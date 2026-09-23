@@ -42,3 +42,23 @@ Left to this ticket per type: the `ResourceState` bucket + `state_label`
 mapping from `provisioningState` / `powerState`, the section descriptor,
 the `is_noise` rule, and the read-only `az … --ids` command. Vocabulary in
 `CONTEXT.md`: "node pool", never "agent pool".
+
+**2026-09-23 — input from the off-map foundation build.** The skeleton
+deltas of tickets 04 and 05 are in the repo, and the first service is real:
+`src/azure/services/subscriptions.rs` lists subscriptions (from
+`az account list`, all tenants, no ARM call) and resource groups
+(`GET /subscriptions/{sub}/resourcegroups`, one `ResourcesPartiallyLoaded`
+per page) with `sections!` tables, `*_section_lines` bodies and two lazy
+sections on a subscription row (the ARM subscription object; the
+locations list, which also feeds the `R` picker). Grill this ticket
+against that file, not from scratch: it made three calls this ticket
+owns — (1) a resource group's `Succeeded` provisioning state renders as
+`ResourceState::stateless()` (dim `○`, blank label) and only `Deleting` /
+`Failed` / `Creating` get a colour and an `F` chip; (2) subscription rows
+map `Enabled → Available`, `Disabled → Unavailable`, `Warned | PastDue →
+Pending`, `Deleted → Terminated`, label = the native word lowercased;
+(3) `is_noise` is untouched (a disabled subscription is a candidate). The
+five other services still run on `services/stub.rs`, which shows the
+shape (`error_rows` / `tag_rows` now live in `services/mod.rs`). The ARM
+client (`src/azure/arm.rs`) has `get`, `list` and page-streaming
+`list_pages`; api-versions live as constants next to each service.

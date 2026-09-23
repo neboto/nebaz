@@ -26,6 +26,15 @@ Standing preferences: **neboto is stable and must not be touched** — no shared
 crate, no workspace, no refactor of the AWS app to serve nebaz. Reuse is by
 copying files, never by depending on them.
 
+Off-map build (2026-09-23): the Destination's "no code beyond the prototype"
+was relaxed by the operator's call once tickets 04 and 05 resolved — the
+skeleton deltas both tickets listed and the Subscriptions service (the
+subscription list from `az account list`, resource groups from ARM, streamed
+per page) were built and committed as ordinary feature work (commits
+`20a83d1`, `3dbf9ba`, `94dcde7`), so the catalog ticket grills
+against an app showing real rows rather than the stub. Nothing else is
+built on this map.
+
 ### Settled at charting (decisions made in the charting grill, no ticket)
 
 - **Name**: binary + crate `nebaz`, repo `neboto/nebaz`, docs later at
