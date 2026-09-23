@@ -37,7 +37,11 @@ resolved, the five remaining services were built to it the same way
 (commit `d2e02f4`, all six services real, stub gone). Nothing else is
 built on this map; the live-tenant checks the catalog lists happen on the
 Azure machine before ticket 09. Ticket 07's mechanism (policy, guard test,
-`PERMISSIONS.md`, `ci.yml`, PR template) was built the same way.
+`PERMISSIONS.md`, `ci.yml`, PR template) and ticket 08's pipeline were
+built the same way; ticket 09 removed the dead code and committed the
+smoke harness. **The map is complete** (2026-09-24): no open tickets; the
+remaining work (live tour, hardening, tag, crates.io) is in
+`docs/SPEC-v0.1.md`, not here.
 
 ### Settled at charting (decisions made in the charting grill, no ticket)
 
@@ -131,36 +135,24 @@ Azure machine before ticket 09. Ticket 07's mechanism (policy, guard test,
   private-repo knobs; dry run green on all four targets in 4 minutes,
   provenance verified. No tag cut yet.
 
+- [First-release spec](issues/09-first-release-spec.md): **the map's
+  destination, reached 2026-09-24** — `docs/SPEC-v0.1.md` (short, pointing
+  at the ADRs, `SERVICES.md`, `PERMISSIONS.md`, `RELEASING.md`), the
+  catalog promoted to `docs/SERVICES.md`, the fog closed into
+  `docs/BACKLOG.md`, `CLAUDE.md` seeded; `v0.1.0` = what is wired (`@all`
+  and visual selection dropped, dead code deleted, clippy clean); bar for
+  the tag = the live tour + docs; seven hardening items before the tag
+  (not yet applied), branch ruleset after; crates.io publish at the tag.
+  Two sessions remain, both in the spec.
+
 ## Not yet specified
 
-- **Key Vault surface**: which metadata to show (secret names/versions, keys,
-  certificates, access model RBAC vs. access policies) and where the
-  "never a value" line sits when a list call itself returns attributes.
-- **AKS beyond the cluster row**: node pools yes; whether the Kubernetes API
-  (data plane, separate auth) is ever touched — probably not, but the
-  neboto EKS pane precedent needs checking against what ARM alone offers.
-- **Which neboto behaviours have an Azure analog**: ownership ribbon (tags are
-  tags; CloudFormation → ARM deployments / Bicep), watch mode, `is_noise`
-  (portal deep links are settled: ticket 04).
-- **Watch mode vs. ARM throttling**: the Storage RP allows 100 list calls
-  per 5 min per subscription/region; whether watch mode ships in the first
-  release, and with what floor interval, needs a decision. The catalog
-  (ticket 06) put numbers on it: one list call per view, 11 for a full
-  tour; only the Accounts view and its lazy Containers sections touch the
-  throttled budget, so a floor is needed there alone.
-- **Emulator and sovereign clouds**: `endpoint_url` is now the live ARM base
-  URL (ticket 05), so a sovereign cloud works by hand; whether to auto-detect
-  it from `az cloud show`, and whether Azurite (storage only) is worth an
-  emulator mode at all, is open.
-- **Two copied neboto behaviours with no Tier-1 entry**: `@all`
-  cross-service cached search and list visual selection (`V` / `Ctrl-A`
-  multi-row copy/export). The skeleton carries hooks for both; whether
-  either is in the first release is ticket 09's call.
-- **Tier 2 rich views** (Azure Monitor metrics, Log Analytics tail, blob
-  browser) and **Tier 3 lenses** (Activity Log timeline, referenced-by, NSG
-  access) — deliberately fog for the first release; each needs its own
-  data-plane research before it can be ticketed. In scope for the product,
-  not for the first release.
+Empty: the destination is reached. Every item that was here (Key Vault
+surface, AKS beyond the cluster, Azure analogs of neboto behaviours,
+watch mode vs. throttling, emulator and sovereign clouds, `@all` and
+visual selection, Tier 2 and 3) was either decided by tickets 06–09 or
+moved to the repo's `docs/BACKLOG.md` with what is known. The next effort
+starts from the backlog, with a fresh map if it needs one.
 
 ## Out of scope
 
