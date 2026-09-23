@@ -4,7 +4,8 @@ use crate::azure::service::ServiceType;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-/// Cache key: service + subscription + an optional variant discriminator.
+/// Cache key: service + subscription + an optional variant discriminator
+/// (the sub-tab's `JumpView::as_str()`).
 ///
 /// neboto keys on `(service, region, variant)` because every AWS list is
 /// region-scoped. Azure lists are subscription-wide and location is a
@@ -46,7 +47,7 @@ impl ResourceCache {
     fn key(service: &ServiceType, subscription: &str, variant: Option<&str>) -> CacheKey {
         CacheKey {
             service: *service,
-            subscription: if service.is_tenant_scoped() {
+            subscription: if service.is_tenant_scoped(variant) {
                 TENANT_SCOPE.to_string()
             } else {
                 subscription.to_string()

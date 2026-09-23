@@ -25,6 +25,95 @@ pub enum ServiceType {
     Aks,
 }
 
+/// One sub-tab: the rows of one resource type within a service. A flat
+/// enum with a variant per sub-tab (ADR 0002): its string form is the list
+/// cache's `variant`, and a routing prefix (`@disk`) names one directly. A
+/// sub-tab exists only when its rows come from one subscription-wide list
+/// or are embedded in one; per-parent lists are lazy sections instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum JumpView {
+    // Subscriptions
+    Subscriptions,
+    ResourceGroups,
+    // Virtual Machines
+    VirtualMachines,
+    Disks,
+    Nics,
+    // Storage
+    StorageAccounts,
+    // Network
+    VirtualNetworks,
+    /// Embedded in the virtual-network list.
+    Subnets,
+    NetworkSecurityGroups,
+    // Key Vault
+    KeyVaults,
+    // AKS
+    Clusters,
+    /// Embedded in the cluster list (the API says agent pool).
+    NodePools,
+}
+
+impl JumpView {
+    /// The service this sub-tab belongs to.
+    pub fn service(&self) -> ServiceType {
+        use JumpView::*;
+        match self {
+            Subscriptions | ResourceGroups => ServiceType::Subscriptions,
+            VirtualMachines | Disks | Nics => ServiceType::VirtualMachines,
+            StorageAccounts => ServiceType::Storage,
+            VirtualNetworks | Subnets | NetworkSecurityGroups => ServiceType::Network,
+            KeyVaults => ServiceType::KeyVault,
+            Clusters | NodePools => ServiceType::Aks,
+        }
+    }
+
+    /// The list-cache variant: stable, never shown to the user.
+    pub fn as_str(&self) -> &'static str {
+        use JumpView::*;
+        match self {
+            Subscriptions => "subscriptions",
+            ResourceGroups => "resource-groups",
+            VirtualMachines => "vms",
+            Disks => "disks",
+            Nics => "nics",
+            StorageAccounts => "accounts",
+            VirtualNetworks => "vnets",
+            Subnets => "subnets",
+            NetworkSecurityGroups => "nsgs",
+            KeyVaults => "vaults",
+            Clusters => "clusters",
+            NodePools => "node-pools",
+        }
+    }
+
+    /// Sub-tab chip label.
+    pub fn label(&self) -> &'static str {
+        use JumpView::*;
+        match self {
+            Subscriptions => "Subscriptions",
+            ResourceGroups => "Resource Groups",
+            VirtualMachines => "VMs",
+            Disks => "Disks",
+            Nics => "NICs",
+            StorageAccounts => "Accounts",
+            VirtualNetworks => "VNets",
+            Subnets => "Subnets",
+            NetworkSecurityGroups => "NSGs",
+            KeyVaults => "Vaults",
+            Clusters => "Clusters",
+            NodePools => "Node pools",
+        }
+    }
+
+    /// Whether this sub-tab's list has no subscription in its path. Only
+    /// the subscription list itself: its rows belong to the tenant, so a
+    /// subscription switch never invalidates them.
+    pub fn is_tenant_scoped(&self) -> bool {
+        matches!(self, JumpView::Subscriptions)
+    }
+}
+
 impl ServiceType {
     pub fn all() -> Vec<ServiceType> {
         vec![
@@ -86,32 +175,71 @@ impl ServiceType {
         }
     }
 
-    /// Whether the list is tenant-scoped rather than subscription-scoped —
-    /// only the subscription list itself. The cache keys such lists under
-    /// a fixed pseudo-subscription so a subscription switch doesn't refetch
-    /// them (the analog of neboto's `is_global()` → `us-east-1` pinning).
-    pub fn is_tenant_scoped(&self) -> bool {
-        matches!(self, ServiceType::Subscriptions)
+    /// The service's sub-tabs in display order (ticket 04's table). A
+    /// single-entry service hides the sub-tab bar.
+    pub fn views(&self) -> &'static [JumpView] {
+        use JumpView::*;
+        match self {
+            ServiceType::Subscriptions => &[Subscriptions, ResourceGroups],
+            ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics],
+            ServiceType::Storage => &[StorageAccounts],
+            ServiceType::Network => &[VirtualNetworks, Subnets, NetworkSecurityGroups],
+            ServiceType::KeyVault => &[KeyVaults],
+            ServiceType::Aks => &[Clusters, NodePools],
+        }
+    }
+
+    /// The sub-tab a plain service prefix (`@vm`) lands on.
+    pub fn default_view(&self) -> JumpView {
+        self.views()[0]
+    }
+
+    /// Whether a list is tenant-scoped rather than subscription-scoped,
+    /// given its cache variant (a `JumpView::as_str()`). The cache keys such
+    /// lists under a fixed pseudo-subscription so a subscription switch
+    /// doesn't refetch them (the analog of neboto's `is_global()` →
+    /// `us-east-1` pinning). A missing variant means the service's default
+    /// sub-tab.
+    pub fn is_tenant_scoped(&self, variant: Option<&str>) -> bool {
+        match variant {
+            None => self.default_view().is_tenant_scoped(),
+            Some(v) => self
+                .views()
+                .iter()
+                .any(|view| view.as_str() == v && view.is_tenant_scoped()),
+        }
     }
 
     /// Parse a `@prefix` (with or without the `@`) or any accepted alias.
-    pub fn from_prefix(s: &str) -> Option<ServiceType> {
+    /// A **routing prefix** (`@rg`, `@disk`, `@nic`, `@subnet`, `@nsg`,
+    /// `@pool`) names a sub-tab as well; a plain service prefix returns
+    /// `None` for the view, meaning the service's first sub-tab.
+    pub fn from_prefix(s: &str) -> Option<(ServiceType, Option<JumpView>)> {
         let s = s.trim().trim_start_matches('@').to_lowercase();
-        match s.as_str() {
-            "sub" | "subs" | "subscription" | "subscriptions" | "rg" | "rgs"
-            | "resourcegroup" | "resourcegroups" => Some(ServiceType::Subscriptions),
-            "vm" | "vms" | "compute" | "virtualmachines" | "disk" | "disks" | "nic"
-            | "nics" => Some(ServiceType::VirtualMachines),
-            "st" | "storage" | "blob" | "blobs" | "storageaccounts" => {
-                Some(ServiceType::Storage)
+        let (service, view) = match s.as_str() {
+            "sub" | "subs" | "subscription" | "subscriptions" => (ServiceType::Subscriptions, None),
+            "rg" | "rgs" | "resourcegroup" | "resourcegroups" | "group" | "groups" => {
+                (ServiceType::Subscriptions, Some(JumpView::ResourceGroups))
             }
-            "vnet" | "vnets" | "net" | "network" | "subnet" | "subnets" | "nsg" | "nsgs" => {
-                Some(ServiceType::Network)
-            }
-            "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => Some(ServiceType::KeyVault),
-            "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => Some(ServiceType::Aks),
-            _ => None,
-        }
+            "vm" | "vms" | "compute" | "virtualmachines" => (ServiceType::VirtualMachines, None),
+            "disk" | "disks" => (ServiceType::VirtualMachines, Some(JumpView::Disks)),
+            "nic" | "nics" => (ServiceType::VirtualMachines, Some(JumpView::Nics)),
+            "st" | "storage" | "blob" | "blobs" | "storageaccounts" => (ServiceType::Storage, None),
+            "vnet" | "vnets" | "net" | "network" => (ServiceType::Network, None),
+            "subnet" | "subnets" => (ServiceType::Network, Some(JumpView::Subnets)),
+            "nsg" | "nsgs" => (ServiceType::Network, Some(JumpView::NetworkSecurityGroups)),
+            "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
+            "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => (ServiceType::Aks, None),
+            "pool" | "pools" | "nodepool" | "nodepools" => (ServiceType::Aks, Some(JumpView::NodePools)),
+            _ => return None,
+        };
+        Some((service, view))
+    }
+
+    /// Parse a prefix to its service only — for config keys and anything
+    /// else that has no sub-tab to land on.
+    pub fn from_prefix_service(s: &str) -> Option<ServiceType> {
+        Self::from_prefix(s).map(|(service, _)| service)
     }
 
     /// Canonical `@prefix` (the completion dropdown shows these).
@@ -125,6 +253,19 @@ impl ServiceType {
             ServiceType::Aks => "@aks",
         }
     }
+
+    /// The routing prefixes, in service order, for `@` completion: each
+    /// selects a service *and* a sub-tab.
+    pub const ROUTING_PREFIXES: &'static [&'static str] =
+        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pool"];
+
+    /// Every completable prefix: the six canonical ones, then the routing
+    /// prefixes.
+    pub fn completion_prefixes() -> Vec<&'static str> {
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@aks"];
+        all.extend_from_slice(Self::ROUTING_PREFIXES);
+        all
+    }
 }
 
 impl std::fmt::Display for ServiceType {
@@ -135,7 +276,9 @@ impl std::fmt::Display for ServiceType {
 
 /// One provider per `ServiceType`. Identical to neboto's `AwsService`
 /// minus `execute_action` (a write hook that a read-only app never
-/// implemented — dropped rather than ported).
+/// implemented — dropped rather than ported). Every list method takes the
+/// sub-tab it is listing; a provider holds the ARM client and the
+/// subscription it was built for (`AzureClients::service`).
 #[async_trait]
 pub trait AzureService: Send + Sync {
     /// Service identifier
@@ -146,18 +289,19 @@ pub trait AzureService: Send + Sync {
     #[allow(dead_code)]
     fn name(&self) -> &str;
 
-    /// List all resources for this service
-    async fn list_resources(&self) -> Result<Vec<Box<dyn Resource>>>;
+    /// List every row of one sub-tab.
+    async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>>;
 
     /// List resources with incremental updates via events. Default
     /// implementation falls back to `list_resources()`; real providers
     /// override it to stream one ARM page (`nextLink`) per batch.
     async fn list_resources_streaming(
         &self,
+        view: JumpView,
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
-        match self.list_resources().await {
+        match self.list_resources(view).await {
             Ok(resources) => {
                 let _ = event_tx.send(Event::ResourcesLoaded {
                     service: service_type,
@@ -185,16 +329,54 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_prefix_round_trips() {
+    fn every_prefix_round_trips_to_the_first_sub_tab() {
         for s in ServiceType::all() {
-            assert_eq!(ServiceType::from_prefix(s.prefix()), Some(s), "{:?}", s);
+            assert_eq!(ServiceType::from_prefix(s.prefix()), Some((s, None)), "{:?}", s);
         }
     }
 
     #[test]
+    fn routing_prefixes_select_a_sub_tab_of_the_right_service() {
+        for p in ServiceType::ROUTING_PREFIXES {
+            let (service, view) = ServiceType::from_prefix(p).unwrap_or_else(|| panic!("{p}"));
+            let view = view.unwrap_or_else(|| panic!("{p} must route to a sub-tab"));
+            assert_eq!(view.service(), service, "{p}");
+            assert!(service.views().contains(&view), "{p}");
+        }
+        assert_eq!(
+            ServiceType::from_prefix("@rg"),
+            Some((ServiceType::Subscriptions, Some(JumpView::ResourceGroups)))
+        );
+        assert_eq!(
+            ServiceType::from_prefix("DISK"),
+            Some((ServiceType::VirtualMachines, Some(JumpView::Disks)))
+        );
+    }
+
+    #[test]
     fn aliases_resolve_and_junk_does_not() {
-        assert_eq!(ServiceType::from_prefix("rg"), Some(ServiceType::Subscriptions));
-        assert_eq!(ServiceType::from_prefix("@K8S"), Some(ServiceType::Aks));
+        assert_eq!(ServiceType::from_prefix_service("@K8S"), Some(ServiceType::Aks));
+        assert_eq!(ServiceType::from_prefix_service("ec2"), None);
         assert_eq!(ServiceType::from_prefix("ec2"), None);
+    }
+
+    #[test]
+    fn every_view_belongs_to_exactly_one_service_and_has_a_unique_variant() {
+        let mut seen = std::collections::HashSet::new();
+        for service in ServiceType::all() {
+            assert!(!service.views().is_empty());
+            for view in service.views() {
+                assert_eq!(view.service(), service, "{:?}", view);
+                assert!(seen.insert(view.as_str()), "duplicate variant {:?}", view);
+            }
+        }
+    }
+
+    #[test]
+    fn only_the_subscription_list_is_tenant_scoped() {
+        assert!(ServiceType::Subscriptions.is_tenant_scoped(None));
+        assert!(ServiceType::Subscriptions.is_tenant_scoped(Some("subscriptions")));
+        assert!(!ServiceType::Subscriptions.is_tenant_scoped(Some("resource-groups")));
+        assert!(!ServiceType::VirtualMachines.is_tenant_scoped(None));
     }
 }

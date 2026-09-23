@@ -33,6 +33,35 @@ impl AzureClients {
         self.subscription.as_deref()
     }
 
+    pub fn current_subscription_name(&self) -> Option<&str> {
+        None
+    }
+
+    pub fn current_tenant(&self) -> Option<&str> {
+        None
+    }
+
+    /// Point the client at another subscription — a value, not a rebuild.
+    pub fn set_subscription(&mut self, id: &str) -> Result<()> {
+        self.subscription = Some(id.to_string());
+        Ok(())
+    }
+
+    /// Look a subscription up by id or display name (case-insensitive).
+    pub fn resolve_subscription(&self, id_or_name: &str) -> Option<SubscriptionEntry> {
+        let _ = id_or_name;
+        None
+    }
+
+    /// The locations list for a subscription (`GET /subscriptions/{id}/locations`).
+    pub fn locations_fetch(
+        &self,
+        subscription: &str,
+    ) -> impl std::future::Future<Output = std::result::Result<Vec<crate::azure::location::LocationInfo>, String>> + Send + 'static {
+        let _ = subscription;
+        async { Ok(Vec::new()) }
+    }
+
     /// A custom ARM endpoint (an emulator, a sovereign cloud). The service
     /// tab strip shows it as a loud badge, like neboto's endpoint badge.
     pub fn current_endpoint(&self) -> Option<&str> {
@@ -47,6 +76,17 @@ impl AzureClients {
             self.subscription.clone().unwrap_or_else(|| "00000000-0000-0000-0000-000000000000".into()),
         ))
     }
+}
+
+/// One `az account list` entry — the picker row and the subscription →
+/// tenant table. Filled by ticket 05.
+#[derive(Debug, Clone)]
+pub struct SubscriptionEntry {
+    pub id: String,
+    pub name: String,
+    pub tenant_id: String,
+    pub state: String,
+    pub is_default: bool,
 }
 
 /// Subscriptions available to the `P` picker. neboto reads

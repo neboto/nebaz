@@ -46,14 +46,15 @@ pub fn save(bookmarks: &[NavLocation]) {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::{JumpView, NavLocation};
-    use crate::azure::service::ServiceType;
+    use crate::app::NavLocation;
+    use crate::azure::service::{JumpView, ServiceType};
 
     #[test]
     fn navlocation_roundtrips_through_json() {
         let loc = NavLocation {
             service: ServiceType::Aks,
-            view: JumpView::None,
+            view: Some(JumpView::NodePools),
+            subscription: Some("11111111-1111-1111-1111-111111111111".to_string()),
             query: String::new(),
             selected_id: Some("/subscriptions/0/resourceGroups/rg/providers/Microsoft.ContainerService/managedClusters/c".to_string()),
             label: "AKS · c".to_string(),
@@ -64,7 +65,8 @@ mod tests {
         let back: Vec<NavLocation> = serde_json::from_str(&json).unwrap();
         assert_eq!(back.len(), 1);
         assert_eq!(back[0].service, ServiceType::Aks);
-        assert!(matches!(back[0].view, JumpView::None));
+        assert_eq!(back[0].view, Some(JumpView::NodePools));
+        assert_eq!(back[0].subscription.as_deref(), Some("11111111-1111-1111-1111-111111111111"));
         assert_eq!(back[0].label, "AKS · c");
         assert!(back[0].details_focused);
         assert_eq!(back[0].detail_section.as_deref(), Some("Node Pools"));
@@ -75,7 +77,8 @@ mod tests {
         // Bookmark files written before the fields existed must still load.
         let loc = NavLocation {
             service: ServiceType::Aks,
-            view: JumpView::None,
+            view: None,
+            subscription: None,
             query: String::new(),
             selected_id: None,
             label: "AKS".to_string(),
@@ -86,9 +89,13 @@ mod tests {
         let obj = value.as_object_mut().unwrap();
         obj.remove("details_focused");
         obj.remove("detail_section");
+        obj.remove("view");
+        obj.remove("subscription");
         let back: NavLocation = serde_json::from_value(value).unwrap();
         assert!(!back.details_focused);
         assert!(back.detail_section.is_none());
+        assert!(back.view.is_none(), "a bookmark without a sub-tab lands on the default one");
+        assert!(back.subscription.is_none());
     }
 
     #[test]

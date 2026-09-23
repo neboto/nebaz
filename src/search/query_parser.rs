@@ -1,11 +1,15 @@
 // ported from neboto-tui src/search/query_parser.rs @ d483900
-use crate::azure::service::ServiceType;
+use crate::azure::service::{JumpView, ServiceType};
 
 /// Represents a parsed search query with optional service prefix
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedQuery {
     /// The service to switch to, if detected in the query
     pub service: Option<ServiceType>,
+    /// The sub-tab a **routing prefix** (`@disk`, `@rg`) selects; `None`
+    /// for a plain service prefix, which lands on the service's first
+    /// sub-tab.
+    pub view: Option<JumpView>,
     /// The search text after removing the service prefix
     pub search_text: String,
     /// Whether this query represents a service switch
@@ -50,6 +54,7 @@ pub fn parse_query(query: &str) -> ParsedQuery {
     if trimmed.is_empty() {
         return ParsedQuery {
             service: None,
+            view: None,
             search_text: String::new(),
             is_service_switch: false,
         };
@@ -74,6 +79,7 @@ pub fn parse_query(query: &str) -> ParsedQuery {
     // No prefix detected - regular search in current service
     ParsedQuery {
         service: None,
+        view: None,
         search_text: trimmed.to_string(),
         is_service_switch: false,
     }
@@ -92,14 +98,48 @@ fn parse_at_prefix(query: &str) -> ParsedQuery {
     let service_str = &without_at[..split_pos];
     let remaining = without_at[split_pos..].trim();
 
-    // Try to map to ServiceType
-    let service = ServiceType::from_prefix(service_str);
+    // Try to map to ServiceType (+ sub-tab for a routing prefix)
+    let (service, view) = split_prefix(service_str);
 
     ParsedQuery {
         service,
+        view,
         search_text: remaining.to_string(),
         is_service_switch: true,
     }
+}
+
+fn split_prefix(s: &str) -> (Option<ServiceType>, Option<JumpView>) {
+    match ServiceType::from_prefix(s) {
+        Some((service, view)) => (Some(service), view),
+        None => (None, None),
+    }
+}
+
+/// Split `rg:<name>` terms out of a search string, returning the group
+/// names (lowercased) and the remaining text for fuzzy matching. Several
+/// `rg:` tokens OR together — a row has exactly one group — and matching
+/// is a case-insensitive exact match on `Resource::resource_group()`. A
+/// bare `rg:` with no name stays literal search text.
+pub fn split_rg_filters(text: &str) -> (Vec<String>, String) {
+    let mut groups = Vec::new();
+    let mut rest: Vec<&str> = Vec::new();
+    for term in text.split_whitespace() {
+        match term.strip_prefix("rg:") {
+            Some(name) if !name.is_empty() => groups.push(name.to_lowercase()),
+            _ => rest.push(term),
+        }
+    }
+    (groups, rest.join(" "))
+}
+
+/// Whether a row passes the `rg:` filter: no filter, or its group is one of
+/// the named ones.
+pub fn rg_filter_admits(groups: &[String], resource_group: Option<&str>) -> bool {
+    if groups.is_empty() {
+        return true;
+    }
+    resource_group.is_some_and(|rg| groups.iter().any(|g| rg.eq_ignore_ascii_case(g)))
 }
 
 /// An exact tag filter extracted from a search query: `tag:key` (key present,
@@ -150,11 +190,12 @@ fn parse_colon_prefix(query: &str, colon_pos: usize) -> ParsedQuery {
     let service_str = &query[..colon_pos];
     let remaining = query[colon_pos + 1..].trim();
 
-    // Try to map to ServiceType
-    let service = ServiceType::from_prefix(service_str);
+    // Try to map to ServiceType (+ sub-tab for a routing prefix)
+    let (service, view) = split_prefix(service_str);
 
     ParsedQuery {
         service,
+        view,
         search_text: remaining.to_string(),
         is_service_switch: true,
     }
@@ -190,6 +231,7 @@ mod tests {
     fn at_prefix_switches_and_keeps_the_rest() {
         let parsed = parse_query("@vm web");
         assert_eq!(parsed.service, Some(ServiceType::VirtualMachines));
+        assert_eq!(parsed.view, None);
         assert_eq!(parsed.search_text, "web");
         assert!(parsed.is_service_switch);
         let parsed = parse_query("@vnet");
@@ -199,6 +241,32 @@ mod tests {
         let parsed = parse_query("@ec2 web");
         assert_eq!(parsed.service, None);
         assert!(parsed.is_service_switch);
+    }
+
+    #[test]
+    fn routing_prefixes_carry_the_sub_tab() {
+        let parsed = parse_query("@disk os-");
+        assert_eq!(parsed.service, Some(ServiceType::VirtualMachines));
+        assert_eq!(parsed.view, Some(JumpView::Disks));
+        assert_eq!(parsed.search_text, "os-");
+        let parsed = parse_query("rg:prod");
+        assert_eq!(parsed.service, Some(ServiceType::Subscriptions));
+        assert_eq!(parsed.view, Some(JumpView::ResourceGroups));
+        assert_eq!(parsed.search_text, "prod");
+    }
+
+    #[test]
+    fn rg_filters_split_out_and_or_together() {
+        let (groups, rest) = split_rg_filters("web rg:Prod-RG rg:dev rg:");
+        assert_eq!(rest, "web rg:");
+        assert_eq!(groups, vec!["prod-rg".to_string(), "dev".to_string()]);
+        assert!(rg_filter_admits(&groups, Some("PROD-RG")));
+        assert!(rg_filter_admits(&groups, Some("dev")));
+        assert!(!rg_filter_admits(&groups, Some("staging")));
+        // A subscription row has no group: it never passes an rg: filter.
+        assert!(!rg_filter_admits(&groups, None));
+        // No filter admits everything, including group-less rows.
+        assert!(rg_filter_admits(&[], None));
     }
 
     #[test]

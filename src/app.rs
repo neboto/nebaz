@@ -6,9 +6,9 @@
 
 use crate::azure::cache::ResourceCache;
 use crate::azure::client::AzureClients;
-use crate::azure::location::Location;
+use crate::azure::location::{Location, LocationRow, ALL_DISPLAY};
 use crate::azure::resource::{Resource, ResourceState};
-use crate::azure::service::ServiceType;
+use crate::azure::service::{JumpView, ServiceType};
 use crate::azure::services::stub::{stub_section_lines, StubDetailSection, StubResource};
 use crate::config::Config;
 use crate::error::Result;
@@ -16,7 +16,7 @@ use crate::event::{Event, LoadProgress};
 use crate::lazy::{LazyApply, LazyMap, LazyStore};
 use crate::macros::{Macro, MacroPlayer, MacroRecorder, MacroStep, PendingKey};
 use crate::search::fuzzy::FuzzyMatcher;
-use crate::search::query_parser::{parse_query, split_tag_filters};
+use crate::search::query_parser::{parse_query, rg_filter_admits, split_rg_filters, split_tag_filters};
 use crate::ui::widgets::location_selector::LocationSelectorState;
 use crate::ui::widgets::service_selector::ServiceSelectorState;
 use crate::ui::widgets::subscription_selector::SubscriptionSelectorState;
@@ -114,20 +114,20 @@ fn state_sort_rank(state: &ResourceState) -> u8 {
     }
 }
 
-/// Destination sub-tab for a "go to resource" jump. neboto carries one
-/// variant per service view enum; nebaz's per-service views are added as
-/// each catalog ticket lands, so only the single-view case exists yet.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum JumpView {
-    None,
-}
-
 /// A captured navigation location for the "go back" / jump-list history and
-/// for bookmarks: service + sub-tab, the search query, the selected id.
+/// for bookmarks: subscription + service + sub-tab, the search query, the
+/// selected id. A jump into another subscription switches it first
+/// (ADR 0002); one whose subscription is not in the picker's list fails
+/// with a message.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NavLocation {
     pub service: ServiceType,
-    pub view: JumpView,
+    /// The sub-tab; `None` (older bookmarks) lands on the service's first.
+    #[serde(default)]
+    pub view: Option<JumpView>,
+    /// The subscription the location was captured in.
+    #[serde(default)]
+    pub subscription: Option<String>,
     pub query: String,
     pub selected_id: Option<String>,
     /// Precomputed one-line label for the jump-list picker.
@@ -236,15 +236,15 @@ pub struct App {
     pub config: Config,
     pub azure_clients: AzureClients,
 
-    // Context: the three slots.
+    // Context: the three slots, plus the sub-tab within the service.
     pub current_service: Option<ServiceType>,
+    /// The active sub-tab; always one of `current_service.views()`.
+    pub current_view: JumpView,
     pub current_location: Location,
     pub subscription_id: Option<String>,
     pub subscription_name: Option<String>,
     pub tenant_id: Option<String>,
     pub visited_services: HashSet<ServiceType>,
-    /// Set while a subscription switch awaits its client rebuild.
-    pub switching_subscription: Option<String>,
 
     // Resources for the current service.
     pub resources: Vec<Box<dyn Resource>>,
@@ -358,19 +358,27 @@ impl App {
 
         let cache_ttl = Duration::from_secs(config.cache_ttl.unwrap_or(300));
         let cache = ResourceCache::new(cache_ttl, config.cache_ttl_overrides());
-        let current_service = config.default_service_type();
+        // `default_service = "rg"` is a routing prefix: it names the sub-tab too.
+        let (current_service, current_view) = match config
+            .default_service
+            .as_deref()
+            .and_then(ServiceType::from_prefix)
+        {
+            Some((service, view)) => (Some(service), view.unwrap_or(service.default_view())),
+            None => (None, JumpView::Subscriptions),
+        };
         let current_location = config.default_location_typed().unwrap_or_default();
 
         let mut app = Self {
             running: true,
             azure_clients,
             current_service,
+            current_view,
             current_location,
             subscription_id,
             subscription_name: None,
             tenant_id: None,
             visited_services: HashSet::new(),
-            switching_subscription: None,
             resources: Vec::new(),
             filtered_resources: Vec::new(),
             selected_index: None,
@@ -477,13 +485,18 @@ impl App {
         }
     }
 
-    /// Serve the current service from cache, or mark a load as needed.
+    /// The list cache variant for the active sub-tab.
+    fn cache_variant(&self) -> &'static str {
+        self.current_view.as_str()
+    }
+
+    /// Serve the current sub-tab from cache, or mark a load as needed.
     pub fn load_service_resources(&mut self) {
         let Some(service) = self.current_service else {
             return;
         };
         let sub = self.subscription_key();
-        if let Some(cached) = self.cache.get(&service, &sub, None) {
+        if let Some(cached) = self.cache.get(&service, &sub, Some(self.cache_variant())) {
             self.resources = cached;
             self.loading = false;
             self.loading_started = true;
@@ -515,6 +528,7 @@ impl App {
         self.load_warnings.clear();
         self.load_generation += 1;
         let generation = self.load_generation;
+        let view = self.current_view;
         let provider = self.azure_clients.service(service);
         let outer = event_tx.clone();
 
@@ -535,7 +549,7 @@ impl App {
             }
         });
         tokio::spawn(async move {
-            let _ = provider.list_resources_streaming(inner_tx, service).await;
+            let _ = provider.list_resources_streaming(view, inner_tx, service).await;
         });
     }
 
@@ -571,8 +585,97 @@ impl App {
     pub fn current_data_age(&self) -> Option<Duration> {
         let service = self.current_service?;
         self.cache
-            .age(&service, &self.subscription_key(), None)
+            .age(&service, &self.subscription_key(), Some(self.cache_variant()))
             .filter(|a| a.as_secs() >= 60)
+    }
+
+    /// The sub-tab chips for the current service: `(digit, label, active)`.
+    /// Empty for a single-sub-tab service (the bar is hidden).
+    pub fn sub_tab_chips(&self) -> Vec<(char, &'static str, bool)> {
+        let Some(service) = self.current_service else {
+            return Vec::new();
+        };
+        let views = service.views();
+        if views.len() < 2 {
+            return Vec::new();
+        }
+        views
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                (
+                    crate::sections::key_for(i).unwrap_or(' '),
+                    v.label(),
+                    *v == self.current_view,
+                )
+            })
+            .collect()
+    }
+
+    /// The `R` picker's rows: `All` first, then the subscription's locations
+    /// (once the endpoint list has landed) merged with the distinct
+    /// locations of the current list and their row counts, sorted by
+    /// count then name. A location the endpoint doesn't know but a row
+    /// carries still appears; one with zero rows is still pickable.
+    pub fn location_rows(&self) -> Vec<LocationRow> {
+        let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+        for r in &self.resources {
+            if let Some(l) = r.location() {
+                *counts.entry(l.to_lowercase()).or_default() += 1;
+            }
+        }
+        let mut names: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+        if let Some(crate::lazy::Lazy::Loaded(infos)) = self.subscription_locations() {
+            for info in infos {
+                names.insert(info.name.to_lowercase(), info.display_name.clone());
+            }
+        }
+        let mut rows: Vec<LocationRow> = names
+            .keys()
+            .chain(counts.keys())
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .map(|name| LocationRow {
+                location: Location::Named(name.clone()),
+                display_name: names.get(name).cloned().unwrap_or_else(|| name.clone()),
+                count: counts.get(name).copied().unwrap_or(0),
+            })
+            .collect();
+        rows.sort_by(|a, b| {
+            b.count
+                .cmp(&a.count)
+                .then_with(|| a.location.as_str().cmp(b.location.as_str()))
+        });
+        rows.insert(
+            0,
+            LocationRow {
+                location: Location::All,
+                display_name: ALL_DISPLAY.to_string(),
+                count: self.resources.len(),
+            },
+        );
+        rows
+    }
+
+    /// The current subscription's locations list, as far as it has landed.
+    fn subscription_locations(&self) -> Option<&crate::lazy::Lazy<Vec<crate::azure::location::LocationInfo>>> {
+        self.lazy.locations.get(&self.subscription_key())
+    }
+
+    /// What the status bar shows for the `R` slot: the endpoint's display
+    /// name when known, else the short name itself.
+    pub fn location_label(&self) -> String {
+        match &self.current_location {
+            Location::All => ALL_DISPLAY.to_string(),
+            Location::Named(name) => match self.subscription_locations() {
+                Some(crate::lazy::Lazy::Loaded(infos)) => infos
+                    .iter()
+                    .find(|i| i.name.eq_ignore_ascii_case(name))
+                    .map(|i| i.display_name.clone())
+                    .unwrap_or_else(|| name.clone()),
+                _ => name.clone(),
+            },
+        }
     }
 
     /// Rows in the current view before the search/state/noise filters.
@@ -631,6 +734,7 @@ impl App {
         let keep_id = self.get_selected_resource_id();
         let parsed = parse_query(&self.search_query);
         let (tag_filters, text) = split_tag_filters(&parsed.search_text);
+        let (rg_filters, text) = split_rg_filters(&text);
 
         // Location filter first — it decides the "of N" denominator.
         let admitted: Vec<usize> = (0..self.resources.len())
@@ -645,6 +749,7 @@ impl App {
             .into_iter()
             .filter(|(i, _)| admitted_set.contains(i))
             .filter(|(i, _)| tag_filters.iter().all(|f| f.matches(self.resources[*i].tags())))
+            .filter(|(i, _)| rg_filter_admits(&rg_filters, self.resources[*i].resource_group()))
             .filter(|(i, _)| {
                 self.list_state_filter
                     .as_deref()
@@ -719,11 +824,15 @@ impl App {
         let parsed = parse_query(&self.search_query);
         if parsed.is_service_switch {
             match parsed.service {
-                Some(s) if Some(s) != self.current_service => {
-                    self.switch_service(s);
+                Some(s) => {
+                    if Some(s) != self.current_service {
+                        self.switch_service(s);
+                    }
+                    if let Some(view) = parsed.view {
+                        self.switch_view(view);
+                    }
                     self.search_query = parsed.search_text;
                 }
-                Some(_) => self.search_query = parsed.search_text,
                 None => {
                     if self.search_query.trim().len() > 1 {
                         self.error_message =
@@ -744,13 +853,59 @@ impl App {
         }
         self.push_nav_location();
         self.current_service = Some(service);
+        self.current_view = service.default_view();
         self.visited_services.insert(service);
+        self.reset_list_shaping();
+        self.load_service_resources();
+    }
+
+    /// Switch sub-tab within the current service. A view of another service
+    /// switches service first (a routing prefix, a bookmark).
+    pub fn switch_view(&mut self, view: JumpView) {
+        if self.current_service != Some(view.service()) {
+            self.switch_service(view.service());
+        }
+        if self.current_view == view {
+            return;
+        }
+        self.push_nav_location();
+        self.current_view = view;
+        self.reset_list_shaping();
+        self.load_service_resources();
+    }
+
+    /// Switch sub-tab by position in the service's list (digit keys).
+    fn switch_view_index(&mut self, idx: usize) {
+        let Some(service) = self.current_service else {
+            return;
+        };
+        if let Some(view) = service.views().get(idx) {
+            self.switch_view(*view);
+        }
+    }
+
+    fn cycle_view(&mut self, forward: bool) {
+        let Some(service) = self.current_service else {
+            return;
+        };
+        let views = service.views();
+        let n = views.len();
+        if n < 2 {
+            return;
+        }
+        let cur = views.iter().position(|v| *v == self.current_view).unwrap_or(0);
+        let next = if forward { (cur + 1) % n } else { (cur + n - 1) % n };
+        self.switch_view(views[next]);
+    }
+
+    /// What a service or sub-tab switch resets: the pane focus, the
+    /// section cursor, sort, state filter and query.
+    fn reset_list_shaping(&mut self) {
         self.details_focused = false;
         self.detail_section_idx = 0;
         self.list_sort = ListSort::Default;
         self.list_state_filter = None;
         self.search_query.clear();
-        self.load_service_resources();
     }
 
     fn switch_location(&mut self, location: Location) {
@@ -759,19 +914,28 @@ impl App {
         self.update_search();
     }
 
-    async fn switch_subscription(&mut self, subscription_id: String) -> Result<()> {
-        self.switching_subscription = Some(subscription_id.clone());
-        self.azure_clients =
-            AzureClients::new(Some(subscription_id.clone()), self.config.endpoint_url.clone())
-                .await?;
-        self.subscription_id = Some(subscription_id);
-        self.subscription_name = None;
+    /// The `P` slot. Keeps the client (a subscription is a value on the
+    /// provider, not a client to rebuild — a tenant change is the
+    /// credential map's concern) and the list cache; replaces the LazyStore
+    /// and bumps the load generation so nothing subscription-scoped
+    /// survives (ADR 0002).
+    fn switch_subscription(&mut self, subscription_id: &str, event_tx: &mpsc::UnboundedSender<Event>) -> Result<()> {
+        self.azure_clients.set_subscription(subscription_id)?;
+        self.apply_subscription_identity();
         // Everything subscription-scoped resets by construction.
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
         self.load_generation += 1;
-        self.switching_subscription = None;
         self.load_service_resources();
+        App::trigger_locations(self, event_tx);
         Ok(())
+    }
+
+    /// Read the active subscription's identity off the client (no ARM
+    /// call: the `az account list` entry carries the name and tenant).
+    fn apply_subscription_identity(&mut self) {
+        self.subscription_id = self.azure_clients.current_subscription().map(str::to_string);
+        self.subscription_name = self.azure_clients.current_subscription_name().map(str::to_string);
+        self.tenant_id = self.azure_clients.current_tenant().map(str::to_string);
     }
 
     // ── Lazy sections ───────────────────────────────────────────────────
@@ -804,6 +968,19 @@ impl App {
                 Box::new(move |app: &mut App| lens(&mut app.lazy).apply(key, result));
             let _ = tx.send(Event::Lazy(LazyApply { epoch, apply }));
         });
+    }
+
+    /// Fetch the current subscription's locations list (once per
+    /// subscription; the map is keyed by subscription id). Fired at
+    /// startup, after a switch and on `R`, so the picker has display names
+    /// and the full region list whether or not the current list covers it.
+    pub fn trigger_locations(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let sub = app.subscription_key();
+        if sub.is_empty() {
+            return;
+        }
+        let fut = app.azure_clients.locations_fetch(&sub);
+        app.trigger_lazy(|s| &mut s.locations, sub, event_tx, move || fut);
     }
 
     /// On-enter hook for the stub pane's Details section.
@@ -982,9 +1159,14 @@ impl App {
     fn current_nav_location(&self) -> Option<NavLocation> {
         let service = self.current_service?;
         let selected = self.get_selected_resource();
+        let place = if service.views().len() > 1 {
+            format!("{} {}", service.short_name(), self.current_view.label())
+        } else {
+            service.short_name().to_string()
+        };
         let label = match selected {
-            Some(r) => format!("{} · {}", service.short_name(), r.name()),
-            None => service.name().to_string(),
+            Some(r) => format!("{} · {}", place, r.name()),
+            None => place,
         };
         let detail_section = self
             .selected_descriptor()
@@ -992,7 +1174,8 @@ impl App {
             .map(|s| s.label.to_string());
         Some(NavLocation {
             service,
-            view: JumpView::None,
+            view: Some(self.current_view),
+            subscription: self.subscription_id.clone(),
             query: self.search_query.clone(),
             selected_id: selected.map(|r| r.id().to_string()),
             label,
@@ -1014,7 +1197,34 @@ impl App {
     }
 
     fn restore_nav_location(&mut self, loc: NavLocation, event_tx: &mpsc::UnboundedSender<Event>) {
+        // Another subscription: switch first, or refuse if it is unknown.
+        if let Some(sub) = loc.subscription.as_deref() {
+            if self.subscription_id.as_deref() != Some(sub) {
+                match self.azure_clients.resolve_subscription(sub) {
+                    Some(entry) => {
+                        let name = entry.name.clone();
+                        if let Err(e) = self.switch_subscription(sub, event_tx) {
+                            self.error_message = Some(format!("Subscription switch failed: {}", e));
+                            return;
+                        }
+                        self.toast(format!("Switched to subscription {}", name));
+                    }
+                    None => {
+                        self.error_message = Some(format!(
+                            "Subscription {} is not in the picker's list (az login to it first)",
+                            sub
+                        ));
+                        return;
+                    }
+                }
+            }
+        }
         self.switch_service(loc.service);
+        let view = loc
+            .view
+            .filter(|v| v.service() == loc.service)
+            .unwrap_or(loc.service.default_view());
+        self.switch_view(view);
         self.search_query = loc.query;
         self.update_search();
         if let Some(id) = &loc.selected_id {
@@ -1047,7 +1257,7 @@ impl App {
 
     /// Nothing loading, no switch in flight — the player may inject.
     fn macro_ready(&self) -> bool {
-        !self.loading && self.switching_subscription.is_none()
+        !self.loading
     }
 
     fn any_modal_open(&self) -> bool {
@@ -1173,11 +1383,7 @@ impl App {
                     }
                 }
             }
-            MacroStep::SwitchLocation(l) => {
-                if let Some(loc) = Location::from_str(&l) {
-                    self.switch_location(loc);
-                }
-            }
+            MacroStep::SwitchLocation(l) => self.switch_location(Location::parse(&l)),
             MacroStep::SwitchSubscription(s) => {
                 let _ = event_tx.send(Event::SubscriptionSwitchRequested { subscription_id: s });
             }
@@ -1234,8 +1440,7 @@ impl App {
 
             Event::LocationSwitchRequested { location } => self.switch_location(location),
             Event::SubscriptionSwitchRequested { subscription_id } => {
-                if let Err(e) = self.switch_subscription(subscription_id).await {
-                    self.switching_subscription = None;
+                if let Err(e) = self.switch_subscription(&subscription_id, event_tx) {
                     self.error_message = Some(format!("Subscription switch failed: {}", e));
                 }
             }
@@ -1253,6 +1458,15 @@ impl App {
             Event::Lazy(apply) => {
                 if apply.epoch == self.lazy.epoch() {
                     (apply.apply)(self);
+                    // The locations list may have landed while `R` is open.
+                    if self.location_selector.visible {
+                        let rows = self.location_rows();
+                        let loaded = matches!(
+                            self.subscription_locations(),
+                            Some(crate::lazy::Lazy::Loaded(_))
+                        );
+                        self.location_selector.refresh_rows(rows, loaded);
+                    }
                 }
             }
         }
@@ -1307,7 +1521,8 @@ impl App {
         self.loading_complete = true;
         self.loading_progress = None;
         let sub = self.subscription_key();
-        self.cache.insert(service, &sub, None, self.resources.clone());
+        self.cache
+            .insert(service, &sub, Some(self.cache_variant().to_string()), self.resources.clone());
         if !self.load_warnings.is_empty() {
             self.error_message = Some(format!(
                 "{} phase(s) failed: {}",
@@ -1552,6 +1767,11 @@ impl App {
             KeyCode::Char('/') => {
                 self.search_active = true;
             }
+            KeyCode::Tab => self.cycle_view(true),
+            KeyCode::BackTab => self.cycle_view(false),
+            KeyCode::Char(c) if crate::sections::index_for_key(c).is_some() => {
+                self.switch_view_index(crate::sections::index_for_key(c).unwrap())
+            }
             KeyCode::Char('z') => {
                 self.list_sort = self.list_sort.next();
                 self.update_search();
@@ -1564,7 +1784,7 @@ impl App {
             KeyCode::Char('r') | KeyCode::F(5) => {
                 if let Some(service) = self.current_service {
                     let sub = self.subscription_key();
-                    self.cache.invalidate(&service, &sub, None);
+                    self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
                     self.load_service_resources();
                 }
             }
@@ -1606,7 +1826,12 @@ impl App {
                 self.help_scroll = 0;
             }
             KeyCode::Char('S') => self.service_selector.show(self.current_service),
-            KeyCode::Char('R') => self.location_selector.show(self.current_location),
+            KeyCode::Char('R') => {
+                App::trigger_locations(self, _event_tx);
+                let rows = self.location_rows();
+                let loaded = matches!(self.subscription_locations(), Some(crate::lazy::Lazy::Loaded(_)));
+                self.location_selector.show(&self.current_location, rows, loaded);
+            }
             KeyCode::Char('P') => self
                 .subscription_selector
                 .show(self.azure_clients.current_subscription()),
@@ -1622,14 +1847,11 @@ impl App {
                 }
             }
             KeyCode::Char('C') => {
+                // Copied verbatim: `--ids` carries the subscription, and the
+                // commands without `--ids` carry `--subscription` themselves.
                 let cmd = self.get_selected_resource().and_then(|r| r.cli_command());
                 match cmd {
-                    Some(mut cmd) => {
-                        if let Some(sub) = self.azure_clients.current_subscription() {
-                            cmd.push_str(&format!(" --subscription {}", sub));
-                        }
-                        self.copy_to_clipboard(&cmd, "az command");
-                    }
+                    Some(cmd) => self.copy_to_clipboard(&cmd, "az command"),
                     None => self.error_message = Some("No CLI command for this resource".into()),
                 }
             }

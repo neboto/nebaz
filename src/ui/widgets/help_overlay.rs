@@ -72,6 +72,8 @@ const RIGHT_SECTIONS: &[Section] = &[
         entries: &[
             ("/", "fuzzy search"),
             ("@svc text", "switch service + search"),
+            ("@rg @disk @nsg …", "switch to a sub-tab"),
+            ("rg:name", "resource group filter"),
             ("tag:k=v", "exact tag filter"),
             ("Tab", "complete @prefix"),
         ],

@@ -128,12 +128,14 @@ impl Config {
     pub fn default_service_type(&self) -> Option<ServiceType> {
         self.default_service
             .as_deref()
-            .and_then(ServiceType::from_prefix)
+            .and_then(ServiceType::from_prefix_service)
     }
 
-    /// Resolve `default_location` to a `Location` (None if unset/unknown).
+    /// Resolve `default_location` to a `Location` (None if unset). Any
+    /// string is accepted — there is no location table to validate against
+    /// (ADR 0002); an unknown value filters to the empty state.
     pub fn default_location_typed(&self) -> Option<Location> {
-        self.default_location.as_deref().and_then(Location::from_str)
+        self.default_location.as_deref().map(Location::parse)
     }
 
     /// Resolve `cache_ttls` prefixes to typed per-service overrides. Unknown
@@ -145,7 +147,7 @@ impl Config {
             .iter()
             .flatten()
             .filter_map(|(prefix, secs)| {
-                ServiceType::from_prefix(prefix)
+                ServiceType::from_prefix_service(prefix)
                     .map(|s| (s, std::time::Duration::from_secs(*secs)))
             })
             .collect()
@@ -166,7 +168,7 @@ default_location = "WestEurope"
         )
         .unwrap();
         assert_eq!(config.default_service_type(), Some(ServiceType::VirtualMachines));
-        assert_eq!(config.default_location_typed(), Some(Location::WestEurope));
+        assert_eq!(config.default_location_typed(), Some(Location::Named("westeurope".into())));
     }
 
     #[test]

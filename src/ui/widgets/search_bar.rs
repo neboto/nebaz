@@ -73,7 +73,7 @@ pub fn render_search_bar(app: &App, area: Rect, frame: &mut Frame) {
         Line::from(vec![
             prompt,
             Span::styled(
-                "Press / to search, @service to switch, tag:key=value to filter",
+                "Press / to search, @service to switch, rg:name and tag:key=value to filter",
                 Style::default()
                     .fg(theme::text_dim())
                     .add_modifier(Modifier::ITALIC),
@@ -185,9 +185,11 @@ pub fn render_service_completions(app: &App, search_area: Rect, frame: &mut Fram
 
     let partial_lower = partial.to_lowercase();
 
-    let matches: Vec<ServiceType> = ServiceType::all()
+    // Canonical service prefixes first, then the routing prefixes that
+    // land on a sub-tab (`@disk`, `@nsg`, …).
+    let matches: Vec<&'static str> = ServiceType::completion_prefixes()
         .into_iter()
-        .filter(|s| s.prefix()[1..].starts_with(partial_lower.as_str()))
+        .filter(|p| p[1..].starts_with(partial_lower.as_str()))
         .collect();
 
     if matches.is_empty() {
@@ -201,7 +203,7 @@ pub fn render_service_completions(app: &App, search_area: Rect, frame: &mut Fram
 
     let mut spans: Vec<Span> = vec![Span::raw("  ")];
 
-    for (i, service) in matches.iter().enumerate() {
+    for (i, prefix) in matches.iter().enumerate() {
         if i > 0 {
             spans.push(Span::raw("  "));
         }
@@ -211,7 +213,7 @@ pub fn render_service_completions(app: &App, search_area: Rect, frame: &mut Fram
         } else {
             Style::default().fg(theme::text_dim())
         };
-        spans.push(Span::styled(service.prefix().to_string(), style));
+        spans.push(Span::styled(prefix.to_string(), style));
     }
 
     spans.push(Span::styled(

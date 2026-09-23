@@ -94,10 +94,16 @@ impl<T> LazyMap<T> {
 pub struct LazyStore {
     epoch: u64,
 
+    // ── Scoping ──────────────────────────────────────────────────────────
+    /// `GET /subscriptions/{id}/locations`, keyed by subscription id: what
+    /// the `R` picker merges with the current list's own locations. One
+    /// fetch per subscription; resets with the store on a switch.
+    pub locations: LazyMap<Vec<crate::azure::location::LocationInfo>>,
+
     // ── Skeleton ─────────────────────────────────────────────────────────
     /// The stub resource's lazily-fetched detail text, keyed by ARM id.
     /// Exists so the trigger → apply-closure → render path is exercised
-    /// end-to-end; the first real service replaces it.
+    /// end-to-end; the remaining stub services still use it.
     pub stub_details: LazyMap<String>,
 }
 

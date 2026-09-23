@@ -211,10 +211,7 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
             // subscription-wide and the `R` slot thins it client-side.
             else if app.location_hidden_count > 0 && app.list_state_filter.is_none() {
                 (
-                    format!(
-                        "No resources in {}",
-                        app.current_location.display_name()
-                    ),
+                    format!("No resources in {}", app.location_label()),
                     format!(
                         "{} in other locations · R change location filter",
                         app.location_hidden_count

@@ -155,27 +155,45 @@ pub trait Resource: Send + Sync + Debug {
         None
     }
 
-    /// The Azure portal page for this resource. Every ARM id has one, so
-    /// unlike neboto's `console_url(region)` this needs no region argument
-    /// and defaults from `id()`; override only for rows with no ARM id.
-    fn portal_url(&self) -> Option<String> {
-        let id = self.id();
-        if id.starts_with("/subscriptions/") {
-            Some(format!("https://portal.azure.com/#@/resource{}", id))
-        } else {
-            None
-        }
+    /// The Entra tenant this resource's subscription belongs to, when the
+    /// provider knows it. Only used to qualify the portal link.
+    fn tenant_id(&self) -> Option<&str> {
+        None
     }
 
-    /// The `az` CLI command that fetches this resource — the service part
-    /// only (`az vm show --ids /subscriptions/…`); the app appends
-    /// `--subscription` from the current context and `C` copies it.
-    /// **Read commands only**: never a mutation, and never one that reveals a
-    /// secret value (Key Vault maps to `az keyvault secret list`, never
-    /// `secret show`). Quote values with [`shell_quote`].
+    /// The Azure portal page for this resource. Every ARM id has one, so
+    /// unlike neboto's `console_url(region)` this needs no region argument
+    /// and defaults from `id()` (tenant-qualified when `tenant_id()` is
+    /// known); override only for rows with no ARM id.
+    fn portal_url(&self) -> Option<String> {
+        portal_url_for(self.id(), self.tenant_id())
+    }
+
+    /// The `az` CLI command that fetches this resource, complete: `C`
+    /// copies it verbatim. Use `--ids <ARM id>` wherever `az` supports it
+    /// and **never** append `--subscription` to such a command (the id
+    /// carries the subscription); only commands without `--ids`
+    /// (`az account show`, `az group show -n`) carry `--subscription`
+    /// themselves. **Read commands only**: never a mutation, and never one
+    /// that reveals a secret value (Key Vault maps to `az keyvault secret
+    /// list`, never `secret show`). Quote values with [`shell_quote`].
     fn cli_command(&self) -> Option<String> {
         None
     }
+}
+
+/// The portal deep link for an ARM id: `#@{tenant}/resource{id}` when the
+/// tenant is known, else `#@/resource{id}` (the portal then picks the
+/// signed-in directory). `None` for anything that is not an ARM id.
+pub fn portal_url_for(id: &str, tenant: Option<&str>) -> Option<String> {
+    if !id.starts_with("/subscriptions/") {
+        return None;
+    }
+    Some(format!(
+        "https://portal.azure.com/#@{}/resource{}",
+        tenant.unwrap_or(""),
+        id
+    ))
 }
 
 /// The `resourceGroups/{name}` segment of an ARM id, case-insensitively.
@@ -210,7 +228,21 @@ pub fn shell_quote(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{native_state_label, resource_group_of, shell_quote, ResourceState};
+    use super::{native_state_label, portal_url_for, resource_group_of, shell_quote, ResourceState};
+
+    #[test]
+    fn portal_url_is_tenant_qualified_when_the_tenant_is_known() {
+        let id = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1";
+        assert_eq!(
+            portal_url_for(id, Some("t-1")).as_deref(),
+            Some("https://portal.azure.com/#@t-1/resource/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1")
+        );
+        assert_eq!(
+            portal_url_for(id, None).as_deref(),
+            Some("https://portal.azure.com/#@/resource/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1")
+        );
+        assert_eq!(portal_url_for("not-an-arm-id", None), None);
+    }
 
     #[test]
     fn native_state_label_prefers_the_resource_word_over_the_bucket() {

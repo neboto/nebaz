@@ -3,7 +3,7 @@
 //! section to trigger. Replaced service by service as the catalog lands.
 
 use crate::azure::resource::{Resource, ResourceState};
-use crate::azure::service::{AzureService, ServiceType};
+use crate::azure::service::{AzureService, JumpView, ServiceType};
 use crate::error::Result;
 use crate::lazy::Lazy;
 use async_trait::async_trait;
@@ -126,10 +126,13 @@ impl AzureService for StubService {
         self.service.name()
     }
 
-    async fn list_resources(&self) -> Result<Vec<Box<dyn Resource>>> {
+    async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
         // A short async gap so the loading path (spinner, streaming, the
         // list-load generation guard) is observable rather than instant.
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        // Every sub-tab of a stub service shows the same rows; only the
+        // ids differ so the cache keeps them apart.
+        let _ = view;
         Ok(vec![
             self.row(1, "eastus", ResourceState::Running),
             self.row(2, "westeurope", ResourceState::Stopped),
@@ -140,7 +143,7 @@ impl AzureService for StubService {
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
-        self.list_resources()
+        self.list_resources(self.service.default_view())
             .await?
             .into_iter()
             .find(|r| r.id() == id)

@@ -30,7 +30,7 @@ use ui::theme;
 use ui::widgets::{
     banner, details_pane, help_overlay, jump_list, location_selector, macro_picker,
     message_log, resource_list, search_bar, service_selector, service_tabs, splash,
-    subscription_selector,
+    subscription_selector, subtab_bar,
 };
 
 fn main() -> Result<()> {
@@ -58,6 +58,7 @@ async fn run(cli: cli::Cli) -> Result<()> {
         app.load_service_resources();
     }
     app.spawn_subscription_info_fetch(&event_tx);
+    App::trigger_locations(&mut app, &event_tx);
 
     while app.running {
         if app.should_load_resources() {
@@ -160,8 +161,9 @@ fn spawn_input_tasks(event_tx: &tokio::sync::mpsc::UnboundedSender<event::Event>
 /// Render one full frame — everything the main loop draws, factored out of
 /// the draw closure so harness tests can render to a `TestBackend`.
 fn render_app(app: &App, frame: &mut ratatui::Frame) {
-    // Sub-tab rows come with the per-service view enums (catalog tickets).
-    let show_sub_tabs = false;
+    // A service with more than one sub-tab gets the sub-tab row.
+    let sub_tabs = app.sub_tab_chips();
+    let show_sub_tabs = !sub_tabs.is_empty();
     // Hide the top banner on the welcome splash — it has its own logo.
     let show_banner = app.banner_visible && app.current_service.is_some();
     let layout = AppLayout::new(frame.size(), show_banner, show_sub_tabs, app.layout_mode);
@@ -171,6 +173,9 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     }
     service_tabs::render_service_tabs(app, layout.tabs_area, frame);
     search_bar::render_search_bar(app, layout.search_area, frame);
+    if let Some(area) = layout.sub_tabs_area {
+        subtab_bar::render_subtab_bar(app, area, frame, &sub_tabs);
+    }
 
     if app.current_service.is_none() {
         let rl = layout.resource_list_area;
@@ -197,7 +202,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     if app.location_selector.visible {
         location_selector::render_location_selector(
             &app.location_selector,
-            app.current_location,
+            &app.current_location,
             frame,
         );
     }
@@ -285,11 +290,6 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
             ),
             Span::styled(success.clone(), Style::default().fg(theme::success())),
         ])
-    } else if let Some(sub) = &app.switching_subscription {
-        Line::from(Span::styled(
-            format!(" {} Switching to {}…", theme::spinner(app.tick_count), sub),
-            Style::default().fg(theme::warning()),
-        ))
     } else if app.show_loading_indicator() {
         let service_name = app
             .current_service
@@ -391,7 +391,7 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
         right_spans.push(Span::styled(label, Style::default().fg(theme::text_dim())));
     }
     right_spans.push(Span::styled(
-        app.current_location.display_name().to_string(),
+        app.location_label(),
         Style::default().fg(theme::brand()),
     ));
     right_spans.push(Span::styled(
