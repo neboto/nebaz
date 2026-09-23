@@ -91,7 +91,7 @@ copying files, never by depending on them.
   tenants, no tenant picker); explicit `auth = "cli"` config key, no
   auto-detection; one app-wide auth error line instead of per-service
   errors; `endpoint_url` is the live ARM base URL and the scope derives
-  from it; flags stay `-s -r -p`; scope spelling verified in the build.
+  from it; flags stay `-s -r -p`; the double-slash ARM scope is verified.
 
 ## Not yet specified
 

@@ -26,8 +26,8 @@ tenant, because there is no `az` cache to read.
 The ARM base URL is `endpoint_url` (default `https://management.azure.com`),
 and the token scope is derived from it as `{endpoint}//.default` — the double
 slash is what Entra documents for ARM's trailing-slash resource identifier.
-The build session verifies that spelling once against `az` before relying on
-it.
+Both spellings were checked against `az account get-access-token` and both
+return a token; the documented one is used.
 
 ## Considered options
 

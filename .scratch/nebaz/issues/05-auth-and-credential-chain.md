@@ -65,10 +65,10 @@ credential source, auth error). No code changed on this map.
    rebuilds nothing; crossing tenants builds that tenant's pipeline once.
    No tenant picker; the `P` picker gets a tenant column.
 3. **Scope**: `{endpoint_url}//.default`, default
-   `https://management.azure.com//.default`. **Build-session check** on the
-   Azure machine: `az account get-access-token --scope 'https://management.azure.com//.default'`
-   and the single-slash spelling; keep whichever the CLI accepts for ARM
-   (Entra documents the double slash).
+   `https://management.azure.com//.default`. **Verified 2026-09-23** on the
+   Azure machine: `az account get-access-token --scope` returns a token for
+   both the double-slash and the single-slash spelling. The double slash is
+   the one Entra documents, so it is the one used; nothing left to check.
 4. **Failure surface**:
    - `az` not on PATH → exit non-zero before the TUI, one stderr line with
      the install link.
