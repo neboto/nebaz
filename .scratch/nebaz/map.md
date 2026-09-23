@@ -32,8 +32,11 @@ skeleton deltas both tickets listed and the Subscriptions service (the
 subscription list from `az account list`, resource groups from ARM, streamed
 per page) were built and committed as ordinary feature work (commits
 `20a83d1`, `3dbf9ba`, `94dcde7`), so the catalog ticket grills
-against an app showing real rows rather than the stub. Nothing else is
-built on this map.
+against an app showing real rows rather than the stub. Once the catalog
+resolved, the five remaining services were built to it the same way
+(commit `d2e02f4`, all six services real, stub gone). Nothing else is
+built on this map; the live-tenant checks the catalog lists happen on the
+Azure machine before ticket 09.
 
 ### Settled at charting (decisions made in the charting grill, no ticket)
 
