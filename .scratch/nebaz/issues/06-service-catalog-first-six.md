@@ -31,3 +31,14 @@ omits power state unless `statusOnly=true` (decide whether the row's state
 is worth that call); Key Vault has ARM `Secrets_List` / `Keys_List` (names
 only) but no certificates list. Storage RP list throttle: 100 calls / 5 min
 per subscription/region.
+
+## Comments
+
+**2026-09-23 — input from ticket 04.** The sub-tab layout is decided (see
+the table in [ticket 04's answer](04-provider-traits-and-scoping-model.md)):
+which types are sub-tabs, which are embedded children (subnets, node pools)
+and which are lazy children (containers, secret/key names, instance view).
+Left to this ticket per type: the `ResourceState` bucket + `state_label`
+mapping from `provisioningState` / `powerState`, the section descriptor,
+the `is_noise` rule, and the read-only `az … --ids` command. Vocabulary in
+`CONTEXT.md`: "node pool", never "agent pool".

@@ -75,6 +75,15 @@ copying files, never by depending on them.
 - [Create the neboto/nebaz repo](issues/03-create-nebaz-repo.md): live at
   https://github.com/neboto/nebaz — public, MIT, squash-only merges,
   `.scratch/` (this map) committed so every machine shares the tracker.
+- [Provider traits and scoping model](issues/04-provider-traits-and-scoping-model.md):
+  locked as ADR 0002 (+ ADR 0001 for the copy-not-depend fork) and a new
+  `CONTEXT.md` — `Location` is a string fed from the locations endpoint,
+  resource group is an `rg:` query token, list cache keyed
+  `(service, subscription, sub-tab)` survives a subscription switch while
+  the LazyStore (keyed by ARM id) is replaced; sub-tabs only for
+  subscription-wide or embedded lists (containers and secret names are lazy
+  sections); routing prefixes `@rg @disk @nic @subnet @nsg @pool`;
+  `--ids` commands, tenant-qualified portal links.
 
 ## Not yet specified
 
@@ -85,8 +94,8 @@ copying files, never by depending on them.
   (data plane, separate auth) is ever touched — probably not, but the
   neboto EKS pane precedent needs checking against what ARM alone offers.
 - **Which neboto behaviours have an Azure analog**: ownership ribbon (tags are
-  tags; CloudFormation → ARM deployments / Bicep), watch mode, console URL
-  (portal deep links from the ARM resource id), `is_noise`.
+  tags; CloudFormation → ARM deployments / Bicep), watch mode, `is_noise`
+  (portal deep links are settled: ticket 04).
 - **Watch mode vs. ARM throttling**: the Storage RP allows 100 list calls
   per 5 min per subscription/region; whether watch mode ships in the first
   release, and with what floor interval, needs a decision once the catalog

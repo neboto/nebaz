@@ -31,3 +31,16 @@ It does not cache tokens — rely on `azure_core`'s
 Azure CLI ≥ 2.54.0 required. Open: whether the ARM scope must be
 `https://management.azure.com//.default` (double slash) — verify in the
 prototype, not by reading.
+
+## Comments
+
+**2026-09-23 — input from ticket 04.** Decided there: a subscription switch
+keeps `AzureClients` (subscription is a value on the provider, not a client
+to rebuild), keeps the list cache and replaces the LazyStore. So this ticket
+owns the one case where that is not enough: a subscription in **another
+tenant**, where the token must be minted for that tenant. Also decided:
+`NavLocation` carries a subscription and a jump may switch it — which needs
+the subscription list this ticket sources (`az account list` vs the ARM
+subscriptions endpoint) to be available for validation. The `R` picker is
+fed from `GET /subscriptions/{id}/locations`, one extra call per
+subscription on the same pipeline.

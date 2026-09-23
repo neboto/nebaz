@@ -26,3 +26,11 @@ emits `Method::Get` — the CI script greps for any other method. RBAC `Reader`
 (`*/read`) per subscription is the server-side backstop; Key Vault secret
 *values* are never returned by the ARM list, and no data-plane vault call
 should exist in the codebase.
+
+## Comments
+
+**2026-09-23 — input from ticket 04.** Every `cli_command()` is an `az`
+**read** command using `--ids <ARM id>`; the app never appends
+`--subscription`. The guarantee this ticket designs should cover the copied
+command table as well as the HTTP layer (GET-only pipeline policy is the
+obvious backstop): Key Vault maps to `secret list`, never `secret show`.
