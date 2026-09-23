@@ -11,6 +11,10 @@ use crate::azure::location::{Location, LocationRow, ALL_DISPLAY};
 use crate::azure::resource::{Resource, ResourceState};
 use crate::azure::service::{JumpView, ServiceType};
 use crate::azure::services::stub::{stub_section_lines, StubDetailSection, StubResource};
+use crate::azure::services::subscriptions::{
+    resource_group_section_lines, subscription_section_lines, ResourceGroupDetailSection,
+    ResourceGroupRow, SubscriptionDetailSection, SubscriptionRow,
+};
 use crate::config::Config;
 use crate::error::Result;
 use crate::event::{Event, LoadProgress};
@@ -18,7 +22,7 @@ use crate::lazy::{LazyApply, LazyMap, LazyStore};
 use crate::macros::{Macro, MacroPlayer, MacroRecorder, MacroStep, PendingKey};
 use crate::search::fuzzy::FuzzyMatcher;
 use crate::search::query_parser::{parse_query, rg_filter_admits, split_rg_filters, split_tag_filters};
-use crate::ui::widgets::location_selector::LocationSelectorState;
+use crate::ui::widgets::location_selector::{EndpointState, LocationSelectorState};
 use crate::ui::widgets::service_selector::ServiceSelectorState;
 use crate::ui::widgets::subscription_selector::SubscriptionSelectorState;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
@@ -1035,11 +1039,53 @@ impl App {
     /// and the full region list whether or not the current list covers it.
     pub fn trigger_locations(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         let sub = app.subscription_key();
-        if sub.is_empty() {
+        app.trigger_locations_for(&sub, event_tx);
+    }
+
+    fn trigger_locations_for(&mut self, subscription: &str, event_tx: &mpsc::UnboundedSender<Event>) {
+        if subscription.is_empty() {
             return;
         }
-        let fut = app.azure_clients.locations_fetch(&sub);
-        app.trigger_lazy(|s| &mut s.locations, sub, event_tx, move || fut);
+        let fut = self.azure_clients.locations_fetch(subscription);
+        self.trigger_lazy(|s| &mut s.locations, subscription.to_string(), event_tx, move || fut);
+    }
+
+    /// On-enter hook for a subscription row's Locations section: the
+    /// selected row's own subscription, which may not be the current one.
+    pub fn trigger_selected_subscription_locations(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(sub) = app.selected_subscription_row_id() else {
+            return;
+        };
+        app.trigger_locations_for(&sub, event_tx);
+    }
+
+    /// On-enter hook for a subscription row's Details section:
+    /// `GET /subscriptions/{id}`, keyed by the row's ARM id.
+    pub fn trigger_subscription_details(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(sub) = app.selected_subscription_row_id() else {
+            return;
+        };
+        let key = format!("/subscriptions/{}", sub);
+        let fut = app.azure_clients.subscription_details_fetch(&sub);
+        app.trigger_lazy(|s| &mut s.subscription_details, key, event_tx, move || fut);
+    }
+
+    /// The bare subscription id of the selected row, when it is a
+    /// subscription row.
+    fn selected_subscription_row_id(&self) -> Option<String> {
+        self.get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<SubscriptionRow>())
+            .map(|r| r.subscription_id().to_string())
+    }
+
+    /// Where the locations endpoint list stands for the current
+    /// subscription, for the `R` picker's footer.
+    fn locations_endpoint_state(&self) -> EndpointState {
+        match self.subscription_locations() {
+            Some(crate::lazy::Lazy::Loaded(_)) => EndpointState::Loaded,
+            Some(crate::lazy::Lazy::Error(e)) => EndpointState::Failed(e.clone()),
+            _ => EndpointState::Loading,
+        }
     }
 
     /// On-enter hook for the stub pane's Details section.
@@ -1100,12 +1146,8 @@ impl App {
         let Some(resource) = self.get_selected_resource() else {
             return Vec::new();
         };
-        if let Some(stub) = resource.as_any().downcast_ref::<StubResource>() {
-            return stub_section_lines(
-                stub,
-                StubDetailSection::from_index(self.detail_section_idx),
-                self.lazy.stub_details.get(stub.id()),
-            );
+        if let Some(lines) = self.section_lines_for(resource, self.detail_section_idx) {
+            return lines;
         }
         let mut lines = resource.details();
         if !resource.tags().is_empty() {
@@ -1185,6 +1227,34 @@ impl App {
         crate::editor::spawn_editor_with_content(&text, ".json")
     }
 
+    /// Section `idx` of a resource with a section descriptor: the one
+    /// downcast per split-pane type. `None` for types without a descriptor.
+    fn section_lines_for(&self, resource: &dyn Resource, idx: usize) -> Option<Vec<(String, String)>> {
+        let any = resource.as_any();
+        if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {
+            return Some(subscription_section_lines(
+                sub,
+                SubscriptionDetailSection::from_index(idx),
+                self.lazy.subscription_details.get(sub.id()),
+                self.lazy.locations.get(sub.subscription_id()),
+            ));
+        }
+        if let Some(rg) = any.downcast_ref::<ResourceGroupRow>() {
+            return Some(resource_group_section_lines(
+                rg,
+                ResourceGroupDetailSection::from_index(idx),
+            ));
+        }
+        if let Some(stub) = any.downcast_ref::<StubResource>() {
+            return Some(stub_section_lines(
+                stub,
+                StubDetailSection::from_index(idx),
+                self.lazy.stub_details.get(stub.id()),
+            ));
+        }
+        None
+    }
+
     /// Every section's lines, in descriptor order — the shape export,
     /// `$EDITOR` and (later) the flat view consume.
     pub fn detail_sections_snapshot(&self) -> Vec<(String, Vec<(String, String)>)> {
@@ -1194,20 +1264,13 @@ impl App {
         let Some(desc) = resource.detail_sections() else {
             return vec![("Details".to_string(), self.get_detail_lines())];
         };
-        let Some(stub) = resource.as_any().downcast_ref::<StubResource>() else {
-            return Vec::new();
-        };
         desc.sections
             .iter()
             .enumerate()
             .map(|(i, s)| {
                 (
                     s.label.to_string(),
-                    stub_section_lines(
-                        stub,
-                        StubDetailSection::from_index(i),
-                        self.lazy.stub_details.get(stub.id()),
-                    ),
+                    self.section_lines_for(resource, i).unwrap_or_default(),
                 )
             })
             .collect()
@@ -1521,11 +1584,8 @@ impl App {
                     // The locations list may have landed while `R` is open.
                     if self.location_selector.visible {
                         let rows = self.location_rows();
-                        let loaded = matches!(
-                            self.subscription_locations(),
-                            Some(crate::lazy::Lazy::Loaded(_))
-                        );
-                        self.location_selector.refresh_rows(rows, loaded);
+                        let state = self.locations_endpoint_state();
+                        self.location_selector.refresh_rows(rows, state);
                     }
                 }
             }
@@ -1899,8 +1959,8 @@ impl App {
             KeyCode::Char('R') => {
                 App::trigger_locations(self, _event_tx);
                 let rows = self.location_rows();
-                let loaded = matches!(self.subscription_locations(), Some(crate::lazy::Lazy::Loaded(_)));
-                self.location_selector.show(&self.current_location, rows, loaded);
+                let state = self.locations_endpoint_state();
+                self.location_selector.show(&self.current_location, rows, state);
             }
             KeyCode::Char('P') => self.open_subscription_picker(),
             KeyCode::Char('b') => self.banner_visible = !self.banner_visible,

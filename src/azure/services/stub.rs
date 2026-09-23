@@ -4,6 +4,7 @@
 
 use crate::azure::resource::{Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::{error_rows, tag_rows};
 use crate::error::Result;
 use crate::lazy::Lazy;
 use async_trait::async_trait;
@@ -171,23 +172,6 @@ pub fn stub_section_lines(
             ],
             Some(Lazy::Error(e)) => error_rows(e),
         },
-        StubDetailSection::Tags => {
-            if r.tags.is_empty() {
-                return vec![(String::new(), "No tags".into())];
-            }
-            let mut tags: Vec<_> = r.tags.iter().collect();
-            tags.sort();
-            tags.into_iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect()
-        }
+        StubDetailSection::Tags => tag_rows(&r.tags),
     }
-}
-
-/// The one shape for a lazy-fetch failure in a section body.
-pub fn error_rows(err: &str) -> Vec<(String, String)> {
-    vec![
-        (String::new(), String::new()),
-        (String::new(), format!("⚠ {}", err)),
-    ]
 }

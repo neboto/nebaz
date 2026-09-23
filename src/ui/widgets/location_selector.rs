@@ -24,12 +24,21 @@ pub struct LocationSelectorState {
     pub selected_index: usize,
     pub query: String,
     rows: Vec<LocationRow>,
-    /// Whether the locations endpoint had landed when the picker opened —
-    /// the footer says so while the list is only what the rows carry.
-    endpoint_loaded: bool,
+    /// Where the locations endpoint list stands — the footer says so while
+    /// the list is only what the rows carry.
+    endpoint: EndpointState,
     /// List-area height recorded at render time (`Cell`: render only sees
     /// `&self`), so `Ctrl-d`/`Ctrl-u` page jumps scale with the actual popup.
     viewport: std::cell::Cell<u16>,
+}
+
+/// The state of the subscription's locations endpoint list, as the
+/// picker reports it in its footer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EndpointState {
+    Loading,
+    Loaded,
+    Failed(String),
 }
 
 fn matches(row: &LocationRow, query: &str) -> bool {
@@ -47,15 +56,15 @@ impl LocationSelectorState {
             selected_index: 0,
             query: String::new(),
             rows: Vec::new(),
-            endpoint_loaded: false,
+            endpoint: EndpointState::Loading,
             viewport: std::cell::Cell::new(0),
         }
     }
 
     /// Show the modal over a fresh row set, selecting the current location.
-    pub fn show(&mut self, current_location: &Location, rows: Vec<LocationRow>, endpoint_loaded: bool) {
+    pub fn show(&mut self, current_location: &Location, rows: Vec<LocationRow>, endpoint: EndpointState) {
         self.rows = rows;
-        self.endpoint_loaded = endpoint_loaded;
+        self.endpoint = endpoint;
         self.visible = true;
         self.query.clear();
         self.selected_index = self
@@ -66,10 +75,10 @@ impl LocationSelectorState {
     }
 
     /// Replace the rows while open (the endpoint list landed after `R`).
-    pub fn refresh_rows(&mut self, rows: Vec<LocationRow>, endpoint_loaded: bool) {
+    pub fn refresh_rows(&mut self, rows: Vec<LocationRow>, endpoint: EndpointState) {
         let keep = self.selected_location();
         self.rows = rows;
-        self.endpoint_loaded = endpoint_loaded;
+        self.endpoint = endpoint;
         if let Some(loc) = keep {
             if let Some(pos) = self.filtered().iter().position(|r| r.location == loc) {
                 self.selected_index = pos;
@@ -161,25 +170,25 @@ pub fn render_location_selector(
     frame.render_widget(Clear, area);
 
     let (pos, total) = state.position();
-    let hints: &[(&str, &str)] = if state.endpoint_loaded {
-        &[
-            ("type", "filter"),
-            ("↑/↓", "move"),
-            ("^d/^u", "page"),
-            ("⏎", "select"),
-            ("Esc", "close"),
-        ]
-    } else {
-        &[
-            ("type", "filter"),
-            ("⏎", "select"),
-            ("Esc", "close"),
-            ("·", "location list loading — showing this view's locations"),
-        ]
-    };
+    let mut hints: Vec<(&str, &str)> = vec![
+        ("type", "filter"),
+        ("↑/↓", "move"),
+        ("^d/^u", "page"),
+        ("⏎", "select"),
+        ("Esc", "close"),
+    ];
+    let note: String;
+    match &state.endpoint {
+        EndpointState::Loaded => {}
+        EndpointState::Loading => hints.push(("…", "loading the subscription's location list")),
+        EndpointState::Failed(e) => {
+            note = format!("location list failed: {}", e);
+            hints.push(("⚠", note.as_str()));
+        }
+    }
     let block = theme::popup_block("Filter by Location")
         .title(
-            Title::from(theme::hint_line(hints))
+            Title::from(theme::hint_line(&hints))
                 .position(Position::Bottom)
                 .alignment(Alignment::Center),
         )
@@ -330,7 +339,7 @@ mod tests {
     #[test]
     fn show_selects_the_current_location_and_filters_by_name_or_display() {
         let mut s = LocationSelectorState::new();
-        s.show(&Location::parse("westeurope"), rows(), true);
+        s.show(&Location::parse("westeurope"), rows(), EndpointState::Loaded);
         assert_eq!(s.selected_index, 2);
         s.push_char('e');
         s.push_char('a');
@@ -344,7 +353,7 @@ mod tests {
     #[test]
     fn refresh_keeps_the_selection_by_location() {
         let mut s = LocationSelectorState::new();
-        s.show(&Location::All, rows(), false);
+        s.show(&Location::All, rows(), EndpointState::Loading);
         s.next();
         assert_eq!(s.selected_location(), Some(Location::parse("eastus")));
         let mut more = rows();
@@ -356,7 +365,7 @@ mod tests {
                 count: 0,
             },
         );
-        s.refresh_rows(more, true);
+        s.refresh_rows(more, EndpointState::Loaded);
         assert_eq!(s.selected_location(), Some(Location::parse("eastus")));
     }
 }

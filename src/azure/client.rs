@@ -14,6 +14,7 @@ use crate::azure::auth::{az_account_list, AuthError, CredentialSource, Subscript
 use crate::azure::location::LocationInfo;
 use crate::azure::service::{AzureService, ServiceType};
 use crate::azure::services::stub::StubService;
+use crate::azure::services::subscriptions::{SubscriptionsService, SUBSCRIPTIONS_API_VERSION};
 use crate::config::Config;
 use crate::error::{Error, Result};
 use std::collections::HashMap;
@@ -237,14 +238,41 @@ impl AzureClients {
     }
 
     /// The provider for a service, holding the current subscription's ARM
-    /// client. Every service is the stub until its catalog lands.
+    /// client (or the auth condition that prevents one, which the provider
+    /// reports as its load error). Every other service is the stub until
+    /// its catalog lands.
     pub fn service(&self, service: ServiceType) -> Arc<dyn AzureService> {
-        Arc::new(StubService::new(
-            service,
-            self.current_subscription()
-                .unwrap_or("00000000-0000-0000-0000-000000000000")
-                .to_string(),
-        ))
+        match service {
+            ServiceType::Subscriptions => Arc::new(SubscriptionsService::new(
+                self.current_arm().map_err(|e| {
+                    e.auth_error()
+                        .unwrap_or_else(|| AuthError::Other(e.to_string()))
+                }),
+                self.current_entry().cloned(),
+                self.subscriptions.clone(),
+            )),
+            other => Arc::new(StubService::new(
+                other,
+                self.current_subscription()
+                    .unwrap_or("00000000-0000-0000-0000-000000000000")
+                    .to_string(),
+            )),
+        }
+    }
+
+    /// `GET /subscriptions/{id}` for a subscription row's Details section.
+    pub fn subscription_details_fetch(
+        &self,
+        subscription: &str,
+    ) -> impl Future<Output = std::result::Result<serde_json::Value, String>> + Send + 'static {
+        let arm = self.arm_for_subscription(subscription);
+        let path = format!("/subscriptions/{}", subscription);
+        async move {
+            let arm = arm.map_err(|e| e.to_string())?;
+            arm.get(&path, SUBSCRIPTIONS_API_VERSION)
+                .await
+                .map_err(|e| e.to_string())
+        }
     }
 
     /// The locations list for a subscription

@@ -13,7 +13,10 @@ use crate::azure::auth::{CliCredential, CredentialSource};
 use crate::error::{Error, Result};
 use azure_core::credentials::TokenCredential;
 use azure_core::http::policies::auth::BearerTokenAuthorizationPolicy;
-use azure_core::http::{ClientOptions, Context, Method, Pipeline, Request, Url};
+use azure_core::http::{
+    ClientOptions, Context, ExponentialRetryOptions, Method, Pipeline, Request, RetryOptions, Url,
+};
+use azure_core::time::Duration;
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -46,10 +49,22 @@ impl ArmClient {
         let endpoint = parse_endpoint(endpoint)?;
         let scope = auth_scope!(endpoint.as_str().trim_end_matches('/'));
         let bearer = BearerTokenAuthorizationPolicy::new(credential, [scope]);
+        // The SDK default is 8 exponential retries up to 30 s apart — over a
+        // minute before a dead endpoint shows in the status bar. A TUI wants
+        // a few short ones; ARM's 429 `Retry-After` is still honoured.
+        let options = ClientOptions {
+            retry: RetryOptions::exponential(ExponentialRetryOptions {
+                initial_delay: Duration::milliseconds(500),
+                max_retries: 3,
+                max_total_elapsed: Duration::seconds(20),
+                max_delay: Duration::seconds(4),
+            }),
+            ..Default::default()
+        };
         let pipeline = Pipeline::new(
             Some("nebaz"),
             Some(env!("CARGO_PKG_VERSION")),
-            ClientOptions::default(),
+            options,
             vec![Arc::new(bearer)],
             Vec::new(),
             None,

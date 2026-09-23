@@ -62,8 +62,11 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 | `src/app.rs` | ~1950 | `src/app.rs` (30 233 lines, per-service) — same conventions: state only here, mutated only in `handle_event`/`handle_key`, widgets read `&App` |
 | `src/main.rs` | 420 | `src/main.rs` (839) — run loop, `$EDITOR` teardown and status bar ported by hand; the 50-arm sub-tab router and lens overlays are not |
 | `src/ui/widgets/details_pane.rs` | 263 | `src/ui/widgets/details_pane.rs` (42 408) — the `header | rule | tabs | rule | body` skeleton, `descriptor_tabs`, `style_detail_row` conventions, `spin_loading_row` |
-| `src/azure/client.rs` | 58 | `src/aws/client.rs` (957, entirely AWS SDK / STS / profile-file code) — stub factory; auth ticket fills it |
-| `src/azure/services/stub.rs` | 190 | any `src/aws/services/*.rs` — the `sections!` + `*_section_lines` + `error_rows` shape a real service follows |
+| `src/azure/client.rs` | ~330 | `src/aws/client.rs` (957, entirely AWS SDK / STS / profile-file code) — `az account list` subscription table, one `ArmClient` per tenant built on demand, startup subscription resolution (ADR 0003) |
+| `src/azure/auth.rs` | ~360 | `src/aws/client.rs` (credential half) — `CredentialSource`, the classifying/timeout `TokenCredential` wrapper, `AuthError`, `az account list` parsing |
+| `src/azure/arm.rs` | ~230 | `src/aws/pagination.rs` (in spirit) — the one `GET` constructor, `nextLink` paging, the `{endpoint}//.default` scope |
+| `src/azure/services/subscriptions.rs` | ~560 | `src/aws/services/organizations.rs` (in spirit) — the first real service: subscription rows from the CLI list, resource groups from ARM, streamed per page |
+| `src/azure/services/stub.rs` | ~180 | any `src/aws/services/*.rs` — the `sections!` + `*_section_lines` shape a real service follows; still serves the five services without a catalog |
 
 ## Not ported (deliberately)
 
@@ -75,8 +78,9 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 
 ## Copied but not yet wired (dead-code warnings at build)
 
-`subtab_bar` (until a service has sub-tab views), `parse_all_query` (`@all`
-cross-service search), `export_detail_multi` / `multi_detail_csv` (deep
-export over a list selection), `shell_quote`, `native_state_label`,
-`AppLayout::sub_tabs_area`. Each is a Tier-1 or fog feature the first
-services light up; the warnings are the to-do list.
+`parse_all_query` (`@all` cross-service search), `export_detail_multi` /
+`multi_detail_csv` (deep export over a list selection), `native_state_label`
+(the first per-type state mapping in the catalog uses it). Each is a Tier-1
+or fog feature the next services light up; the warnings are the to-do list.
+`subtab_bar`, `AppLayout::sub_tabs_area` and `shell_quote` lit up with the
+sub-tab model and the Subscriptions service.

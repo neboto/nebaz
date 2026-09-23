@@ -100,6 +100,11 @@ pub struct LazyStore {
     /// fetch per subscription; resets with the store on a switch.
     pub locations: LazyMap<Vec<crate::azure::location::LocationInfo>>,
 
+    // ── Subscriptions ────────────────────────────────────────────────────
+    /// `GET /subscriptions/{id}` — the ARM subscription object behind a
+    /// subscription row's Details section, keyed by ARM id.
+    pub subscription_details: LazyMap<serde_json::Value>,
+
     // ── Skeleton ─────────────────────────────────────────────────────────
     /// The stub resource's lazily-fetched detail text, keyed by ARM id.
     /// Exists so the trigger → apply-closure → render path is exercised
