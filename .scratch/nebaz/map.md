@@ -2,7 +2,7 @@
 
 Label: wayfinder:map
 Tracker: local markdown (`~/work/nebaz/.scratch/nebaz/`, see plugin doc `issue-tracker-local.md`)
-Home: `~/work/nebaz` — the future `neboto/nebaz` repo itself (git-initialised, unpushed). Run wayfinder sessions from there, not from neboto-tui.
+Home: https://github.com/neboto/nebaz (local clone `~/work/nebaz`). Run wayfinder sessions from the clone, not from neboto-tui. The map is committed, so **pull before a session and push after it** — two machines edit this tracker.
 Charted: 2026-09-23
 
 ## Destination
@@ -72,6 +72,9 @@ copying files, never by depending on them.
   proposal (`portal_url` from the ARM id, `location`, `resource_group`;
   trail/security-group hooks dropped) for ticket 04; per-file table in the
   repo's `docs/PORTED-FROM-NEBOTO.md`.
+- [Create the neboto/nebaz repo](issues/03-create-nebaz-repo.md): live at
+  https://github.com/neboto/nebaz — public, MIT, squash-only merges,
+  `.scratch/` (this map) committed so every machine shares the tracker.
 
 ## Not yet specified
 
