@@ -34,8 +34,23 @@ subscription does not invalidate them.
 _Avoid_: global (neboto's word for us-east-1-pinned services)
 
 **Tenant**:
-The Azure AD directory a subscription belongs to. One login may span several;
-which tenant a token is minted for is a credential concern, not a list one.
+The Entra directory a subscription belongs to. One login may span several;
+a token is minted for exactly one, so the tenant is what a credential is
+scoped to. There is no tenant picker: choosing a subscription chooses its
+tenant.
+_Avoid_: directory, Azure AD
+
+**Credential source**:
+Where tokens come from — the Azure CLI's login in the first release, a
+service principal or managed identity later. Chosen explicitly in config,
+never guessed from the environment.
+_Avoid_: credential chain (implies auto-detection)
+
+**Auth error**:
+The single, app-wide condition that tokens cannot be obtained, shown as one
+status-bar line with the fix. It replaces per-service load errors while it
+holds and clears on the next successful token.
+_Avoid_: per-service auth failure
 
 ### Resources
 

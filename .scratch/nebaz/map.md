@@ -85,6 +85,14 @@ copying files, never by depending on them.
   sections); routing prefixes `@rg @disk @nic @subnet @nsg @pool`;
   `--ids` commands, tenant-qualified portal links.
 
+- [Auth and the credential chain](issues/05-auth-and-credential-chain.md):
+  ADR 0003 — `AzureCliCredential` + bearer policy, **one pipeline per
+  tenant** built on demand; the `P` picker reads `az account list` (all
+  tenants, no tenant picker); explicit `auth = "cli"` config key, no
+  auto-detection; one app-wide auth error line instead of per-service
+  errors; `endpoint_url` is the live ARM base URL and the scope derives
+  from it; flags stay `-s -r -p`; scope spelling verified in the build.
+
 ## Not yet specified
 
 - **Key Vault surface**: which metadata to show (secret names/versions, keys,
@@ -100,15 +108,14 @@ copying files, never by depending on them.
   per 5 min per subscription/region; whether watch mode ships in the first
   release, and with what floor interval, needs a decision once the catalog
   (ticket 06) shows how many list calls one view costs.
-- **Emulator story**: Azurite covers storage only; whether an endpoint
-  override is worth carrying (the skeleton keeps `endpoint_url` in config
-  and an endpoint badge in the tab strip, both inert).
+- **Emulator and sovereign clouds**: `endpoint_url` is now the live ARM base
+  URL (ticket 05), so a sovereign cloud works by hand; whether to auto-detect
+  it from `az cloud show`, and whether Azurite (storage only) is worth an
+  emulator mode at all, is open.
 - **Two copied neboto behaviours with no Tier-1 entry**: `@all`
   cross-service cached search and list visual selection (`V` / `Ctrl-A`
   multi-row copy/export). The skeleton carries hooks for both; whether
   either is in the first release is ticket 09's call.
-- **Tenant switching / multi-tenant**: how `az login` tenants surface once
-  the subscription picker exists.
 - **Tier 2 rich views** (Azure Monitor metrics, Log Analytics tail, blob
   browser) and **Tier 3 lenses** (Activity Log timeline, referenced-by, NSG
   access) — deliberately fog for the first release; each needs its own

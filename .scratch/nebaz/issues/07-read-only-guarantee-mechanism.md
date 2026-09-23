@@ -34,3 +34,8 @@ should exist in the codebase.
 `--subscription`. The guarantee this ticket designs should cover the copied
 command table as well as the HTTP layer (GET-only pipeline policy is the
 obvious backstop): Key Vault maps to `secret list`, never `secret show`.
+
+**2026-09-23 — input from ticket 05.** Every ARM request goes through one
+`azure_core` pipeline per tenant (ADR 0003). That pipeline is the single
+choke point: a per-call policy that rejects any method but `GET` is the
+cheapest runtime backstop, on top of the CI check.

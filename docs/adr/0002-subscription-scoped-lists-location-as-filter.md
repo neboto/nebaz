@@ -51,7 +51,7 @@ compiled table would go stale the day Azure adds a region.
 
 - A subscription switch keeps the client and the list cache, replaces the
   LazyStore, and bumps the load generation. A tenant change is a credential
-  concern (ADR pending from the auth ticket).
+  concern: see ADR 0003.
 - Navigation history and bookmarks carry the subscription, so a jump into
   another subscription switches it first.
 - Copied `az` commands use `--ids <ARM id>` and never append
