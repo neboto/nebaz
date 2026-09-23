@@ -75,10 +75,45 @@ impl From<azure_core::Error> for Error {
                     Error::Azure(format!("{} {}: {}", status, code, msg))
                 }
             }
-            ErrorKind::Connection => Error::Azure(format!("connection failed: {}", e)),
-            _ => Error::Azure(e.to_string()),
+            ErrorKind::Connection => Error::Azure(format!("connection failed: {}", cause_chain(&e))),
+            _ => Error::Azure(cause_chain(&e)),
         }
     }
 }
 
+/// An error and every cause beneath it, outermost first: the retry policy
+/// wraps the transport error as its `source()`, and the transport error
+/// wraps the socket's, so `to_string()` alone says "retry policy expired"
+/// and hides the DNS, TLS or proxy failure that actually happened.
+pub fn cause_chain(e: &(dyn std::error::Error + 'static)) -> String {
+    let mut parts: Vec<String> = vec![e.to_string()];
+    let mut cur = e.source();
+    while let Some(c) = cur {
+        let text = c.to_string();
+        // Levels often repeat the text beneath them; keep each once.
+        if !parts.iter().any(|p| p.contains(&text)) {
+            parts.push(text);
+        }
+        cur = c.source();
+    }
+    parts.join(": ")
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connection_errors_carry_the_whole_cause_chain() {
+        use azure_core::error::ErrorKind;
+        let inner = azure_core::Error::with_message(ErrorKind::Connection, "dns error: no such host");
+        let outer = inner.with_context("retry policy expired and the request will no longer be retried");
+        let e: Error = outer.into();
+        let text = e.to_string();
+        assert!(text.contains("retry policy expired"), "{}", text);
+        assert!(text.contains("no such host"), "the root cause must survive: {}", text);
+        assert!(text.starts_with("Azure error: connection failed:"), "{}", text);
+    }
+}

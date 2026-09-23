@@ -111,7 +111,20 @@ impl ArmClient {
     }
 
     async fn send_json(&self, mut request: Request) -> Result<Value> {
-        let response = self.pipeline.send(&Context::new(), &mut request, None).await?;
+        let response = match self.pipeline.send(&Context::new(), &mut request, None).await {
+            Ok(r) => r,
+            // Name the host we could not reach: a wrong `endpoint_url`, a
+            // proxy or DNS problem all end here, and the status bar is the
+            // only place the user sees it.
+            Err(e) if matches!(e.kind(), azure_core::error::ErrorKind::Connection) => {
+                return Err(Error::Azure(format!(
+                    "cannot reach {}: {}",
+                    self.endpoint.host_str().unwrap_or("the endpoint"),
+                    crate::error::cause_chain(&e)
+                )));
+            }
+            Err(e) => return Err(e.into()),
+        };
         Ok(response.into_body().json::<Value>()?)
     }
 
