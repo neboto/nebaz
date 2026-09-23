@@ -71,6 +71,9 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 | `src/azure/services/storage.rs` | ~380 | `src/aws/services/s3.rs` (buckets) — storage accounts, lazy containers |
 | `src/azure/services/network.rs` | ~790 | `src/aws/services/vpc.rs` + the EC2 security-group rows — VNets, embedded subnets, NSGs with rule tables |
 | `src/azure/services/keyvault.rs` | ~450 | `src/aws/services/kms.rs` (in spirit) — vault metadata, lazy secret/key names through ARM |
+| `tests/readonly_guard.rs` | ~230 | `scripts/check-readonly.py` — a Rust integration test instead of Python: GET-only constructor, no data-plane host, `az` verbs, `PERMISSIONS.md` actions |
+| `PERMISSIONS.md` | — | `PERMISSIONS.md` — one built-in role (`Reader`) instead of an IAM action list per service; actions listed for a custom role |
+| `.github/workflows/ci.yml`, `.github/PULL_REQUEST_TEMPLATE.md` | — | copied; the guard step is gone because the guard runs inside `cargo test` |
 | `src/azure/services/aks.rs` | ~680 | `src/aws/services/eks.rs` — clusters, embedded node pools |
 
 ## Not ported (deliberately)

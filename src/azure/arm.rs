@@ -3,16 +3,20 @@
 //! tokens are cached and refreshed per tenant, and direct `GET`s against the
 //! management endpoint (ticket 01: no management-plane crate exists).
 //!
-//! **Read-only guarantee.** Every request this crate sends is built by
-//! [`ArmClient::get_request`] — the one place `Method::Get` appears — so a
-//! grep for `Method::` under `src/azure/` is the whole audit. Ticket 07
-//! turns that into a CI check.
+//! **Read-only guarantee** (ticket 07, `PERMISSIONS.md`). Every request
+//! this crate sends is built by [`ArmClient::get_request`] or
+//! [`ArmClient::get_link`] — the only places `Method::` appears — and the
+//! pipeline carries [`ReadOnlyPolicy`], which refuses any request whose
+//! method is not `GET` before it leaves the process. `tests/readonly_guard.rs`
+//! checks the source for both facts (and for `az` command verbs and
+//! data-plane hosts) under `cargo test`.
 
 use crate::auth_scope;
 use crate::azure::auth::{CliCredential, CredentialSource};
 use crate::error::{Error, Result};
 use azure_core::credentials::TokenCredential;
 use azure_core::http::policies::auth::BearerTokenAuthorizationPolicy;
+use azure_core::http::policies::{Policy, PolicyResult};
 use azure_core::http::{
     ClientOptions, Context, ExponentialRetryOptions, Method, Pipeline, Request, RetryOptions, Url,
 };
@@ -23,6 +27,29 @@ use std::sync::Arc;
 /// The public cloud's ARM base URL; `endpoint_url` overrides it for a
 /// sovereign cloud.
 pub const DEFAULT_ENDPOINT: &str = "https://management.azure.com";
+
+/// The runtime half of the read-only guarantee: a per-call policy that
+/// refuses every request whose method is not `GET`. Nothing in this crate
+/// can build such a request, so this exists for the day something does.
+#[derive(Debug)]
+pub struct ReadOnlyPolicy;
+
+#[async_trait::async_trait]
+impl Policy for ReadOnlyPolicy {
+    async fn send(&self, ctx: &Context, request: &mut Request, next: &[Arc<dyn Policy>]) -> PolicyResult {
+        if request.method() != Method::Get {
+            return Err(azure_core::Error::with_message(
+                azure_core::error::ErrorKind::Other,
+                format!(
+                    "nebaz is read-only: refused a {} request to {}",
+                    request.method(),
+                    request.url()
+                ),
+            ));
+        }
+        next[0].send(ctx, request, &next[1..]).await
+    }
+}
 
 /// One ARM connection: a pipeline whose bearer policy holds one tenant's
 /// token.
@@ -65,7 +92,7 @@ impl ArmClient {
             Some("nebaz"),
             Some(env!("CARGO_PKG_VERSION")),
             options,
-            vec![Arc::new(bearer)],
+            vec![Arc::new(ReadOnlyPolicy), Arc::new(bearer)],
             Vec::new(),
             None,
         );
@@ -265,6 +292,33 @@ mod tests {
     fn non_cli_sources_fail_with_not_supported_yet() {
         let err = ArmClient::new(CredentialSource::Environment, "t-1", DEFAULT_ENDPOINT).unwrap_err();
         assert!(err.to_string().contains("not supported yet"), "{}", err);
+    }
+
+    /// A stand-in for the transport: proves the policy let a `GET` through.
+    #[derive(Debug)]
+    struct Reached;
+
+    #[async_trait::async_trait]
+    impl Policy for Reached {
+        async fn send(&self, _: &Context, _: &mut Request, _: &[Arc<dyn Policy>]) -> PolicyResult {
+            Err(azure_core::Error::with_message(azure_core::error::ErrorKind::Other, "reached transport"))
+        }
+    }
+
+    #[tokio::test]
+    async fn the_read_only_policy_refuses_everything_but_get() {
+        let url = Url::parse("https://management.azure.com/subscriptions/0?api-version=2022-12-01").unwrap();
+        let next: Vec<Arc<dyn Policy>> = vec![Arc::new(Reached)];
+        let mut get = Request::new(url.clone(), Method::Get);
+        let err = ReadOnlyPolicy.send(&Context::new(), &mut get, &next).await.unwrap_err();
+        assert!(err.to_string().contains("reached transport"), "{}", err);
+        for method in [Method::Post, Method::Put, Method::Patch, Method::Delete] {
+            let mut req = Request::new(url.clone(), method);
+            let err = ReadOnlyPolicy.send(&Context::new(), &mut req, &next).await.unwrap_err();
+            let msg = err.to_string();
+            assert!(msg.contains("read-only") && msg.contains("refused"), "{}", msg);
+            assert!(!msg.contains("reached transport"), "{}", msg);
+        }
     }
 
     #[test]

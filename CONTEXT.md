@@ -111,6 +111,20 @@ The detail section every type carries listing the ARM ids the row points at
 line jumps to that resource. It is the app's only jump mechanism.
 _Avoid_: references, referenced-by (the reverse lens, not in the first release)
 
+**Read-only guarantee**:
+The promise that nebaz never changes anything in Azure, and never fetches a
+value that belongs to a data plane (a secret's value, a blob's body). It is
+held by three layers that fail independently: the process refuses to send
+anything but a read, the guard fails the build, and the granted role can
+only read.
+_Avoid_: read-only mode (it is not a mode; there is no other one)
+
+**Guard**:
+The test that fails the build when the source could break the read-only
+guarantee: another request builder, a data-plane host, a mutating `az`
+command, a non-read permission in the permissions doc.
+_Avoid_: linter, allowlist script (neboto's name for its Python version)
+
 ### Detail loading
 
 **Lazy section**:

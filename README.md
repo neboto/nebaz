@@ -32,7 +32,8 @@ cargo run -- -s sub    # subscriptions + resource groups (needs `az login`)
 cargo run -- -s rg     # straight to the Resource Groups sub-tab
 cargo run -- -s vm     # virtual machines (Tab / 2 / 3 for Disks, NICs)
 cargo run -- -s kv     # key vaults; 4 / 5 on a row list secret and key names
-cargo test             # all tests
+cargo test             # all tests, including the read-only guard
+cargo test --test readonly_guard   # just the guard (see "Why read-only")
 cargo clippy           # lint
 ```
 
@@ -55,3 +56,28 @@ knows across tenants; switching subscription switches tenant implicitly.
 `endpoint_url` sets the ARM base URL for a sovereign cloud. A missing `az`
 exits with the install link; not being logged in opens the TUI with one
 status line and `R` retries.
+
+## Why read-only
+
+This is a design constraint, not a missing feature. A `PERMISSIONS.md`
+that documents a pure `*/read` footprint is a trust asset: a security team
+can approve nebaz precisely *because* it cannot change anything, and the
+built-in `Reader` role at subscription scope is the whole requirement. One
+gated write action would change that conversation permanently.
+
+The promise is held at three layers, not by convention
+([`PERMISSIONS.md`](PERMISSIONS.md)):
+
+1. the single request constructor only builds `GET`s, and a pipeline policy
+   refuses any other method at runtime;
+2. `tests/readonly_guard.rs` fails `cargo test` if the source gains another
+   request builder, an HTTP client crate, a data-plane host (vault, blob),
+   a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
+3. `Reader` grants nothing a write could use.
+
+Key Vault is the case people ask about: nebaz lists secret and key
+**names** through ARM's control-plane actions, which never return a value,
+and no vault data-plane call exists in the codebase (the guard checks).
+
+Where a change is what you want, **`C`** copies the `az … show` command for
+the selected resource; edit the verb and run it yourself.
