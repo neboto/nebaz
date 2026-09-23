@@ -1,0 +1,75 @@
+# nebaz configuration — copy to ~/.config/nebaz/config.toml (or ~/.nebaz.toml,
+# or point $NEBAZ_CONFIG at it). Every key is optional.
+#
+# A file that fails to parse is reported in the status bar at startup rather
+# than being silently ignored.
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+
+# Where tokens come from. "cli" (the default, and the only source in this
+# release) uses the Azure CLI's login: run `az login` first. Service principal
+# ("environment") and managed identity ("managed-identity") are recognised but
+# not implemented yet. Env NEBAZ_AUTH overrides. Never auto-detected.
+# auth = "cli"
+
+# The Azure Resource Manager base URL. Only needed for a sovereign cloud
+# (Azure Government, Azure China); the token scope derives from it.
+# endpoint_url = "https://management.usgovcloudapi.net"
+
+# ── Startup ──────────────────────────────────────────────────────────────────
+
+# Service to load on startup, as an @-search prefix (with or without the @):
+# sub, rg, vm, disk, nic, storage, vnet, subnet, nsg, kv, aks, pool.
+# Omit this to show the welcome screen and load nothing until you pick one.
+# default_service = "vm"
+
+# Subscription to start in: an id or a display name from `az account list`.
+# `P` switches at runtime and switches tenant with it.
+# default_subscription = "Production"
+
+# Location filter to start with (an ARM location name such as "westeurope").
+# Lists are subscription-wide; the location is a client-side filter, so the
+# default is all locations. `R` switches at runtime.
+# default_location = "westeurope"
+
+# Show the ASCII banner at the top on startup (default: false).
+# show_banner = true
+
+# ── View defaults ────────────────────────────────────────────────────────────
+
+# Start in watch mode: auto-refresh the current view. `w` toggles it at
+# runtime, `+`/`-` step through the interval presets (5–300 seconds).
+# watch = true
+# watch_interval = 10
+
+# Start with the flat detail view — every section concatenated into one scroll
+# instead of one section at a time. `\` toggles it at runtime.
+# detail_flat = true
+
+# ── Caching ──────────────────────────────────────────────────────────────────
+
+# Base cache freshness in seconds (default 300). `r` invalidates and reloads
+# the current service regardless of TTL. The list cache is keyed by service,
+# subscription and sub-tab, so switching subscription and back is instant.
+# cache_ttl = 300
+
+# ── Theme ────────────────────────────────────────────────────────────────────
+
+# Preset: dark (default), light, solarized-dark, solarized-light, gruvbox-dark,
+# gruvbox-light, dracula, nord, catppuccin-mocha, catppuccin-latte.
+# Separators are optional; "mocha" and "latte" also resolve.
+# theme = "gruvbox-dark"
+
+# ── Tables (keep these last: a `[table]` header claims every key below it) ──
+
+# Per-color overrides by palette field name — #rrggbb or an ANSI color name.
+# An unknown key or an unparseable value warns at startup and is never fatal.
+# [theme_colors]
+# accent = "#ff8800"
+# warning = "yellow"
+
+# Per-service cache TTL overrides, keyed by any @-search prefix (without the
+# @). Unknown prefixes are ignored.
+# [cache_ttls]
+# storage = 600
+# vm = 120

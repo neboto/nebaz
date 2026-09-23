@@ -181,6 +181,31 @@ default_location = "WestEurope"
         assert_eq!(config.default_location_typed(), Some(Location::Named("westeurope".into())));
     }
 
+    /// `config.example.toml` documents every key; with each `# key = …`
+    /// line uncommented it must parse, so the example cannot drift from
+    /// the struct.
+    #[test]
+    fn the_example_config_parses_with_every_key_enabled() {
+        let example = include_str!("../config.example.toml");
+        let enabled: String = example
+            .lines()
+            .map(|l| match l.strip_prefix("# ") {
+                Some(rest) if rest.starts_with('[') || rest.split_once(" = ").is_some_and(|(k, _)| !k.contains(' ')) => rest,
+                _ => l,
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let config: Config = toml::from_str(&enabled).unwrap_or_else(|e| panic!("{}\n---\n{}", e, enabled));
+        assert_eq!(config.auth.as_deref(), Some("cli"));
+        assert_eq!(config.default_service.as_deref(), Some("vm"));
+        assert_eq!(config.default_subscription.as_deref(), Some("Production"));
+        assert_eq!(config.default_location.as_deref(), Some("westeurope"));
+        assert_eq!(config.endpoint_url.as_deref(), Some("https://management.usgovcloudapi.net"));
+        assert_eq!(config.theme.as_deref(), Some("gruvbox-dark"));
+        assert_eq!(config.cache_ttls.as_ref().and_then(|m| m.get("storage")), Some(&600));
+        assert_eq!(config.theme_colors.as_ref().and_then(|m| m.get("accent")).map(String::as_str), Some("#ff8800"));
+    }
+
     #[test]
     fn parses_the_auth_key() {
         let config: Config = toml::from_str(r#"auth = "cli""#).unwrap();

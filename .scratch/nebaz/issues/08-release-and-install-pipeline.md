@@ -1,7 +1,7 @@
 # 08 — Release and install pipeline
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 03
 Map: ../map.md
 

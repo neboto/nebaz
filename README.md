@@ -24,6 +24,55 @@ points at; Enter on one jumps there. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 
+## Install
+
+Prebuilt binaries for Linux (x86_64, aarch64) and macOS (Intel, Apple
+Silicon) are attached to every [GitHub release](https://github.com/neboto/nebaz/releases)
+(none cut yet; the pipeline is in place, see [`docs/RELEASING.md`](docs/RELEASING.md)).
+nebaz needs the **Azure CLI** (≥ 2.54.0), logged in with `az login`; the
+installer does not install it.
+
+**Installer** — picks the right binary, verifies its SHA-256 and, when the
+GitHub CLI is installed, its signed build provenance, and puts it in
+`~/.local/bin`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/neboto/nebaz/main/install.sh | sh
+```
+
+Prefer to read a script before running it? Download it first:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/neboto/nebaz/main/install.sh && less install.sh && sh install.sh
+```
+
+**Or with [cargo-binstall](https://github.com/cargo-bins/cargo-binstall)**:
+
+```bash
+cargo binstall --git https://github.com/neboto/nebaz nebaz
+```
+
+`NEBAZ_VERSION=v0.1.0` pins a version and `NEBAZ_INSTALL_DIR` changes the
+destination. Or grab the tarball for your platform from the releases page and
+put `nebaz` anywhere on your `PATH`.
+
+**Verify a download.** Every release archive carries a signed [build
+provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)
+naming the commit and workflow that built it. With the GitHub CLI:
+
+```bash
+gh attestation verify nebaz-aarch64-apple-darwin.tar.gz --repo neboto/nebaz
+```
+
+**From source** — needs a recent stable Rust toolchain:
+
+```bash
+cargo install --git https://github.com/neboto/nebaz
+```
+
+Configuration lives in `~/.config/nebaz/config.toml`; every key is
+documented in [`config.example.toml`](config.example.toml).
+
 ## Build
 
 ```bash

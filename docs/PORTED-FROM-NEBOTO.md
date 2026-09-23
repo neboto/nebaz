@@ -74,6 +74,7 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 | `tests/readonly_guard.rs` | ~230 | `scripts/check-readonly.py` — a Rust integration test instead of Python: GET-only constructor, no data-plane host, `az` verbs, `PERMISSIONS.md` actions |
 | `PERMISSIONS.md` | — | `PERMISSIONS.md` — one built-in role (`Reader`) instead of an IAM action list per service; actions listed for a custom role |
 | `.github/workflows/ci.yml`, `.github/PULL_REQUEST_TEMPLATE.md` | — | copied; the guard step is gone because the guard runs inside `cargo test` |
+| `.github/workflows/release.yml`, `install.sh`, `docs/RELEASING.md`, `.github/dependabot.yml`, `.github/rulesets/*.json`, `config.example.toml` | — | copied and renamed (ticket 08); the private-repo knobs (`RELEASE_ON_CI`, `BUILD_MACOS`, `scripts/release-local.sh`) are dropped because nebaz is public; the example config carries the Azure keys (`auth`, `endpoint_url`, `default_subscription`, `default_location`) |
 | `src/azure/services/aks.rs` | ~680 | `src/aws/services/eks.rs` — clusters, embedded node pools |
 
 ## Not ported (deliberately)
