@@ -99,6 +99,16 @@ pub fn cause_chain(e: &(dyn std::error::Error + 'static)) -> String {
     parts.join(": ")
 }
 
+/// The innermost cause's text alone — what to lead a status line with,
+/// since the bar truncates and the outer levels are policy noise.
+pub fn root_cause(e: &(dyn std::error::Error + 'static)) -> String {
+    let mut cur: &(dyn std::error::Error + 'static) = e;
+    while let Some(c) = cur.source() {
+        cur = c;
+    }
+    cur.to_string()
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
@@ -115,5 +125,8 @@ mod tests {
         assert!(text.contains("retry policy expired"), "{}", text);
         assert!(text.contains("no such host"), "the root cause must survive: {}", text);
         assert!(text.starts_with("Azure error: connection failed:"), "{}", text);
+        let again = azure_core::Error::with_message(ErrorKind::Connection, "dns error: no such host")
+            .with_context("retry policy expired");
+        assert_eq!(root_cause(&again), "dns error: no such host");
     }
 }

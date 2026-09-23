@@ -117,10 +117,14 @@ impl ArmClient {
             // proxy or DNS problem all end here, and the status bar is the
             // only place the user sees it.
             Err(e) if matches!(e.kind(), azure_core::error::ErrorKind::Connection) => {
+                let root = crate::error::root_cause(&e);
+                let chain = crate::error::cause_chain(&e);
+                let policy = if chain.contains("retry policy expired") { " (gave up after retries)" } else { "" };
                 return Err(Error::Azure(format!(
-                    "cannot reach {}: {}",
+                    "cannot reach {}: {}{}",
                     self.endpoint.host_str().unwrap_or("the endpoint"),
-                    crate::error::cause_chain(&e)
+                    root,
+                    policy
                 )));
             }
             Err(e) => return Err(e.into()),
