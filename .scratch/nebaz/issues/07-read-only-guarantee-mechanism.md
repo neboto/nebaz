@@ -1,7 +1,7 @@
 # 07 — Read-only guarantee mechanism
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01, 04
 Map: ../map.md
 
@@ -51,3 +51,50 @@ secret and key names) are section lines with no command, and the vault's
 sections name `az keyvault secret list` / `key list` as the read commands.
 Key Vault values are never fetched: the ARM `secrets` / `keys` lists cannot
 return them, and no data-plane vault scope exists in the app.
+
+## Answer
+
+**Resolved 2026-09-23 (grilled, one round, all recommendations accepted).**
+
+The guarantee is **three layers**, one more than neboto, because direct ARM
+REST makes a runtime layer cheap:
+
+1. **Runtime**: every request is built by the single constructor in
+   `src/azure/arm.rs` (`Method::Get` only), and the per-tenant pipeline
+   carries a `ReadOnlyPolicy` per-call policy that refuses any request whose
+   method is not `GET` before it leaves the process. A future helper or bug
+   cannot send a write.
+2. **Guard test**: `tests/readonly_guard.rs`, a Rust integration test under
+   `cargo test` (no Python step, runs for every contributor). Four rules:
+   - `Method::`, `Pipeline::new` and `BearerTokenAuthorizationPolicy` occur
+     only in `arm.rs`, and `Method::` only as `Method::Get`;
+   - no data-plane host anywhere in `src/` (`vault.azure.net`,
+     `blob.core.windows.net`, `dfs.core.windows.net`,
+     `file.core.windows.net`, `queue.core.windows.net`,
+     `table.core.windows.net`, `vault.usgovcloudapi.net`,
+     `vault.azure.cn`), so no secret value or blob body is ever fetchable;
+   - every `az …` literal in `src/` uses a read verb (`show`, `list`,
+     `get-access-token`) or is on a written allowlist (`az login` as advice
+     text); `keyvault secret show`, `keyvault key show` and `keyvault
+     certificate` are named forbidden;
+   - every action in `PERMISSIONS.md` ends in `/read`.
+   No API-path allowlist in the test: the path list is documentation in
+   `PERMISSIONS.md`, kept in sync by the PR-template checkbox.
+3. **RBAC**: `PERMISSIONS.md` at the repo root, neboto-style: assign the
+   built-in **`Reader`** role at subscription scope, then per service the
+   exact ARM actions used so a least-privilege custom role can be built. No
+   custom-role JSON shipped. Key Vault secret and key *names* are the
+   control-plane actions `Microsoft.KeyVault/vaults/secrets/read` and
+   `vaults/keys/read`, which `Reader` includes and which never return
+   values, so **no data-plane role and no vault access policy is needed**.
+   The doc also lists the two local commands the app runs (`az account
+   list`, `az account get-access-token` via azure_identity).
+
+No ADR: the mechanism is self-describing once the test and doc exist. The
+promise is written for users in a README "Why read-only" section.
+
+**Built off-map right after resolution** (same pattern as ticket 06):
+`ReadOnlyPolicy`, `tests/readonly_guard.rs`, `PERMISSIONS.md`, the README
+section, and `.github/workflows/ci.yml` (test + clippy, copied from
+neboto, the guard runs inside `cargo test`) plus neboto's PR template.
+Ticket 08 stays a pure release ticket.

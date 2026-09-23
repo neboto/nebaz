@@ -19,3 +19,9 @@ sync, and any Azure-specific build deps (e.g. OpenSSL vs. rustls choice).
 **2026-09-23 — input from ticket 05.** Runtime dependency to document in
 the README and the install script's post-install note: Azure CLI ≥ 2.54.0,
 logged in (`az login`). The script does not install `az`.
+
+**2026-09-23 — input from ticket 07.** `.github/workflows/ci.yml` (test +
+clippy on Linux, copied from neboto) and the PR template already exist; the
+read-only guard runs inside `cargo test`, so `release.yml` needs no extra
+step. This ticket ports only `release.yml`, `install.sh`, the binstall
+table and `docs/RELEASING.md`.

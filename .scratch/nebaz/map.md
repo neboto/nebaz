@@ -36,7 +36,8 @@ against an app showing real rows rather than the stub. Once the catalog
 resolved, the five remaining services were built to it the same way
 (commit `d2e02f4`, all six services real, stub gone). Nothing else is
 built on this map; the live-tenant checks the catalog lists happen on the
-Azure machine before ticket 09.
+Azure machine before ticket 09. Ticket 07's mechanism (policy, guard test,
+`PERMISSIONS.md`, `ci.yml`, PR template) was built the same way.
 
 ### Settled at charting (decisions made in the charting grill, no ticket)
 
@@ -113,6 +114,15 @@ Azure machine before ticket 09.
   `parent/child` and inheriting the parent's location; AKS node pools need
   no lazy call; per-type section, state, `az` and API-call tables — 11 list
   calls for a full tour, only Storage's throttled.
+
+- [Read-only guarantee mechanism](issues/07-read-only-guarantee-mechanism.md):
+  three layers — the single `GET` constructor plus a `ReadOnlyPolicy` on the
+  pipeline that refuses any other method at runtime; a Rust guard test
+  (`tests/readonly_guard.rs`) under `cargo test` checking verbs, data-plane
+  hosts, `az` command verbs and `PERMISSIONS.md` actions; `PERMISSIONS.md`
+  says `Reader` at subscription scope covers everything, Key Vault names
+  included, no data-plane role. Built off-map with `ci.yml` and the PR
+  template.
 
 ## Not yet specified
 
