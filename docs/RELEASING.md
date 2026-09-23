@@ -127,11 +127,19 @@ artifacts, but creates no release and uploads nothing.
 
 ## Build time
 
-nebaz's dependency tree is a fraction of neboto's (no 80 SDK crates), so a
-cold four-target dry run is measured in minutes, not hours; see the
-workflow's run history for current numbers. `[profile.release] strip = true`
-is on. Actions are free on the public repo, so there is no cost table and
-no local-release script.
+Measured on the first dry run (2026-09-23, cold cache, run 35858121936):
+
+| Target | Runner | Wall time | Archive |
+|---|---|---|---|
+| x86_64-unknown-linux-gnu | ubuntu-22.04 | 2.9 min | 3.9 MB |
+| aarch64-unknown-linux-gnu (cross) | ubuntu-22.04 | 3.1 min | 3.6 MB |
+| aarch64-apple-darwin | macos-15 | 4.1 min | 3.5 MB |
+| x86_64-apple-darwin | macos-15 | 2.8 min | 3.7 MB |
+
+Four minutes end to end, in parallel. nebaz's dependency tree is a fraction
+of neboto's (no 80 SDK crates), which is the whole difference.
+`[profile.release] strip = true` is on. Actions are free on the public
+repo, so there is no cost table and no local-release script.
 
 ## Repo hardening — checklist
 

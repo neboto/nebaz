@@ -124,6 +124,13 @@ Azure machine before ticket 09. Ticket 07's mechanism (policy, guard test,
   included, no data-plane role. Built off-map with `ci.yml` and the PR
   template.
 
+- [Release and install pipeline](issues/08-release-and-install-pipeline.md):
+  `release.yml` (draft → 4 targets → attestation → publish), `install.sh`,
+  binstall table, `docs/RELEASING.md`, Dependabot, rulesets (not applied)
+  and a shipped `config.example.toml` — ported from neboto without the
+  private-repo knobs; dry run green on all four targets in 4 minutes,
+  provenance verified. No tag cut yet.
+
 ## Not yet specified
 
 - **Key Vault surface**: which metadata to show (secret names/versions, keys,

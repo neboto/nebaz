@@ -25,3 +25,10 @@ layers (GET-only constructor + `ReadOnlyPolicy`, `tests/readonly_guard.rs`,
 permissions section can point at `PERMISSIONS.md` rather than restate it;
 the one user-facing line is "assign Reader, nothing else, no vault access
 policy".
+
+**2026-09-23 — input from ticket 08.** The release pipeline is live and
+dry-run verified; cutting `v0.1.0` is `cargo set-version 0.1.0`, commit,
+tag, push. The spec should say what the first tag contains and whether the
+repo hardening checklist in `docs/RELEASING.md` (branch ruleset → PR flow)
+is applied before or after it.
+
