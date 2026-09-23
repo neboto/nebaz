@@ -39,3 +39,13 @@ obvious backstop): Key Vault maps to `secret list`, never `secret show`.
 `azure_core` pipeline per tenant (ADR 0003). That pipeline is the single
 choke point: a per-call policy that rejects any method but `GET` is the
 cheapest runtime backstop, on top of the CI check.
+
+**2026-09-23 — input from ticket 06.** The catalog's "API calls per view"
+table is the allowlist: 15 `GET` paths (plus `nextLink` continuations) at
+seven api-versions, every one built by `ArmClient::get_request`. The copied
+command table is `show --ids` for every ARM row, `az account show` /
+`az group show` for the two without `--ids`; lazy children (containers,
+secret and key names) are section lines with no command, and the vault's
+sections name `az keyvault secret list` / `key list` as the read commands.
+Key Vault values are never fetched: the ARM `secrets` / `keys` lists cannot
+return them, and no data-plane vault scope exists in the app.

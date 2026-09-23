@@ -98,6 +98,19 @@ lands on the Disks sub-tab of Virtual Machines). A plain service prefix
 (`@vm`) lands on the service's first sub-tab.
 _Avoid_: alias (for the sub-tab-selecting form)
 
+**State ladder**:
+The one rule that maps a row's Azure status onto the coarse colour bucket:
+a provisioning state in transition or failed wins, else the type's runtime
+state (power, attachment, primary status), else stateless. The label is
+always the resource's own word, never the bucket's.
+_Avoid_: per-type state tables that disagree on what `Succeeded` means
+
+**Related section**:
+The detail section every type carries listing the ARM ids the row points at
+(its subscription and resource group first, then its own links); Enter on a
+line jumps to that resource. It is the app's only jump mechanism.
+_Avoid_: references, referenced-by (the reverse lens, not in the first release)
+
 ### Detail loading
 
 **Lazy section**:

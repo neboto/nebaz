@@ -58,3 +58,8 @@ compiled table would go stale the day Azure adds a region.
   `--subscription`; only commands without `--ids` carry it themselves.
 - Portal links use the tenant-qualified form `#@{tenant}/resource{id}` once
   the tenant is known.
+- Embedded children (subnets, node pools) carry no location in the API but
+  are flattened from a parent that does, so they inherit it and the `R`
+  filter applies to their sub-tab as it does to the parent's. "Rows with no
+  location are never filtered" still holds: subscriptions and resource
+  groups stay unfiltered.

@@ -101,6 +101,15 @@ built on this map.
   auto-detection; one app-wide auth error line instead of per-service
   errors; `endpoint_url` is the live ARM base URL and the scope derives
   from it; flags stay `-s -r -p`; the double-slash ARM scope is verified.
+- [Service catalog for the first six services](issues/06-service-catalog-first-six.md):
+  one state ladder (transitional or failed `provisioningState` > runtime
+  state > stateless, native word as label); VM power state on the row via
+  a second `statusOnly=true` list; jumps are ARM id → `NavLocation` from a
+  **Related** section on every type; Key Vault secret/key *names* via ARM;
+  noise = non-enabled subscriptions only; embedded children named
+  `parent/child` and inheriting the parent's location; AKS node pools need
+  no lazy call; per-type section, state, `az` and API-call tables — 11 list
+  calls for a full tour, only Storage's throttled.
 
 ## Not yet specified
 
@@ -115,8 +124,10 @@ built on this map.
   (portal deep links are settled: ticket 04).
 - **Watch mode vs. ARM throttling**: the Storage RP allows 100 list calls
   per 5 min per subscription/region; whether watch mode ships in the first
-  release, and with what floor interval, needs a decision once the catalog
-  (ticket 06) shows how many list calls one view costs.
+  release, and with what floor interval, needs a decision. The catalog
+  (ticket 06) put numbers on it: one list call per view, 11 for a full
+  tour; only the Accounts view and its lazy Containers sections touch the
+  throttled budget, so a floor is needed there alone.
 - **Emulator and sovereign clouds**: `endpoint_url` is now the live ARM base
   URL (ticket 05), so a sovereign cloud works by hand; whether to auto-detect
   it from `az cloud show`, and whether Azurite (storage only) is worth an
