@@ -65,8 +65,13 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 | `src/azure/client.rs` | ~330 | `src/aws/client.rs` (957, entirely AWS SDK / STS / profile-file code) — `az account list` subscription table, one `ArmClient` per tenant built on demand, startup subscription resolution (ADR 0003) |
 | `src/azure/auth.rs` | ~360 | `src/aws/client.rs` (credential half) — `CredentialSource`, the classifying/timeout `TokenCredential` wrapper, `AuthError`, `az account list` parsing |
 | `src/azure/arm.rs` | ~230 | `src/aws/pagination.rs` (in spirit) — the one `GET` constructor, `nextLink` paging, the `{endpoint}//.default` scope |
-| `src/azure/services/subscriptions.rs` | ~560 | `src/aws/services/organizations.rs` (in spirit) — the first real service: subscription rows from the CLI list, resource groups from ARM, streamed per page |
-| `src/azure/services/stub.rs` | ~180 | any `src/aws/services/*.rs` — the `sections!` + `*_section_lines` shape a real service follows; still serves the five services without a catalog |
+| `src/azure/services/mod.rs` | ~420 | `src/aws/services/mod.rs` — plus what every Azure provider shares: `ArmBase` (the ARM envelope), the `arm_row!` boilerplate, `Scope` (pipeline + subscription, page streaming), `json` pointer readers |
+| `src/azure/services/subscriptions.rs` | ~620 | `src/aws/services/organizations.rs` (in spirit) — subscription rows from the CLI list, resource groups from ARM, streamed per page |
+| `src/azure/services/compute.rs` | ~990 | `src/aws/services/ec2.rs` (instances, volumes, ENIs) — VMs with the `statusOnly=true` power-state pass, disks, NICs |
+| `src/azure/services/storage.rs` | ~380 | `src/aws/services/s3.rs` (buckets) — storage accounts, lazy containers |
+| `src/azure/services/network.rs` | ~790 | `src/aws/services/vpc.rs` + the EC2 security-group rows — VNets, embedded subnets, NSGs with rule tables |
+| `src/azure/services/keyvault.rs` | ~450 | `src/aws/services/kms.rs` (in spirit) — vault metadata, lazy secret/key names through ARM |
+| `src/azure/services/aks.rs` | ~680 | `src/aws/services/eks.rs` — clusters, embedded node pools |
 
 ## Not ported (deliberately)
 
@@ -79,8 +84,8 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 ## Copied but not yet wired (dead-code warnings at build)
 
 `parse_all_query` (`@all` cross-service search), `export_detail_multi` /
-`multi_detail_csv` (deep export over a list selection), `native_state_label`
-(the first per-type state mapping in the catalog uses it). Each is a Tier-1
-or fog feature the next services light up; the warnings are the to-do list.
+`multi_detail_csv` (deep export over a list selection). Each is a Tier-1
+or fog feature ticket 09 decides on; the warnings are the to-do list.
 `subtab_bar`, `AppLayout::sub_tabs_area` and `shell_quote` lit up with the
-sub-tab model and the Subscriptions service.
+sub-tab model and the Subscriptions service; `native_state_label` with the
+catalog's state ladder.

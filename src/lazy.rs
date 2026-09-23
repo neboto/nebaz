@@ -105,11 +105,22 @@ pub struct LazyStore {
     /// subscription row's Details section, keyed by ARM id.
     pub subscription_details: LazyMap<serde_json::Value>,
 
-    // ── Skeleton ─────────────────────────────────────────────────────────
-    /// The stub resource's lazily-fetched detail text, keyed by ARM id.
-    /// Exists so the trigger → apply-closure → render path is exercised
-    /// end-to-end; the remaining stub services still use it.
-    pub stub_details: LazyMap<String>,
+    // ── Virtual Machines ─────────────────────────────────────────────────
+    /// `GET {vm}/instanceView` — the Instance view section, keyed by VM id.
+    pub vm_instance_views: LazyMap<serde_json::Value>,
+
+    // ── Storage ──────────────────────────────────────────────────────────
+    /// `GET {account}/blobServices/default/containers` — the Containers
+    /// section, keyed by storage-account id. Counts against the Storage
+    /// resource provider's 100 list calls per 5 minutes.
+    pub containers: LazyMap<Vec<serde_json::Value>>,
+
+    // ── Key Vault ────────────────────────────────────────────────────────
+    /// `GET {vault}/secrets` — secret **names** and attributes, keyed by
+    /// vault id. ARM never returns a value.
+    pub vault_secrets: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {vault}/keys` — key names and attributes, keyed by vault id.
+    pub vault_keys: LazyMap<Vec<serde_json::Value>>,
 }
 
 impl LazyStore {
@@ -169,9 +180,9 @@ mod tests {
     #[test]
     fn new_store_is_empty_at_the_given_epoch() {
         let mut store = LazyStore::new(3);
-        store.stub_details.insert_loading("/subscriptions/x".into());
+        store.containers.insert_loading("/subscriptions/x".into());
         store = LazyStore::new(store.epoch() + 1);
         assert_eq!(store.epoch(), 4);
-        assert!(store.stub_details.get("/subscriptions/x").is_none());
+        assert!(store.containers.get("/subscriptions/x").is_none());
     }
 }

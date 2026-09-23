@@ -11,19 +11,17 @@
 //! `is_noise`, the exact section tables): they follow the skeleton's
 //! conventions and are expected to be tuned there, not frozen here.
 
-use crate::azure::arm::ArmClient;
-use crate::azure::auth::{AuthError, SubscriptionEntry};
+use crate::azure::auth::SubscriptionEntry;
 use crate::azure::location::LocationInfo;
 use crate::azure::resource::{resource_group_of, shell_quote, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
-use crate::azure::services::{error_rows, tag_rows};
+use crate::azure::services::{error_rows, finish_stream, json, overview_rows, related_rows, tag_rows, Scope};
 use crate::error::{Error, Result};
-use crate::event::{Event, LoadProgress};
+use crate::event::Event;
 use crate::lazy::Lazy;
 use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::mpsc;
 
 /// `GET /subscriptions/{id}` api-version.
@@ -37,6 +35,10 @@ crate::sections! {
         Overview "Overview",
         Details "Details" => crate::app::App::trigger_subscription_details,
         Locations "Locations" => crate::app::App::trigger_selected_subscription_locations,
+        Related "Related",
+        // A subscription's tags live on the ARM object, so this shares
+        // the Details fetch.
+        Tags "Tags" => crate::app::App::trigger_subscription_details,
     ]
 }
 
@@ -44,6 +46,7 @@ crate::sections! {
     pub enum ResourceGroupDetailSection,
     pub static RESOURCE_GROUP_SECTIONS = [
         Overview "Overview",
+        Related "Related",
         Tags "Tags",
     ]
 }
@@ -107,6 +110,15 @@ impl Resource for SubscriptionRow {
     fn tenant_id(&self) -> Option<&str> {
         Some(&self.entry.tenant_id)
     }
+    /// The one noise rule in the first release (ticket 06): a subscription
+    /// that is not `Enabled` is hidden by `a`.
+    fn is_noise(&self) -> bool {
+        !self.entry.is_enabled()
+    }
+    /// The root of the scope tree links to nothing.
+    fn related(&self) -> Vec<(String, String)> {
+        Vec::new()
+    }
     fn search_text(&self) -> String {
         format!(
             "{} {} {} {} {}",
@@ -118,6 +130,7 @@ impl Resource for SubscriptionRow {
         vec![
             ("Name".into(), self.entry.name.clone()),
             ("Id".into(), self.entry.id.clone()),
+            ("ARM id".into(), self.id.clone()),
             ("State".into(), self.entry.state.clone()),
             ("Tenant".into(), self.entry.tenant_id.clone()),
             ("Cloud".into(), self.entry.cloud_name.clone().unwrap_or_else(|| "-".into())),
@@ -275,6 +288,13 @@ impl Resource for ResourceGroupRow {
     fn raw_content(&self) -> Option<String> {
         Some(self.raw.clone())
     }
+    fn related(&self) -> Vec<(String, String)> {
+        let mut v = vec![("Subscription".to_string(), format!("/subscriptions/{}", self.subscription))];
+        if let Some(m) = self.managed_by.as_deref().filter(|m| m.starts_with("/subscriptions/")) {
+            v.push((format!("Managed by {}", crate::azure::resource::name_of_id(m)), m.to_string()));
+        }
+        v
+    }
     /// `az group show` has no `--ids`, so `--subscription` rides along.
     fn cli_command(&self) -> Option<String> {
         Some(format!(
@@ -288,34 +308,13 @@ impl Resource for ResourceGroupRow {
 // ── Provider ──────────────────────────────────────────────────────────
 
 pub struct SubscriptionsService {
-    /// The current subscription's tenant pipeline, or the auth condition
-    /// that prevents one.
-    arm: std::result::Result<Arc<ArmClient>, AuthError>,
-    current: Option<SubscriptionEntry>,
+    scope: Scope,
     entries: Vec<SubscriptionEntry>,
 }
 
 impl SubscriptionsService {
-    pub fn new(
-        arm: std::result::Result<Arc<ArmClient>, AuthError>,
-        current: Option<SubscriptionEntry>,
-        entries: Vec<SubscriptionEntry>,
-    ) -> Self {
-        Self {
-            arm,
-            current,
-            entries,
-        }
-    }
-
-    fn arm(&self) -> Result<&Arc<ArmClient>> {
-        self.arm.as_ref().map_err(|e| Error::Auth(e.clone()))
-    }
-
-    fn current(&self) -> Result<&SubscriptionEntry> {
-        self.current
-            .as_ref()
-            .ok_or_else(|| Error::Auth(self.arm.as_ref().err().cloned().unwrap_or(AuthError::NotLoggedIn)))
+    pub fn new(scope: Scope, entries: Vec<SubscriptionEntry>) -> Self {
+        Self { scope, entries }
     }
 
     fn subscription_rows(&self) -> Vec<Box<dyn Resource>> {
@@ -326,12 +325,8 @@ impl SubscriptionsService {
             .collect()
     }
 
-    fn resource_groups_path(&self) -> Result<String> {
-        Ok(format!("/subscriptions/{}/resourcegroups", self.current()?.id))
-    }
-
     fn rows_from_page(&self, page: Vec<Value>) -> Vec<Box<dyn Resource>> {
-        let tenant = self.current.as_ref().map(|c| c.tenant_id.as_str());
+        let tenant = self.scope.tenant();
         page.iter()
             .filter_map(|v| ResourceGroupRow::from_json(v, tenant))
             .map(|r| Box::new(r) as Box<dyn Resource>)
@@ -352,8 +347,7 @@ impl AzureService for SubscriptionsService {
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
         match view {
             JumpView::ResourceGroups => {
-                let path = self.resource_groups_path()?;
-                let items = self.arm()?.list(&path, RESOURCE_GROUPS_API_VERSION).await?;
+                let items = self.scope.list("/resourcegroups", RESOURCE_GROUPS_API_VERSION).await?;
                 Ok(self.rows_from_page(items))
             }
             _ => Ok(self.subscription_rows()),
@@ -375,51 +369,19 @@ impl AzureService for SubscriptionsService {
             });
             return Ok(());
         }
-        let run = async {
-            let path = self.resource_groups_path()?;
-            let arm = self.arm()?;
-            let mut loaded = 0usize;
-            let tx = event_tx.clone();
-            arm.list_pages(&path, RESOURCE_GROUPS_API_VERSION, &[], |page| {
-                let resources = self.rows_from_page(page);
-                loaded += resources.len();
-                let _ = tx.send(Event::ResourcesPartiallyLoaded {
-                    service: service_type,
-                    resources,
-                    progress: LoadProgress {
-                        loaded_count: loaded,
-                        total_count: None,
-                        status_message: Some("Listing resource groups…".into()),
-                    },
-                });
+        let r = self
+            .scope
+            .stream("/resourcegroups", RESOURCE_GROUPS_API_VERSION, &[], service_type, "Listing resource groups…", &event_tx, |page| {
+                self.rows_from_page(page)
             })
-            .await?;
-            Ok::<usize, Error>(loaded)
-        };
-        match run.await {
-            Ok(total) => {
-                let _ = event_tx.send(Event::ResourcesFullyLoaded {
-                    service: service_type,
-                    total_count: total,
-                });
-                Ok(())
-            }
-            Err(e) => {
-                let _ = event_tx.send(Event::ResourceLoadError {
-                    service: service_type,
-                    auth: e.auth_error(),
-                    error: e.to_string(),
-                });
-                Err(e)
-            }
-        }
+            .await;
+        finish_stream(service_type, r, &event_tx)
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
         if resource_group_of(id).is_some() {
-            let v = self.arm()?.get(id, RESOURCE_GROUPS_API_VERSION).await?;
-            let tenant = self.current.as_ref().map(|c| c.tenant_id.as_str());
-            return ResourceGroupRow::from_json(&v, tenant)
+            let v = self.scope.get(id, RESOURCE_GROUPS_API_VERSION).await?;
+            return ResourceGroupRow::from_json(&v, self.scope.tenant())
                 .map(|r| Box::new(r) as Box<dyn Resource>)
                 .ok_or_else(|| Error::ResourceNotFound(id.to_string()));
         }
@@ -442,13 +404,13 @@ pub fn subscription_section_lines(
     locations: Option<&Lazy<Vec<LocationInfo>>>,
 ) -> Vec<(String, String)> {
     match section {
-        SubscriptionDetailSection::Overview => {
-            let mut lines = r.details();
-            lines.push((String::new(), String::new()));
-            lines.push(("Portal".into(), r.portal_url().unwrap_or_default()));
-            lines.push(("CLI".into(), r.cli_command().unwrap_or_default()));
-            lines
-        }
+        SubscriptionDetailSection::Overview => overview_rows(r),
+        SubscriptionDetailSection::Related => related_rows(r),
+        SubscriptionDetailSection::Tags => match details {
+            None | Some(Lazy::Loading) => vec![("Tags".into(), "Loading…".into())],
+            Some(Lazy::Error(e)) => error_rows(e),
+            Some(Lazy::Loaded(v)) => tag_rows(&json::tags_of(v)),
+        },
         SubscriptionDetailSection::Details => match details {
             None | Some(Lazy::Loading) => vec![("Subscription".into(), "Loading…".into())],
             Some(Lazy::Error(e)) => error_rows(e),
@@ -510,15 +472,6 @@ fn subscription_detail_rows(v: &Value) -> Vec<(String, String)> {
             if ids.is_empty() { "-".into() } else { ids.join(", ") },
         ));
     }
-    if let Some(tags) = v.get("tags").and_then(|t| t.as_object()).filter(|t| !t.is_empty()) {
-        lines.push((String::new(), String::new()));
-        lines.push(("Tags".into(), String::new()));
-        let mut tags: Vec<_> = tags.iter().collect();
-        tags.sort_by(|a, b| a.0.cmp(b.0));
-        for (k, val) in tags {
-            lines.push((format!("  {}", k), val.as_str().unwrap_or("").to_string()));
-        }
-    }
     lines
 }
 
@@ -528,13 +481,8 @@ pub fn resource_group_section_lines(
     section: ResourceGroupDetailSection,
 ) -> Vec<(String, String)> {
     match section {
-        ResourceGroupDetailSection::Overview => {
-            let mut lines = r.details();
-            lines.push((String::new(), String::new()));
-            lines.push(("Portal".into(), r.portal_url().unwrap_or_default()));
-            lines.push(("CLI".into(), r.cli_command().unwrap_or_default()));
-            lines
-        }
+        ResourceGroupDetailSection::Overview => overview_rows(r),
+        ResourceGroupDetailSection::Related => related_rows(r),
         ResourceGroupDetailSection::Tags => tag_rows(r.tags()),
     }
 }
@@ -572,9 +520,12 @@ mod tests {
             row.cli_command().as_deref(),
             Some("az account show --subscription 22222222-2222-2222-2222-222222222222")
         );
+        assert!(!row.is_noise());
         let mut disabled = entry();
         disabled.state = "Disabled".into();
-        assert_eq!(SubscriptionRow::new(disabled).state(), ResourceState::Unavailable);
+        let disabled = SubscriptionRow::new(disabled);
+        assert_eq!(disabled.state(), ResourceState::Unavailable);
+        assert!(disabled.is_noise(), "a non-enabled subscription is the one noise rule");
     }
 
     #[test]
@@ -603,6 +554,7 @@ mod tests {
         );
         assert!(row.raw_content().unwrap().contains("\"provisioningState\""));
         assert_eq!(row.tenant_id(), Some("t-1"));
+        assert_eq!(row.related(), vec![("Subscription".to_string(), "/subscriptions/2222".to_string())]);
 
         let deleting = serde_json::json!({
             "id": "/subscriptions/2222/resourceGroups/rg-old",
@@ -643,7 +595,14 @@ mod tests {
         );
         assert!(loaded.iter().any(|(k, v)| k == "Quota" && v == "PayAsYouGo_2014-09-01"));
         assert!(loaded.iter().any(|(k, v)| k == "Managed by tenants" && v == "m-1"));
-        assert!(loaded.iter().any(|(k, v)| k == "  cost-center" && v == "42"));
+        let tags = subscription_section_lines(
+            &row,
+            SubscriptionDetailSection::Tags,
+            Some(&Lazy::Loaded(serde_json::json!({"tags": {"cost-center": "42"}}))),
+            None,
+        );
+        assert_eq!(tags, vec![("cost-center".to_string(), "42".to_string())]);
+        assert!(subscription_section_lines(&row, SubscriptionDetailSection::Related, None, None)[0].1.contains("No related"));
         let locs = subscription_section_lines(
             &row,
             SubscriptionDetailSection::Locations,

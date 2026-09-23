@@ -106,6 +106,34 @@ impl JumpView {
         }
     }
 
+    /// The sub-tab that lists an ARM id's type, from its resource-provider
+    /// namespace and type chain — the jump router (ticket 06). `None` for
+    /// a type nebaz does not browse (a public IP, a route table).
+    pub fn for_arm_id(id: &str) -> Option<JumpView> {
+        use crate::azure::resource::{arm_type_chain, resource_group_of, subscription_of};
+        let Some((ns, chain)) = arm_type_chain(id) else {
+            return match (subscription_of(id), resource_group_of(id)) {
+                (Some(_), Some(_)) => Some(JumpView::ResourceGroups),
+                (Some(_), None) => Some(JumpView::Subscriptions),
+                _ => None,
+            };
+        };
+        let chain: Vec<&str> = chain.iter().map(String::as_str).collect();
+        Some(match (ns.as_str(), chain.as_slice()) {
+            ("microsoft.compute", ["virtualmachines"]) => JumpView::VirtualMachines,
+            ("microsoft.compute", ["disks"]) => JumpView::Disks,
+            ("microsoft.network", ["networkinterfaces"]) => JumpView::Nics,
+            ("microsoft.storage", ["storageaccounts"]) => JumpView::StorageAccounts,
+            ("microsoft.network", ["virtualnetworks"]) => JumpView::VirtualNetworks,
+            ("microsoft.network", ["virtualnetworks", "subnets"]) => JumpView::Subnets,
+            ("microsoft.network", ["networksecuritygroups"]) => JumpView::NetworkSecurityGroups,
+            ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
+            ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
+            ("microsoft.containerservice", ["managedclusters", "agentpools"]) => JumpView::NodePools,
+            _ => return None,
+        })
+    }
+
     /// Whether this sub-tab's list has no subscription in its path. Only
     /// the subscription list itself: its rows belong to the tenant, so a
     /// subscription switch never invalidates them.
@@ -379,5 +407,26 @@ mod tests {
         assert!(ServiceType::Subscriptions.is_tenant_scoped(Some("subscriptions")));
         assert!(!ServiceType::Subscriptions.is_tenant_scoped(Some("resource-groups")));
         assert!(!ServiceType::VirtualMachines.is_tenant_scoped(None));
+    }
+
+    #[test]
+    fn for_arm_id_routes_on_namespace_and_type_chain() {
+        let rg = "/subscriptions/0/resourceGroups/rg";
+        assert_eq!(JumpView::for_arm_id("/subscriptions/0"), Some(JumpView::Subscriptions));
+        assert_eq!(JumpView::for_arm_id(rg), Some(JumpView::ResourceGroups));
+        let p = |t: &str| format!("{}/providers/{}", rg, t);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Compute/virtualMachines/vm")), Some(JumpView::VirtualMachines));
+        assert_eq!(JumpView::for_arm_id(&p("microsoft.compute/DISKS/d")), Some(JumpView::Disks));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/networkInterfaces/n")), Some(JumpView::Nics));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Storage/storageAccounts/a")), Some(JumpView::StorageAccounts));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v")), Some(JumpView::VirtualNetworks));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s")), Some(JumpView::Subnets));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/networkSecurityGroups/g")), Some(JumpView::NetworkSecurityGroups));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.KeyVault/vaults/k")), Some(JumpView::KeyVaults));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c")), Some(JumpView::Clusters));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c/agentPools/np")), Some(JumpView::NodePools));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/publicIPAddresses/ip")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s/x/y")), None);
+        assert_eq!(JumpView::for_arm_id("garbage"), None);
     }
 }

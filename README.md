@@ -14,13 +14,15 @@ from neboto — see [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md)
 for what came from where and what was changed. The foundation is in: the
 scoping model ([ADR 0002](docs/adr/0002-subscription-scoped-lists-location-as-filter.md)),
 auth through the Azure CLI ([ADR 0003](docs/adr/0003-azure-cli-credential-per-tenant.md))
-and the first service, **Subscriptions** (the subscription list from
-`az account list`, resource groups from ARM). The other five services are
-stubs until their catalog lands.
-
-Planned first release: Subscriptions + Resource Groups, Virtual Machines
-(+ disks, NICs), Storage Accounts (+ containers), Virtual Networks (+ subnets,
-NSGs), Key Vault (metadata only, never values), AKS.
+and the six first-release services are real, per the catalog in
+`.scratch/nebaz/issues/06-service-catalog-first-six.md`: Subscriptions +
+Resource Groups, Virtual Machines (+ disks, NICs; power state on the row),
+Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
+NSGs), Key Vault (metadata plus secret and key *names*, never values), AKS
+(+ node pools). Every row has a **Related** section listing the ARM ids it
+points at; Enter on one jumps there. Unverified against a live tenant
+until the Azure machine runs it: the `statusOnly=true` VM list shape, and
+`--ids` on `az keyvault show` / `az aks show` / `az aks nodepool show`.
 
 ## Build
 
@@ -28,7 +30,8 @@ NSGs), Key Vault (metadata only, never values), AKS.
 cargo build            # debug   (cargo build --release for release)
 cargo run -- -s sub    # subscriptions + resource groups (needs `az login`)
 cargo run -- -s rg     # straight to the Resource Groups sub-tab
-cargo run -- -s vm     # a stub service
+cargo run -- -s vm     # virtual machines (Tab / 2 / 3 for Disks, NICs)
+cargo run -- -s kv     # key vaults; 4 / 5 on a row list secret and key names
 cargo test             # all tests
 cargo clippy           # lint
 ```

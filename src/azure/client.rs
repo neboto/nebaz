@@ -13,8 +13,14 @@ use crate::azure::arm::{ArmClient, DEFAULT_ENDPOINT};
 use crate::azure::auth::{az_account_list, AuthError, CredentialSource, SubscriptionEntry};
 use crate::azure::location::LocationInfo;
 use crate::azure::service::{AzureService, ServiceType};
-use crate::azure::services::stub::StubService;
+use crate::azure::resource::subscription_of;
+use crate::azure::services::aks::AksService;
+use crate::azure::services::compute::ComputeService;
+use crate::azure::services::keyvault::KeyVaultService;
+use crate::azure::services::network::NetworkService;
+use crate::azure::services::storage::StorageService;
 use crate::azure::services::subscriptions::{SubscriptionsService, SUBSCRIPTIONS_API_VERSION};
+use crate::azure::services::Scope;
 use crate::config::Config;
 use crate::error::{Error, Result};
 use std::collections::HashMap;
@@ -241,22 +247,65 @@ impl AzureClients {
     /// client (or the auth condition that prevents one, which the provider
     /// reports as its load error). Every other service is the stub until
     /// its catalog lands.
+    /// What a provider is pointed at: the current subscription's tenant
+    /// pipeline (or the auth condition that prevents one) and the entry.
+    pub fn scope(&self) -> Scope {
+        Scope::new(
+            self.current_arm().map_err(|e| {
+                e.auth_error()
+                    .unwrap_or_else(|| AuthError::Other(e.to_string()))
+            }),
+            self.current_entry().cloned(),
+        )
+    }
+
+    /// The provider for one service, over the current scope.
     pub fn service(&self, service: ServiceType) -> Arc<dyn AzureService> {
+        let scope = self.scope();
         match service {
-            ServiceType::Subscriptions => Arc::new(SubscriptionsService::new(
-                self.current_arm().map_err(|e| {
-                    e.auth_error()
-                        .unwrap_or_else(|| AuthError::Other(e.to_string()))
-                }),
-                self.current_entry().cloned(),
-                self.subscriptions.clone(),
-            )),
-            other => Arc::new(StubService::new(
-                other,
-                self.current_subscription()
-                    .unwrap_or("00000000-0000-0000-0000-000000000000")
-                    .to_string(),
-            )),
+            ServiceType::Subscriptions => Arc::new(SubscriptionsService::new(scope, self.subscriptions.clone())),
+            ServiceType::VirtualMachines => Arc::new(ComputeService::new(scope)),
+            ServiceType::Storage => Arc::new(StorageService::new(scope)),
+            ServiceType::Network => Arc::new(NetworkService::new(scope)),
+            ServiceType::KeyVault => Arc::new(KeyVaultService::new(scope)),
+            ServiceType::Aks => Arc::new(AksService::new(scope)),
+        }
+    }
+
+    /// The pipeline for the tenant an ARM path belongs to, resolved
+    /// synchronously so an auth condition surfaces as the fetch's error.
+    fn arm_for_path(&self, path: &str) -> std::result::Result<Arc<ArmClient>, String> {
+        let sub = subscription_of(path).ok_or_else(|| format!("not an ARM path: {}", path))?;
+        self.arm_for_subscription(sub).map_err(|e| e.to_string())
+    }
+
+    /// `GET {path}` as a future the lazy store can own (a VM's instance
+    /// view).
+    pub fn get_fetch(
+        &self,
+        path: &str,
+        api_version: &'static str,
+    ) -> impl Future<Output = std::result::Result<serde_json::Value, String>> + Send + 'static {
+        let arm = self.arm_for_path(path);
+        let path = path.to_string();
+        async move {
+            let arm = arm?;
+            arm.get(&path, api_version).await.map_err(|e| e.to_string())
+        }
+    }
+
+    /// `GET {path}` as a whole collection, for the lazy children
+    /// (containers, secret and key names).
+    pub fn list_fetch(
+        &self,
+        path: &str,
+        api_version: &'static str,
+    ) -> impl Future<Output = std::result::Result<Vec<serde_json::Value>, String>> + Send + 'static {
+        let arm = self.arm_for_path(path);
+        let path = path.to_string();
+        async move {
+            let arm = arm?;
+            arm.list(&path, api_version).await.map_err(|e| e.to_string())
         }
     }
 

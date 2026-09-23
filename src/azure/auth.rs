@@ -116,8 +116,13 @@ impl AuthError {
         if m.contains("timed out") {
             return Some(AuthError::Timeout);
         }
-        // Expiry mentions `az login` too, so it is checked first.
-        if m.contains("aadsts700082") || m.contains("aadsts70008") || m.contains("expired") {
+        // Expiry mentions `az login` too, so it is checked first. A bare
+        // "expired" is not enough: the HTTP layer says "retry policy
+        // expired" for a dead endpoint, which is not an auth condition.
+        let token_context = ["token", "login", "credential", "refresh", "session"]
+            .iter()
+            .any(|w| m.contains(w));
+        if m.contains("aadsts700082") || m.contains("aadsts70008") || (m.contains("expired") && token_context) {
             return Some(AuthError::TokenExpired);
         }
         if m.contains("az login") || m.contains("not logged in") || m.contains("no subscriptions found") {
@@ -372,6 +377,18 @@ mod tests {
         assert_eq!(
             AuthError::from_message(" odd "),
             AuthError::Other("odd".into())
+        );
+    }
+
+    #[test]
+    fn a_transport_expiry_is_not_an_auth_condition() {
+        assert_eq!(
+            AuthError::classify("connection failed: retry policy expired after 3 retries"),
+            None
+        );
+        assert_eq!(
+            AuthError::classify("ERROR: The refresh token has expired due to inactivity. Run az login"),
+            Some(AuthError::TokenExpired)
         );
     }
 

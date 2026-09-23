@@ -45,6 +45,7 @@ const LEFT_SECTIONS: &[Section] = &[
         entries: &[
             ("Tab · 1–9", "sections"),
             ("j / k", "scroll"),
+            ("⏎", "jump to the ARM id on the line (Related)"),
             ("y", "copy row"),
             ("Z", "full-width pane"),
             ("r", "refresh this resource"),

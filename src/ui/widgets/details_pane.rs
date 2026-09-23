@@ -54,7 +54,7 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
 
     let title = format!("{} · {}", resource.resource_type(), resource.name());
     let footer = if focused {
-        theme::hint_line(&[("Tab", "section"), ("j/k", "scroll"), ("y", "copy"), ("Esc", "back")])
+        theme::hint_line(&[("Tab", "section"), ("j/k", "line"), ("⏎", "jump to id"), ("y", "copy"), ("Esc", "back")])
     } else {
         theme::hint_line(&[("⏎", "focus"), ("e", "editor"), ("O", "portal")])
     };

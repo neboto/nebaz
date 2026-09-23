@@ -10,7 +10,26 @@ use crate::azure::client::AzureClients;
 use crate::azure::location::{Location, LocationRow, ALL_DISPLAY};
 use crate::azure::resource::{Resource, ResourceState};
 use crate::azure::service::{JumpView, ServiceType};
-use crate::azure::services::stub::{stub_section_lines, StubDetailSection, StubResource};
+use crate::azure::resource::{name_of_id, subscription_of};
+use crate::azure::services::aks::{
+    cluster_section_lines, node_pool_section_lines, ClusterDetailSection, ClusterRow, NodePoolDetailSection,
+    NodePoolRow,
+};
+use crate::azure::services::compute::{
+    disk_section_lines, instance_view_path, nic_section_lines, vm_section_lines, DiskDetailSection, DiskRow,
+    NicDetailSection, NicRow, VmDetailSection, VmRow, VM_API_VERSION,
+};
+use crate::azure::services::keyvault::{
+    names_path, vault_section_lines, VaultDetailSection, VaultRow, VAULT_NAMES_API_VERSION,
+};
+use crate::azure::services::network::{
+    nsg_section_lines, subnet_section_lines, vnet_section_lines, NsgDetailSection, NsgRow, SubnetDetailSection,
+    SubnetRow, VnetDetailSection, VnetRow,
+};
+use crate::azure::services::storage::{
+    containers_path, storage_account_section_lines, StorageAccountDetailSection, StorageAccountRow,
+    STORAGE_API_VERSION,
+};
 use crate::azure::services::subscriptions::{
     resource_group_section_lines, subscription_section_lines, ResourceGroupDetailSection,
     ResourceGroupRow, SubscriptionDetailSection, SubscriptionRow,
@@ -322,6 +341,11 @@ pub struct App {
     pub nav_cursor: Option<usize>,
     pub jump_list_visible: bool,
     pub jump_list_selected: usize,
+    /// A jump (Related section, bookmark, history) whose target row has
+    /// not landed yet: `(ARM id, focus the pane once it does)`. Resolved
+    /// as pages stream in; cleared with a message if the load ends
+    /// without it.
+    pub pending_jump: Option<(String, bool)>,
     pub bookmarks: Vec<NavLocation>,
     pub bookmarks_visible: bool,
     pub bookmarks_selected: usize,
@@ -438,6 +462,7 @@ impl App {
             nav_cursor: None,
             jump_list_visible: false,
             jump_list_selected: 0,
+            pending_jump: None,
             bookmarks: crate::bookmarks::load(),
             bookmarks_visible: false,
             bookmarks_selected: 0,
@@ -762,13 +787,87 @@ impl App {
         self.get_selected_resource().map(|r| r.id().to_string())
     }
 
-    pub fn restore_selection_by_id(&mut self, id: &str) {
-        if let Some(pos) = self
+    /// Select the visible row with this ARM id (case-insensitively — ARM
+    /// ids vary in case between endpoints). `false` when no visible row
+    /// has it.
+    pub fn restore_selection_by_id(&mut self, id: &str) -> bool {
+        match self
             .filtered_resources
             .iter()
-            .position(|&i| self.resources[i].id() == id)
+            .position(|&i| self.resources[i].id().eq_ignore_ascii_case(id))
         {
-            self.select(Some(pos));
+            Some(pos) => {
+                self.select(Some(pos));
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Whether any loaded row (visible or filtered out) has this id.
+    fn has_resource_id(&self, id: &str) -> bool {
+        self.resources.iter().any(|r| r.id().eq_ignore_ascii_case(id))
+    }
+
+    // ── Jumps ───────────────────────────────────────────────────────────
+
+    /// The one jump mechanism (ticket 06): an ARM id becomes a
+    /// `NavLocation` routed on its type, and the row resolves once its
+    /// list has it. An id nebaz does not browse is copied instead.
+    pub fn jump_to_arm_id(&mut self, id: &str, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(view) = JumpView::for_arm_id(id) else {
+            if id.starts_with("/subscriptions/") {
+                self.copy_to_clipboard(id, "id (not a type nebaz browses)");
+            }
+            return;
+        };
+        self.push_nav_location();
+        let loc = NavLocation {
+            service: view.service(),
+            view: Some(view),
+            subscription: subscription_of(id).map(str::to_string),
+            query: String::new(),
+            selected_id: Some(id.to_string()),
+            label: format!("{} · {}", view.label(), name_of_id(id)),
+            details_focused: true,
+            detail_section: None,
+        };
+        self.restore_nav_location(loc, event_tx);
+    }
+
+    /// Enter on a detail line: jump when its value is an ARM id.
+    fn follow_detail_line(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let lines = self.get_detail_lines();
+        let Some((_, value)) = lines.get(self.details_scroll) else {
+            return;
+        };
+        let value = value.trim().to_string();
+        if value.starts_with("/subscriptions/") {
+            self.jump_to_arm_id(&value, event_tx);
+        }
+    }
+
+    /// Try to land a pending jump on the rows loaded so far. A row hidden
+    /// only by the location filter lifts the filter; a load that ends
+    /// without the row clears the jump with a message.
+    fn resolve_pending_jump(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some((id, focus)) = self.pending_jump.clone() else {
+            return;
+        };
+        if !self.restore_selection_by_id(&id) && self.has_resource_id(&id) {
+            self.switch_location(Location::All);
+            self.toast("Location filter cleared to reach the row");
+            self.restore_selection_by_id(&id);
+        }
+        if self.selected_index.is_some() && self.get_selected_resource_id().is_some_and(|s| s.eq_ignore_ascii_case(&id)) {
+            self.pending_jump = None;
+            if focus {
+                self.details_focused = true;
+                self.reset_detail_section_to_default(event_tx);
+            }
+        } else if !self.loading {
+            self.pending_jump = None;
+            self.error_message = Some(format!("{} is not in this list", name_of_id(&id)));
         }
     }
 
@@ -1088,20 +1187,58 @@ impl App {
         }
     }
 
-    /// On-enter hook for the stub pane's Details section.
-    pub fn trigger_stub_details(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
-        let Some(id) = app.get_selected_resource_id() else {
+    /// A lazy fetch keyed by the selected row's ARM id — the shape of
+    /// every per-resource section in the catalog (ticket 06).
+    fn trigger_selected<T, Fut>(
+        &mut self,
+        lens: fn(&mut LazyStore) -> &mut LazyMap<T>,
+        event_tx: &mpsc::UnboundedSender<Event>,
+        fetch: impl FnOnce(&AzureClients, &str) -> Fut,
+    ) where
+        T: Send + 'static,
+        Fut: Future<Output = std::result::Result<T, String>> + Send + 'static,
+    {
+        let Some(id) = self.get_selected_resource_id() else {
             return;
         };
-        let fetched_id = id.clone();
-        app.trigger_lazy(
-            |s| &mut s.stub_details,
-            id,
+        let fut = fetch(&self.azure_clients, &id);
+        self.trigger_lazy(lens, id, event_tx, move || fut);
+    }
+
+    /// On-enter hook for a VM's Instance view: `GET {vm}/instanceView`.
+    pub fn trigger_vm_instance_view(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.vm_instance_views,
             event_tx,
-            move || async move {
-                tokio::time::sleep(Duration::from_millis(600)).await;
-                Ok(format!("lazily fetched detail for {}", fetched_id))
-            },
+            |c, id| c.get_fetch(&instance_view_path(id), VM_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a storage account's Containers: one ARM list per
+    /// account, on demand (the Storage RP's throttled budget).
+    pub fn trigger_containers(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.containers,
+            event_tx,
+            |c, id| c.list_fetch(&containers_path(id), STORAGE_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a vault's Secrets: names and attributes only.
+    pub fn trigger_vault_secrets(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.vault_secrets,
+            event_tx,
+            |c, id| c.list_fetch(&names_path(id, "secrets"), VAULT_NAMES_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a vault's Keys: names and attributes only.
+    pub fn trigger_vault_keys(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.vault_keys,
+            event_tx,
+            |c, id| c.list_fetch(&names_path(id, "keys"), VAULT_NAMES_API_VERSION),
         );
     }
 
@@ -1245,12 +1382,48 @@ impl App {
                 ResourceGroupDetailSection::from_index(idx),
             ));
         }
-        if let Some(stub) = any.downcast_ref::<StubResource>() {
-            return Some(stub_section_lines(
-                stub,
-                StubDetailSection::from_index(idx),
-                self.lazy.stub_details.get(stub.id()),
+        if let Some(r) = any.downcast_ref::<VmRow>() {
+            return Some(vm_section_lines(
+                r,
+                VmDetailSection::from_index(idx),
+                self.lazy.vm_instance_views.get(r.id()),
             ));
+        }
+        if let Some(r) = any.downcast_ref::<DiskRow>() {
+            return Some(disk_section_lines(r, DiskDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<NicRow>() {
+            return Some(nic_section_lines(r, NicDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<StorageAccountRow>() {
+            return Some(storage_account_section_lines(
+                r,
+                StorageAccountDetailSection::from_index(idx),
+                self.lazy.containers.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<VnetRow>() {
+            return Some(vnet_section_lines(r, VnetDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<SubnetRow>() {
+            return Some(subnet_section_lines(r, SubnetDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<NsgRow>() {
+            return Some(nsg_section_lines(r, NsgDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<VaultRow>() {
+            return Some(vault_section_lines(
+                r,
+                VaultDetailSection::from_index(idx),
+                self.lazy.vault_secrets.get(r.id()),
+                self.lazy.vault_keys.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<ClusterRow>() {
+            return Some(cluster_section_lines(r, ClusterDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<NodePoolRow>() {
+            return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
         }
         None
     }
@@ -1349,8 +1522,15 @@ impl App {
         self.switch_view(view);
         self.search_query = loc.query;
         self.update_search();
+        self.pending_jump = None;
         if let Some(id) = &loc.selected_id {
-            self.restore_selection_by_id(id);
+            if !self.restore_selection_by_id(id) {
+                // Not visible yet (still loading, or filtered out): land it
+                // when it appears. The section name is not carried over.
+                self.pending_jump = Some((id.clone(), loc.details_focused));
+                self.resolve_pending_jump(event_tx);
+                return;
+            }
         }
         if loc.details_focused && self.selected_index.is_some() {
             self.details_focused = true;
@@ -1493,7 +1673,9 @@ impl App {
                 self.apply_query(q);
                 self.process_pending_search();
             }
-            MacroStep::SelectId { id, .. } => self.restore_selection_by_id(&id),
+            MacroStep::SelectId { id, .. } => {
+                self.restore_selection_by_id(&id);
+            }
             MacroStep::DetailSection(name) => {
                 if self.selected_index.is_some() {
                     self.details_focused = true;
@@ -1535,7 +1717,7 @@ impl App {
                 if generation != self.load_generation {
                     return Ok(()); // superseded stream
                 }
-                self.handle_stream_event(*event);
+                self.handle_stream_event(*event, event_tx);
             }
             // Untagged stream events (a provider sending directly) are
             // treated as current.
@@ -1543,7 +1725,7 @@ impl App {
             | Event::ResourcesPartiallyLoaded { .. }
             | Event::ResourcesFullyLoaded { .. }
             | Event::ResourceLoadError { .. }
-            | Event::ResourceLoadWarning { .. }) => self.handle_stream_event(e),
+            | Event::ResourceLoadWarning { .. }) => self.handle_stream_event(e, event_tx),
 
             Event::ResourceRefreshed {
                 id,
@@ -1593,7 +1775,7 @@ impl App {
         Ok(())
     }
 
-    fn handle_stream_event(&mut self, event: Event) {
+    fn handle_stream_event(&mut self, event: Event, event_tx: &mpsc::UnboundedSender<Event>) {
         match event {
             Event::ResourcesLoaded { service, resources } => {
                 if Some(service) != self.current_service {
@@ -1601,7 +1783,7 @@ impl App {
                 }
                 self.auth_error = None;
                 self.resources = resources;
-                self.finish_load(service);
+                self.finish_load(service, event_tx);
             }
             Event::ResourcesPartiallyLoaded {
                 service,
@@ -1615,10 +1797,11 @@ impl App {
                 self.resources.extend(resources);
                 self.loading_progress = Some(progress);
                 self.update_search();
+                self.resolve_pending_jump(event_tx);
             }
             Event::ResourcesFullyLoaded { service, .. } => {
                 if Some(service) == self.current_service {
-                    self.finish_load(service);
+                    self.finish_load(service, event_tx);
                 }
             }
             Event::ResourceLoadError { service, error, auth } => {
@@ -1626,6 +1809,7 @@ impl App {
                     self.loading = false;
                     self.loading_complete = true;
                     self.loading_progress = None;
+                    self.pending_jump = None;
                     match auth {
                         // One app-wide line, never a per-service error.
                         Some(a) => self.auth_error = Some(a),
@@ -1643,7 +1827,7 @@ impl App {
         }
     }
 
-    fn finish_load(&mut self, service: ServiceType) {
+    fn finish_load(&mut self, service: ServiceType, event_tx: &mpsc::UnboundedSender<Event>) {
         self.loading = false;
         self.loading_complete = true;
         self.loading_progress = None;
@@ -1658,6 +1842,7 @@ impl App {
             ));
         }
         self.update_search();
+        self.resolve_pending_jump(event_tx);
     }
 
     fn handle_mouse(&mut self, mouse: MouseEvent, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -1845,6 +2030,7 @@ impl App {
                 KeyCode::Char(c) if crate::sections::index_for_key(c).is_some() => {
                     self.set_detail_section(crate::sections::index_for_key(c).unwrap(), event_tx)
                 }
+                KeyCode::Enter => self.follow_detail_line(event_tx),
                 KeyCode::Char('y') => {
                     let lines = self.get_detail_lines();
                     if let Some((_, v)) = lines.get(self.details_scroll) {

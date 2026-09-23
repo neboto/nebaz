@@ -117,7 +117,12 @@ impl ArmClient {
 
     /// `GET` one resource (or any single-object endpoint).
     pub async fn get(&self, path: &str, api_version: &str) -> Result<Value> {
-        self.send_json(self.get_request(path, api_version, &[])?).await
+        self.get_query(path, api_version, &[]).await
+    }
+
+    /// `GET` one resource with extra query pairs (`$expand=instanceView`).
+    pub async fn get_query(&self, path: &str, api_version: &str, query: &[(&str, &str)]) -> Result<Value> {
+        self.send_json(self.get_request(path, api_version, query)?).await
     }
 
     /// `GET` a whole collection, following `nextLink` to the end.

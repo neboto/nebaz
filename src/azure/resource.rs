@@ -169,6 +169,15 @@ pub trait Resource: Send + Sync + Debug {
         portal_url_for(self.id(), self.tenant_id())
     }
 
+    /// The **Related** section's lines: labelled ARM ids this row points
+    /// at, its subscription and resource group first (the default), then
+    /// the type's own links (a VM's NICs and disks, a NIC's subnet). Enter
+    /// on a line jumps there: this is the app's one jump mechanism
+    /// (ticket 06). Override by starting from [`scope_related`].
+    fn related(&self) -> Vec<(String, String)> {
+        scope_related(self.id())
+    }
+
     /// The `az` CLI command that fetches this resource, complete: `C`
     /// copies it verbatim. Use `--ids <ARM id>` wherever `az` supports it
     /// and **never** append `--subscription` to such a command (the id
@@ -207,6 +216,102 @@ pub fn resource_group_of(id: &str) -> Option<&str> {
     None
 }
 
+// ── The state ladder (ticket 06) ──────────────────────────────────────
+
+/// Rung 1: a `provisioningState` that says something — a transition or a
+/// failure. `Succeeded` (and a missing state) says nothing and yields
+/// `None`, so the next rung decides.
+pub fn provisioning_rung(provisioning_state: Option<&str>) -> Option<(ResourceState, String)> {
+    let native = provisioning_state.unwrap_or("").trim();
+    let bucket = match native.to_lowercase().as_str() {
+        "" | "succeeded" => return None,
+        "failed" | "canceled" | "cancelled" => ResourceState::Unavailable,
+        "deleting" => ResourceState::Deleting,
+        "creating" | "accepted" | "resolvingdns" => ResourceState::Creating,
+        // Updating, Upgrading, Scaling, Migrating, Starting, Stopping…
+        _ => ResourceState::Pending,
+    };
+    Some((bucket, native.to_lowercase()))
+}
+
+/// The one rule every type's `state()` / `state_label()` follows:
+/// provisioning transition or failure > the type's runtime state (power,
+/// attachment, primary status) > stateless. Returns the bucket and the
+/// label together so the two can never disagree.
+pub fn state_ladder(
+    provisioning_state: Option<&str>,
+    runtime: Option<(ResourceState, &str)>,
+) -> (ResourceState, String) {
+    if let Some(rung) = provisioning_rung(provisioning_state) {
+        return rung;
+    }
+    match runtime {
+        Some((bucket, native)) => {
+            let label = native_state_label(native, || bucket.clone());
+            (bucket, label)
+        }
+        None => (ResourceState::stateless(), String::new()),
+    }
+}
+
+// ── ARM id helpers ────────────────────────────────────────────────────
+
+/// The subscription GUID segment of an ARM id.
+pub fn subscription_of(id: &str) -> Option<&str> {
+    let mut parts = id.split('/').filter(|p| !p.is_empty());
+    match parts.next() {
+        Some(p) if p.eq_ignore_ascii_case("subscriptions") => parts.next(),
+        _ => None,
+    }
+}
+
+/// `/subscriptions/{sub}` for any ARM id under a subscription.
+pub fn subscription_id_of(id: &str) -> Option<String> {
+    subscription_of(id).map(|s| format!("/subscriptions/{}", s))
+}
+
+/// `/subscriptions/{sub}/resourceGroups/{rg}` for any ARM id inside a group.
+pub fn resource_group_id_of(id: &str) -> Option<String> {
+    let sub = subscription_of(id)?;
+    let rg = resource_group_of(id)?;
+    Some(format!("/subscriptions/{}/resourceGroups/{}", sub, rg))
+}
+
+/// The last segment of an ARM id — the resource's own name.
+pub fn name_of_id(id: &str) -> &str {
+    id.trim_end_matches('/').rsplit('/').next().unwrap_or(id)
+}
+
+/// The resource-provider namespace and the type chain of an ARM id,
+/// lowercased: `…/providers/Microsoft.Network/virtualNetworks/v/subnets/s`
+/// → `("microsoft.network", ["virtualnetworks", "subnets"])`. `None` for
+/// subscription- and group-level ids.
+pub fn arm_type_chain(id: &str) -> Option<(String, Vec<String>)> {
+    let mut parts = id.split('/').filter(|p| !p.is_empty()).peekable();
+    while let Some(p) = parts.next() {
+        if p.eq_ignore_ascii_case("providers") {
+            let ns = parts.next()?.to_lowercase();
+            let rest: Vec<&str> = parts.collect();
+            let chain = rest.iter().step_by(2).map(|t| t.to_lowercase()).collect();
+            return Some((ns, chain));
+        }
+    }
+    None
+}
+
+/// The two links every ARM row has: its subscription and, inside a group,
+/// its resource group. The seed of every `related()` override.
+pub fn scope_related(id: &str) -> Vec<(String, String)> {
+    let mut v = Vec::new();
+    if let Some(sub) = subscription_id_of(id) {
+        v.push(("Subscription".to_string(), sub));
+    }
+    if let Some(rg) = resource_group_id_of(id) {
+        v.push(("Resource group".to_string(), rg));
+    }
+    v
+}
+
 // Enable cloning of Box<dyn Resource>
 impl Clone for Box<dyn Resource> {
     fn clone(&self) -> Self {
@@ -228,7 +333,50 @@ pub fn shell_quote(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{native_state_label, portal_url_for, resource_group_of, shell_quote, ResourceState};
+    use super::*;
+
+    #[test]
+    fn the_ladder_prefers_transitions_then_runtime_then_stateless() {
+        assert_eq!(
+            state_ladder(Some("Updating"), Some((ResourceState::Running, "running"))),
+            (ResourceState::Pending, "updating".into())
+        );
+        assert_eq!(
+            state_ladder(Some("Failed"), Some((ResourceState::Running, "running"))),
+            (ResourceState::Unavailable, "failed".into())
+        );
+        assert_eq!(
+            state_ladder(Some("Succeeded"), Some((ResourceState::Stopped, "deallocated"))),
+            (ResourceState::Stopped, "deallocated".into())
+        );
+        assert_eq!(state_ladder(None, Some((ResourceState::Available, ""))), (ResourceState::Available, "available".into()));
+        assert_eq!(state_ladder(Some("Succeeded"), None), (ResourceState::stateless(), String::new()));
+        assert_eq!(state_ladder(Some("Deleting"), None), (ResourceState::Deleting, "deleting".into()));
+        assert_eq!(state_ladder(Some("Creating"), None).0, ResourceState::Creating);
+    }
+
+    #[test]
+    fn arm_id_helpers_split_the_path() {
+        let id = "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/v1/subnets/s1";
+        assert_eq!(subscription_of(id), Some("0000"));
+        assert_eq!(subscription_id_of(id).as_deref(), Some("/subscriptions/0000"));
+        assert_eq!(resource_group_id_of(id).as_deref(), Some("/subscriptions/0000/resourceGroups/rg"));
+        assert_eq!(name_of_id(id), "s1");
+        assert_eq!(
+            arm_type_chain(id),
+            Some(("microsoft.network".into(), vec!["virtualnetworks".into(), "subnets".into()]))
+        );
+        assert_eq!(arm_type_chain("/subscriptions/0000/resourceGroups/rg"), None);
+        assert_eq!(subscription_of("not-an-id"), None);
+        assert_eq!(
+            scope_related(id),
+            vec![
+                ("Subscription".to_string(), "/subscriptions/0000".to_string()),
+                ("Resource group".to_string(), "/subscriptions/0000/resourceGroups/rg".to_string()),
+            ]
+        );
+        assert_eq!(scope_related("/subscriptions/0000").len(), 1);
+    }
 
     #[test]
     fn portal_url_is_tenant_qualified_when_the_tenant_is_known() {
