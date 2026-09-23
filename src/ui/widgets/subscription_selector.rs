@@ -1,5 +1,10 @@
 // ported from neboto-tui src/ui/widgets/profile_selector.rs @ d483900
-use crate::azure::client::list_subscriptions;
+//! The `P` picker: every subscription `az account list` knows, all tenants,
+//! with a tenant column instead of a tenant picker (ADR 0003). Disabled
+//! subscriptions are listed but dimmed; the current one is marked. When
+//! there is nothing to list the popup shows the auth line and its fix.
+
+use crate::azure::auth::SubscriptionEntry;
 use crate::ui::theme;
 use crate::ui::widgets::location_selector::render_search_line;
 use ratatui::{
@@ -17,10 +22,23 @@ pub struct SubscriptionSelectorState {
     pub visible: bool,
     pub selected_index: usize,
     pub query: String,
-    subscriptions: Vec<String>,
+    subscriptions: Vec<SubscriptionEntry>,
+    /// The auth line to show in place of an empty list.
+    auth_message: Option<String>,
     /// List-area height recorded at render time (`Cell`: render only sees
     /// `&self`), so `Ctrl-d`/`Ctrl-u` page jumps scale with the actual popup.
     viewport: std::cell::Cell<u16>,
+}
+
+fn matches(entry: &SubscriptionEntry, query: &str) -> bool {
+    if query.is_empty() {
+        return true;
+    }
+    let q = query.to_lowercase();
+    entry.name.to_lowercase().contains(&q)
+        || entry.id.to_lowercase().contains(&q)
+        || entry.tenant_id.to_lowercase().contains(&q)
+        || entry.state.to_lowercase().contains(&q)
 }
 
 impl SubscriptionSelectorState {
@@ -30,18 +48,25 @@ impl SubscriptionSelectorState {
             selected_index: 0,
             query: String::new(),
             subscriptions: Vec::new(),
+            auth_message: None,
             viewport: std::cell::Cell::new(0),
         }
     }
 
-    /// Re-read the subscription list and show the modal, selecting the
-    /// active subscription if present.
-    pub fn show(&mut self, current_subscription: Option<&str>) {
-        self.subscriptions = list_subscriptions();
+    /// Show the modal over the given entries, selecting the active
+    /// subscription if present.
+    pub fn show(
+        &mut self,
+        subscriptions: Vec<SubscriptionEntry>,
+        current_subscription: Option<&str>,
+        auth_message: Option<String>,
+    ) {
+        self.subscriptions = subscriptions;
+        self.auth_message = auth_message;
         self.visible = true;
         self.query.clear();
         self.selected_index = current_subscription
-            .and_then(|target| self.subscriptions.iter().position(|p| p == target))
+            .and_then(|target| self.subscriptions.iter().position(|p| p.id == target))
             .unwrap_or(0);
     }
 
@@ -49,16 +74,11 @@ impl SubscriptionSelectorState {
         self.visible = false;
     }
 
-    /// Subscriptions matching the current search query.
-    pub fn filtered(&self) -> Vec<String> {
-        if self.query.is_empty() {
-            return self.subscriptions.clone();
-        }
-        let q = self.query.to_lowercase();
+    /// Entries matching the current search query.
+    pub fn filtered(&self) -> Vec<&SubscriptionEntry> {
         self.subscriptions
             .iter()
-            .filter(|p| p.to_lowercase().contains(&q))
-            .cloned()
+            .filter(|e| matches(e, &self.query))
             .collect()
     }
 
@@ -85,8 +105,9 @@ impl SubscriptionSelectorState {
         self.selected_index = 0;
     }
 
+    /// The selected subscription's id.
     pub fn selected_subscription(&self) -> Option<String> {
-        self.filtered().get(self.selected_index).cloned()
+        self.filtered().get(self.selected_index).map(|e| e.id.clone())
     }
 
     fn page_stride(&self) -> usize {
@@ -131,24 +152,26 @@ pub fn render_subscription_selector(
         return;
     }
 
-    let area = centered_rect(60, 60, frame.size());
+    let area = centered_rect(70, 60, frame.size());
     frame.render_widget(Clear, area);
 
-    // Empty state: nothing discovered (no `az login`, or discovery not wired).
+    // Empty state: the auth line (not logged in, expired, …) or nothing found.
     if state.subscriptions.is_empty() {
         let block = theme::popup_block("Switch Subscription").title(
-            Title::from(theme::hint_line(&[("Esc", "close")]))
+            Title::from(theme::hint_line(&[("R", "retry"), ("Esc", "close")]))
                 .position(Position::Bottom)
                 .alignment(Alignment::Center),
         );
+        let text = state
+            .auth_message
+            .clone()
+            .unwrap_or_else(|| "No subscriptions found — run `az login`, then press R".to_string());
         let msg = Paragraph::new(vec![
             Line::raw(""),
-            Line::styled(
-                "  No subscriptions found — run `az login` first",
-                Style::default().fg(crate::ui::theme::text_muted()),
-            ),
+            Line::styled(format!("  ✗ {}", text), Style::default().fg(theme::error())),
         ])
-        .block(block);
+        .block(block)
+        .wrap(ratatui::widgets::Wrap { trim: false });
         frame.render_widget(msg, area);
         return;
     }
@@ -186,12 +209,19 @@ pub fn render_subscription_selector(
     state.viewport.set(chunks[1].height);
 
     let filtered = state.filtered();
+    let name_w = filtered
+        .iter()
+        .map(|e| e.name.chars().count())
+        .max()
+        .unwrap_or(0)
+        .clamp(8, 36);
     let items: Vec<ListItem> = filtered
         .iter()
-        .map(|subscription| {
-            let is_current = current_subscription == Some(subscription.as_str());
+        .map(|entry| {
+            let is_current = current_subscription == Some(entry.id.as_str());
+            let enabled = entry.is_enabled();
             let marker = if is_current {
-                Span::styled("● ", Style::default().fg(theme::success()))
+                Span::styled("⦿ ", Style::default().fg(theme::success()))
             } else {
                 Span::raw("  ")
             };
@@ -199,12 +229,28 @@ pub fn render_subscription_selector(
                 Style::default()
                     .fg(theme::success())
                     .add_modifier(Modifier::BOLD)
-            } else {
+            } else if enabled {
                 Style::default().fg(crate::ui::theme::text_primary())
+            } else {
+                Style::default().fg(theme::text_dim())
             };
+            let dim = Style::default().fg(theme::text_dim());
+            let state_style = if enabled {
+                Style::default().fg(crate::ui::theme::text_muted())
+            } else {
+                Style::default().fg(theme::warning())
+            };
+            let mut name: String = entry.name.chars().take(name_w).collect();
+            if entry.name.chars().count() > name_w {
+                name.pop();
+                name.push('…');
+            }
             ListItem::new(Line::from(vec![
                 marker,
-                Span::styled(subscription.clone(), name_style),
+                Span::styled(format!("{:<w$}", name, w = name_w), name_style),
+                Span::styled(format!("  {}…", entry.short_id()), dim),
+                Span::styled(format!("  {}…", entry.short_tenant()), dim),
+                Span::styled(format!("  {}", entry.state.to_lowercase()), state_style),
             ]))
         })
         .collect();
@@ -239,4 +285,43 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(id: &str, name: &str, tenant: &str, state: &str) -> SubscriptionEntry {
+        SubscriptionEntry {
+            id: id.into(),
+            name: name.into(),
+            tenant_id: tenant.into(),
+            state: state.into(),
+            is_default: false,
+            cloud_name: None,
+            user: None,
+        }
+    }
+
+    #[test]
+    fn show_marks_the_current_and_filters_on_name_id_tenant_or_state() {
+        let mut s = SubscriptionSelectorState::new();
+        s.show(
+            vec![
+                entry("1111", "Prod", "t-a", "Enabled"),
+                entry("2222", "Dev", "t-b", "Enabled"),
+                entry("3333", "Old", "t-b", "Disabled"),
+            ],
+            Some("2222"),
+            None,
+        );
+        assert_eq!(s.selected_index, 1);
+        s.query = "t-b".into();
+        assert_eq!(s.filtered().len(), 2);
+        s.query = "disabled".into();
+        s.selected_index = 0;
+        assert_eq!(s.selected_subscription().as_deref(), Some("3333"));
+        s.query = "33".into();
+        assert_eq!(s.selected_subscription().as_deref(), Some("3333"));
+    }
 }

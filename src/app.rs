@@ -4,6 +4,7 @@
 //! mutated only in `handle_event` / `handle_key`, and every widget renders
 //! from `&App`.
 
+use crate::azure::auth::AuthError;
 use crate::azure::cache::ResourceCache;
 use crate::azure::client::AzureClients;
 use crate::azure::location::{Location, LocationRow, ALL_DISPLAY};
@@ -244,6 +245,10 @@ pub struct App {
     pub subscription_id: Option<String>,
     pub subscription_name: Option<String>,
     pub tenant_id: Option<String>,
+    /// The one app-wide auth condition (ADR 0003): one status-bar line
+    /// with the fix, suppressing per-service load errors while it holds;
+    /// cleared by the next successful token.
+    pub auth_error: Option<AuthError>,
     pub visited_services: HashSet<ServiceType>,
 
     // Resources for the current service.
@@ -351,10 +356,11 @@ impl App {
         );
         crate::ui::theme::init_palette(palette);
 
-        let azure_clients =
-            AzureClients::new(config.default_subscription.clone(), config.endpoint_url.clone())
-                .await?;
+        let azure_clients = AzureClients::new(&config).await?;
         let subscription_id = azure_clients.current_subscription().map(str::to_string);
+        let subscription_name = azure_clients.current_subscription_name().map(str::to_string);
+        let tenant_id = azure_clients.current_tenant().map(str::to_string);
+        let auth_error = azure_clients.auth_error().cloned();
 
         let cache_ttl = Duration::from_secs(config.cache_ttl.unwrap_or(300));
         let cache = ResourceCache::new(cache_ttl, config.cache_ttl_overrides());
@@ -376,8 +382,9 @@ impl App {
             current_view,
             current_location,
             subscription_id,
-            subscription_name: None,
-            tenant_id: None,
+            subscription_name,
+            tenant_id,
+            auth_error,
             visited_services: HashSet::new(),
             resources: Vec::new(),
             filtered_resources: Vec::new(),
@@ -454,7 +461,21 @@ impl App {
         if let Some(s) = current_service {
             app.visited_services.insert(s);
         }
+        // No subscription resolved: open the picker with the auth line.
+        if app.subscription_id.is_none() {
+            app.open_subscription_picker();
+        }
         Ok(app)
+    }
+
+    /// `P`: the picker over every subscription the CLI knows, or the auth
+    /// line when there are none.
+    fn open_subscription_picker(&mut self) {
+        let entries = self.azure_clients.subscriptions().to_vec();
+        let current = self.azure_clients.current_subscription().map(str::to_string);
+        let message = self.auth_error.as_ref().map(|a| a.status_line());
+        self.subscription_selector
+            .show(entries, current.as_deref(), message);
     }
 
     // ── Startup / main-loop hooks ───────────────────────────────────────
@@ -553,19 +574,46 @@ impl App {
         });
     }
 
-    /// Background identity fetch for the service-tab badge. The stub reports
-    /// the configured subscription only; ticket 05 replaces the body with
-    /// `GET /subscriptions/{id}`.
+    /// Identity for the service-tab badge. Filled from the `az account
+    /// list` entry — no ARM call — and delivered through the same event a
+    /// fetched identity would use.
     pub fn spawn_subscription_info_fetch(&self, event_tx: &mpsc::UnboundedSender<Event>) {
-        let id = self.subscription_id.clone();
-        let tx = event_tx.clone();
-        tokio::spawn(async move {
-            let _ = tx.send(Event::SubscriptionInfoLoaded {
-                subscription_id: id,
-                display_name: None,
-                tenant_id: None,
-            });
+        let entry = self.azure_clients.current_entry().cloned();
+        let _ = event_tx.send(Event::SubscriptionInfoLoaded {
+            subscription_id: entry.as_ref().map(|e| e.id.clone()),
+            display_name: entry.as_ref().map(|e| e.name.clone()),
+            tenant_id: entry.map(|e| e.tenant_id),
         });
+    }
+
+    /// `R` on the auth line: re-read the account list, then reload the
+    /// current view under a fresh LazyStore.
+    async fn retry_auth(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        match self.azure_clients.retry_auth().await {
+            Ok(_) => {
+                self.auth_error = self.azure_clients.auth_error().cloned();
+            }
+            Err(e) => {
+                self.auth_error = e.auth_error().or_else(|| Some(AuthError::Other(e.to_string())));
+            }
+        }
+        if self.subscription_selector.visible {
+            self.open_subscription_picker();
+        }
+        if self.auth_error.is_some() {
+            return;
+        }
+        self.apply_subscription_identity();
+        self.spawn_subscription_info_fetch(event_tx);
+        self.lazy = LazyStore::new(self.lazy.epoch() + 1);
+        self.load_generation += 1;
+        if let Some(service) = self.current_service {
+            let sub = self.subscription_key();
+            self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
+        }
+        self.load_service_resources();
+        App::trigger_locations(self, event_tx);
+        self.toast("Retrying with the Azure CLI");
     }
 
     fn subscription_key(&self) -> String {
@@ -964,8 +1012,19 @@ impl App {
         let fut = fut();
         tokio::spawn(async move {
             let result = fut.await;
-            let apply: Box<dyn FnOnce(&mut App) + Send> =
-                Box::new(move |app: &mut App| lens(&mut app.lazy).apply(key, result));
+            let apply: Box<dyn FnOnce(&mut App) + Send> = Box::new(move |app: &mut App| {
+                // A lazy fetch that failed for want of a token raises the
+                // app-wide line; one that succeeded proves the token works.
+                match &result {
+                    Err(e) => {
+                        if let Some(a) = AuthError::classify(e) {
+                            app.auth_error = Some(a);
+                        }
+                    }
+                    Ok(_) => app.auth_error = None,
+                }
+                lens(&mut app.lazy).apply(key, result)
+            });
             let _ = tx.send(Event::Lazy(LazyApply { epoch, apply }));
         });
     }
@@ -1438,6 +1497,7 @@ impl App {
             }
             Event::ResourceRefreshFailed { error } => self.error_message = Some(error),
 
+            Event::AuthRetryRequested => self.retry_auth(event_tx).await,
             Event::LocationSwitchRequested { location } => self.switch_location(location),
             Event::SubscriptionSwitchRequested { subscription_id } => {
                 if let Err(e) = self.switch_subscription(&subscription_id, event_tx) {
@@ -1479,6 +1539,7 @@ impl App {
                 if Some(service) != self.current_service {
                     return;
                 }
+                self.auth_error = None;
                 self.resources = resources;
                 self.finish_load(service);
             }
@@ -1490,6 +1551,7 @@ impl App {
                 if Some(service) != self.current_service || !self.loading {
                     return;
                 }
+                self.auth_error = None;
                 self.resources.extend(resources);
                 self.loading_progress = Some(progress);
                 self.update_search();
@@ -1499,12 +1561,17 @@ impl App {
                     self.finish_load(service);
                 }
             }
-            Event::ResourceLoadError { service, error } => {
+            Event::ResourceLoadError { service, error, auth } => {
                 if Some(service) == self.current_service {
                     self.loading = false;
                     self.loading_complete = true;
                     self.loading_progress = None;
-                    self.error_message = Some(error);
+                    match auth {
+                        // One app-wide line, never a per-service error.
+                        Some(a) => self.auth_error = Some(a),
+                        None if self.auth_error.is_none() => self.error_message = Some(error),
+                        None => {}
+                    }
                 }
             }
             Event::ResourceLoadWarning { service, warning }
@@ -1826,15 +1893,16 @@ impl App {
                 self.help_scroll = 0;
             }
             KeyCode::Char('S') => self.service_selector.show(self.current_service),
+            KeyCode::Char('R') if self.auth_error.is_some() => {
+                let _ = _event_tx.send(Event::AuthRetryRequested);
+            }
             KeyCode::Char('R') => {
                 App::trigger_locations(self, _event_tx);
                 let rows = self.location_rows();
                 let loaded = matches!(self.subscription_locations(), Some(crate::lazy::Lazy::Loaded(_)));
                 self.location_selector.show(&self.current_location, rows, loaded);
             }
-            KeyCode::Char('P') => self
-                .subscription_selector
-                .show(self.azure_clients.current_subscription()),
+            KeyCode::Char('P') => self.open_subscription_picker(),
             KeyCode::Char('b') => self.banner_visible = !self.banner_visible,
             KeyCode::Char('e') => {
                 if self.selected_index.is_some() {
@@ -2035,6 +2103,10 @@ impl App {
     }
 
     fn handle_subscription_selector_key(&mut self, key: KeyEvent, event_tx: &mpsc::UnboundedSender<Event>) {
+        if self.auth_error.is_some() && matches!(key.code, KeyCode::Char('R')) {
+            let _ = event_tx.send(Event::AuthRetryRequested);
+            return;
+        }
         let sel = &mut self.subscription_selector;
         match key.code {
             KeyCode::Esc => sel.hide(),

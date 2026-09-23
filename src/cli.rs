@@ -21,11 +21,12 @@ pub struct Cli {
     #[arg(short = 'r', long, value_name = "LOCATION")]
     pub location: Option<String>,
 
-    /// Subscription id to browse (default: the Azure CLI's current account).
+    /// Subscription to browse, by id or display name (default: the Azure
+    /// CLI's current account).
     #[arg(short = 'p', long, value_name = "SUBSCRIPTION")]
     pub subscription: Option<String>,
 
-    /// Custom ARM endpoint URL.
+    /// ARM base URL for a sovereign cloud (default https://management.azure.com).
     #[arg(long, value_name = "URL")]
     pub endpoint_url: Option<String>,
 

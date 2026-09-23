@@ -27,9 +27,12 @@ crossterm = "0.27"
 tokio = { version = "1.35", features = ["full"] }
 async-trait = "0.1"
 
-# Azure — deliberately absent from the skeleton. Ticket 05 (auth) adds
-# `azure_core` + `azure_identity` 1.x; every ARM call is direct REST
-# through the azure_core pipeline (ticket 01).
+# Azure. No management-plane crate exists (ticket 01): every ARM call is a
+# direct GET through the azure_core pipeline, and azure_identity supplies
+# the Azure CLI credential (ADR 0003). `tokio` selects the async process
+# executor for the `az` shell-out.
+azure_core = "1"
+azure_identity = { version = "1", features = ["tokio"] }
 
 # Fuzzy search
 fuzzy-matcher = "0.3"

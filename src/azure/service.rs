@@ -312,6 +312,7 @@ pub trait AzureService: Send + Sync {
             Err(e) => {
                 let _ = event_tx.send(Event::ResourceLoadError {
                     service: service_type,
+                    auth: e.auth_error(),
                     error: e.to_string(),
                 });
                 Err(e)

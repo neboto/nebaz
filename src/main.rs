@@ -44,7 +44,17 @@ fn main() -> Result<()> {
 }
 
 async fn run(cli: cli::Cli) -> Result<()> {
-    let mut app = App::new(cli).await?;
+    // Anything that fails here fails before the TUI opens: a missing `az`
+    // (with the install link), an unsupported credential source, an unknown
+    // --subscription (listing the known ones). Not being logged in is not
+    // a failure — the TUI opens with the auth line.
+    let mut app = match App::new(cli).await {
+        Ok(app) => app,
+        Err(e) => {
+            eprintln!("nebaz: {}", e);
+            std::process::exit(1);
+        }
+    };
     app.arm_startup_macro();
 
     let mut tui = Some(Tui::new()?);
@@ -262,7 +272,18 @@ fn fit_hint_line(mut line: Line<'static>, max_width: usize) -> Line<'static> {
 fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui::Frame) {
     // Left segment: transient message (error/success/loading) or contextual key hints
     let mut left_is_hints = false;
-    let left: Line = if let Some(error) = &app.error_message {
+    let left: Line = if let Some(auth) = &app.auth_error {
+        // The one app-wide auth line, ahead of everything else.
+        Line::from(vec![
+            Span::styled(
+                " ✗ ",
+                Style::default()
+                    .fg(theme::error())
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(auth.status_line(), Style::default().fg(theme::error())),
+        ])
+    } else if let Some(error) = &app.error_message {
         Line::from(vec![
             Span::styled(
                 " ✗ ",

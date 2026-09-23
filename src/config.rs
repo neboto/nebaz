@@ -14,7 +14,8 @@ use std::path::PathBuf;
 /// # ~/.config/nebaz/config.toml
 /// default_service = "vm"       # omit to show the welcome screen and load nothing
 /// default_location = "westeurope"  # omit for "all locations"
-/// default_subscription = "00000000-0000-0000-0000-000000000000"
+/// default_subscription = "Prod"    # id or display name; omit for the CLI's default
+/// auth            = "cli"      # the only source in the first release
 /// show_banner     = true
 /// ```
 #[derive(Debug, Default, Deserialize)]
@@ -27,12 +28,21 @@ pub struct Config {
     /// Location filter to start with (short name, e.g. "westeurope");
     /// unset means all locations.
     pub default_location: Option<String>,
-    /// Subscription id to start in. Unset: the Azure CLI's current account.
+    /// Subscription to start in — an id **or** a display name,
+    /// case-insensitive, validated against `az account list` (an unknown
+    /// value exits listing the known ones). Unset: the CLI's default
+    /// account, or its first enabled one.
     pub default_subscription: Option<String>,
+    /// Credential source: `"cli"` (default; `az login`), `"environment"`
+    /// or `"managed-identity"` (both parse and fail with "not supported
+    /// yet" until they land). Env `NEBAZ_AUTH` overrides. Never
+    /// auto-detected.
+    pub auth: Option<String>,
     /// Whether the ASCII banner is shown at startup (default true).
     pub show_banner: Option<bool>,
-    /// Custom ARM endpoint URL (a sovereign cloud, or an emulator — whether
-    /// one is worth supporting is open; Azurite covers storage only).
+    /// The ARM base URL (default `https://management.azure.com`). A
+    /// sovereign cloud works by setting it by hand; the token scope
+    /// derives from it. Must be https.
     pub endpoint_url: Option<String>,
     /// Start in watch mode (auto-refresh of the current view) — same as the
     /// `--watch` flag. `w` toggles it at runtime either way.
@@ -169,6 +179,13 @@ default_location = "WestEurope"
         .unwrap();
         assert_eq!(config.default_service_type(), Some(ServiceType::VirtualMachines));
         assert_eq!(config.default_location_typed(), Some(Location::Named("westeurope".into())));
+    }
+
+    #[test]
+    fn parses_the_auth_key() {
+        let config: Config = toml::from_str(r#"auth = "cli""#).unwrap();
+        assert_eq!(config.auth.as_deref(), Some("cli"));
+        assert_eq!(Config::default().auth, None);
     }
 
     #[test]

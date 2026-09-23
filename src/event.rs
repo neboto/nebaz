@@ -1,4 +1,5 @@
 // ported from neboto-tui src/event.rs @ d483900
+use crate::azure::auth::AuthError;
 use crate::azure::location::Location;
 use crate::azure::resource::Resource;
 use crate::azure::service::ServiceType;
@@ -55,6 +56,10 @@ pub enum Event {
     ResourceLoadError {
         service: ServiceType,
         error: String,
+        /// Set when the load failed because no token could be obtained:
+        /// the app raises the app-wide auth line instead of a per-service
+        /// error.
+        auth: Option<AuthError>,
     },
     /// Non-fatal: one phase of a multi-phase load failed but the load keeps
     /// streaming. Unlike `ResourceLoadError` this must NOT clear the loading
@@ -83,11 +88,14 @@ pub enum Event {
         location: Location,
     },
 
-    /// The `P` slot: switch the active subscription (rebuilds the client
-    /// factory, replaces the `LazyStore`, bumps `load_generation`).
+    /// The `P` slot: switch the active subscription (keeps the client and
+    /// the list cache, replaces the `LazyStore`, bumps `load_generation`).
     SubscriptionSwitchRequested {
         subscription_id: String,
     },
+
+    /// `R` while the auth line is up: re-read `az account list` and reload.
+    AuthRetryRequested,
 
     /// Identity of the active subscription, fetched in the background at
     /// startup / after a switch for the service-tab badge.
