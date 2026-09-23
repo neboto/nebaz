@@ -1,0 +1,64 @@
+[package]
+name = "nebaz"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "A fast, keyboard-driven, read-only terminal UI for browsing Azure"
+repository = "https://github.com/neboto/nebaz"
+homepage = "https://neboto.dev/azure"
+readme = "README.md"
+keywords = ["azure", "tui", "terminal", "ratatui", "cloud"]
+categories = ["command-line-utilities"]
+
+# `cargo binstall nebaz` pulls the prebuilt tarball the Release workflow
+# attaches to each tag. The archive name must match what
+# .github/workflows/release.yml produces and install.sh downloads.
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }{ archive-suffix }"
+pkg-fmt = "tgz"
+bin-dir = "{ bin }{ binary-ext }"
+
+[dependencies]
+# TUI
+ratatui = "0.26"
+crossterm = "0.27"
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+
+# Azure — deliberately absent from the skeleton. Ticket 05 (auth) adds
+# `azure_core` + `azure_identity` 1.x; every ARM call is direct REST
+# through the azure_core pipeline (ticket 01).
+
+# Fuzzy search
+fuzzy-matcher = "0.3"
+
+# Error handling
+thiserror = "1.0"
+
+# Serialization + config
+serde = { version = "1.0", features = ["derive"] }
+# preserve_order keeps detail/export JSON keys in on-screen order instead of
+# alphabetizing them (sections and fields read top-to-bottom like the pane).
+serde_json = { version = "1.0", features = ["preserve_order"] }
+toml = "0.8"
+
+# Clipboard
+arboard = "3.3"
+
+# Temporary files ($EDITOR)
+tempfile = "3.8"
+
+# CLI
+clap = { version = "4.6.1", features = ["derive"] }
+
+# Dev builds: keep line tables for our own code, strip dependency debuginfo.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+strip = true
+
+[profile.dev.package."*"]
+debug = false
