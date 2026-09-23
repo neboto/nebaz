@@ -1,0 +1,154 @@
+# Services
+
+What each first-release service shows, how its rows get a state, what a row
+links to, and which ARM call feeds it. This is the service catalog decided
+on the wayfinder map (ticket 06, 2026-09-23) promoted into the repo; the
+service file itself (`src/azure/services/<svc>.rs`) is the reference for
+what renders today and moves faster than this page. Read this **before
+editing a service file**; the cross-cutting rules are the ones that bit.
+
+Vocabulary (state ladder, Related section, embedded vs. lazy child, sub-tab)
+is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
+[`PERMISSIONS.md`](../PERMISSIONS.md).
+
+## Cross-cutting rules
+
+1. **State ladder**, applied top down on every type
+   (`resource::state_ladder`):
+   1. a `provisioningState` in transition (`Creating`, `Updating`,
+      `Deleting`, `Upgrading`, `Scaling`, `Accepted`, `ResolvingDNS`, …) or
+      `Failed`/`Canceled` wins → Creating / Deleting / Pending /
+      Unavailable, label the native word;
+   2. else the runtime state when the type has one: VM power state
+      (`running` → Running, `deallocated`/`stopped` → Stopped,
+      `starting`/`stopping`/`deallocating` → Pending), disk `diskState`
+      (`Attached` → Running, `Unattached` → Available, `Reserved`,
+      `ActiveSAS`, uploads → Pending), NIC attachment derived from
+      `virtualMachine.id` (`attached` → Running, `unattached` →
+      Available), AKS `powerState.code` (`Running`/`Stopped`), storage
+      `statusOfPrimary` (`available`/`unavailable`), subscription `state`
+      (`Enabled` → Available, `Disabled` → Unavailable, `Warned`/`PastDue`
+      → Pending, `Deleted` → Terminated);
+   3. else stateless (dim `○`, blank label): resource groups, VNets,
+      subnets, NSGs, vaults.
+   The label is always the native word lowercased (`native_state_label`),
+   so the `F` chips read `deallocated`, `unattached`, `upgrading`. Never
+   add a per-type state table that disagrees on what `Succeeded` means.
+2. **VM power state is on the row.** The VM list is two subscription-wide
+   calls: the model pages stream in with a blank state, then the same list
+   with `statusOnly=true` fills the power state, merged by id, delivered
+   as one replacement (`ResourcesLoaded`). If the second call fails the
+   rows stay, with a load warning. The Instance view section stays lazy
+   for the rest. Verified live 2026-09-23.
+3. **Jumps** are one function, ARM id → `NavLocation`, routing on the id's
+   `providers/{namespace}/{type}` segment (`JumpView::for_arm_id`); a
+   resource-group id lands on Resource Groups, a bare subscription id on
+   Subscriptions. The user presses it in a **Related** section every type
+   carries (non-lazy, derived from the list body): Subscription and
+   Resource group first, then the type's own targets; Enter on a line
+   jumps, switching subscription (and tenant) and lifting the location
+   filter if needed, with a toast. An id whose type nebaz does not browse
+   (public IP, route table) still lists; Enter copies it with a toast.
+   Enter on any other ARM-id valued line in the pane does the same, so the
+   Networking and Storage sections of a VM jump too.
+4. **Key Vault names come from ARM** (`Secrets_List`, `Keys_List`): the
+   control-plane token, `Reader` suffices, values never returned by
+   construction. Both section bodies open with "names and attributes from
+   ARM; values are never fetched". No certificates (no ARM list). The
+   read-only guard (`tests/readonly_guard.rs`) fails the build on any
+   vault data-plane host or `az keyvault secret show`.
+5. **Noise** (`a` hides it): only subscriptions whose state is not
+   `Enabled`. Every other type is false in the first release. Mark a
+   category noise only when the non-noise subset is normally non-empty,
+   because `a` is a session-wide toggle.
+6. **Embedded children** (subnets, node pools) are named `parent/child`
+   on their own sub-tab (`vnet-prod/default`, `aks-prod/system`), bare
+   inside the parent's section; `search_text` carries both. They
+   **inherit the parent's location** for the `R` filter (ADR 0002). Lazy
+   children (containers, secret and key names) are section lines, never
+   rows, so they carry no `cli_command`; the section footer names the
+   read command.
+7. **One call, two sub-tabs**: VNets/Subnets and Clusters/Node pools are
+   two cache entries from the same list; switching sub-tab refetches
+   (Network reads allow 10,000 per 5 min; AKS is a handful of rows).
+   Cross-filling both from one call is a backlog nicety.
+8. **AKS node pools need no lazy call**: the list's `agentPoolProfiles`
+   is the full agent-pool property set (autoscale bounds, power state,
+   node image version, current version). Still to confirm on a
+   subscription with a cluster; if the live JSON lacks those fields, add
+   a lazy Detail section per cluster rather than a per-pool call.
+9. **`az` commands** are `show --ids {id}` for every ARM row except the
+   five whose `show` takes no `--ids` (`az account show`, `az group
+   show`, `az keyvault show`, `az aks show`, `az aks nodepool show`), which
+   use the name form with `--subscription`. Verified live 2026-09-23. The
+   guard requires a read verb on every `az` literal in `src/`.
+10. **Partial failures**: a phase failure (the power-state pass, a lazy
+    section) sends `ResourceLoadWarning` and keeps going; `ResourceLoadError`
+    is for a first-phase failure where nothing can stream. Connection
+    failures name the host and the root cause ("cannot reach
+    management.azure.com: Connection refused (gave up after retries)").
+
+## The catalog
+
+Every type: Overview first, Related second to last, Tags last; ⧗ marks a
+lazy section; every `az` command is `show --ids {id}` unless stated.
+
+| Service · sub-tab | Sections between Overview and Related | State | Related (after Subscription, Resource group) | `az` |
+|---|---|---|---|---|
+| Subscriptions · Subscriptions | Details ⧗ · Locations ⧗ · Tags (from Details) | subscription state; noise unless `Enabled` | — (root) | `az account show --subscription {id}` |
+| Subscriptions · Resource Groups | — | stateless when `Succeeded` | `managedBy` id when set | `az group show -n {name} --subscription {sub}` |
+| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) | power state | each NIC, OS and data disks, availability set | `az vm show` |
+| Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
+| Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
+| Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
+| Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet | `az network vnet show` |
+| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway | `az network vnet subnet show` |
+| Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
+| Key Vault · Vaults | Access (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
+| AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group | `az aks show -n {name} -g {rg} --subscription {sub}` |
+| AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show --cluster-name {cluster} -g {rg} -n {pool} --subscription {sub}` |
+
+Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @kv
+@aks @pool` (the list in `ServiceType`, `src/azure/service.rs`, is the
+reference).
+
+## API calls per view
+
+All `GET`, all under `/subscriptions/{sub}`; paged with `nextLink`. Every
+path is built by the one constructor in `src/azure/arm.rs`; the ARM action
+each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
+
+| View or section | Calls | Path · api-version |
+|---|---|---|
+| Subscriptions | 0 ARM (`az account list`) | — |
+| Subscription Details / Locations | 1 each, per row, on demand | `/subscriptions/{id}` · `/subscriptions/{id}/locations` · `2022-12-01` |
+| Resource Groups | 1 | `/resourcegroups` · `2021-04-01` |
+| VMs | 2 | `/providers/Microsoft.Compute/virtualMachines` (+ `statusOnly=true`) · `2026-04-01` |
+| VM Instance view | 1 per VM, on demand | `{vm}/instanceView` · `2026-04-01` |
+| Disks | 1 | `/providers/Microsoft.Compute/disks` · `2026-03-02` |
+| NICs | 1 | `/providers/Microsoft.Network/networkInterfaces` · `2025-09-01` |
+| Accounts | 1 (Storage RP: 100 list calls / 5 min) | `/providers/Microsoft.Storage/storageAccounts` · `2026-06-01` |
+| Containers | 1 per account, on demand (same budget) | `{account}/blobServices/default/containers` · `2026-06-01` |
+| VNets, Subnets | 1 each (same list) | `/providers/Microsoft.Network/virtualNetworks` · `2025-09-01` |
+| NSGs | 1 | `/providers/Microsoft.Network/networkSecurityGroups` · `2025-09-01` |
+| Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
+| Secrets, Keys | 1 each per vault, on demand | `{vault}/secrets` · `{vault}/keys` · `2026-05-15` |
+| Clusters, Node pools | 1 each (same list) | `/providers/Microsoft.ContainerService/managedClusters` · `2026-06-01` |
+
+A full tour of every sub-tab in one subscription is 11 list calls. Only
+the Accounts view and its Containers sections touch the throttled Storage
+budget. **Watch mode** (`w`, presets 5–300 s) needs no floor for one
+watched view: the 5 s preset is 60 list calls per 5 minutes against the
+100 allowed. Two watched Storage views in one subscription would exceed
+it; that floor is on the backlog.
+
+## Verified live (2026-09-23, the Azure machine)
+
+- VM power state on the row through the `statusOnly=true` pass. Whether
+  that pass also carries the full model (one call instead of two) is
+  unchecked; the two-call form stays.
+- `az keyvault show`, `az aks show`, `az aks nodepool show` take no
+  `--ids` (name form above).
+- The api-versions above were accepted.
+- Still to check: embedded `agentPoolProfiles` carry autoscale and power
+  (rule 8), on a subscription with an AKS cluster.

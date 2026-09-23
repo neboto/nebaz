@@ -15,7 +15,7 @@ for what came from where and what was changed. The foundation is in: the
 scoping model ([ADR 0002](docs/adr/0002-subscription-scoped-lists-location-as-filter.md)),
 auth through the Azure CLI ([ADR 0003](docs/adr/0003-azure-cli-credential-per-tenant.md))
 and the six first-release services are real, per the catalog in
-`.scratch/nebaz/issues/06-service-catalog-first-six.md`: Subscriptions +
+[`docs/SERVICES.md`](docs/SERVICES.md): Subscriptions +
 Resource Groups, Virtual Machines (+ disks, NICs; power state on the row),
 Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
 NSGs), Key Vault (metadata plus secret and key *names*, never values), AKS
@@ -23,6 +23,9 @@ NSGs), Key Vault (metadata plus secret and key *names*, never values), AKS
 points at; Enter on one jumps there. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
+What `v0.1.0` is, and what must be true before it is tagged, is in
+[`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md); what is deliberately not in it
+is in [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Install
 
@@ -84,6 +87,7 @@ cargo run -- -s kv     # key vaults; 4 / 5 on a row list secret and key names
 cargo test             # all tests, including the read-only guard
 cargo test --test readonly_guard   # just the guard (see "Why read-only")
 cargo clippy           # lint
+scripts/smoke.sh       # offline pty run with a fake az (needs python3)
 ```
 
 ## Scoping model

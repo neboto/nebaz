@@ -533,81 +533,6 @@ pub fn export_detail(
     Ok(vec![json_path, csv_path, md_path])
 }
 
-/// Captured detail-pane sections for one resource: `(section name, rows)` as
-/// produced by `detail_sections_snapshot`.
-pub type DetailSections = Vec<(String, Vec<(String, String)>)>;
-
-/// Deep-export several resources to one combined
-/// `nebaz-<slug>-deep-<ts>` trio (`-deep-` keeps a same-second `Ctrl-X`
-/// shallow export from colliding):
-/// - `.json`: an array of the objects `detail_json` serializes (identity +
-///   per-section maps + tags — the full split-pane fidelity)
-/// - `.md`: one document — `# <label> (N)`, then a `##` chapter per resource
-///   mirroring its detail pane (sections nest at `###`)
-/// - `.csv`: long format (`ID, Section, Key, Value`) — deep nested data
-///   doesn't fit a wide table, but long format filters in a spreadsheet
-pub fn export_detail_multi(
-    items: &[(&dyn Resource, DetailSections)],
-    label: &str,
-) -> Result<Vec<PathBuf>> {
-    let ts = timestamp();
-    let base = export_dir().join(format!("nebaz-{}-deep-{}", slug(label), ts));
-    let json_path = base.with_extension("json");
-    let csv_path = base.with_extension("csv");
-    let md_path = base.with_extension("md");
-
-    let arr: Vec<Value> = items
-        .iter()
-        .map(|(r, sections)| detail_value(*r, sections))
-        .collect();
-    fs::write(&json_path, serde_json::to_string_pretty(&Value::Array(arr))?)?;
-
-    fs::write(&csv_path, multi_detail_csv(items))?;
-
-    let mut md = format!("# {} ({})\n\n", label, items.len());
-    for (r, sections) in items {
-        md.push_str(&detail_markdown_at(*r, sections, 2));
-        md.push('\n');
-    }
-    fs::write(&md_path, md)?;
-
-    Ok(vec![json_path, csv_path, md_path])
-}
-
-/// The multi-resource deep export's CSV: long format (`ID, Section, Key,
-/// Value`) — one row per detail line, filterable in a spreadsheet. Plain
-/// content lines (leading-space key, empty value) carry their text in the
-/// Value column so fixed-width tables and code previews survive; unloaded
-/// lazy sections are skipped (the export gate means there normally are none).
-fn multi_detail_csv(items: &[(&dyn Resource, DetailSections)]) -> String {
-    let mut csv = String::from("ID,Section,Key,Value\n");
-    for (r, sections) in items {
-        for (section, lines) in sections {
-            if is_unloaded(lines) {
-                continue;
-            }
-            for (k, v) in lines {
-                if k.trim().is_empty() && v.is_empty() {
-                    continue;
-                }
-                let (key, value) = if v.is_empty() && k.starts_with(' ') {
-                    ("", k.trim())
-                } else {
-                    (k.trim(), v.as_str())
-                };
-                csv.push_str(&format!(
-                    "{},{},{},{}\n",
-                    csv_escape(r.id()),
-                    csv_escape(section.trim()),
-                    csv_escape(key),
-                    csv_escape(value)
-                ));
-            }
-        }
-    }
-    csv
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -786,37 +711,4 @@ mod tests {
         assert!(solo.contains("\n## Overview\n"));
     }
 
-    #[test]
-    fn multi_detail_csv_is_long_format() {
-        let a = MockResource { tags: Default::default() };
-        let b = MockResource { tags: Default::default() };
-        let items: Vec<(&dyn Resource, Vec<(String, Vec<(String, String)>)>)> = vec![
-            (
-                &a,
-                vec![(
-                    "Overview".to_string(),
-                    vec![
-                        ("Name".to_string(), "mock".to_string()),
-                        ("".to_string(), "".to_string()), // spacer dropped
-                        ("  fixed-width row".to_string(), "".to_string()),
-                    ],
-                )],
-            ),
-            (
-                &b,
-                vec![(
-                    "Rules".to_string(),
-                    vec![("Loading…".to_string(), "".to_string())], // unloaded: skipped
-                )],
-            ),
-        ];
-        let csv = multi_detail_csv(&items);
-        let lines: Vec<&str> = csv.lines().collect();
-        assert_eq!(lines[0], "ID,Section,Key,Value");
-        assert_eq!(lines[1], "mock-1,Overview,Name,mock");
-        // Plain content line: empty key, text in the Value column.
-        assert_eq!(lines[2], "mock-1,Overview,,fixed-width row");
-        // The unloaded section contributed nothing.
-        assert_eq!(lines.len(), 3);
-    }
 }

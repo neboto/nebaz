@@ -32,21 +32,6 @@ pub struct ParsedQuery {
 /// assert_eq!(parsed.search_text, "web-server");
 /// assert!(parsed.is_service_switch);
 /// ```
-/// `@all <text>` → the cross-service search text: fuzzy-match every service
-/// with a warm cache entry instead of switching to one. Checked before
-/// `parse_query` (which would reject `all` as an unknown service prefix).
-/// `@allx` is NOT an @all query — the prefix must end the token.
-pub fn parse_all_query(query: &str) -> Option<&str> {
-    let rest = query.trim_start().strip_prefix("@all")?;
-    if rest.is_empty() {
-        Some("")
-    } else if rest.starts_with(char::is_whitespace) {
-        Some(rest.trim())
-    } else {
-        None
-    }
-}
-
 pub fn parse_query(query: &str) -> ParsedQuery {
     let trimmed = query.trim();
 
@@ -204,17 +189,6 @@ fn parse_colon_prefix(query: &str, colon_pos: usize) -> ParsedQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parse_all_query_requires_the_exact_prefix() {
-        assert_eq!(parse_all_query("@all"), Some(""));
-        assert_eq!(parse_all_query("@all "), Some(""));
-        assert_eq!(parse_all_query("@all api prod"), Some("api prod"));
-        assert_eq!(parse_all_query("  @all x"), Some("x"));
-        assert_eq!(parse_all_query("@allx"), None); // prefix must end the token
-        assert_eq!(parse_all_query("@vm all"), None);
-        assert_eq!(parse_all_query("all"), None);
-    }
 
     #[test]
     fn empty_and_plain_queries_do_not_switch() {

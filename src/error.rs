@@ -3,6 +3,7 @@ use crate::azure::auth::AuthError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(clippy::enum_variant_names)] // `ChannelError` is neboto's name; kept for the ported table
 pub enum Error {
     /// Anything the Azure side reports — an ARM error body, a transport
     /// failure. `From<azure_core::Error>` is the analog of neboto's

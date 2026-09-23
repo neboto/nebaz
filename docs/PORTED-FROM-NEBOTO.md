@@ -75,6 +75,8 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 | `PERMISSIONS.md` | — | `PERMISSIONS.md` — one built-in role (`Reader`) instead of an IAM action list per service; actions listed for a custom role |
 | `.github/workflows/ci.yml`, `.github/PULL_REQUEST_TEMPLATE.md` | — | copied; the guard step is gone because the guard runs inside `cargo test` |
 | `.github/workflows/release.yml`, `install.sh`, `docs/RELEASING.md`, `.github/dependabot.yml`, `.github/rulesets/*.json`, `config.example.toml` | — | copied and renamed (ticket 08); the private-repo knobs (`RELEASE_ON_CI`, `BUILD_MACOS`, `scripts/release-local.sh`) are dropped because nebaz is public; the example config carries the Azure keys (`auth`, `endpoint_url`, `default_subscription`, `default_location`) |
+| `CLAUDE.md`, `docs/SERVICES.md`, `docs/BACKLOG.md` | — | same names and shape as neboto's; written fresh for nebaz (ticket 09), the catalog promoted from the map |
+| `scripts/smoke.sh`, `scripts/smoke/` | — | no neboto equivalent (neboto has an in-crate harness and an emulator); a pty run with a fake `az` |
 | `src/azure/services/aks.rs` | ~680 | `src/aws/services/eks.rs` — clusters, embedded node pools |
 
 ## Not ported (deliberately)
@@ -85,11 +87,12 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 - `src/harness_tests/` — layer-2 harness; nebaz gets its own once a real service exists.
 - Every `src/aws/services/*.rs` and `src/ui/widgets/*_tabs.rs`, `metrics_overlay.rs`, `log_tail.rs`, `*_lens.rs`, `*_browser.rs`, `*_modal.rs`.
 
-## Copied but not yet wired (dead-code warnings at build)
+## Copied but not wired, then removed
 
-`parse_all_query` (`@all` cross-service search), `export_detail_multi` /
-`multi_detail_csv` (deep export over a list selection). Each is a Tier-1
-or fog feature ticket 09 decides on; the warnings are the to-do list.
-`subtab_bar`, `AppLayout::sub_tabs_area` and `shell_quote` lit up with the
-sub-tab model and the Subscriptions service; `native_state_label` with the
-catalog's state ladder.
+`parse_all_query` (`@all` cross-service search) and `export_detail_multi`
+/ `multi_detail_csv` (deep export over a list selection) were copied, never
+wired, and removed for `v0.1.0` (ticket 09) so the build is warning-free;
+they are in git history and on `docs/BACKLOG.md`. `subtab_bar`,
+`AppLayout::sub_tabs_area` and `shell_quote` lit up with the sub-tab model
+and the Subscriptions service; `native_state_label` with the catalog's
+state ladder.

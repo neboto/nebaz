@@ -1,0 +1,18 @@
+#!/bin/sh
+# Fake Azure CLI for TUI smoke tests: a two-tenant account list and a junk token.
+case "$1 $2" in
+  "account list")
+    cat <<'JSON'
+[
+ {"cloudName":"AzureCloud","homeTenantId":"aaaaaaaa-0000-0000-0000-000000000001","id":"11111111-1111-1111-1111-111111111111","isDefault":false,"name":"Old Sandbox","state":"Disabled","tenantId":"aaaaaaaa-0000-0000-0000-000000000001","user":{"name":"me@example.com","type":"user"}},
+ {"cloudName":"AzureCloud","homeTenantId":"aaaaaaaa-0000-0000-0000-000000000001","id":"22222222-2222-2222-2222-222222222222","isDefault":true,"name":"Production","state":"Enabled","tenantId":"aaaaaaaa-0000-0000-0000-000000000001","user":{"name":"me@example.com","type":"user"}},
+ {"cloudName":"AzureCloud","homeTenantId":"bbbbbbbb-0000-0000-0000-000000000002","id":"33333333-3333-3333-3333-333333333333","isDefault":false,"name":"Partner Dev","state":"Enabled","tenantId":"bbbbbbbb-0000-0000-0000-000000000002","user":{"name":"me@example.com","type":"user"}}
+]
+JSON
+    ;;
+  "account get-access-token")
+    echo "$@" >> "${FAKE_AZ_LOG:-/dev/null}"
+    printf '{"accessToken":"junk","expiresOn":"2030-01-02 03:04:05.000000","expires_on":1893456245,"subscription":"22222222-2222-2222-2222-222222222222","tenant":"aaaaaaaa-0000-0000-0000-000000000001","tokenType":"Bearer"}\n'
+    ;;
+  *) echo "fake az: unsupported: $*" >&2; exit 2 ;;
+esac
