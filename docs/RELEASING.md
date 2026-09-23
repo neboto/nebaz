@@ -143,11 +143,11 @@ repo, so there is no cost table and no local-release script.
 
 ## Repo hardening — checklist
 
-The repo is public, so all of these are available. None is applied yet
-(2026-09-23); apply them in this order once direct pushes to `main` are no
-longer the working shape, because step 1 makes a fresh push to `main` wait
-for CI to pass on it (branch → PR → CI → squash merge; the merge settings
-in step 5 are already on):
+The repo is public, so all of these are available. Apply step 1 only once
+direct pushes to `main` are no longer the working shape, because it makes
+a fresh push to `main` wait for CI to pass on it (branch → PR → CI →
+squash merge; the merge settings in step 5 are already on). Each command
+is one line; paste them one at a time.
 
 1. Branch ruleset (no force push, no deletion, CI must pass):
    `gh api -X POST repos/neboto/nebaz/rulesets --input .github/rulesets/protect-main.json`
@@ -167,8 +167,12 @@ in step 5 are already on):
    `gh api -X POST repos/neboto/nebaz/rulesets --input .github/rulesets/protect-release-tags.json`
 8. Dependabot **security** updates:
    `gh api -X PUT repos/neboto/nebaz/automated-security-fixes`
-9. Actions must be SHA-pinned (Settings → Actions → General), matching the
-   supply-chain rule above.
+9. Actions must be SHA-pinned, matching the supply-chain rule above (the
+   field sits on the general Actions permissions endpoint):
+   `gh api -X PUT repos/neboto/nebaz/actions/permissions -F enabled=true -f allowed_actions=all -F sha_pinning_required=true`
+
+Applied 2026-09-24: 1 is deliberately not; 2, 4, 6, 7, 8 are on; 3 and 9
+were re-run after a paste mangled the `<<<` forms (see the spec).
 
 ## How users install
 
