@@ -138,6 +138,9 @@ async fn run(cli: cli::Cli) -> Result<()> {
         app.macro_tick(&event_tx);
 
         if let Some(ref mut t) = tui {
+            if std::mem::take(&mut app.redraw_requested) {
+                let _ = t.terminal().clear();
+            }
             t.terminal().draw(|frame| render_app(&app, frame))?;
         }
 

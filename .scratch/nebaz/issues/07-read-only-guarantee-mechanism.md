@@ -43,8 +43,10 @@ cheapest runtime backstop, on top of the CI check.
 **2026-09-23 — input from ticket 06.** The catalog's "API calls per view"
 table is the allowlist: 15 `GET` paths (plus `nextLink` continuations) at
 seven api-versions, every one built by `ArmClient::get_request`. The copied
-command table is `show --ids` for every ARM row, `az account show` /
-`az group show` for the two without `--ids`; lazy children (containers,
+command table is `show --ids` for every ARM row except the five whose
+`show` takes no `--ids` (`az account show`, `az group show`,
+`az keyvault show`, `az aks show`, `az aks nodepool show`), which carry
+`--subscription` by name; lazy children (containers,
 secret and key names) are section lines with no command, and the vault's
 sections name `az keyvault secret list` / `key list` as the read commands.
 Key Vault values are never fetched: the ARM `secrets` / `keys` lists cannot

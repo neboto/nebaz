@@ -20,9 +20,9 @@ Resource Groups, Virtual Machines (+ disks, NICs; power state on the row),
 Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
 NSGs), Key Vault (metadata plus secret and key *names*, never values), AKS
 (+ node pools). Every row has a **Related** section listing the ARM ids it
-points at; Enter on one jumps there. Unverified against a live tenant
-until the Azure machine runs it: the `statusOnly=true` VM list shape, and
-`--ids` on `az keyvault show` / `az aks show` / `az aks nodepool show`.
+points at; Enter on one jumps there. Verified against a live tenant:
+VM power state on the row, and the copied `az` commands (Key Vault and
+AKS use the name form, since those `show` commands take no `--ids`).
 
 ## Build
 

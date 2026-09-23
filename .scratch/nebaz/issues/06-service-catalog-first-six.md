@@ -149,9 +149,9 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet | `az network vnet show` |
 | Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway | `az network vnet subnet show` |
 | Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
-| Key Vault · Vaults | Access (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show` (verify `--ids`) |
-| AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group | `az aks show` (verify `--ids`) |
-| AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show` (verify `--ids`) |
+| Key Vault · Vaults | Access (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` (no `--ids`) |
+| AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group | `az aks show -n {name} -g {rg} --subscription {sub}` (no `--ids`) |
+| AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show --cluster-name {cluster} -g {rg} -n {pool} --subscription {sub}` (no `--ids`) |
 
 ### API calls per view (input to ticket 07's allowlist and the watch-mode decision)
 
@@ -178,16 +178,18 @@ A full tour of every sub-tab in one subscription is 11 list calls; only
 the Accounts view and its Containers sections touch the throttled Storage
 budget, so a watch mode needs a floor only there.
 
-### To verify on the Azure machine
+### Verified on the Azure machine (2026-09-23)
 
-- The shape of the VM list with `statusOnly=true` (does it carry the full
-  model? then the VM view is one call).
-- `az keyvault show`, `az aks show`, `az aks nodepool show` accept `--ids`
-  (else the command carries `-n -g --subscription`).
-- The embedded `agentPoolProfiles` carry autoscale and power fields
-  (rule 8).
-- The api-versions above are the ones on Learn on 2026-09-23; ARM answers
-  an unsupported one with a 400 that lists the supported ones.
+- VM rows show their power state: the `statusOnly=true` pass works as
+  documented. Whether it also carries the full model (one call instead of
+  two) is still unchecked; the two-call form stays.
+- `az keyvault show`, `az aks show` and `az aks nodepool show` do **not**
+  take `--ids`; the copied commands use the name form with
+  `--subscription` (the table above is corrected).
+- The api-versions were accepted (rows rendered for the services tried).
+
+Still to check: the embedded `agentPoolProfiles` carry autoscale and
+power fields (rule 8), on a subscription with an AKS cluster.
 
 ### Inputs to later tickets
 

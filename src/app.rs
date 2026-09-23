@@ -346,6 +346,10 @@ pub struct App {
     /// as pages stream in; cleared with a message if the load ends
     /// without it.
     pub pending_jump: Option<(String, bool)>,
+    /// `Ctrl-L`: the main loop clears the terminal before the next draw,
+    /// so a screen garbled by the terminal (or something printing over
+    /// it) is one key from clean.
+    pub redraw_requested: bool,
     pub bookmarks: Vec<NavLocation>,
     pub bookmarks_visible: bool,
     pub bookmarks_selected: usize,
@@ -463,6 +467,7 @@ impl App {
             jump_list_visible: false,
             jump_list_selected: 0,
             pending_jump: None,
+            redraw_requested: false,
             bookmarks: crate::bookmarks::load(),
             bookmarks_visible: false,
             bookmarks_selected: 0,
@@ -2071,6 +2076,9 @@ impl App {
                     self.select(Some(0));
                 }
             }
+            KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.redraw_requested = true
+            }
             KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
                 if self.selected_index.is_some() {
                     self.details_focused = true;
@@ -2133,6 +2141,9 @@ impl App {
     /// Keys that work from either pane.
     fn handle_global_key(&mut self, key: KeyEvent, _event_tx: &mpsc::UnboundedSender<Event>) {
         match key.code {
+            KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.redraw_requested = true
+            }
             KeyCode::Char('q') => self.running = false,
             KeyCode::Char('?') => {
                 self.help_visible = true;

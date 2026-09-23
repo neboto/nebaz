@@ -4,7 +4,10 @@
 //! by construction. No certificates: ARM has no list for them, and the
 //! data plane is deliberately not touched.
 
-use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
+use crate::azure::resource::{
+    name_of_id, resource_group_of, scope_related, shell_quote, state_ladder, subscription_of, Resource,
+    ResourceState,
+};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
 use crate::azure::services::{
     arm_row, finish_stream, json, lazy_list_rows, overview_rows, related_rows, tag_rows, ArmBase, Scope,
@@ -175,8 +178,15 @@ impl Resource for VaultRow {
         }
         v
     }
+    /// `az keyvault show` takes no `--ids` (checked on the Azure machine,
+    /// 2026-09-23), so the name form carries `--subscription` itself.
     fn cli_command(&self) -> Option<String> {
-        Some(format!("az keyvault show --ids {}", shell_quote(&self.base.id)))
+        Some(format!(
+            "az keyvault show -n {} -g {} --subscription {}",
+            shell_quote(&self.base.name),
+            shell_quote(resource_group_of(&self.base.id)?),
+            shell_quote(subscription_of(&self.base.id)?)
+        ))
     }
 }
 
@@ -415,6 +425,10 @@ mod tests {
         assert!(net.iter().any(|(k, _)| k == "VNet rule · s"));
         assert!(row.related().iter().any(|(l, _)| l == "Network rule subnet s"));
         assert!(row.details().iter().any(|(k, v)| k == "Soft delete" && v == "yes · 90 days"));
+        assert_eq!(
+            row.cli_command().as_deref(),
+            Some("az keyvault show -n kv-prod -g rg --subscription 0000")
+        );
 
         let rbac = VaultRow::from_json(&vault_json(true), None).unwrap();
         let access = vault_section_lines(&rbac, VaultDetailSection::Access, None, None);

@@ -4,7 +4,8 @@
 //! the full agent-pool property set, so node pools need no lazy call.
 
 use crate::azure::resource::{
-    name_of_id, scope_related, shell_quote, state_ladder, subscription_of, Resource, ResourceState,
+    name_of_id, resource_group_of, scope_related, shell_quote, state_ladder, subscription_of, Resource,
+    ResourceState,
 };
 use crate::azure::service::{AzureService, JumpView, ServiceType};
 use crate::azure::services::{arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope};
@@ -214,8 +215,15 @@ impl Resource for ClusterRow {
         }
         v
     }
+    /// `az aks show` takes no `--ids` (checked on the Azure machine,
+    /// 2026-09-23), so the name form carries `--subscription` itself.
     fn cli_command(&self) -> Option<String> {
-        Some(format!("az aks show --ids {}", shell_quote(&self.base.id)))
+        Some(format!(
+            "az aks show -n {} -g {} --subscription {}",
+            shell_quote(&self.base.name),
+            shell_quote(resource_group_of(&self.base.id)?),
+            shell_quote(subscription_of(&self.base.id)?)
+        ))
     }
 }
 
@@ -497,8 +505,16 @@ impl Resource for NodePoolRow {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    /// No `--ids` on `az aks nodepool show` either: cluster, group and
+    /// pool by name.
     fn cli_command(&self) -> Option<String> {
-        Some(format!("az aks nodepool show --ids {}", shell_quote(&self.id)))
+        Some(format!(
+            "az aks nodepool show --cluster-name {} -g {} -n {} --subscription {}",
+            shell_quote(&self.cluster_name),
+            shell_quote(resource_group_of(&self.id)?),
+            shell_quote(&self.name),
+            shell_quote(subscription_of(&self.id)?)
+        ))
     }
 }
 
@@ -646,7 +662,7 @@ mod tests {
         assert!(pools[0].1.ends_with("/managedClusters/aks-prod/agentPools/system"));
         let addons = cluster_section_lines(&row, ClusterDetailSection::AddOns);
         assert_eq!(addons, vec![("azurepolicy".to_string(), "disabled".to_string()), ("omsagent".to_string(), "enabled".to_string())]);
-        assert_eq!(row.cli_command().unwrap(), format!("az aks show --ids {}", row.id()));
+        assert_eq!(row.cli_command().as_deref(), Some("az aks show -n aks-prod -g rg-aks --subscription 0000"));
     }
 
     #[test]
@@ -661,7 +677,10 @@ mod tests {
         assert!(system.details().iter().any(|(k, v)| k == "Autoscale" && v == "3 – 6"));
         assert!(system.details().iter().any(|(k, v)| k == "Labels" && v == "role=system"));
         assert!(system.related().iter().any(|(l, id)| l == "Cluster aks-prod" && id == row.id()));
-        assert_eq!(system.cli_command().unwrap(), format!("az aks nodepool show --ids {}", system.id()));
+        assert_eq!(
+            system.cli_command().as_deref(),
+            Some("az aks nodepool show --cluster-name aks-prod -g rg-aks -n system --subscription 0000")
+        );
         let spot = &row.pools[1];
         assert_eq!(spot.state(), ResourceState::Pending);
         assert_eq!(spot.state_label(), "upgrading");
