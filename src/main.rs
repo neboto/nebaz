@@ -1,5 +1,6 @@
 // ported from neboto-tui src/main.rs @ d483900 (run loop and status bar; the
 // per-service sub-tab routing and lens overlays are not carried over)
+mod clipboard;
 mod app;
 mod azure;
 mod bookmarks;

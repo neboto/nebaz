@@ -350,6 +350,8 @@ pub struct App {
     /// so a screen garbled by the terminal (or something printing over
     /// it) is one key from clean.
     pub redraw_requested: bool,
+    /// One long-lived clipboard handle (see `clipboard.rs` for why).
+    clipboard: crate::clipboard::Clipboard,
     pub bookmarks: Vec<NavLocation>,
     pub bookmarks_visible: bool,
     pub bookmarks_selected: usize,
@@ -468,6 +470,7 @@ impl App {
             jump_list_selected: 0,
             pending_jump: None,
             redraw_requested: false,
+            clipboard: crate::clipboard::Clipboard::new(),
             bookmarks: crate::bookmarks::load(),
             bookmarks_visible: false,
             bookmarks_selected: 0,
@@ -1346,8 +1349,10 @@ impl App {
     }
 
     fn copy_to_clipboard(&mut self, text: &str, what: &str) {
-        match arboard::Clipboard::new().and_then(|mut c| c.set_text(text.to_string())) {
-            Ok(()) => self.toast(format!("Copied {}", what)),
+        use crate::clipboard::Sink;
+        match self.clipboard.copy(text) {
+            Ok(Sink::System) => self.toast(format!("Copied {}", what)),
+            Ok(Sink::Terminal) => self.toast(format!("Copied {} via the terminal (OSC 52)", what)),
             Err(e) => self.error_message = Some(format!("Clipboard: {}", e)),
         }
     }
