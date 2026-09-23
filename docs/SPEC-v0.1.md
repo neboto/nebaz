@@ -104,12 +104,11 @@ Still to do, in order:
    - [ ] not logged in (`az logout`): the one status line, `R` retries
          after `az login`
    Fix what the tour finds, on `main`, as ordinary commits.
-2. **Repo hardening**, seven API calls from the checklist in
-   `RELEASING.md` (everything except the branch ruleset): private
-   vulnerability reporting, secret scanning and push protection, fork-PR
-   approval, immutable releases, tag protection, Dependabot security
-   fixes, SHA-pinned actions. They were prepared on 2026-09-24 but not
-   applied (the agent session lacked permission); run them by hand.
+2. ~~**Repo hardening**~~ — done 2026-09-24: private vulnerability
+   reporting, secret scanning and push protection, fork-PR approval,
+   immutable releases, tag protection, Dependabot security fixes and
+   SHA-pinned actions are all on and read back. Only the branch ruleset
+   (step 1 of the checklist in `RELEASING.md`) waits until after the tag.
 3. **Cut `v0.1.0`**: `cargo set-version 0.1.0`, commit "Release v0.1.0",
    tag, push; watch the workflow; `gh release view v0.1.0`; run
    `install.sh` on the Azure machine and start the installed binary.
@@ -127,7 +126,7 @@ sensitive on screen; open the backlog as a new effort.
 | Session | Work | Machine |
 |---|---|---|
 | 1 | the live tour above, fixing as it goes; record results in `SERVICES.md` "Verified live" | the Azure machine |
-| 2 (short) | hardening calls, version bump, tag, watch the release, install check, `cargo publish` | any, with `gh` and a crates.io token |
+| 2 (short) | version bump, tag, watch the release, install check, `cargo publish` | any, with `gh` and a crates.io token |
 
 Everything else the map's tickets listed as "build sessions" was built
 off-map while the map was worked: the skeleton and Subscriptions service

@@ -171,8 +171,8 @@ is one line; paste them one at a time.
    field sits on the general Actions permissions endpoint):
    `gh api -X PUT repos/neboto/nebaz/actions/permissions -F enabled=true -f allowed_actions=all -F sha_pinning_required=true`
 
-Applied 2026-09-24: 1 is deliberately not; 2, 4, 6, 7, 8 are on; 3 and 9
-were re-run after a paste mangled the `<<<` forms (see the spec).
+Applied and read back 2026-09-24: steps 2 to 9 are all on. Step 1 (the
+branch ruleset) is deliberately not, until after `v0.1.0`.
 
 ## How users install
 
