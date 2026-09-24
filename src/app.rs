@@ -38,6 +38,9 @@ use crate::azure::services::app_service::{
     plan_section_lines, site_config_path, site_section_lines, PlanDetailSection, PlanRow, SiteDetailSection, SiteRow,
     WEB_API_VERSION,
 };
+use crate::azure::services::container_registry::{
+    registry_child_path, registry_section_lines, RegistryDetailSection, RegistryRow, ACR_API_VERSION,
+};
 use crate::azure::services::sql::{
     server_child_path, sql_server_section_lines, SqlServerDetailSection, SqlServerRow, SQL_API_VERSION,
 };
@@ -1373,6 +1376,32 @@ impl App {
         );
     }
 
+    /// On-enter hook for a registry's Replications: one list per
+    /// registry, and none for a non-Premium one (it cannot replicate).
+    pub fn trigger_acr_replications(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let premium = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<RegistryRow>())
+            .is_some_and(RegistryRow::is_premium);
+        if !premium {
+            return;
+        }
+        app.trigger_selected(
+            |s| &mut s.acr_replications,
+            event_tx,
+            |c, id| c.list_fetch(&registry_child_path(id, "replications"), ACR_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a registry's Webhooks: one list per registry.
+    pub fn trigger_acr_webhooks(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.acr_webhooks,
+            event_tx,
+            |c, id| c.list_fetch(&registry_child_path(id, "webhooks"), ACR_API_VERSION),
+        );
+    }
+
     // ── Detail sections ─────────────────────────────────────────────────
 
     fn selected_descriptor(&self) -> Option<&'static crate::sections::SectionDescriptor> {
@@ -1734,6 +1763,14 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<NodePoolRow>() {
             return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<RegistryRow>() {
+            return Some(registry_section_lines(
+                r,
+                RegistryDetailSection::from_index(idx),
+                self.lazy.acr_replications.get(r.id()),
+                self.lazy.acr_webhooks.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<SqlServerRow>() {
             return Some(sql_server_section_lines(

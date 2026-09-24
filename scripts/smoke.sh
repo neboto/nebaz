@@ -98,6 +98,11 @@ run sql-tab ok sql '[6.0]' \
   "SQL servers & databases" \
   "cannot reach 127.0.0.1"
 
+# The Container Registry tab loads and lists registries through ARM.
+run acr-tab ok acr '[6.0]' \
+  "Container registries" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 

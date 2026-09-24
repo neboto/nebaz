@@ -139,6 +139,12 @@ pub struct LazyStore {
     /// `GET {server}/firewallRules`, keyed by server id.
     pub sql_firewall_rules: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Container Registry ───────────────────────────────────────────────
+    /// `GET {registry}/replications`, keyed by registry id; Premium only.
+    pub acr_replications: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {registry}/webhooks`, keyed by registry id. Never the URI.
+    pub acr_webhooks: LazyMap<Vec<serde_json::Value>>,
+
     // ── Identity ─────────────────────────────────────────────────────────
     /// `GET {identity}/federatedIdentityCredentials`, keyed by identity id.
     pub federated_credentials: LazyMap<Vec<serde_json::Value>>,
