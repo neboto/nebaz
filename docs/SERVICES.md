@@ -77,10 +77,13 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
    node image version, current version). Still to confirm on a
    subscription with a cluster; if the live JSON lacks those fields, add
    a lazy Detail section per cluster rather than a per-pool call.
-9. **`az` commands** are `show --ids {id}` for every ARM row except the
-   five whose `show` takes no `--ids` (`az account show`, `az group
-   show`, `az keyvault show`, `az aks show`, `az aks nodepool show`), which
-   use the name form with `--subscription`. Verified live 2026-09-23. The
+9. **`az` commands** are `show --ids {id}` for every ARM row except those
+   whose `show` takes no `--ids` (`az account show`, `az group show`,
+   `az keyvault show`, `az aks show`, `az aks nodepool show`,
+   `az cognitiveservices account show`), which use the name form with
+   `--subscription`. Verified live 2026-09-23; the Cognitive Services one
+   from the CLI's parameter table (no `id_part` on the account name,
+   2026-09-24), not yet live. The
    guard requires a read verb on every `az` literal in `src/`.
 10. **Partial failures**: a phase failure (the power-state pass, a lazy
     section) sends `ResourceLoadWarning` and keeps going; `ResourceLoadError`
@@ -107,9 +110,10 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Key Vault · Vaults | Access (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group | `az aks show -n {name} -g {rg} --subscription {sub}` |
 | AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show --cluster-name {cluster} -g {rg} -n {pool} --subscription {sub}` |
+| Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @kv
-@aks @pool` (the list in `ServiceType`, `src/azure/service.rs`, is the
+@aks @pool @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -134,8 +138,11 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Secrets, Keys | 1 each per vault, on demand | `{vault}/secrets` · `{vault}/keys` · `2026-05-15` |
 | Clusters, Node pools | 1 each (same list) | `/providers/Microsoft.ContainerService/managedClusters` · `2026-06-01` |
+| Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
+| Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
 
-A full tour of every sub-tab in one subscription is 11 list calls. Only
+A full tour of every sub-tab in one subscription is one list call per
+sub-tab. Only
 the Accounts view and its Containers sections touch the throttled Storage
 budget. **Watch mode** (`w`, presets 5–300 s) needs no floor for one
 watched view: the 5 s preset is 60 list calls per 5 minutes against the

@@ -19,6 +19,9 @@ use crate::azure::services::compute::{
     disk_section_lines, instance_view_path, nic_section_lines, vm_section_lines, DiskDetailSection, DiskRow,
     NicDetailSection, NicRow, VmDetailSection, VmRow, VM_API_VERSION,
 };
+use crate::azure::services::foundry::{
+    child_path, foundry_section_lines, FoundryDetailSection, FoundryRow, FOUNDRY_API_VERSION,
+};
 use crate::azure::services::keyvault::{
     names_path, vault_section_lines, VaultDetailSection, VaultRow, VAULT_NAMES_API_VERSION,
 };
@@ -1268,6 +1271,33 @@ impl App {
         );
     }
 
+    /// On-enter hook for an AI account's Deployments: one ARM list per
+    /// account, on demand.
+    pub fn trigger_foundry_deployments(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.foundry_deployments,
+            event_tx,
+            |c, id| c.list_fetch(&child_path(id, "deployments"), FOUNDRY_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for an AI account's Projects: only a Foundry resource
+    /// (project management on) has any, so nothing is fetched otherwise.
+    pub fn trigger_foundry_projects(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let holds = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<FoundryRow>())
+            .is_some_and(FoundryRow::holds_projects);
+        if !holds {
+            return;
+        }
+        app.trigger_selected(
+            |s| &mut s.foundry_projects,
+            event_tx,
+            |c, id| c.list_fetch(&child_path(id, "projects"), FOUNDRY_API_VERSION),
+        );
+    }
+
     // ── Detail sections ─────────────────────────────────────────────────
 
     fn selected_descriptor(&self) -> Option<&'static crate::sections::SectionDescriptor> {
@@ -1617,6 +1647,14 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<NodePoolRow>() {
             return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<FoundryRow>() {
+            return Some(foundry_section_lines(
+                r,
+                FoundryDetailSection::from_index(idx),
+                self.lazy.foundry_deployments.get(r.id()),
+                self.lazy.foundry_projects.get(r.id()),
+            ));
         }
         None
     }

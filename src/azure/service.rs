@@ -23,6 +23,9 @@ pub enum ServiceType {
     KeyVault,
     /// AKS managed clusters + node pools.
     Aks,
+    /// Foundry / AI Services / Azure OpenAI accounts; deployments and
+    /// projects as lazy sections. Metadata only, never keys.
+    Foundry,
 }
 
 /// One sub-tab: the rows of one resource type within a service. A flat
@@ -52,6 +55,9 @@ pub enum JumpView {
     Clusters,
     /// Embedded in the cluster list (the API says agent pool).
     NodePools,
+    // Foundry
+    /// Every `Microsoft.CognitiveServices` account, `kind` on the row.
+    AiAccounts,
 }
 
 impl JumpView {
@@ -65,6 +71,7 @@ impl JumpView {
             VirtualNetworks | Subnets | NetworkSecurityGroups => ServiceType::Network,
             KeyVaults => ServiceType::KeyVault,
             Clusters | NodePools => ServiceType::Aks,
+            AiAccounts => ServiceType::Foundry,
         }
     }
 
@@ -84,6 +91,7 @@ impl JumpView {
             KeyVaults => "vaults",
             Clusters => "clusters",
             NodePools => "node-pools",
+            AiAccounts => "ai-accounts",
         }
     }
 
@@ -103,6 +111,7 @@ impl JumpView {
             KeyVaults => "Vaults",
             Clusters => "Clusters",
             NodePools => "Node pools",
+            AiAccounts => "Resources",
         }
     }
 
@@ -130,6 +139,7 @@ impl JumpView {
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
             ("microsoft.containerservice", ["managedclusters", "agentpools"]) => JumpView::NodePools,
+            ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
             _ => return None,
         })
     }
@@ -151,12 +161,13 @@ impl ServiceType {
             ServiceType::Network,
             ServiceType::KeyVault,
             ServiceType::Aks,
+            ServiceType::Foundry,
         ]
     }
 
     /// Ordered picker categories. Every `category()` value must appear here.
     pub const CATEGORIES: &'static [&'static str] =
-        &["Management", "Compute", "Storage", "Networking", "Security", "Containers"];
+        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "AI"];
 
     pub fn category(&self) -> &'static str {
         match self {
@@ -166,6 +177,7 @@ impl ServiceType {
             ServiceType::Network => "Networking",
             ServiceType::KeyVault => "Security",
             ServiceType::Aks => "Containers",
+            ServiceType::Foundry => "AI",
         }
     }
 
@@ -177,6 +189,7 @@ impl ServiceType {
             ServiceType::Network => "Virtual Network",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Aks => "AKS",
+            ServiceType::Foundry => "Foundry",
         }
     }
 
@@ -189,6 +202,7 @@ impl ServiceType {
             ServiceType::Network => "VNet",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Aks => "AKS",
+            ServiceType::Foundry => "Foundry",
         }
     }
 
@@ -200,6 +214,7 @@ impl ServiceType {
             ServiceType::Network => "Virtual Networks, Subnets & NSGs",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
+            ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
         }
     }
 
@@ -214,6 +229,7 @@ impl ServiceType {
             ServiceType::Network => &[VirtualNetworks, Subnets, NetworkSecurityGroups],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Aks => &[Clusters, NodePools],
+            ServiceType::Foundry => &[AiAccounts],
         }
     }
 
@@ -259,6 +275,9 @@ impl ServiceType {
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => (ServiceType::Aks, None),
             "pool" | "pools" | "nodepool" | "nodepools" => (ServiceType::Aks, Some(JumpView::NodePools)),
+            "foundry" | "aifoundry" | "aiservices" | "openai" | "aoai" | "cognitive" | "cognitiveservices" | "cog" => {
+                (ServiceType::Foundry, None)
+            }
             _ => return None,
         };
         Some((service, view))
@@ -279,6 +298,7 @@ impl ServiceType {
             ServiceType::Network => "@vnet",
             ServiceType::KeyVault => "@kv",
             ServiceType::Aks => "@aks",
+            ServiceType::Foundry => "@foundry",
         }
     }
 
@@ -287,10 +307,10 @@ impl ServiceType {
     pub const ROUTING_PREFIXES: &'static [&'static str] =
         &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pool"];
 
-    /// Every completable prefix: the six canonical ones, then the routing
+    /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@aks"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@aks", "@foundry"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -425,6 +445,8 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.KeyVault/vaults/k")), Some(JumpView::KeyVaults));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c")), Some(JumpView::Clusters));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c/agentPools/np")), Some(JumpView::NodePools));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.CognitiveServices/accounts/ai")), Some(JumpView::AiAccounts));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.CognitiveServices/accounts/ai/deployments/d")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/publicIPAddresses/ip")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s/x/y")), None);
         assert_eq!(JumpView::for_arm_id("garbage"), None);

@@ -58,6 +58,13 @@ each one backs are in the catalog table
   they return names and attributes only. Certificates are not listed.
 - **AKS**: `Microsoft.ContainerService/managedClusters/read` (node pools
   arrive embedded as `agentPoolProfiles` in the same list).
+- **Foundry** (every Cognitive Services account, Azure OpenAI included):
+  `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
+  Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,
+  `Microsoft.CognitiveServices/accounts/projects/read`. Keys (`listKeys`)
+  are a `POST` nebaz never sends, and no model is ever called: the AI
+  data-plane hosts are on the guard's list, and
+  `az cognitiveservices account keys` is named forbidden.
 
 ## Local commands
 

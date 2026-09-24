@@ -62,6 +62,11 @@ run flat-and-select ok sub '[2.0, "\r", 0.3, "\\", 0.5, "V", "J", "J", "y", 1.0]
   "━━ Overview" "━━ Related" \
   "3 lines"
 
+# A seventh tab still fits, and the Foundry list goes to ARM like the rest.
+run foundry-tab ok foundry '[8.0]' \
+  "Foundry" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 
