@@ -13,6 +13,8 @@
 #   arm-unreachable   same, on Resource Groups (an ARM list) with ARM at a
 #               closed port → the connection error names the host and the
 #               root cause after the short retry policy gives up
+#   flat-and-select   focus the pane, `\` for the flat view, `V J J y` →
+#               section headers on screen and "Copied 3 lines"
 #   not-logged-in   fake az that says "Please run 'az login'" → the single
 #               app-wide auth line, no crash
 #
@@ -54,6 +56,11 @@ run logged-in ok sub '[2.0, "j", "C", 1.0]' \
 run arm-unreachable ok rg '[8.0]' \
   "cannot reach 127.0.0.1" \
   "Connection refused"
+
+# Focus the pane, flat view, select three lines from the top, copy.
+run flat-and-select ok sub '[2.0, "\r", 0.3, "\\", 0.5, "V", "J", "J", "y", 1.0]' \
+  "━━ Overview" "━━ Related" \
+  "3 lines"
 
 run not-logged-in nologin sub '[2.0]' \
   "az login"

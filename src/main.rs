@@ -137,6 +137,9 @@ async fn run(cli: cli::Cli) -> Result<()> {
 
         // Macro recording / playback, before the draw so the chips are current.
         app.macro_tick(&event_tx);
+        // Flat detail view: fire the lazy sections once per focused
+        // resource and keep the tab bar on the section under the cursor.
+        app.flat_tick(&event_tx);
 
         if let Some(ref mut t) = tui {
             if std::mem::take(&mut app.redraw_requested) {

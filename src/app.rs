@@ -312,10 +312,23 @@ pub struct App {
 
     // Detail pane.
     pub details_focused: bool,
-    pub details_selected_index: Option<usize>,
     /// The single cursor into the selected resource's section descriptor.
     pub detail_section_idx: usize,
+    /// The cursor line in the detail body (the pane scrolls to keep it in
+    /// view). `⏎` follows it, `y` copies it.
     pub details_scroll: usize,
+    /// Anchor of a linewise visual selection in the detail body (vim `V`).
+    /// While `Some`, the selection spans `min(anchor, cursor)..=max`;
+    /// `y` copies the range. Positional, so any cursor reset clears it.
+    pub detail_visual_anchor: Option<usize>,
+    /// Flat detail view (`\`, config `detail_flat`): every section of the
+    /// selected resource in one scroll, with `━━ Name ━━` headers; digits
+    /// and Tab jump between headers instead of switching sections.
+    pub detail_flat_mode: bool,
+    /// The ARM id whose sections were all triggered for the flat view, so
+    /// the sweep runs once per focused resource (the triggers are
+    /// idempotent anyway).
+    flat_triggered_for: Option<String>,
     pub layout_mode: LayoutMode,
 
     // Status messages.
@@ -446,7 +459,9 @@ impl App {
             noise_in_view: false,
             location_hidden_count: 0,
             details_focused: false,
-            details_selected_index: None,
+            detail_visual_anchor: None,
+            detail_flat_mode: config.detail_flat.unwrap_or(false),
+            flat_triggered_for: None,
             detail_section_idx: 0,
             details_scroll: 0,
             layout_mode: LayoutMode::Split,
@@ -643,6 +658,7 @@ impl App {
         self.apply_subscription_identity();
         self.spawn_subscription_info_fetch(event_tx);
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
+        self.flat_triggered_for = None;
         self.load_generation += 1;
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
@@ -883,6 +899,7 @@ impl App {
         self.selected_index = pos;
         self.resource_list_state.borrow_mut().select(pos);
         self.details_scroll = 0;
+        self.detail_visual_anchor = None;
     }
 
     // ── Search ──────────────────────────────────────────────────────────
@@ -1083,6 +1100,7 @@ impl App {
         self.apply_subscription_identity();
         // Everything subscription-scoped resets by construction.
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
+        self.flat_triggered_for = None;
         self.load_generation += 1;
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
@@ -1264,6 +1282,7 @@ impl App {
         let idx = idx.min(desc.len().saturating_sub(1));
         self.detail_section_idx = idx;
         self.details_scroll = 0;
+        self.detail_visual_anchor = None;
         desc.enter(idx, self, event_tx);
     }
 
@@ -1291,6 +1310,9 @@ impl App {
         let Some(resource) = self.get_selected_resource() else {
             return Vec::new();
         };
+        if self.flat_active() {
+            return assemble_flat_detail(&self.detail_sections_snapshot());
+        }
         if let Some(lines) = self.section_lines_for(resource, self.detail_section_idx) {
             return lines;
         }
@@ -1305,6 +1327,167 @@ impl App {
             }
         }
         lines
+    }
+
+    // ── Detail cursor, visual selection, flat view ───────────────────────
+
+    fn detail_line_count(&self) -> usize {
+        self.get_detail_lines().len()
+    }
+
+    /// Move the detail cursor by `delta` lines, clamped to the body.
+    fn move_detail_cursor(&mut self, delta: isize) {
+        let n = self.detail_line_count();
+        if n == 0 {
+            self.details_scroll = 0;
+            return;
+        }
+        let cur = self.details_scroll.min(n - 1) as isize;
+        self.details_scroll = (cur + delta).clamp(0, n as isize - 1) as usize;
+    }
+
+    /// The inclusive `(start, end)` line range of the visual selection,
+    /// clamped to the body. `None` outside visual mode. Rendering and copy
+    /// both read it, so they cannot disagree.
+    pub fn detail_visual_range(&self) -> Option<(usize, usize)> {
+        let anchor = self.detail_visual_anchor?;
+        let n = self.detail_line_count();
+        if n == 0 {
+            return None;
+        }
+        let a = anchor.min(n - 1);
+        let b = self.details_scroll.min(n - 1);
+        Some((a.min(b), a.max(b)))
+    }
+
+    /// Whether a body line is highlighted: in the visual range, or the
+    /// cursor line outside visual mode.
+    pub fn detail_line_in_selection(&self, idx: usize) -> bool {
+        match self.detail_visual_range() {
+            Some((start, end)) => idx >= start && idx <= end,
+            None => self.details_scroll == idx,
+        }
+    }
+
+    /// Start a selection at the cursor if none, then move one line
+    /// (`J` / `K`, Shift-↓ / Shift-↑: extend as you move).
+    fn detail_visual_step(&mut self, down: bool) {
+        if self.detail_visual_anchor.is_none() {
+            self.detail_visual_anchor = Some(self.details_scroll);
+        }
+        self.move_detail_cursor(if down { 1 } else { -1 });
+    }
+
+    /// `y` in the detail pane: the selection as text when one is active,
+    /// else the cursor line's value.
+    fn copy_detail_selection(&mut self) {
+        let lines = self.get_detail_lines();
+        match self.detail_visual_range() {
+            Some((start, end)) => {
+                let text = selection_text(&lines, start, end);
+                self.detail_visual_anchor = None;
+                if text.trim().is_empty() {
+                    self.error_message = Some("Nothing to copy in the selection".into());
+                } else {
+                    self.copy_to_clipboard(&text, &format!("{} lines", end - start + 1));
+                }
+            }
+            None => {
+                if let Some((_, v)) = lines.get(self.details_scroll) {
+                    let text = v.clone();
+                    if text.is_empty() {
+                        self.error_message = Some("Nothing to copy on this line".into());
+                    } else {
+                        self.copy_to_clipboard(&text, "row");
+                    }
+                }
+            }
+        }
+    }
+
+    /// True when the body on screen is the flat concatenation: flat mode
+    /// on and the resource has more than one section (a single-section
+    /// resource's flat view is its section view).
+    pub fn flat_active(&self) -> bool {
+        self.detail_flat_mode && self.selected_descriptor().is_some_and(|d| d.len() > 1)
+    }
+
+    /// `\`: tabbed sections ↔ one scroll. The cursor resets because row
+    /// indexes mean different things per mode.
+    fn toggle_detail_flat_mode(&mut self) {
+        self.detail_flat_mode = !self.detail_flat_mode;
+        self.flat_triggered_for = None;
+        self.details_scroll = 0;
+        self.detail_visual_anchor = None;
+        self.toast(if self.detail_flat_mode {
+            "Detail view: all sections in one scroll (\\ for tabs)"
+        } else {
+            "Detail view: tabbed sections (\\ for one scroll)"
+        });
+    }
+
+    /// Body row indexes of the flat section headers, in order.
+    fn flat_header_rows(&self) -> Vec<usize> {
+        self.get_detail_lines()
+            .iter()
+            .enumerate()
+            .filter(|(_, (k, v))| v.is_empty() && flat_header_name(k).is_some())
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// `1`–`9` in the flat view: cursor to that section's header.
+    fn flat_jump_to_section(&mut self, idx: usize) {
+        if let Some(&row) = self.flat_header_rows().get(idx) {
+            self.detail_visual_anchor = None;
+            self.details_scroll = row;
+        }
+    }
+
+    /// Tab / Shift-Tab in the flat view: next / previous header, wrapping.
+    fn flat_jump_relative(&mut self, forward: bool) {
+        let headers = self.flat_header_rows();
+        let Some(&first) = headers.first() else {
+            return;
+        };
+        let cursor = self.details_scroll;
+        let target = if forward {
+            headers.iter().copied().find(|&i| i > cursor).unwrap_or(first)
+        } else {
+            headers.iter().rev().copied().find(|&i| i < cursor).unwrap_or(*headers.last().unwrap())
+        };
+        self.detail_visual_anchor = None;
+        self.details_scroll = target;
+    }
+
+    /// Per-frame flat-view upkeep, called by the main loop before the draw:
+    /// once per focused resource, fire every section's on-enter hook so the
+    /// lazy sections load (the triggers are LazyMap-idempotent); and keep
+    /// the section index on the header above the cursor so the tab bar
+    /// highlights the section being read.
+    pub fn flat_tick(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        if !self.flat_active() {
+            return;
+        }
+        if self.details_focused {
+            let id = self.get_selected_resource().map(|r| r.id().to_string());
+            if id.is_some() && self.flat_triggered_for != id {
+                self.flat_triggered_for = id;
+                if let Some(desc) = self.selected_descriptor() {
+                    for i in 0..desc.len() {
+                        desc.enter(i, self, event_tx);
+                    }
+                }
+            }
+        }
+        let cursor = self.details_scroll;
+        let section = self
+            .flat_header_rows()
+            .iter()
+            .take_while(|&&row| row <= cursor)
+            .count()
+            .saturating_sub(1);
+        self.detail_section_idx = section;
     }
 
     // ── Messages ────────────────────────────────────────────────────────
@@ -2021,19 +2204,52 @@ impl App {
 
         // Detail pane focused.
         if self.details_focused {
+            let flat = self.flat_active();
             match key.code {
+                // Esc drops an active selection first, then leaves the pane.
+                KeyCode::Esc if self.detail_visual_anchor.is_some() => {
+                    self.detail_visual_anchor = None;
+                }
                 KeyCode::Esc | KeyCode::Char('h') | KeyCode::Left | KeyCode::Backspace => {
                     self.details_focused = false;
+                    self.detail_visual_anchor = None;
                 }
-                KeyCode::Char('j') | KeyCode::Down => self.details_scroll += 1,
-                KeyCode::Char('k') | KeyCode::Up => {
-                    self.details_scroll = self.details_scroll.saturating_sub(1)
+                // Linewise visual selection (vim-style): `V` toggles it at the
+                // cursor; `J`/`K` and Shift-↓/↑ start-and-extend in one motion;
+                // once active, plain movement extends it (the anchor stays).
+                KeyCode::Char('V') => {
+                    self.detail_visual_anchor = match self.detail_visual_anchor {
+                        Some(_) => None,
+                        None => Some(self.details_scroll),
+                    };
                 }
+                KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    let n = self.detail_line_count();
+                    if n > 0 {
+                        self.detail_visual_anchor = Some(0);
+                        self.details_scroll = n - 1;
+                    }
+                }
+                KeyCode::Char('J') => self.detail_visual_step(true),
+                KeyCode::Char('K') => self.detail_visual_step(false),
+                KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => self.detail_visual_step(true),
+                KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => self.detail_visual_step(false),
+                KeyCode::Char('j') | KeyCode::Down => self.move_detail_cursor(1),
+                KeyCode::Char('k') | KeyCode::Up => self.move_detail_cursor(-1),
                 KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    self.details_scroll += PAGE_STEP
+                    self.move_detail_cursor(PAGE_STEP as isize)
                 }
                 KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    self.details_scroll = self.details_scroll.saturating_sub(PAGE_STEP)
+                    self.move_detail_cursor(-(PAGE_STEP as isize))
+                }
+                KeyCode::Char('g') | KeyCode::Home => self.move_detail_cursor(isize::MIN / 2),
+                KeyCode::Char('G') | KeyCode::End => self.move_detail_cursor(isize::MAX / 2),
+                // In the flat view digits and Tab jump between section
+                // headers; in the tabbed view they switch the section.
+                KeyCode::Tab if flat => self.flat_jump_relative(true),
+                KeyCode::BackTab if flat => self.flat_jump_relative(false),
+                KeyCode::Char(c) if flat && crate::sections::index_for_key(c).is_some() => {
+                    self.flat_jump_to_section(crate::sections::index_for_key(c).unwrap())
                 }
                 KeyCode::Tab => self.cycle_detail_section(true, event_tx),
                 KeyCode::BackTab => self.cycle_detail_section(false, event_tx),
@@ -2041,13 +2257,7 @@ impl App {
                     self.set_detail_section(crate::sections::index_for_key(c).unwrap(), event_tx)
                 }
                 KeyCode::Enter => self.follow_detail_line(event_tx),
-                KeyCode::Char('y') => {
-                    let lines = self.get_detail_lines();
-                    if let Some((_, v)) = lines.get(self.details_scroll) {
-                        let text = v.clone();
-                        self.copy_to_clipboard(&text, "row");
-                    }
-                }
+                KeyCode::Char('y') => self.copy_detail_selection(),
                 KeyCode::Char('Z') => {
                     self.layout_mode = match self.layout_mode {
                         LayoutMode::DetailsOnly => LayoutMode::Split,
@@ -2149,6 +2359,8 @@ impl App {
             KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.redraw_requested = true
             }
+            // `\` works from either pane so the preview follows the mode.
+            KeyCode::Char('\\') => self.toggle_detail_flat_mode(),
             KeyCode::Char('q') => self.running = false,
             KeyCode::Char('?') => {
                 self.help_visible = true;
@@ -2506,5 +2718,96 @@ impl App {
             }
             _ => {}
         }
+    }
+}
+
+
+// ── Flat view and selection helpers (pure) ──────────────────────────────
+
+/// Section-header row for the flat body: `━━ Name ━━━…` with an empty
+/// value. The pane renders it brand-bold; `flat_header_name` inverts it.
+fn flat_section_header(name: &str) -> (String, String) {
+    let base = format!("━━ {} ", name);
+    let fill = 44usize.saturating_sub(base.chars().count());
+    (format!("{}{}", base, "━".repeat(fill)), String::new())
+}
+
+/// The section name if this key is a flat header row.
+pub fn flat_header_name(key: &str) -> Option<&str> {
+    key.strip_prefix("━━ ").map(|rest| rest.trim_end_matches('━').trim())
+}
+
+/// Concatenate the section snapshot into one body with a header per
+/// section, trimming each section's own leading/trailing spacers so the
+/// gaps are uniform. A single section comes back as is.
+fn assemble_flat_detail(sections: &[(String, Vec<(String, String)>)]) -> Vec<(String, String)> {
+    if sections.len() == 1 {
+        return sections[0].1.clone();
+    }
+    let mut lines: Vec<(String, String)> = Vec::new();
+    for (name, rows) in sections {
+        if !lines.is_empty() {
+            lines.push((String::new(), String::new()));
+        }
+        lines.push(flat_section_header(name));
+        let blank = |(k, v): &(String, String)| k.is_empty() && v.is_empty();
+        let start = rows.iter().position(|r| !blank(r)).unwrap_or(rows.len());
+        let end = rows.iter().rposition(|r| !blank(r)).map(|i| i + 1).unwrap_or(start);
+        lines.extend(rows[start..end].iter().cloned());
+    }
+    lines
+}
+
+/// The visual selection as clipboard text: `key: value` per row, headers
+/// and plain content lines as themselves, blank rows kept as blank lines.
+fn selection_text(lines: &[(String, String)], start: usize, end: usize) -> String {
+    lines
+        .iter()
+        .skip(start)
+        .take(end - start + 1)
+        .map(|(key, value)| {
+            if value.is_empty() {
+                key.trim_end().to_string()
+            } else if key.trim().is_empty() {
+                value.clone()
+            } else {
+                format!("{}: {}", key.trim(), value)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn s(k: &str, v: &str) -> (String, String) {
+        (k.to_string(), v.to_string())
+    }
+
+    #[test]
+    fn flat_headers_round_trip_and_sections_are_trimmed() {
+        let sections = vec![
+            ("Overview".to_string(), vec![s("", ""), s("Name", "vm-1"), s("", "")]),
+            ("Related".to_string(), vec![s("Subscription", "/subscriptions/0")]),
+        ];
+        let flat = assemble_flat_detail(&sections);
+        let keys: Vec<&str> = flat.iter().map(|(k, _)| k.as_str()).collect();
+        assert_eq!(flat_header_name(keys[0]), Some("Overview"));
+        assert_eq!(keys[1], "Name");
+        assert_eq!(keys[2], "");
+        assert_eq!(flat_header_name(keys[3]), Some("Related"));
+        assert_eq!(keys.len(), 5);
+        assert_eq!(flat_header_name("Name"), None);
+        // One section: no header, nothing changes.
+        assert_eq!(assemble_flat_detail(&sections[1..]), sections[1].1);
+    }
+
+    #[test]
+    fn selection_text_keeps_the_row_conventions() {
+        let lines = vec![s("Name", "vm-1"), s("Tags", ""), s("  env", "prod"), s("", "note"), s("", "")];
+        assert_eq!(selection_text(&lines, 0, 4), "Name: vm-1\nTags\nenv: prod\nnote\n");
+        assert_eq!(selection_text(&lines, 2, 2), "env: prod");
     }
 }

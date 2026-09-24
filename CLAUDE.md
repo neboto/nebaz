@@ -87,7 +87,13 @@ each type declares a **section descriptor** (`*_SECTIONS` in its service
 file: label + optional on-enter hook); digit keys, `Tab`, reset, snapshot
 and flat view all derive from it. `App::section_lines_for` dispatches by
 downcast to the type's `*_section_lines`. Every type has Overview first,
-**Related** second to last, Tags last.
+**Related** second to last, Tags last. `details_scroll` is the body's
+line cursor (the pane scrolls to keep it visible); `detail_visual_anchor`
+is the vim-style linewise selection (`V`, `J`/`K`, `Ctrl-A`; `y` copies
+the range); `detail_flat_mode` (`\`, config `detail_flat`) renders every
+section in one scroll with `━━ Name ━━` headers, digits and Tab jumping
+between headers, and `App::flat_tick` firing every lazy section once per
+focused resource.
 
 **Lazy loading** (`src/lazy.rs`): `LazyStore` owns every `LazyMap`
 (instance views, containers, vault secrets, vault keys) keyed by ARM id,

@@ -20,7 +20,9 @@ Resource Groups, Virtual Machines (+ disks, NICs; power state on the row),
 Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
 NSGs), Key Vault (metadata plus secret and key *names*, never values), AKS
 (+ node pools). Every row has a **Related** section listing the ARM ids it
-points at; Enter on one jumps there. Verified against a live tenant:
+points at; Enter on one jumps there. The detail pane has a line cursor,
+vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`) and a flat
+view (`\`) that puts every section in one scroll. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in

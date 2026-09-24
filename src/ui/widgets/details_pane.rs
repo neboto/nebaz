@@ -53,10 +53,19 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     };
 
     let title = format!("{} · {}", resource.resource_type(), resource.name());
+    let flat_hint = if app.detail_flat_mode { "tabs" } else { "flat" };
     let footer = if focused {
-        theme::hint_line(&[("Tab", "section"), ("j/k", "line"), ("⏎", "jump to id"), ("y", "copy"), ("Esc", "back")])
+        theme::hint_line(&[
+            ("Tab", if app.flat_active() { "header" } else { "section" }),
+            ("j/k", "line"),
+            ("V", "select"),
+            ("⏎", "jump to id"),
+            ("y", "copy"),
+            ("\\", flat_hint),
+            ("Esc", "back"),
+        ])
     } else {
-        theme::hint_line(&[("⏎", "focus"), ("e", "editor"), ("O", "portal")])
+        theme::hint_line(&[("⏎", "focus"), ("e", "editor"), ("O", "portal"), ("\\", flat_hint)])
     };
     let block = theme::pane_block(&title, focused).title(
         Title::from(footer)
@@ -119,16 +128,31 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
         rows[2]
     };
 
-    // Body.
+    // Body: the cursor line (and the visual range) render on the selection
+    // bar when the pane is focused; the view scrolls just enough to keep
+    // the cursor on screen.
     let lines = app.get_detail_lines();
     let key_w = key_col_width(&lines, body_area.width as usize);
+    let height = body_area.height as usize;
+    let cursor = app.details_scroll.min(lines.len().saturating_sub(1));
+    let offset = cursor.saturating_sub(height.saturating_sub(1));
     let styled: Vec<Line> = lines
         .iter()
-        .map(|(k, v)| style_detail_row(k, v, key_w, app))
+        .enumerate()
+        .skip(offset)
+        .take(height)
+        .map(|(idx, (k, v))| {
+            let line = style_detail_row(k, v, key_w, app);
+            if focused && app.detail_line_in_selection(idx) {
+                let sel = theme::selection_style(true);
+                let spans: Vec<Span> = line.spans.into_iter().map(|s| Span::styled(s.content, sel)).collect();
+                Line::from(spans).style(sel)
+            } else {
+                line
+            }
+        })
         .collect();
-    let max_scroll = styled.len().saturating_sub(body_area.height as usize);
-    let scroll = app.details_scroll.min(max_scroll) as u16;
-    frame.render_widget(Paragraph::new(styled).scroll((scroll, 0)), body_area);
+    frame.render_widget(Paragraph::new(styled), body_area);
 }
 
 fn rule(width: u16) -> Paragraph<'static> {
@@ -215,6 +239,14 @@ fn style_detail_row(key: &str, value: &str, key_w: usize, app: &App) -> Line<'st
             Style::default().fg(theme::text_primary())
         };
         return Line::from(Span::styled(format!("  {}", text), style));
+    }
+    // Flat-view section header (`━━ Name ━━━…`, inserted by the flat body
+    // assembly): brand-bold so sections read apart from group headers.
+    if value.is_empty() && crate::app::flat_header_name(key).is_some() {
+        return Line::from(Span::styled(
+            key.to_string(),
+            Style::default().fg(theme::brand()).add_modifier(Modifier::BOLD),
+        ));
     }
     // Group header: key, no value, no leading space.
     if value.is_empty() {

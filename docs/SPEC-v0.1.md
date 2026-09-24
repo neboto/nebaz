@@ -38,7 +38,9 @@ and tenants.
 
 ### Features (Tier 1, as shipped)
 
-Split detail pane with lazy sections (`Tab`, digits) · `@service` and
+Split detail pane with lazy sections (`Tab`, digits), a line cursor, the
+flat all-sections view (`\`) and linewise visual selection (`V`, `J`/`K`,
+`Ctrl-A`, `y` copies the range) · `@service` and
 sub-tab routing prefixes (`@vm`, `@disk`, `@nsg`, …) · fuzzy search with
 `rg:` and `tag:` filters · pickers `S` / `R` / `P` · sort, state filter
 (`F`), noise toggle (`a`) · bookmarks, jump list, history · export
@@ -74,6 +76,8 @@ Done (2026-09-24, on `main`):
 - [x] release workflow dry run green on all four targets; archive layout,
       checksum and provenance verified
 - [x] `scripts/smoke.sh` passes offline (fake `az`, dead endpoint)
+- [x] the detail pane's flat view and visual selection, found missing on
+      the first live tour (2026-09-24), ported from neboto
 
 Still to do, in order:
 

@@ -43,11 +43,13 @@ const LEFT_SECTIONS: &[Section] = &[
     Section {
         title: "Detail pane",
         entries: &[
-            ("Tab · 1–9", "sections"),
-            ("j / k", "scroll"),
+            ("Tab · 1–9", "sections (flat: headers)"),
+            ("j / k · g / G", "line · top / bottom"),
+            ("V · J / K · ^A", "select · extend · all"),
+            ("\\", "flat view (all sections)"),
             ("⏎", "jump to the ARM id on the line (Related)"),
+            ("y", "copy line or selection"),
             ("^L", "repaint the screen"),
-            ("y", "copy row"),
             ("Z", "full-width pane"),
             ("r", "refresh this resource"),
         ],
