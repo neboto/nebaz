@@ -30,6 +30,10 @@ use crate::azure::services::network_edge::{
 use crate::azure::services::identity::{
     federated_credentials_path, identity_section_lines, IdentityDetailSection, IdentityRow, IDENTITY_API_VERSION,
 };
+use crate::azure::services::network_private::{
+    private_dns_zone_section_lines, private_endpoint_section_lines, zone_child_path, PrivateDnsZoneDetailSection,
+    PrivateDnsZoneRow, PrivateEndpointDetailSection, PrivateEndpointRow, PRIVATE_DNS_API_VERSION,
+};
 use crate::azure::services::keyvault::{
     names_path, vault_section_lines, VaultDetailSection, VaultRow, VAULT_NAMES_API_VERSION,
 };
@@ -1279,6 +1283,25 @@ impl App {
         );
     }
 
+    /// On-enter hook for a private DNS zone's Records: every record set,
+    /// one list per zone.
+    pub fn trigger_dns_records(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.dns_records,
+            event_tx,
+            |c, id| c.list_fetch(&zone_child_path(id, "ALL"), PRIVATE_DNS_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a private DNS zone's VNet links.
+    pub fn trigger_dns_vnet_links(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.dns_vnet_links,
+            event_tx,
+            |c, id| c.list_fetch(&zone_child_path(id, "virtualNetworkLinks"), PRIVATE_DNS_API_VERSION),
+        );
+    }
+
     /// On-enter hook for an identity's Federated credentials: one ARM list
     /// per identity, on demand.
     pub fn trigger_federated_credentials(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -1677,6 +1700,17 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<NodePoolRow>() {
             return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<PrivateEndpointRow>() {
+            return Some(private_endpoint_section_lines(r, PrivateEndpointDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<PrivateDnsZoneRow>() {
+            return Some(private_dns_zone_section_lines(
+                r,
+                PrivateDnsZoneDetailSection::from_index(idx),
+                self.lazy.dns_records.get(r.id()),
+                self.lazy.dns_vnet_links.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<IdentityRow>() {
             return Some(identity_section_lines(

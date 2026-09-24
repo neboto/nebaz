@@ -211,7 +211,9 @@ fn every_az_command_reads() {
                     .split_whitespace()
                     .map(|w| w.trim_matches(|c: char| !c.is_ascii_alphanumeric()).to_ascii_lowercase())
                     .take_while(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
-                    .take(4)
+                    // Four command groups plus the verb: the deepest chain in
+                    // use is `network private-dns link vnet list`.
+                    .take(5)
                     .collect();
                 let words: Vec<&str> = words.iter().map(String::as_str).collect();
                 let chain = words.join(" ");

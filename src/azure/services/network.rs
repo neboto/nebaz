@@ -3,14 +3,18 @@
 //! `vnet/subnet`, inheriting the VNet's location) and network security
 //! groups. All three are stateless: only a provisioning transition or
 //! failure colours a row. The edge types (public IPs, load balancers,
-//! route tables, NAT gateways) live in `network_edge.rs`; the provider
-//! here lists all seven.
+//! route tables, NAT gateways) live in `network_edge.rs`, private
+//! endpoints and private DNS zones in `network_private.rs`; the provider
+//! here lists all nine.
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
 use crate::azure::services::network_edge::{
     LoadBalancerRow, NatGatewayRow, PublicIpRow, RouteTableRow, LOAD_BALANCERS_PATH, NAT_GATEWAYS_PATH,
     PUBLIC_IPS_PATH, ROUTE_TABLES_PATH,
+};
+use crate::azure::services::network_private::{
+    PrivateDnsZoneRow, PrivateEndpointRow, PRIVATE_DNS_API_VERSION, PRIVATE_DNS_ZONES_PATH, PRIVATE_ENDPOINTS_PATH,
 };
 use crate::azure::services::{arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope};
 use crate::error::{Error, Result};
@@ -591,9 +595,24 @@ impl NetworkService {
         rows.into_iter().map(|r| Box::new(r) as Box<dyn Resource>).collect()
     }
 
-    /// One page of an edge sub-tab's list, parsed by that sub-tab's row
+    /// The sub-tabs that are one plain list each (every Network type but
+    /// VNets, their embedded subnets and NSGs): path, api-version, and
+    /// the loading label. Private DNS is its own spec, on its own version.
+    fn flat_list(view: JumpView) -> Option<(&'static str, &'static str, &'static str)> {
+        Some(match view {
+            JumpView::PublicIps => (PUBLIC_IPS_PATH, NETWORK_API_VERSION, "Listing public IPs…"),
+            JumpView::LoadBalancers => (LOAD_BALANCERS_PATH, NETWORK_API_VERSION, "Listing load balancers…"),
+            JumpView::RouteTables => (ROUTE_TABLES_PATH, NETWORK_API_VERSION, "Listing route tables…"),
+            JumpView::NatGateways => (NAT_GATEWAYS_PATH, NETWORK_API_VERSION, "Listing NAT gateways…"),
+            JumpView::PrivateEndpoints => (PRIVATE_ENDPOINTS_PATH, NETWORK_API_VERSION, "Listing private endpoints…"),
+            JumpView::PrivateDnsZones => (PRIVATE_DNS_ZONES_PATH, PRIVATE_DNS_API_VERSION, "Listing private DNS zones…"),
+            _ => return None,
+        })
+    }
+
+    /// One page of a `flat_list` sub-tab, parsed by that sub-tab's row
     /// type. Empty for any other view.
-    fn edge_rows(view: JumpView, page: &[Value], tenant: Option<&str>) -> Vec<Box<dyn Resource>> {
+    fn flat_rows(view: JumpView, page: &[Value], tenant: Option<&str>) -> Vec<Box<dyn Resource>> {
         match view {
             JumpView::PublicIps => Self::boxed(page.iter().filter_map(|v| PublicIpRow::from_json(v, tenant)).collect()),
             JumpView::LoadBalancers => {
@@ -604,6 +623,12 @@ impl NetworkService {
             }
             JumpView::NatGateways => {
                 Self::boxed(page.iter().filter_map(|v| NatGatewayRow::from_json(v, tenant)).collect())
+            }
+            JumpView::PrivateEndpoints => {
+                Self::boxed(page.iter().filter_map(|v| PrivateEndpointRow::from_json(v, tenant)).collect())
+            }
+            JumpView::PrivateDnsZones => {
+                Self::boxed(page.iter().filter_map(|v| PrivateDnsZoneRow::from_json(v, tenant)).collect())
             }
             _ => Vec::new(),
         }
@@ -630,12 +655,10 @@ impl AzureService for NetworkService {
 
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
         let tenant = self.scope.tenant();
-        let rows = |page: Vec<Value>| Self::edge_rows(view, &page, tenant);
+        if let Some((path, api_version, _)) = Self::flat_list(view) {
+            return Ok(Self::flat_rows(view, &self.scope.list(path, api_version).await?, tenant));
+        }
         Ok(match view {
-            JumpView::PublicIps => rows(self.scope.list(PUBLIC_IPS_PATH, NETWORK_API_VERSION).await?),
-            JumpView::LoadBalancers => rows(self.scope.list(LOAD_BALANCERS_PATH, NETWORK_API_VERSION).await?),
-            JumpView::RouteTables => rows(self.scope.list(ROUTE_TABLES_PATH, NETWORK_API_VERSION).await?),
-            JumpView::NatGateways => rows(self.scope.list(NAT_GATEWAYS_PATH, NETWORK_API_VERSION).await?),
             JumpView::NetworkSecurityGroups => Self::boxed(
                 self.scope
                     .list(NSGS_PATH, NETWORK_API_VERSION)
@@ -666,18 +689,11 @@ impl AzureService for NetworkService {
         service_type: ServiceType,
     ) -> Result<()> {
         let tenant = self.scope.tenant().map(str::to_string);
-        let edge = match view {
-            JumpView::PublicIps => Some((PUBLIC_IPS_PATH, "Listing public IPs…")),
-            JumpView::LoadBalancers => Some((LOAD_BALANCERS_PATH, "Listing load balancers…")),
-            JumpView::RouteTables => Some((ROUTE_TABLES_PATH, "Listing route tables…")),
-            JumpView::NatGateways => Some((NAT_GATEWAYS_PATH, "Listing NAT gateways…")),
-            _ => None,
-        };
-        if let Some((path, label)) = edge {
+        if let Some((path, api_version, label)) = Self::flat_list(view) {
             let r = self
                 .scope
-                .stream(path, NETWORK_API_VERSION, &[], service_type, label, &event_tx, |page| {
-                    Self::edge_rows(view, &page, tenant.as_deref())
+                .stream(path, api_version, &[], service_type, label, &event_tx, |page| {
+                    Self::flat_rows(view, &page, tenant.as_deref())
                 })
                 .await;
             return finish_stream(service_type, r, &event_tx);
@@ -711,13 +727,18 @@ impl AzureService for NetworkService {
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
         let tenant = self.scope.tenant();
         let not_found = || Error::ResourceNotFound(id.to_string());
-        let v = self.scope.get(id, NETWORK_API_VERSION).await?;
-        match JumpView::for_arm_id(id) {
+        let view = JumpView::for_arm_id(id);
+        let api_version = view
+            .and_then(Self::flat_list)
+            .map(|(_, v, _)| v)
+            .unwrap_or(NETWORK_API_VERSION);
+        let v = self.scope.get(id, api_version).await?;
+        match view {
             Some(JumpView::VirtualNetworks) => Ok(Box::new(VnetRow::from_json(&v, tenant).ok_or_else(not_found)?)),
             Some(JumpView::Subnets) => Ok(Box::new(SubnetRow::from_json(&v, tenant).ok_or_else(not_found)?)),
             Some(JumpView::NetworkSecurityGroups) => Ok(Box::new(NsgRow::from_json(&v, tenant).ok_or_else(not_found)?)),
-            Some(view @ (JumpView::PublicIps | JumpView::LoadBalancers | JumpView::RouteTables | JumpView::NatGateways)) => {
-                Self::edge_rows(view, std::slice::from_ref(&v), tenant).pop().ok_or_else(not_found)
+            Some(view) if Self::flat_list(view).is_some() => {
+                Self::flat_rows(view, std::slice::from_ref(&v), tenant).pop().ok_or_else(not_found)
             }
             _ => Err(not_found()),
         }

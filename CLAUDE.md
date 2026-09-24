@@ -49,7 +49,8 @@ never blocks; `Ctrl-L` clears and repaints.
 
 **Scoping** (ADR 0002): `subscription` is the `P` slot, the one thing the
 app is pointed at; every list is subscription-wide. `location` is a
-client-side `R` filter over rows already fetched, never a call scope.
+client-side `R` filter over rows already fetched, never a call scope;
+`global` rows pass every filter (`Location::admits`).
 Resource group is the `rg:` search token. The **ARM id** is the universal
 key: row identity, portal link, cache and lazy key, the copied command's
 argument.
@@ -194,7 +195,7 @@ verbatim where the concept is unchanged.
 | `src/azure/service.rs` | `ServiceType`, `JumpView`, routing prefixes, `for_arm_id` |
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
-| `src/azure/services/{subscriptions,compute,storage,network,network_edge,keyvault,identity,aks,foundry}.rs` | one file per service |
+| `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,keyvault,identity,aks,foundry}.rs` | one file per service |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |

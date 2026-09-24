@@ -82,6 +82,12 @@ run identity-tab ok id '[6.0]' \
   "Managed identities" \
   "cannot reach 127.0.0.1"
 
+# The ninth Network chip: the bar scrolls to keep it visible, and the
+# zone list goes to ARM on the private DNS api-version.
+run private-dns-tab ok pdns '[6.0]' \
+  "9 Private DNS" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 

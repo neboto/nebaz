@@ -18,8 +18,8 @@ and the six first-release services are real, per the catalog in
 [`docs/SERVICES.md`](docs/SERVICES.md): Subscriptions +
 Resource Groups, Virtual Machines (+ disks, NICs; power state on the row),
 Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
-NSGs; since `v0.1.0` public IPs, load balancers, route tables and NAT
-gateways), Key Vault (metadata plus secret and key *names*, never values),
+NSGs; since `v0.1.0` public IPs, load balancers, route tables, NAT
+gateways, private endpoints and private DNS zones), Key Vault (metadata plus secret and key *names*, never values),
 Managed Identity (since `v0.1.0`; federated credentials lazy, and VMs and
 AKS link to the identities they use), AKS
 (+ node pools). Since `v0.1.0`: Foundry (every Cognitive Services
@@ -92,7 +92,7 @@ cargo run -- -s rg     # straight to the Resource Groups sub-tab
 cargo run -- -s vm     # virtual machines (Tab / 2 / 3 for Disks, NICs)
 cargo run -- -s kv     # key vaults; 4 / 5 on a row list secret and key names
 cargo run -- -s id     # managed identities; search by client or principal id
-cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat)
+cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe / pdns)
 cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments
 cargo test             # all tests, including the read-only guard
 cargo test --test readonly_guard   # just the guard (see "Why read-only")

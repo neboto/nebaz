@@ -55,7 +55,11 @@ each one backs are in the catalog table
   public IPs: `Microsoft.Network/publicIPAddresses/read`; load balancers:
   `Microsoft.Network/loadBalancers/read` (frontends, pools, rules and
   probes arrive embedded); route tables: `Microsoft.Network/routeTables/read`;
-  NAT gateways: `Microsoft.Network/natGateways/read`.
+  NAT gateways: `Microsoft.Network/natGateways/read`; private endpoints:
+  `Microsoft.Network/privateEndpoints/read`; private DNS zones:
+  `Microsoft.Network/privateDnsZones/read`, and the lazy Records and VNet
+  links sections: `Microsoft.Network/privateDnsZones/ALL/read`,
+  `Microsoft.Network/privateDnsZones/virtualNetworkLinks/read`.
 - **Key Vault**: `Microsoft.KeyVault/vaults/read`; the lazy Secrets and Keys
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:
