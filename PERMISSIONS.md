@@ -60,6 +60,10 @@ each one backs are in the catalog table
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:
   they return names and attributes only. Certificates are not listed.
+- **Managed Identity**: `Microsoft.ManagedIdentity/userAssignedIdentities/read`;
+  the lazy Federated credentials section:
+  `Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/read`.
+  Role assignments (what an identity can do) are not read.
 - **AKS**: `Microsoft.ContainerService/managedClusters/read` (node pools
   arrive embedded as `agentPoolProfiles` in the same list).
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):

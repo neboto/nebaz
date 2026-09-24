@@ -32,7 +32,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
       (`Enabled` → Available, `Disabled` → Unavailable, `Warned`/`PastDue`
       → Pending, `Deleted` → Terminated);
    3. else stateless (dim `○`, blank label): resource groups, VNets,
-      subnets, NSGs, load balancers, route tables, NAT gateways, vaults.
+      subnets, NSGs, load balancers, route tables, NAT gateways, vaults,
+      managed identities (no `provisioningState` at all).
    The label is always the native word lowercased (`native_state_label`),
    so the `F` chips read `deallocated`, `unattached`, `upgrading`. Never
    add a per-type state table that disagrees on what `Succeeded` means.
@@ -102,7 +103,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 |---|---|---|---|---|
 | Subscriptions · Subscriptions | Details ⧗ · Locations ⧗ · Tags (from Details) | subscription state; noise unless `Enabled` | — (root) | `az account show --subscription {id}` |
 | Subscriptions · Resource Groups | — | stateless when `Succeeded` | `managedBy` id when set | `az group show -n {name} --subscription {sub}` |
-| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) | power state | each NIC, OS and data disks, availability set | `az vm show` |
+| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) | power state | each NIC, OS and data disks, availability set, user-assigned identities | `az vm show` |
 | Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
 | Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
@@ -114,12 +115,13 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Network · Routes | Routes (prefix → next hop type and IP) | stateless | each associated subnet | `az network route-table show` |
 | Network · NAT | — (Overview: SKU, idle timeout, zones, counts) | stateless | public IPs (v4 and v6), prefixes, each subnet | `az network nat gateway show` |
 | Key Vault · Vaults | Access (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
-| AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group | `az aks show -n {name} -g {rg} --subscription {sub}` |
+| Identity · Identities | Federated credentials ⧗ (issuer, subject, audiences) · (Overview: client id, principal id, tenant, isolation scope; both ids searchable) | stateless | — (users list the identity in their own Related) | `az identity show` |
+| AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group, user-assigned identities, kubelet identity | `az aks show -n {name} -g {rg} --subscription {sub}` |
 | AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show --cluster-name {cluster} -g {rg} -n {pool} --subscription {sub}` |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @kv @aks @pool @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @kv @id @aks @pool @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -146,6 +148,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Routes | 1 (routes embedded) | `/providers/Microsoft.Network/routeTables` · `2025-09-01` |
 | NAT | 1 | `/providers/Microsoft.Network/natGateways` · `2025-09-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
+| Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
+| Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |
 | Secrets, Keys | 1 each per vault, on demand | `{vault}/secrets` · `{vault}/keys` · `2026-05-15` |
 | Clusters, Node pools | 1 each (same list) | `/providers/Microsoft.ContainerService/managedClusters` · `2026-06-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |

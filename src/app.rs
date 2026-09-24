@@ -27,6 +27,9 @@ use crate::azure::services::network_edge::{
     LoadBalancerDetailSection, LoadBalancerRow, NatGatewayDetailSection, NatGatewayRow, PublicIpDetailSection,
     PublicIpRow, RouteTableDetailSection, RouteTableRow,
 };
+use crate::azure::services::identity::{
+    federated_credentials_path, identity_section_lines, IdentityDetailSection, IdentityRow, IDENTITY_API_VERSION,
+};
 use crate::azure::services::keyvault::{
     names_path, vault_section_lines, VaultDetailSection, VaultRow, VAULT_NAMES_API_VERSION,
 };
@@ -1276,6 +1279,16 @@ impl App {
         );
     }
 
+    /// On-enter hook for an identity's Federated credentials: one ARM list
+    /// per identity, on demand.
+    pub fn trigger_federated_credentials(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.federated_credentials,
+            event_tx,
+            |c, id| c.list_fetch(&federated_credentials_path(id), IDENTITY_API_VERSION),
+        );
+    }
+
     /// On-enter hook for an AI account's Deployments: one ARM list per
     /// account, on demand.
     pub fn trigger_foundry_deployments(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -1664,6 +1677,13 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<NodePoolRow>() {
             return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<IdentityRow>() {
+            return Some(identity_section_lines(
+                r,
+                IdentityDetailSection::from_index(idx),
+                self.lazy.federated_credentials.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<FoundryRow>() {
             return Some(foundry_section_lines(

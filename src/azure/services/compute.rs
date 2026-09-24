@@ -114,6 +114,8 @@ pub struct VmRow {
     /// `(id, primary)`.
     pub nics: Vec<(String, bool)>,
     pub availability_set: Option<String>,
+    pub identity_type: Option<String>,
+    pub user_identity_ids: Vec<String>,
     pub time_created: Option<String>,
     pub license_type: Option<String>,
     pub image: Option<String>,
@@ -163,6 +165,8 @@ impl VmRow {
                 })
                 .collect(),
             availability_set: json::arm_id(json::id_at(v, &format!("{}/availabilitySet", p))),
+            identity_type: json::str_at(v, "/identity/type"),
+            user_identity_ids: json::user_identity_ids(v),
             time_created: json::str_at(v, &format!("{}/timeCreated", p)),
             license_type: json::str_at(v, &format!("{}/licenseType", p)),
             image,
@@ -236,6 +240,7 @@ impl Resource for VmRow {
             ("Zones".into(), json::join(&self.zones)),
             ("Priority".into(), json::opt(self.priority.clone())),
             ("License".into(), json::opt(self.license_type.clone())),
+            ("Identity".into(), json::opt(self.identity_type.clone())),
             ("Created".into(), json::time(self.time_created.clone())),
         ]
     }
@@ -253,6 +258,9 @@ impl Resource for VmRow {
         }
         if let Some(a) = &self.availability_set {
             v.push((format!("Availability set {}", name_of_id(a)), a.clone()));
+        }
+        for id in &self.user_identity_ids {
+            v.push((format!("Identity {}", name_of_id(id)), id.clone()));
         }
         v
     }
@@ -850,6 +858,9 @@ mod tests {
             "location": "westeurope",
             "zones": ["1"],
             "tags": {"env": "prod"},
+            "identity": {"type": "SystemAssigned, UserAssigned", "userAssignedIdentities": {
+                format!("{}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-web", RG): {"principalId": "p", "clientId": "c"}
+            }},
             "properties": {
                 "provisioningState": "Succeeded",
                 "timeCreated": "2024-03-01T10:00:00.1234567+00:00",
@@ -902,6 +913,9 @@ mod tests {
         assert!(related.iter().any(|(l, _)| l == "NIC (primary) web-1-nic"));
         assert!(related.iter().any(|(l, _)| l == "OS disk web-1_OsDisk"));
         assert!(related.iter().any(|(l, _)| l == "Data disk data0"));
+        assert!(related.iter().any(|(l, id)| l == "Identity id-web"
+            && crate::azure::service::JumpView::for_arm_id(id) == Some(crate::azure::service::JumpView::Identities)));
+        assert!(row.details().iter().any(|(k, v)| k == "Identity" && v == "SystemAssigned, UserAssigned"));
         assert_eq!(
             row.cli_command().as_deref(),
             Some(format!("az vm show --ids {}/providers/Microsoft.Compute/virtualMachines/web-1", RG).as_str())

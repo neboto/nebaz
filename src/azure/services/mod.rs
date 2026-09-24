@@ -8,6 +8,7 @@
 pub mod aks;
 pub mod compute;
 pub mod foundry;
+pub mod identity;
 pub mod keyvault;
 pub mod network;
 pub mod network_edge;
@@ -315,6 +316,19 @@ pub mod json {
             .iter()
             .filter_map(|o| str_at(o, "/id"))
             .collect()
+    }
+
+    /// The user-assigned identity ids of an ARM resource: the keys of
+    /// `identity.userAssignedIdentities`, sorted. The same shape on every
+    /// type that carries a managed identity.
+    pub fn user_identity_ids(v: &Value) -> Vec<String> {
+        let mut ids: Vec<String> = v
+            .pointer("/identity/userAssignedIdentities")
+            .and_then(|m| m.as_object())
+            .map(|m| m.keys().cloned().collect())
+            .unwrap_or_default();
+        ids.sort();
+        ids
     }
 
     /// The strings in the array at `ptr`.

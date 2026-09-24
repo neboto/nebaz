@@ -77,6 +77,11 @@ run network-edge-lb ok lb '[6.0]' \
   "5 LBs" \
   "cannot reach 127.0.0.1"
 
+# The Identity tab loads and lists through ARM.
+run identity-tab ok id '[6.0]' \
+  "Managed identities" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 

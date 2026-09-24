@@ -77,12 +77,6 @@ impl FoundryRow {
     pub fn from_json(v: &Value, tenant: Option<&str>) -> Option<FoundryRow> {
         let base = ArmBase::from_json(v, tenant)?;
         let p = "/properties";
-        let mut user_identity_ids: Vec<String> = v
-            .pointer("/identity/userAssignedIdentities")
-            .and_then(|m| m.as_object())
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default();
-        user_identity_ids.sort();
         Some(FoundryRow {
             kind: json::str_at(v, "/kind"),
             sku: json::str_at(v, "/sku/name"),
@@ -114,7 +108,7 @@ impl FoundryRow {
             key_vault_uri: json::str_at(v, &format!("{}/encryption/keyVaultProperties/keyVaultUri", p)),
             key_name: json::str_at(v, &format!("{}/encryption/keyVaultProperties/keyName", p)),
             identity_type: json::str_at(v, "/identity/type"),
-            user_identity_ids,
+            user_identity_ids: json::user_identity_ids(v),
             user_owned_storage_ids: json::arr(v, &format!("{}/userOwnedStorage", p))
                 .iter()
                 .filter_map(|s| json::arm_id(json::str_at(s, "/resourceId")))
