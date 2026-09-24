@@ -14,6 +14,7 @@ pub mod keyvault;
 pub mod network;
 pub mod network_edge;
 pub mod network_private;
+pub mod sql;
 pub mod storage;
 pub mod subscriptions;
 

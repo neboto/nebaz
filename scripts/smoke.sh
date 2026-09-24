@@ -93,6 +93,11 @@ run app-service-func ok func '[6.0]' \
   "2 Functions" \
   "cannot reach 127.0.0.1"
 
+# The SQL tab loads and lists servers through ARM.
+run sql-tab ok sql '[6.0]' \
+  "SQL servers & databases" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 

@@ -38,6 +38,9 @@ use crate::azure::services::app_service::{
     plan_section_lines, site_config_path, site_section_lines, PlanDetailSection, PlanRow, SiteDetailSection, SiteRow,
     WEB_API_VERSION,
 };
+use crate::azure::services::sql::{
+    server_child_path, sql_server_section_lines, SqlServerDetailSection, SqlServerRow, SQL_API_VERSION,
+};
 use crate::azure::services::keyvault::{
     names_path, vault_section_lines, VaultDetailSection, VaultRow, VAULT_NAMES_API_VERSION,
 };
@@ -1287,6 +1290,24 @@ impl App {
         );
     }
 
+    /// On-enter hook for a SQL server's Databases: one list per server.
+    pub fn trigger_sql_databases(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.sql_databases,
+            event_tx,
+            |c, id| c.list_fetch(&server_child_path(id, "databases"), SQL_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a SQL server's Firewall: one list per server.
+    pub fn trigger_sql_firewall(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.sql_firewall_rules,
+            event_tx,
+            |c, id| c.list_fetch(&server_child_path(id, "firewallRules"), SQL_API_VERSION),
+        );
+    }
+
     /// On-enter hook for an app's Configuration: `GET {site}/config/web`.
     pub fn trigger_site_config(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         app.trigger_selected(
@@ -1713,6 +1734,14 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<NodePoolRow>() {
             return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<SqlServerRow>() {
+            return Some(sql_server_section_lines(
+                r,
+                SqlServerDetailSection::from_index(idx),
+                self.lazy.sql_databases.get(r.id()),
+                self.lazy.sql_firewall_rules.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<SiteRow>() {
             return Some(site_section_lines(

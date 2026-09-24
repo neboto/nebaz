@@ -42,6 +42,8 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "services.ai.azure.com",
     // App Service: the apps themselves and their Kudu (SCM) sites.
     "azurewebsites.net",
+    // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).
+    "database.windows.net",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.

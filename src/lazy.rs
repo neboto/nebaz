@@ -133,6 +133,12 @@ pub struct LazyStore {
     /// id. Never app settings or connection strings.
     pub site_configs: LazyMap<serde_json::Value>,
 
+    // ── SQL ──────────────────────────────────────────────────────────────
+    /// `GET {server}/databases`, keyed by server id.
+    pub sql_databases: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {server}/firewallRules`, keyed by server id.
+    pub sql_firewall_rules: LazyMap<Vec<serde_json::Value>>,
+
     // ── Identity ─────────────────────────────────────────────────────────
     /// `GET {identity}/federatedIdentityCredentials`, keyed by identity id.
     pub federated_credentials: LazyMap<Vec<serde_json::Value>>,

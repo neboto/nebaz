@@ -18,6 +18,7 @@ use crate::azure::services::aks::AksService;
 use crate::azure::services::compute::ComputeService;
 use crate::azure::services::app_service::AppServiceService;
 use crate::azure::services::foundry::FoundryService;
+use crate::azure::services::sql::SqlService;
 use crate::azure::services::identity::IdentityService;
 use crate::azure::services::keyvault::KeyVaultService;
 use crate::azure::services::network::NetworkService;
@@ -274,6 +275,7 @@ impl AzureClients {
             ServiceType::Identity => Arc::new(IdentityService::new(scope)),
             ServiceType::Aks => Arc::new(AksService::new(scope)),
             ServiceType::AppService => Arc::new(AppServiceService::new(scope)),
+            ServiceType::Sql => Arc::new(SqlService::new(scope)),
             ServiceType::Foundry => Arc::new(FoundryService::new(scope)),
         }
     }
