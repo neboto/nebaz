@@ -70,6 +70,12 @@ each one backs are in the catalog table
   Role assignments (what an identity can do) are not read.
 - **AKS**: `Microsoft.ContainerService/managedClusters/read` (node pools
   arrive embedded as `agentPoolProfiles` in the same list).
+- **App Service**: `Microsoft.Web/sites/read` (web, function and logic
+  apps), `Microsoft.Web/serverfarms/read` (plans); the lazy Configuration
+  section: `Microsoft.Web/sites/config/read` (`config/web` only). App
+  settings, connection strings, publishing credentials and function keys
+  are all `POST` actions nebaz never sends; the guard names the `az`
+  commands that would print them.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

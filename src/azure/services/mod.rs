@@ -6,6 +6,7 @@
 //! The helpers here are the pieces every service shares.
 
 pub mod aks;
+pub mod app_service;
 pub mod compute;
 pub mod foundry;
 pub mod identity;

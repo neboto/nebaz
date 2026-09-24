@@ -40,6 +40,8 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "cognitiveservices.azure.com",
     "openai.azure.com",
     "services.ai.azure.com",
+    // App Service: the apps themselves and their Kudu (SCM) sites.
+    "azurewebsites.net",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.
@@ -57,6 +59,14 @@ const AZ_FORBIDDEN: &[&str] = &[
     "keyvault key show",
     "keyvault certificate",
     "cognitiveservices account keys",
+    // App settings, connection strings and function keys: each lists
+    // secrets under a read verb.
+    "webapp config appsettings",
+    "webapp config connection-string",
+    "functionapp config appsettings",
+    "functionapp keys",
+    "functionapp function keys",
+    "logicapp config appsettings",
 ];
 
 /// `az` mentions that are not commands. Each needs a reason.

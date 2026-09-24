@@ -88,6 +88,11 @@ run private-dns-tab ok pdns '[6.0]' \
   "9 Private DNS" \
   "cannot reach 127.0.0.1"
 
+# A routing prefix lands on App Service's filtered Functions sub-tab.
+run app-service-func ok func '[6.0]' \
+  "2 Functions" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 
