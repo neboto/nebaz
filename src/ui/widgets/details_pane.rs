@@ -11,8 +11,11 @@
 //! - leading-space key + empty value → plain content line;
 //! - both empty → blank spacer;
 //! - a value starting `· ` → dim annotation row.
+//!
+//! A line whose value is an ARM id of a browsed type ends in `→`: Enter
+//! jumps to it (`app::detail_jump_view`).
 
-use crate::app::{App, ClickAction};
+use crate::app::{detail_jump_view, App, ClickAction};
 use crate::sections::{key_for, SectionDescriptor};
 use crate::ui::theme;
 use ratatui::{
@@ -28,6 +31,8 @@ use ratatui::{
 
 const KEY_COL_MIN: usize = 16;
 const KEY_COL_MAX: usize = 40;
+/// Appended to a line Enter jumps from (neboto's marker).
+const JUMP_MARKER: &str = "  →";
 
 pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     let focused = app.details_focused;
@@ -142,7 +147,10 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
         .skip(offset)
         .take(height)
         .map(|(idx, (k, v))| {
-            let line = style_detail_row(k, v, key_w, app);
+            let mut line = style_detail_row(k, v, key_w, app);
+            if detail_jump_view(v).is_some() {
+                line.spans.push(Span::styled(JUMP_MARKER, Style::default().fg(theme::brand())));
+            }
             if focused && app.detail_line_in_selection(idx) {
                 let sel = theme::selection_style(true);
                 let spans: Vec<Span> = line.spans.into_iter().map(|s| Span::styled(s.content, sel)).collect();

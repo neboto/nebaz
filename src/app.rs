@@ -866,7 +866,7 @@ impl App {
             return;
         };
         let value = value.trim().to_string();
-        if value.starts_with("/subscriptions/") {
+        if is_arm_id(&value) {
             self.jump_to_arm_id(&value, event_tx);
         }
     }
@@ -2732,6 +2732,24 @@ fn flat_section_header(name: &str) -> (String, String) {
     (format!("{}{}", base, "━".repeat(fill)), String::new())
 }
 
+/// Whether a detail value is an ARM id Enter acts on (a jump, or a copy
+/// when nebaz does not browse the type).
+fn is_arm_id(value: &str) -> bool {
+    value.starts_with("/subscriptions/")
+}
+
+/// The view Enter on this detail value jumps to: `Some` exactly when the
+/// value is an ARM id of a type nebaz browses. The detail pane marks those
+/// lines with `→`, so the marker and the jump cannot disagree.
+pub fn detail_jump_view(value: &str) -> Option<JumpView> {
+    let value = value.trim();
+    if is_arm_id(value) {
+        JumpView::for_arm_id(value)
+    } else {
+        None
+    }
+}
+
 /// The section name if this key is a flat header row.
 pub fn flat_header_name(key: &str) -> Option<&str> {
     key.strip_prefix("━━ ").map(|rest| rest.trim_end_matches('━').trim())
@@ -2784,6 +2802,18 @@ mod tests {
 
     fn s(k: &str, v: &str) -> (String, String) {
         (k.to_string(), v.to_string())
+    }
+
+    #[test]
+    fn only_browsed_arm_ids_carry_the_jump_marker() {
+        let rg = "/subscriptions/0/resourceGroups/rg";
+        assert_eq!(detail_jump_view(rg), Some(JumpView::ResourceGroups));
+        let nic = format!(" {}/providers/Microsoft.Network/networkInterfaces/n ", rg);
+        assert_eq!(detail_jump_view(&nic), Some(JumpView::Nics));
+        // Enter copies an unbrowsed id instead of jumping: no marker.
+        assert_eq!(detail_jump_view(&format!("{}/providers/Microsoft.Network/publicIPAddresses/ip", rg)), None);
+        assert_eq!(detail_jump_view("Standard_D2s_v3"), None);
+        assert_eq!(detail_jump_view(""), None);
     }
 
     #[test]
