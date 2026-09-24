@@ -26,6 +26,8 @@ pub enum ServiceType {
     Identity,
     /// AKS managed clusters + node pools.
     Aks,
+    /// Web, function and logic apps (`Microsoft.Web/sites`) and plans.
+    AppService,
     /// Foundry / AI Services / Azure OpenAI accounts; deployments and
     /// projects as lazy sections. Metadata only, never keys.
     Foundry,
@@ -66,6 +68,12 @@ pub enum JumpView {
     Clusters,
     /// Embedded in the cluster list (the API says agent pool).
     NodePools,
+    // App Service
+    /// Every site: web, API, function and logic apps.
+    WebApps,
+    /// The same sites list, function and logic apps only.
+    FunctionApps,
+    AppServicePlans,
     // Foundry
     /// Every `Microsoft.CognitiveServices` account, `kind` on the row.
     AiAccounts,
@@ -84,6 +92,7 @@ impl JumpView {
             KeyVaults => ServiceType::KeyVault,
             Identities => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
+            WebApps | FunctionApps | AppServicePlans => ServiceType::AppService,
             AiAccounts => ServiceType::Foundry,
         }
     }
@@ -111,6 +120,9 @@ impl JumpView {
             Identities => "identities",
             Clusters => "clusters",
             NodePools => "node-pools",
+            WebApps => "apps",
+            FunctionApps => "function-apps",
+            AppServicePlans => "plans",
             AiAccounts => "ai-accounts",
         }
     }
@@ -138,6 +150,9 @@ impl JumpView {
             Identities => "Identities",
             Clusters => "Clusters",
             NodePools => "Node pools",
+            WebApps => "Apps",
+            FunctionApps => "Functions",
+            AppServicePlans => "Plans",
             AiAccounts => "Resources",
         }
     }
@@ -173,6 +188,9 @@ impl JumpView {
             ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
             ("microsoft.containerservice", ["managedclusters", "agentpools"]) => JumpView::NodePools,
+            // A site's id does not say its kind; Apps lists every site.
+            ("microsoft.web", ["sites"]) => JumpView::WebApps,
+            ("microsoft.web", ["serverfarms"]) => JumpView::AppServicePlans,
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
             _ => return None,
         })
@@ -196,13 +214,14 @@ impl ServiceType {
             ServiceType::KeyVault,
             ServiceType::Identity,
             ServiceType::Aks,
+            ServiceType::AppService,
             ServiceType::Foundry,
         ]
     }
 
     /// Ordered picker categories. Every `category()` value must appear here.
     pub const CATEGORIES: &'static [&'static str] =
-        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "AI"];
+        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "Web", "AI"];
 
     pub fn category(&self) -> &'static str {
         match self {
@@ -213,6 +232,7 @@ impl ServiceType {
             ServiceType::KeyVault => "Security",
             ServiceType::Identity => "Security",
             ServiceType::Aks => "Containers",
+            ServiceType::AppService => "Web",
             ServiceType::Foundry => "AI",
         }
     }
@@ -226,6 +246,7 @@ impl ServiceType {
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Managed Identity",
             ServiceType::Aks => "AKS",
+            ServiceType::AppService => "App Service",
             ServiceType::Foundry => "Foundry",
         }
     }
@@ -240,6 +261,7 @@ impl ServiceType {
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Identity",
             ServiceType::Aks => "AKS",
+            ServiceType::AppService => "App Svc",
             ServiceType::Foundry => "Foundry",
         }
     }
@@ -253,6 +275,7 @@ impl ServiceType {
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Identity => "Managed identities",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
+            ServiceType::AppService => "Web & function apps, plans",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
         }
     }
@@ -279,6 +302,7 @@ impl ServiceType {
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Identity => &[Identities],
             ServiceType::Aks => &[Clusters, NodePools],
+            ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans],
             ServiceType::Foundry => &[AiAccounts],
         }
     }
@@ -338,6 +362,13 @@ impl ServiceType {
             "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
             "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => (ServiceType::Aks, None),
             "pool" | "pools" | "nodepool" | "nodepools" => (ServiceType::Aks, Some(JumpView::NodePools)),
+            "app" | "apps" | "web" | "webapp" | "webapps" | "appservice" | "site" | "sites" => (ServiceType::AppService, None),
+            "func" | "funcs" | "function" | "functions" | "functionapp" | "functionapps" | "logicapp" | "logicapps" => {
+                (ServiceType::AppService, Some(JumpView::FunctionApps))
+            }
+            "plan" | "plans" | "asp" | "serverfarm" | "serverfarms" => {
+                (ServiceType::AppService, Some(JumpView::AppServicePlans))
+            }
             "foundry" | "aifoundry" | "aiservices" | "openai" | "aoai" | "cognitive" | "cognitiveservices" | "cog" => {
                 (ServiceType::Foundry, None)
             }
@@ -362,6 +393,7 @@ impl ServiceType {
             ServiceType::KeyVault => "@kv",
             ServiceType::Identity => "@id",
             ServiceType::Aks => "@aks",
+            ServiceType::AppService => "@app",
             ServiceType::Foundry => "@foundry",
         }
     }
@@ -369,12 +401,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool"];
+        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@foundry"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@app", "@foundry"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -510,6 +542,9 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c")), Some(JumpView::Clusters));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c/agentPools/np")), Some(JumpView::NodePools));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.CognitiveServices/accounts/ai")), Some(JumpView::AiAccounts));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop")), Some(JumpView::WebApps));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/serverfarms/plan")), Some(JumpView::AppServicePlans));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop/slots/staging")), None);
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.ManagedIdentity/userAssignedIdentities/id-app")),
             Some(JumpView::Identities)

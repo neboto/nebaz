@@ -128,6 +128,11 @@ pub struct LazyStore {
     /// `GET {zone}/virtualNetworkLinks`, keyed by zone id.
     pub dns_vnet_links: LazyMap<Vec<serde_json::Value>>,
 
+    // ── App Service ──────────────────────────────────────────────────────
+    /// `GET {site}/config/web` — the Configuration section, keyed by site
+    /// id. Never app settings or connection strings.
+    pub site_configs: LazyMap<serde_json::Value>,
+
     // ── Identity ─────────────────────────────────────────────────────────
     /// `GET {identity}/federatedIdentityCredentials`, keyed by identity id.
     pub federated_credentials: LazyMap<Vec<serde_json::Value>>,

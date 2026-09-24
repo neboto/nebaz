@@ -21,7 +21,8 @@ Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
 NSGs; since `v0.1.0` public IPs, load balancers, route tables, NAT
 gateways, private endpoints and private DNS zones), Key Vault (metadata plus secret and key *names*, never values),
 Managed Identity (since `v0.1.0`; federated credentials lazy, and VMs and
-AKS link to the identities they use), AKS
+AKS link to the identities they use), App Service (since `v0.1.0`; apps,
+function apps and plans, never app settings), AKS
 (+ node pools). Since `v0.1.0`: Foundry (every Cognitive Services
 account, Azure OpenAI included; model deployments and projects lazy, never
 keys). Every row has a **Related** section listing the ARM ids it
@@ -92,6 +93,7 @@ cargo run -- -s rg     # straight to the Resource Groups sub-tab
 cargo run -- -s vm     # virtual machines (Tab / 2 / 3 for Disks, NICs)
 cargo run -- -s kv     # key vaults; 4 / 5 on a row list secret and key names
 cargo run -- -s id     # managed identities; search by client or principal id
+cargo run -- -s app    # App Service apps (2 Functions, 3 Plans); 2 on a row loads Configuration
 cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe / pdns)
 cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments
 cargo test             # all tests, including the read-only guard
@@ -134,7 +136,7 @@ The promise is held at three layers, not by convention
 1. the single request constructor only builds `GET`s, and a pipeline policy
    refuses any other method at runtime;
 2. `tests/readonly_guard.rs` fails `cargo test` if the source gains another
-   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints),
+   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites),
    a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
 
