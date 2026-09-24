@@ -114,6 +114,8 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Network · LBs | Frontends (public IP, or private IP + subnet) · Backend pools (NICs, deduplicated from IP configurations; or addresses) · Rules (LB rules, health probes, inbound NAT, outbound) | stateless | frontend public IPs and subnets, backend NICs | `az network lb show` |
 | Network · Routes | Routes (prefix → next hop type and IP) | stateless | each associated subnet | `az network route-table show` |
 | Network · NAT | — (Overview: SKU, idle timeout, zones, counts) | stateless | public IPs (v4 and v6), prefixes, each subnet | `az network nat gateway show` |
+| Network · PEs | Connection (target, sub-resource, status, description, automatic or manual approval) · DNS (custom DNS configs: FQDN → IPs) | ladder, then connection status (`Approved` → Available, `Pending` → Pending, `Rejected` / `Disconnected` → Unavailable) | **target** (`privateLinkServiceId`: jumps to the vault, account, storage account… it fronts), subnet, NICs | `az network private-endpoint show` |
+| Network · Private DNS | Records ⧗ (name, type, TTL, values; auto-registered flagged) · VNet links ⧗ (each linked VNet jumps; auto-registration, state) | stateless; `location` is `global`, which passes every `R` filter | — (linked VNets are in VNet links) | `az network private-dns zone show` |
 | Key Vault · Vaults | Access (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Identities | Federated credentials ⧗ (issuer, subject, audiences) · (Overview: client id, principal id, tenant, isolation scope; both ids searchable) | stateless | — (users list the identity in their own Related) | `az identity show` |
 | AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group, user-assigned identities, kubelet identity | `az aks show -n {name} -g {rg} --subscription {sub}` |
@@ -121,7 +123,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @kv @id @aks @pool @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @pdns @kv @id @aks @pool @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -147,6 +149,9 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | LBs | 1 (frontends, pools, rules, probes embedded) | `/providers/Microsoft.Network/loadBalancers` · `2025-09-01` |
 | Routes | 1 (routes embedded) | `/providers/Microsoft.Network/routeTables` · `2025-09-01` |
 | NAT | 1 | `/providers/Microsoft.Network/natGateways` · `2025-09-01` |
+| PEs | 1 | `/providers/Microsoft.Network/privateEndpoints` · `2025-09-01` |
+| Private DNS | 1 | `/providers/Microsoft.Network/privateDnsZones` · `2024-06-01` (its own spec) |
+| Records, VNet links | 1 each per zone, on demand | `{zone}/ALL` · `{zone}/virtualNetworkLinks` · `2024-06-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
 | Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |

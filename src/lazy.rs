@@ -122,6 +122,12 @@ pub struct LazyStore {
     /// `GET {vault}/keys` — key names and attributes, keyed by vault id.
     pub vault_keys: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Network ──────────────────────────────────────────────────────────
+    /// `GET {zone}/ALL` — a private DNS zone's record sets, keyed by zone id.
+    pub dns_records: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {zone}/virtualNetworkLinks`, keyed by zone id.
+    pub dns_vnet_links: LazyMap<Vec<serde_json::Value>>,
+
     // ── Identity ─────────────────────────────────────────────────────────
     /// `GET {identity}/federatedIdentityCredentials`, keyed by identity id.
     pub federated_credentials: LazyMap<Vec<serde_json::Value>>,

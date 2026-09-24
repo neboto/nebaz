@@ -18,7 +18,7 @@ pub enum ServiceType {
     /// Storage accounts + blob containers (via ARM).
     Storage,
     /// Virtual networks, subnets, NSGs, public IPs, load balancers, route
-    /// tables, NAT gateways.
+    /// tables, NAT gateways, private endpoints, private DNS zones.
     Network,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
@@ -56,6 +56,8 @@ pub enum JumpView {
     LoadBalancers,
     RouteTables,
     NatGateways,
+    PrivateEndpoints,
+    PrivateDnsZones,
     // Key Vault
     KeyVaults,
     // Identity
@@ -78,7 +80,7 @@ impl JumpView {
             VirtualMachines | Disks | Nics => ServiceType::VirtualMachines,
             StorageAccounts => ServiceType::Storage,
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
-            | NatGateways => ServiceType::Network,
+            | NatGateways | PrivateEndpoints | PrivateDnsZones => ServiceType::Network,
             KeyVaults => ServiceType::KeyVault,
             Identities => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
@@ -103,6 +105,8 @@ impl JumpView {
             LoadBalancers => "load-balancers",
             RouteTables => "route-tables",
             NatGateways => "nat-gateways",
+            PrivateEndpoints => "private-endpoints",
+            PrivateDnsZones => "private-dns-zones",
             KeyVaults => "vaults",
             Identities => "identities",
             Clusters => "clusters",
@@ -128,6 +132,8 @@ impl JumpView {
             LoadBalancers => "LBs",
             RouteTables => "Routes",
             NatGateways => "NAT",
+            PrivateEndpoints => "PEs",
+            PrivateDnsZones => "Private DNS",
             KeyVaults => "Vaults",
             Identities => "Identities",
             Clusters => "Clusters",
@@ -161,6 +167,8 @@ impl JumpView {
             ("microsoft.network", ["loadbalancers"]) => JumpView::LoadBalancers,
             ("microsoft.network", ["routetables"]) => JumpView::RouteTables,
             ("microsoft.network", ["natgateways"]) => JumpView::NatGateways,
+            ("microsoft.network", ["privateendpoints"]) => JumpView::PrivateEndpoints,
+            ("microsoft.network", ["privatednszones"]) => JumpView::PrivateDnsZones,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
@@ -265,6 +273,8 @@ impl ServiceType {
                 LoadBalancers,
                 RouteTables,
                 NatGateways,
+                PrivateEndpoints,
+                PrivateDnsZones,
             ],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Identity => &[Identities],
@@ -318,6 +328,12 @@ impl ServiceType {
                 (ServiceType::Network, Some(JumpView::RouteTables))
             }
             "nat" | "natgw" | "natgateway" | "natgateways" => (ServiceType::Network, Some(JumpView::NatGateways)),
+            "pe" | "pes" | "privateendpoint" | "privateendpoints" => {
+                (ServiceType::Network, Some(JumpView::PrivateEndpoints))
+            }
+            "pdns" | "privatedns" | "privatednszone" | "privatednszones" => {
+                (ServiceType::Network, Some(JumpView::PrivateDnsZones))
+            }
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
             "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => (ServiceType::Aks, None),
@@ -353,7 +369,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pool"];
+        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -509,6 +525,12 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("microsoft.network/NATGATEWAYS/n")), Some(JumpView::NatGateways));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/loadBalancers/lb/frontendIPConfigurations/fe")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/publicIPPrefixes/px")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/privateEndpoints/pe")), Some(JumpView::PrivateEndpoints));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net")),
+            Some(JumpView::PrivateDnsZones)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/privateDnsZones/z/A/www")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s/x/y")), None);
         assert_eq!(JumpView::for_arm_id("garbage"), None);
     }

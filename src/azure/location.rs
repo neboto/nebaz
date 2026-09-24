@@ -25,6 +25,9 @@ pub enum Location {
 /// macros and bookmarks.
 pub const ALL: &str = "all";
 
+/// The `location` ARM gives non-regional resources.
+pub const GLOBAL: &str = "global";
+
 /// What the `All` value displays as.
 pub const ALL_DISPLAY: &str = "All locations";
 
@@ -51,11 +54,14 @@ impl Location {
 
     /// Whether a resource's own `location` passes this filter. `All`
     /// passes everything; a resource with no location of its own
-    /// (subscription rows, child resources) is never filtered out.
+    /// (subscription rows, child resources) is never filtered out, and
+    /// neither is a `global` one (private DNS zones and every other
+    /// non-regional type): it is in every location, not in none.
     pub fn admits(&self, resource_location: Option<&str>) -> bool {
         match (self, resource_location) {
             (Location::All, _) => true,
             (_, None) => true,
+            (_, Some(l)) if l.eq_ignore_ascii_case(GLOBAL) => true,
             (Location::Named(loc), Some(l)) => l.eq_ignore_ascii_case(loc),
         }
     }
@@ -129,6 +135,8 @@ mod tests {
         assert!(!eastus.admits(Some("westus")));
         // Child / subscription-level rows carry no location: never filtered.
         assert!(eastus.admits(None));
+        assert!(eastus.admits(Some("global")), "a global row is in every location");
+        assert!(eastus.admits(Some("Global")));
     }
 
     #[test]
