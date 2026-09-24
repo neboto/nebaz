@@ -8,11 +8,11 @@
 //!    `Method::Get`; the pipeline (`Pipeline::new`) and the bearer policy
 //!    are built nowhere else; no HTTP client crate is a direct dependency.
 //! 2. No data-plane host string exists in non-test code under `src/` — Key
-//!    Vault values and blob bodies live behind those hosts, never behind
-//!    ARM. (Test fixtures may carry a `vaultUri`, as real ARM rows do.)
+//!    Vault values, blob bodies and model calls live behind those hosts,
+//!    never behind ARM. (Test fixtures may carry a `vaultUri`, as real ARM rows do.)
 //! 3. Every `az …` command string in `src/` uses a read verb, or is on a
-//!    written allowlist; the Key Vault value-returning commands are named
-//!    forbidden outright.
+//!    written allowlist; the Key Vault value-returning commands and the
+//!    AI account key listing are named forbidden outright.
 //! 4. Every ARM action `PERMISSIONS.md` grants ends in `/read`.
 //!
 //! There is deliberately no API-path allowlist here: the paths are
@@ -36,6 +36,10 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "table.core.windows.net",
     "blob.core.usgovcloudapi.net",
     "blob.core.chinacloudapi.cn",
+    // Foundry / AI Services / Azure OpenAI: model calls and agent APIs.
+    "cognitiveservices.azure.com",
+    "openai.azure.com",
+    "services.ai.azure.com",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.
@@ -46,8 +50,14 @@ const HTTP_CLIENT_CRATES: &[&str] = &["reqwest", "hyper", "ureq", "curl", "isahc
 const AZ_READ_VERBS: &[&str] = &["show", "list", "get-access-token"];
 
 /// Command chains that read nothing but must never appear: they return
-/// secret material to the terminal.
-const AZ_FORBIDDEN: &[&str] = &["keyvault secret show", "keyvault key show", "keyvault certificate"];
+/// secret material to the terminal. `cognitiveservices account keys list`
+/// carries a read verb, so it has to be named here.
+const AZ_FORBIDDEN: &[&str] = &[
+    "keyvault secret show",
+    "keyvault key show",
+    "keyvault certificate",
+    "cognitiveservices account keys",
+];
 
 /// `az` mentions that are not commands. Each needs a reason.
 const AZ_ALLOW: &[(&str, &str)] = &[

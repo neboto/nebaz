@@ -121,6 +121,13 @@ pub struct LazyStore {
     pub vault_secrets: LazyMap<Vec<serde_json::Value>>,
     /// `GET {vault}/keys` — key names and attributes, keyed by vault id.
     pub vault_keys: LazyMap<Vec<serde_json::Value>>,
+
+    // ── Foundry ──────────────────────────────────────────────────────────
+    /// `GET {account}/deployments` — model deployments, keyed by account id.
+    pub foundry_deployments: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {account}/projects` — Foundry projects, keyed by account id;
+    /// only ever fetched for accounts with project management on.
+    pub foundry_projects: LazyMap<Vec<serde_json::Value>>,
 }
 
 impl LazyStore {

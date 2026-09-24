@@ -7,6 +7,7 @@
 
 pub mod aks;
 pub mod compute;
+pub mod foundry;
 pub mod keyvault;
 pub mod network;
 pub mod storage;

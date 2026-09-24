@@ -31,7 +31,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / storage / vnet / kv / aks
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / storage / vnet / kv / aks / foundry
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 cargo test --test readonly_guard    # just the guard
 cargo clippy --all-targets          # CI runs this; keep it clean
@@ -169,8 +169,10 @@ verbatim where the concept is unchanged.
 - **Embedded children** (`SubnetRow`, `NodePoolRow`) expose the
   `parent/child` display name from `name()` (`#[allow(clippy::misnamed_getters)]`
   on purpose) and carry the parent's location.
-- **`az` commands** are the name form for the five `show` commands that
-  take no `--ids` (`SERVICES.md` rule 9); every other row is `show --ids`.
+- **`az` commands** are the name form for the `show` commands that take
+  no `--ids` (`SERVICES.md` rule 9 lists them); every other row is
+  `show --ids`. Check the CLI's parameter table (`id_part`) before
+  assuming either.
   The app never runs a copied command; it runs `az account list` and, via
   azure_identity, `az account get-access-token`, nothing else.
 - **Clipboard**: no `eprintln!` anywhere in the TUI path; arboard's
@@ -192,7 +194,7 @@ verbatim where the concept is unchanged.
 | `src/azure/service.rs` | `ServiceType`, `JumpView`, routing prefixes, `for_arm_id` |
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
-| `src/azure/services/{subscriptions,compute,storage,network,keyvault,aks}.rs` | the six services |
+| `src/azure/services/{subscriptions,compute,storage,network,keyvault,aks,foundry}.rs` | one file per service |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |
