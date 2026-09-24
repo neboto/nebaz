@@ -76,6 +76,10 @@ each one backs are in the catalog table
   settings, connection strings, publishing credentials and function keys
   are all `POST` actions nebaz never sends; the guard names the `az`
   commands that would print them.
+- **SQL**: `Microsoft.Sql/servers/read`; the lazy Databases and
+  Firewall sections: `Microsoft.Sql/servers/databases/read`,
+  `Microsoft.Sql/servers/firewallRules/read`. Metadata only: nebaz never
+  connects to a database (the server endpoints are on the guard's list).
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

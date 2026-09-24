@@ -28,6 +28,8 @@ pub enum ServiceType {
     Aks,
     /// Web, function and logic apps (`Microsoft.Web/sites`) and plans.
     AppService,
+    /// Azure SQL logical servers; databases and firewall rules lazy.
+    Sql,
     /// Foundry / AI Services / Azure OpenAI accounts; deployments and
     /// projects as lazy sections. Metadata only, never keys.
     Foundry,
@@ -74,6 +76,8 @@ pub enum JumpView {
     /// The same sites list, function and logic apps only.
     FunctionApps,
     AppServicePlans,
+    // SQL
+    SqlServers,
     // Foundry
     /// Every `Microsoft.CognitiveServices` account, `kind` on the row.
     AiAccounts,
@@ -93,6 +97,7 @@ impl JumpView {
             Identities => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
             WebApps | FunctionApps | AppServicePlans => ServiceType::AppService,
+            SqlServers => ServiceType::Sql,
             AiAccounts => ServiceType::Foundry,
         }
     }
@@ -123,6 +128,7 @@ impl JumpView {
             WebApps => "apps",
             FunctionApps => "function-apps",
             AppServicePlans => "plans",
+            SqlServers => "sql-servers",
             AiAccounts => "ai-accounts",
         }
     }
@@ -153,6 +159,7 @@ impl JumpView {
             WebApps => "Apps",
             FunctionApps => "Functions",
             AppServicePlans => "Plans",
+            SqlServers => "Servers",
             AiAccounts => "Resources",
         }
     }
@@ -191,6 +198,7 @@ impl JumpView {
             // A site's id does not say its kind; Apps lists every site.
             ("microsoft.web", ["sites"]) => JumpView::WebApps,
             ("microsoft.web", ["serverfarms"]) => JumpView::AppServicePlans,
+            ("microsoft.sql", ["servers"]) => JumpView::SqlServers,
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
             _ => return None,
         })
@@ -215,13 +223,14 @@ impl ServiceType {
             ServiceType::Identity,
             ServiceType::Aks,
             ServiceType::AppService,
+            ServiceType::Sql,
             ServiceType::Foundry,
         ]
     }
 
     /// Ordered picker categories. Every `category()` value must appear here.
     pub const CATEGORIES: &'static [&'static str] =
-        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "Web", "AI"];
+        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "Web", "Databases", "AI"];
 
     pub fn category(&self) -> &'static str {
         match self {
@@ -233,6 +242,7 @@ impl ServiceType {
             ServiceType::Identity => "Security",
             ServiceType::Aks => "Containers",
             ServiceType::AppService => "Web",
+            ServiceType::Sql => "Databases",
             ServiceType::Foundry => "AI",
         }
     }
@@ -247,6 +257,7 @@ impl ServiceType {
             ServiceType::Identity => "Managed Identity",
             ServiceType::Aks => "AKS",
             ServiceType::AppService => "App Service",
+            ServiceType::Sql => "SQL",
             ServiceType::Foundry => "Foundry",
         }
     }
@@ -262,6 +273,7 @@ impl ServiceType {
             ServiceType::Identity => "Identity",
             ServiceType::Aks => "AKS",
             ServiceType::AppService => "App Svc",
+            ServiceType::Sql => "SQL",
             ServiceType::Foundry => "Foundry",
         }
     }
@@ -276,6 +288,7 @@ impl ServiceType {
             ServiceType::Identity => "Managed identities",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
             ServiceType::AppService => "Web & function apps, plans",
+            ServiceType::Sql => "SQL servers & databases",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
         }
     }
@@ -303,6 +316,7 @@ impl ServiceType {
             ServiceType::Identity => &[Identities],
             ServiceType::Aks => &[Clusters, NodePools],
             ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans],
+            ServiceType::Sql => &[SqlServers],
             ServiceType::Foundry => &[AiAccounts],
         }
     }
@@ -366,6 +380,7 @@ impl ServiceType {
             "func" | "funcs" | "function" | "functions" | "functionapp" | "functionapps" | "logicapp" | "logicapps" => {
                 (ServiceType::AppService, Some(JumpView::FunctionApps))
             }
+            "sql" | "sqlserver" | "sqlservers" | "azuresql" | "db" | "dbs" => (ServiceType::Sql, None),
             "plan" | "plans" | "asp" | "serverfarm" | "serverfarms" => {
                 (ServiceType::AppService, Some(JumpView::AppServicePlans))
             }
@@ -394,6 +409,7 @@ impl ServiceType {
             ServiceType::Identity => "@id",
             ServiceType::Aks => "@aks",
             ServiceType::AppService => "@app",
+            ServiceType::Sql => "@sql",
             ServiceType::Foundry => "@foundry",
         }
     }
@@ -406,7 +422,7 @@ impl ServiceType {
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@app", "@foundry"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@app", "@sql", "@foundry"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -545,6 +561,8 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop")), Some(JumpView::WebApps));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/serverfarms/plan")), Some(JumpView::AppServicePlans));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop/slots/staging")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod/databases/orders")), None);
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.ManagedIdentity/userAssignedIdentities/id-app")),
             Some(JumpView::Identities)

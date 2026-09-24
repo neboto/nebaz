@@ -126,10 +126,11 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | App Service · Apps | Configuration ⧗ (`config/web`: runtime, always on, TLS, FTPS, HTTP/2, health check, VNet routing, access restrictions; never app settings or connection strings) · Hostnames (TLS state, SCM flagged) · Networking (public access, VNet integration subnet, outbound IPs) | ladder, then `state` (`Running` / `Stopped`) | plan, VNet integration subnet, Container Apps environment, user-assigned identities, Key Vault reference identity | web apps `az webapp show --ids`; function and logic apps `az functionapp` / `az logicapp show -n {name} -g {rg} --subscription {sub}` |
 | App Service · Functions | the same rows as Apps, filtered to `kind` containing `functionapp` (Logic Apps Standard included) | as Apps | as Apps | as Apps |
 | App Service · Plans | — (Overview: SKU · tier, OS, workers of max, apps, zone redundancy, per-app and elastic scaling) | ladder, then `status` (`Ready` → Available) | — (apps list their plan) | `az appservice plan show` |
+| SQL · Servers | Security (Entra admin, Entra-only auth, SQL admin login, min TLS, TDE key service- or customer-managed, identity) · Databases ⧗ (user databases: SKU, status, max size, zone redundancy, backup redundancy, serverless auto-pause, elastic pool; system databases as a note) · Firewall ⧗ (IP rules; `AllowAllWindowsAzureIps` flagged) · Networking (public access, outbound restriction, IPv6, private endpoints) | `state` (`Ready` → Available; no `provisioningState` on servers) | private endpoints, user-assigned and primary identities | `az sql server show` |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @pdns @kv @id @aks @pool @app @func @plan @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @pdns @kv @id @aks @pool @app @func @plan @sql @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -166,6 +167,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Apps, Functions | 1 each (the same sites list; Apps is every site because a site id does not say its kind) | `/providers/Microsoft.Web/sites` · `2026-03-15` |
 | Plans | 1 | `/providers/Microsoft.Web/serverfarms` · `2026-03-15` |
 | App Configuration | 1 per app, on demand | `{site}/config/web` · `2026-03-15` |
+| SQL servers | 1 | `/providers/Microsoft.Sql/servers` · `2025-01-01` |
+| Databases, Firewall | 1 each per server, on demand (no subscription-wide database list exists) | `{server}/databases` · `{server}/firewallRules` · `2025-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
 
