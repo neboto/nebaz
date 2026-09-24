@@ -51,7 +51,11 @@ each one backs are in the catalog table
   (container metadata through ARM, never a blob).
 - **Virtual Networks**: `Microsoft.Network/virtualNetworks/read` (subnets
   and peerings arrive embedded in the same list; the Subnets sub-tab needs
-  nothing more); NSGs: `Microsoft.Network/networkSecurityGroups/read`.
+  nothing more); NSGs: `Microsoft.Network/networkSecurityGroups/read`;
+  public IPs: `Microsoft.Network/publicIPAddresses/read`; load balancers:
+  `Microsoft.Network/loadBalancers/read` (frontends, pools, rules and
+  probes arrive embedded); route tables: `Microsoft.Network/routeTables/read`;
+  NAT gateways: `Microsoft.Network/natGateways/read`.
 - **Key Vault**: `Microsoft.KeyVault/vaults/read`; the lazy Secrets and Keys
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:

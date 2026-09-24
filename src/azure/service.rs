@@ -17,7 +17,8 @@ pub enum ServiceType {
     VirtualMachines,
     /// Storage accounts + blob containers (via ARM).
     Storage,
-    /// Virtual networks, subnets, network security groups.
+    /// Virtual networks, subnets, NSGs, public IPs, load balancers, route
+    /// tables, NAT gateways.
     Network,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
@@ -49,6 +50,10 @@ pub enum JumpView {
     /// Embedded in the virtual-network list.
     Subnets,
     NetworkSecurityGroups,
+    PublicIps,
+    LoadBalancers,
+    RouteTables,
+    NatGateways,
     // Key Vault
     KeyVaults,
     // AKS
@@ -68,7 +73,8 @@ impl JumpView {
             Subscriptions | ResourceGroups => ServiceType::Subscriptions,
             VirtualMachines | Disks | Nics => ServiceType::VirtualMachines,
             StorageAccounts => ServiceType::Storage,
-            VirtualNetworks | Subnets | NetworkSecurityGroups => ServiceType::Network,
+            VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
+            | NatGateways => ServiceType::Network,
             KeyVaults => ServiceType::KeyVault,
             Clusters | NodePools => ServiceType::Aks,
             AiAccounts => ServiceType::Foundry,
@@ -88,6 +94,10 @@ impl JumpView {
             VirtualNetworks => "vnets",
             Subnets => "subnets",
             NetworkSecurityGroups => "nsgs",
+            PublicIps => "public-ips",
+            LoadBalancers => "load-balancers",
+            RouteTables => "route-tables",
+            NatGateways => "nat-gateways",
             KeyVaults => "vaults",
             Clusters => "clusters",
             NodePools => "node-pools",
@@ -108,6 +118,10 @@ impl JumpView {
             VirtualNetworks => "VNets",
             Subnets => "Subnets",
             NetworkSecurityGroups => "NSGs",
+            PublicIps => "Public IPs",
+            LoadBalancers => "LBs",
+            RouteTables => "Routes",
+            NatGateways => "NAT",
             KeyVaults => "Vaults",
             Clusters => "Clusters",
             NodePools => "Node pools",
@@ -117,7 +131,7 @@ impl JumpView {
 
     /// The sub-tab that lists an ARM id's type, from its resource-provider
     /// namespace and type chain — the jump router (ticket 06). `None` for
-    /// a type nebaz does not browse (a public IP, a route table).
+    /// a type nebaz does not browse (a public IP prefix, a firewall).
     pub fn for_arm_id(id: &str) -> Option<JumpView> {
         use crate::azure::resource::{arm_type_chain, resource_group_of, subscription_of};
         let Some((ns, chain)) = arm_type_chain(id) else {
@@ -136,6 +150,10 @@ impl JumpView {
             ("microsoft.network", ["virtualnetworks"]) => JumpView::VirtualNetworks,
             ("microsoft.network", ["virtualnetworks", "subnets"]) => JumpView::Subnets,
             ("microsoft.network", ["networksecuritygroups"]) => JumpView::NetworkSecurityGroups,
+            ("microsoft.network", ["publicipaddresses"]) => JumpView::PublicIps,
+            ("microsoft.network", ["loadbalancers"]) => JumpView::LoadBalancers,
+            ("microsoft.network", ["routetables"]) => JumpView::RouteTables,
+            ("microsoft.network", ["natgateways"]) => JumpView::NatGateways,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
             ("microsoft.containerservice", ["managedclusters", "agentpools"]) => JumpView::NodePools,
@@ -211,7 +229,7 @@ impl ServiceType {
             ServiceType::Subscriptions => "Subscriptions & Resource Groups",
             ServiceType::VirtualMachines => "Virtual Machines, Disks & NICs",
             ServiceType::Storage => "Storage Accounts & Containers",
-            ServiceType::Network => "Virtual Networks, Subnets & NSGs",
+            ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
@@ -226,7 +244,15 @@ impl ServiceType {
             ServiceType::Subscriptions => &[Subscriptions, ResourceGroups],
             ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics],
             ServiceType::Storage => &[StorageAccounts],
-            ServiceType::Network => &[VirtualNetworks, Subnets, NetworkSecurityGroups],
+            ServiceType::Network => &[
+                VirtualNetworks,
+                Subnets,
+                NetworkSecurityGroups,
+                PublicIps,
+                LoadBalancers,
+                RouteTables,
+                NatGateways,
+            ],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Aks => &[Clusters, NodePools],
             ServiceType::Foundry => &[AiAccounts],
@@ -272,6 +298,12 @@ impl ServiceType {
             "vnet" | "vnets" | "net" | "network" => (ServiceType::Network, None),
             "subnet" | "subnets" => (ServiceType::Network, Some(JumpView::Subnets)),
             "nsg" | "nsgs" => (ServiceType::Network, Some(JumpView::NetworkSecurityGroups)),
+            "pip" | "pips" | "publicip" | "publicips" => (ServiceType::Network, Some(JumpView::PublicIps)),
+            "lb" | "lbs" | "loadbalancer" | "loadbalancers" => (ServiceType::Network, Some(JumpView::LoadBalancers)),
+            "rt" | "route" | "routes" | "routetable" | "routetables" => {
+                (ServiceType::Network, Some(JumpView::RouteTables))
+            }
+            "nat" | "natgw" | "natgateway" | "natgateways" => (ServiceType::Network, Some(JumpView::NatGateways)),
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => (ServiceType::Aks, None),
             "pool" | "pools" | "nodepool" | "nodepools" => (ServiceType::Aks, Some(JumpView::NodePools)),
@@ -305,7 +337,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pool"];
+        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pool"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -447,7 +479,12 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c/agentPools/np")), Some(JumpView::NodePools));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.CognitiveServices/accounts/ai")), Some(JumpView::AiAccounts));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.CognitiveServices/accounts/ai/deployments/d")), None);
-        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/publicIPAddresses/ip")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/publicIPAddresses/ip")), Some(JumpView::PublicIps));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/loadBalancers/lb")), Some(JumpView::LoadBalancers));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/routeTables/rt")), Some(JumpView::RouteTables));
+        assert_eq!(JumpView::for_arm_id(&p("microsoft.network/NATGATEWAYS/n")), Some(JumpView::NatGateways));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/loadBalancers/lb/frontendIPConfigurations/fe")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/publicIPPrefixes/px")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s/x/y")), None);
         assert_eq!(JumpView::for_arm_id("garbage"), None);
     }

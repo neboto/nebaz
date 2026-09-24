@@ -2,10 +2,16 @@
 //! subnets (own sub-tab, flattened from the VNet list; named
 //! `vnet/subnet`, inheriting the VNet's location) and network security
 //! groups. All three are stateless: only a provisioning transition or
-//! failure colours a row.
+//! failure colours a row. The edge types (public IPs, load balancers,
+//! route tables, NAT gateways) live in `network_edge.rs`; the provider
+//! here lists all seven.
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::network_edge::{
+    LoadBalancerRow, NatGatewayRow, PublicIpRow, RouteTableRow, LOAD_BALANCERS_PATH, NAT_GATEWAYS_PATH,
+    PUBLIC_IPS_PATH, ROUTE_TABLES_PATH,
+};
 use crate::azure::services::{arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope};
 use crate::error::{Error, Result};
 use crate::event::Event;
@@ -585,6 +591,24 @@ impl NetworkService {
         rows.into_iter().map(|r| Box::new(r) as Box<dyn Resource>).collect()
     }
 
+    /// One page of an edge sub-tab's list, parsed by that sub-tab's row
+    /// type. Empty for any other view.
+    fn edge_rows(view: JumpView, page: &[Value], tenant: Option<&str>) -> Vec<Box<dyn Resource>> {
+        match view {
+            JumpView::PublicIps => Self::boxed(page.iter().filter_map(|v| PublicIpRow::from_json(v, tenant)).collect()),
+            JumpView::LoadBalancers => {
+                Self::boxed(page.iter().filter_map(|v| LoadBalancerRow::from_json(v, tenant)).collect())
+            }
+            JumpView::RouteTables => {
+                Self::boxed(page.iter().filter_map(|v| RouteTableRow::from_json(v, tenant)).collect())
+            }
+            JumpView::NatGateways => {
+                Self::boxed(page.iter().filter_map(|v| NatGatewayRow::from_json(v, tenant)).collect())
+            }
+            _ => Vec::new(),
+        }
+    }
+
     /// Every subnet of every VNet in a page, flattened.
     fn subnets_of(page: &[Value], tenant: Option<&str>) -> Vec<SubnetRow> {
         page.iter()
@@ -606,7 +630,12 @@ impl AzureService for NetworkService {
 
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
         let tenant = self.scope.tenant();
+        let rows = |page: Vec<Value>| Self::edge_rows(view, &page, tenant);
         Ok(match view {
+            JumpView::PublicIps => rows(self.scope.list(PUBLIC_IPS_PATH, NETWORK_API_VERSION).await?),
+            JumpView::LoadBalancers => rows(self.scope.list(LOAD_BALANCERS_PATH, NETWORK_API_VERSION).await?),
+            JumpView::RouteTables => rows(self.scope.list(ROUTE_TABLES_PATH, NETWORK_API_VERSION).await?),
+            JumpView::NatGateways => rows(self.scope.list(NAT_GATEWAYS_PATH, NETWORK_API_VERSION).await?),
             JumpView::NetworkSecurityGroups => Self::boxed(
                 self.scope
                     .list(NSGS_PATH, NETWORK_API_VERSION)
@@ -637,6 +666,22 @@ impl AzureService for NetworkService {
         service_type: ServiceType,
     ) -> Result<()> {
         let tenant = self.scope.tenant().map(str::to_string);
+        let edge = match view {
+            JumpView::PublicIps => Some((PUBLIC_IPS_PATH, "Listing public IPs…")),
+            JumpView::LoadBalancers => Some((LOAD_BALANCERS_PATH, "Listing load balancers…")),
+            JumpView::RouteTables => Some((ROUTE_TABLES_PATH, "Listing route tables…")),
+            JumpView::NatGateways => Some((NAT_GATEWAYS_PATH, "Listing NAT gateways…")),
+            _ => None,
+        };
+        if let Some((path, label)) = edge {
+            let r = self
+                .scope
+                .stream(path, NETWORK_API_VERSION, &[], service_type, label, &event_tx, |page| {
+                    Self::edge_rows(view, &page, tenant.as_deref())
+                })
+                .await;
+            return finish_stream(service_type, r, &event_tx);
+        }
         let r = match view {
             JumpView::NetworkSecurityGroups => {
                 self.scope
@@ -671,6 +716,9 @@ impl AzureService for NetworkService {
             Some(JumpView::VirtualNetworks) => Ok(Box::new(VnetRow::from_json(&v, tenant).ok_or_else(not_found)?)),
             Some(JumpView::Subnets) => Ok(Box::new(SubnetRow::from_json(&v, tenant).ok_or_else(not_found)?)),
             Some(JumpView::NetworkSecurityGroups) => Ok(Box::new(NsgRow::from_json(&v, tenant).ok_or_else(not_found)?)),
+            Some(view @ (JumpView::PublicIps | JumpView::LoadBalancers | JumpView::RouteTables | JumpView::NatGateways)) => {
+                Self::edge_rows(view, std::slice::from_ref(&v), tenant).pop().ok_or_else(not_found)
+            }
             _ => Err(not_found()),
         }
     }

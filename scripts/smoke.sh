@@ -72,6 +72,11 @@ run foundry-tab ok foundry '[8.0]' \
   "Foundry" \
   "cannot reach 127.0.0.1"
 
+# A routing prefix lands on a Network edge sub-tab, which lists through ARM.
+run network-edge-lb ok lb '[6.0]' \
+  "5 LBs" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 
