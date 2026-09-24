@@ -22,6 +22,11 @@ use crate::azure::services::compute::{
 use crate::azure::services::foundry::{
     child_path, foundry_section_lines, FoundryDetailSection, FoundryRow, FOUNDRY_API_VERSION,
 };
+use crate::azure::services::network_edge::{
+    load_balancer_section_lines, nat_gateway_section_lines, public_ip_section_lines, route_table_section_lines,
+    LoadBalancerDetailSection, LoadBalancerRow, NatGatewayDetailSection, NatGatewayRow, PublicIpDetailSection,
+    PublicIpRow, RouteTableDetailSection, RouteTableRow,
+};
 use crate::azure::services::keyvault::{
     names_path, vault_section_lines, VaultDetailSection, VaultRow, VAULT_NAMES_API_VERSION,
 };
@@ -1634,6 +1639,18 @@ impl App {
         if let Some(r) = any.downcast_ref::<NsgRow>() {
             return Some(nsg_section_lines(r, NsgDetailSection::from_index(idx)));
         }
+        if let Some(r) = any.downcast_ref::<PublicIpRow>() {
+            return Some(public_ip_section_lines(r, PublicIpDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<LoadBalancerRow>() {
+            return Some(load_balancer_section_lines(r, LoadBalancerDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<RouteTableRow>() {
+            return Some(route_table_section_lines(r, RouteTableDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<NatGatewayRow>() {
+            return Some(nat_gateway_section_lines(r, NatGatewayDetailSection::from_index(idx)));
+        }
         if let Some(r) = any.downcast_ref::<VaultRow>() {
             return Some(vault_section_lines(
                 r,
@@ -2878,7 +2895,7 @@ mod tests {
         let nic = format!(" {}/providers/Microsoft.Network/networkInterfaces/n ", rg);
         assert_eq!(detail_jump_view(&nic), Some(JumpView::Nics));
         // Enter copies an unbrowsed id instead of jumping: no marker.
-        assert_eq!(detail_jump_view(&format!("{}/providers/Microsoft.Network/publicIPAddresses/ip", rg)), None);
+        assert_eq!(detail_jump_view(&format!("{}/providers/Microsoft.Network/publicIPPrefixes/px", rg)), None);
         assert_eq!(detail_jump_view("Standard_D2s_v3"), None);
         assert_eq!(detail_jump_view(""), None);
     }

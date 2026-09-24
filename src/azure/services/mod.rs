@@ -10,6 +10,7 @@ pub mod compute;
 pub mod foundry;
 pub mod keyvault;
 pub mod network;
+pub mod network_edge;
 pub mod storage;
 pub mod subscriptions;
 
