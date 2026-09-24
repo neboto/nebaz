@@ -17,6 +17,7 @@ use crate::azure::resource::subscription_of;
 use crate::azure::services::aks::AksService;
 use crate::azure::services::compute::ComputeService;
 use crate::azure::services::foundry::FoundryService;
+use crate::azure::services::identity::IdentityService;
 use crate::azure::services::keyvault::KeyVaultService;
 use crate::azure::services::network::NetworkService;
 use crate::azure::services::storage::StorageService;
@@ -269,6 +270,7 @@ impl AzureClients {
             ServiceType::Storage => Arc::new(StorageService::new(scope)),
             ServiceType::Network => Arc::new(NetworkService::new(scope)),
             ServiceType::KeyVault => Arc::new(KeyVaultService::new(scope)),
+            ServiceType::Identity => Arc::new(IdentityService::new(scope)),
             ServiceType::Aks => Arc::new(AksService::new(scope)),
             ServiceType::Foundry => Arc::new(FoundryService::new(scope)),
         }

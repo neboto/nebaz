@@ -122,6 +122,10 @@ pub struct LazyStore {
     /// `GET {vault}/keys` — key names and attributes, keyed by vault id.
     pub vault_keys: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Identity ─────────────────────────────────────────────────────────
+    /// `GET {identity}/federatedIdentityCredentials`, keyed by identity id.
+    pub federated_credentials: LazyMap<Vec<serde_json::Value>>,
+
     // ── Foundry ──────────────────────────────────────────────────────────
     /// `GET {account}/deployments` — model deployments, keyed by account id.
     pub foundry_deployments: LazyMap<Vec<serde_json::Value>>,

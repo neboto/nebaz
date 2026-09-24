@@ -22,6 +22,8 @@ pub enum ServiceType {
     Network,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
+    /// User-assigned managed identities; federated credentials lazy.
+    Identity,
     /// AKS managed clusters + node pools.
     Aks,
     /// Foundry / AI Services / Azure OpenAI accounts; deployments and
@@ -56,6 +58,8 @@ pub enum JumpView {
     NatGateways,
     // Key Vault
     KeyVaults,
+    // Identity
+    Identities,
     // AKS
     Clusters,
     /// Embedded in the cluster list (the API says agent pool).
@@ -76,6 +80,7 @@ impl JumpView {
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
             | NatGateways => ServiceType::Network,
             KeyVaults => ServiceType::KeyVault,
+            Identities => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
             AiAccounts => ServiceType::Foundry,
         }
@@ -99,6 +104,7 @@ impl JumpView {
             RouteTables => "route-tables",
             NatGateways => "nat-gateways",
             KeyVaults => "vaults",
+            Identities => "identities",
             Clusters => "clusters",
             NodePools => "node-pools",
             AiAccounts => "ai-accounts",
@@ -123,6 +129,7 @@ impl JumpView {
             RouteTables => "Routes",
             NatGateways => "NAT",
             KeyVaults => "Vaults",
+            Identities => "Identities",
             Clusters => "Clusters",
             NodePools => "Node pools",
             AiAccounts => "Resources",
@@ -155,6 +162,7 @@ impl JumpView {
             ("microsoft.network", ["routetables"]) => JumpView::RouteTables,
             ("microsoft.network", ["natgateways"]) => JumpView::NatGateways,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
+            ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
             ("microsoft.containerservice", ["managedclusters", "agentpools"]) => JumpView::NodePools,
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
@@ -178,6 +186,7 @@ impl ServiceType {
             ServiceType::Storage,
             ServiceType::Network,
             ServiceType::KeyVault,
+            ServiceType::Identity,
             ServiceType::Aks,
             ServiceType::Foundry,
         ]
@@ -194,6 +203,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage",
             ServiceType::Network => "Networking",
             ServiceType::KeyVault => "Security",
+            ServiceType::Identity => "Security",
             ServiceType::Aks => "Containers",
             ServiceType::Foundry => "AI",
         }
@@ -206,6 +216,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage",
             ServiceType::Network => "Virtual Network",
             ServiceType::KeyVault => "Key Vault",
+            ServiceType::Identity => "Managed Identity",
             ServiceType::Aks => "AKS",
             ServiceType::Foundry => "Foundry",
         }
@@ -219,6 +230,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage",
             ServiceType::Network => "VNet",
             ServiceType::KeyVault => "Key Vault",
+            ServiceType::Identity => "Identity",
             ServiceType::Aks => "AKS",
             ServiceType::Foundry => "Foundry",
         }
@@ -231,6 +243,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage Accounts & Containers",
             ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
+            ServiceType::Identity => "Managed identities",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
         }
@@ -254,6 +267,7 @@ impl ServiceType {
                 NatGateways,
             ],
             ServiceType::KeyVault => &[KeyVaults],
+            ServiceType::Identity => &[Identities],
             ServiceType::Aks => &[Clusters, NodePools],
             ServiceType::Foundry => &[AiAccounts],
         }
@@ -305,6 +319,7 @@ impl ServiceType {
             }
             "nat" | "natgw" | "natgateway" | "natgateways" => (ServiceType::Network, Some(JumpView::NatGateways)),
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
+            "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
             "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => (ServiceType::Aks, None),
             "pool" | "pools" | "nodepool" | "nodepools" => (ServiceType::Aks, Some(JumpView::NodePools)),
             "foundry" | "aifoundry" | "aiservices" | "openai" | "aoai" | "cognitive" | "cognitiveservices" | "cog" => {
@@ -329,6 +344,7 @@ impl ServiceType {
             ServiceType::Storage => "@storage",
             ServiceType::Network => "@vnet",
             ServiceType::KeyVault => "@kv",
+            ServiceType::Identity => "@id",
             ServiceType::Aks => "@aks",
             ServiceType::Foundry => "@foundry",
         }
@@ -342,7 +358,7 @@ impl ServiceType {
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@aks", "@foundry"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@foundry"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -478,6 +494,14 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c")), Some(JumpView::Clusters));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerService/managedClusters/c/agentPools/np")), Some(JumpView::NodePools));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.CognitiveServices/accounts/ai")), Some(JumpView::AiAccounts));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.ManagedIdentity/userAssignedIdentities/id-app")),
+            Some(JumpView::Identities)
+        );
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.ManagedIdentity/userAssignedIdentities/id/federatedIdentityCredentials/f")),
+            None
+        );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.CognitiveServices/accounts/ai/deployments/d")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/publicIPAddresses/ip")), Some(JumpView::PublicIps));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/loadBalancers/lb")), Some(JumpView::LoadBalancers));

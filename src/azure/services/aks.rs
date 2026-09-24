@@ -77,6 +77,11 @@ pub struct ClusterRow {
     pub aad_managed: Option<bool>,
     pub azure_rbac: Option<bool>,
     pub identity_type: Option<String>,
+    /// The cluster's user-assigned control-plane identities.
+    pub user_identity_ids: Vec<String>,
+    /// `identityProfile.kubeletidentity.resourceId`: what the nodes pull
+    /// images and reach Azure as.
+    pub kubelet_identity_id: Option<String>,
     pub oidc_issuer: Option<String>,
     pub workload_identity: Option<bool>,
     /// `(name, enabled)`.
@@ -138,6 +143,8 @@ impl ClusterRow {
             aad_managed: json::bool_at(v, &format!("{}/aadProfile/managed", p)),
             azure_rbac: json::bool_at(v, &format!("{}/aadProfile/enableAzureRBAC", p)),
             identity_type: json::str_at(v, "/identity/type"),
+            user_identity_ids: json::user_identity_ids(v),
+            kubelet_identity_id: json::arm_id(json::str_at(v, &format!("{}/identityProfile/kubeletidentity/resourceId", p))),
             oidc_issuer: json::bool_at(v, &format!("{}/oidcIssuerProfile/enabled", p))
                 .filter(|e| *e)
                 .and_then(|_| json::str_at(v, &format!("{}/oidcIssuerProfile/issuerURL", p))),
@@ -213,6 +220,12 @@ impl Resource for ClusterRow {
         if let (Some(rg), Some(id)) = (&self.node_resource_group, self.node_resource_group_id()) {
             v.push((format!("Node resource group {}", rg), id));
         }
+        for id in &self.user_identity_ids {
+            v.push((format!("Identity {}", name_of_id(id)), id.clone()));
+        }
+        if let Some(k) = &self.kubelet_identity_id {
+            v.push((format!("Kubelet identity {}", name_of_id(k)), k.clone()));
+        }
         v
     }
     /// `az aks show` takes no `--ids` (checked on the Azure machine,
@@ -239,14 +252,23 @@ pub fn cluster_section_lines(r: &ClusterRow, section: ClusterDetailSection) -> V
             }
             lines
         }
-        ClusterDetailSection::Access => vec![
-            ("Kubernetes RBAC".into(), json::yes_no(r.enable_rbac)),
-            ("Entra integration".into(), json::yes_no(r.aad_managed)),
-            ("Azure RBAC for Kubernetes".into(), json::yes_no(r.azure_rbac)),
-            ("Identity".into(), json::opt(r.identity_type.clone())),
-            ("Workload identity".into(), json::yes_no(r.workload_identity)),
-            ("OIDC issuer".into(), json::opt(r.oidc_issuer.clone())),
-        ],
+        ClusterDetailSection::Access => {
+            let mut lines = vec![
+                ("Kubernetes RBAC".into(), json::yes_no(r.enable_rbac)),
+                ("Entra integration".into(), json::yes_no(r.aad_managed)),
+                ("Azure RBAC for Kubernetes".into(), json::yes_no(r.azure_rbac)),
+                ("Identity".into(), json::opt(r.identity_type.clone())),
+                ("Workload identity".into(), json::yes_no(r.workload_identity)),
+                ("OIDC issuer".into(), json::opt(r.oidc_issuer.clone())),
+            ];
+            for id in &r.user_identity_ids {
+                lines.push((format!("User identity · {}", name_of_id(id)), id.clone()));
+            }
+            if let Some(k) = &r.kubelet_identity_id {
+                lines.push((format!("Kubelet identity · {}", name_of_id(k)), k.clone()));
+            }
+            lines
+        }
         ClusterDetailSection::NodePools => {
             if r.pools.is_empty() {
                 return vec![(String::new(), "No node pools".into())];
@@ -616,10 +638,16 @@ mod tests {
             "name": "aks-prod",
             "location": "westeurope",
             "sku": {"name": "Base", "tier": "Standard"},
-            "identity": {"type": "SystemAssigned"},
+            "identity": {"type": "UserAssigned", "userAssignedIdentities": {
+                "/subscriptions/0000/resourceGroups/rg-id/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-aks": {}
+            }},
             "properties": {
                 "provisioningState": "Succeeded",
                 "powerState": {"code": "Running"},
+                "identityProfile": {"kubeletidentity": {
+                    "resourceId": "/subscriptions/0000/resourceGroups/MC_rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/aks-prod-agentpool",
+                    "clientId": "c", "objectId": "o"
+                }},
                 "kubernetesVersion": "1.31.2",
                 "currentKubernetesVersion": "1.31.2",
                 "fqdn": "aks-prod-abc.hcp.westeurope.azmk8s.io",
@@ -654,6 +682,11 @@ mod tests {
         let access = cluster_section_lines(&row, ClusterDetailSection::Access);
         assert!(access.iter().any(|(k, v)| k == "Azure RBAC for Kubernetes" && v == "yes"));
         assert!(access.iter().any(|(k, v)| k == "OIDC issuer" && v == "https://oidc.example/"));
+        assert!(access.iter().any(|(k, _)| k == "User identity · id-aks"));
+        assert!(access.iter().any(|(k, _)| k == "Kubelet identity · aks-prod-agentpool"));
+        let related: Vec<String> = row.related().into_iter().map(|(l, _)| l).collect();
+        assert!(related.iter().any(|l| l == "Identity id-aks"), "{related:?}");
+        assert!(related.iter().any(|l| l == "Kubelet identity aks-prod-agentpool"), "{related:?}");
         let net = cluster_section_lines(&row, ClusterDetailSection::Network);
         assert_eq!(net[0], ("Plugin".to_string(), "azure".to_string()));
         assert!(net.iter().any(|(k, v)| k == "Authorised IP ranges" && v == "1.2.3.4/32"));
