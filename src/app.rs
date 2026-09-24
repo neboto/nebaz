@@ -2145,7 +2145,11 @@ impl App {
             }
         }
 
-        // Modals first — each owns the keyboard while open.
+        // Modals first — each owns the keyboard while open. Ctrl-N / Ctrl-P
+        // move like Down / Up in every one of them (neboto's picker keys);
+        // unmapped, they typed `n` / `p` into a picker's filter and Ctrl-N
+        // started a macro recording from the macro picker.
+        let key = if self.any_modal_open() { overlay_nav_key(key) } else { key };
         if self.help_visible {
             match key.code {
                 KeyCode::Esc | KeyCode::Char('?') | KeyCode::Char('q') => self.help_visible = false,
@@ -2788,6 +2792,19 @@ pub fn detail_jump_view(value: &str) -> Option<JumpView> {
     }
 }
 
+/// Ctrl-N → Down and Ctrl-P → Up; every other key unchanged. Applied to
+/// keys an open overlay receives, never to the main list or detail pane.
+fn overlay_nav_key(key: KeyEvent) -> KeyEvent {
+    if !key.modifiers.contains(KeyModifiers::CONTROL) {
+        return key;
+    }
+    match key.code {
+        KeyCode::Char('n') => KeyEvent::new(KeyCode::Down, KeyModifiers::NONE),
+        KeyCode::Char('p') => KeyEvent::new(KeyCode::Up, KeyModifiers::NONE),
+        _ => key,
+    }
+}
+
 /// The section name if this key is a flat header row.
 pub fn flat_header_name(key: &str) -> Option<&str> {
     key.strip_prefix("━━ ").map(|rest| rest.trim_end_matches('━').trim())
@@ -2840,6 +2857,18 @@ mod tests {
 
     fn s(k: &str, v: &str) -> (String, String) {
         (k.to_string(), v.to_string())
+    }
+
+    #[test]
+    fn ctrl_n_and_ctrl_p_are_down_and_up_in_overlays() {
+        let ctrl = |c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL);
+        assert_eq!(overlay_nav_key(ctrl('n')).code, KeyCode::Down);
+        assert_eq!(overlay_nav_key(ctrl('p')).code, KeyCode::Up);
+        assert_eq!(overlay_nav_key(ctrl('n')).modifiers, KeyModifiers::NONE);
+        // Plain n / p still type into a filter; other chords are untouched.
+        let plain = KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE);
+        assert_eq!(overlay_nav_key(plain), plain);
+        assert_eq!(overlay_nav_key(ctrl('d')), ctrl('d'));
     }
 
     #[test]

@@ -62,6 +62,11 @@ run flat-and-select ok sub '[2.0, "\r", 0.3, "\\", 0.5, "V", "J", "J", "y", 1.0]
   "━━ Overview" "━━ Related" \
   "3 lines"
 
+# Ctrl-N moves down in a picker (it used to type `n` into the filter):
+# Subscriptions → Virtual Machines → Storage, then Enter.
+run picker-ctrl-n ok sub '[2.0, "S", 0.3, "\u000e", "\u000e", 0.3, "\r", 3.0]' \
+  "Loading Storage…"
+
 # A seventh tab still fits, and the Foundry list goes to ARM like the rest.
 run foundry-tab ok foundry '[8.0]' \
   "Foundry" \
