@@ -139,6 +139,11 @@ pub struct LazyStore {
     /// `GET {server}/firewallRules`, keyed by server id.
     pub sql_firewall_rules: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Cosmos DB ────────────────────────────────────────────────────────
+    /// `GET {account}/{sqlDatabases|mongodbDatabases|…}` — the path the
+    /// account's API picks, keyed by account id.
+    pub cosmos_databases: LazyMap<Vec<serde_json::Value>>,
+
     // ── Container Registry ───────────────────────────────────────────────
     /// `GET {registry}/replications`, keyed by registry id; Premium only.
     pub acr_replications: LazyMap<Vec<serde_json::Value>>,

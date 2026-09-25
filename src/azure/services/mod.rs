@@ -9,6 +9,7 @@ pub mod aks;
 pub mod app_service;
 pub mod compute;
 pub mod container_registry;
+pub mod cosmos;
 pub mod foundry;
 pub mod identity;
 pub mod keyvault;

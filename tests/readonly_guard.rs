@@ -47,6 +47,8 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // Container Registry: repositories, tags and manifests (the registry's
     // login server).
     "azurecr.io",
+    // Cosmos DB: the accounts' document endpoints.
+    "documents.azure.com",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.
@@ -72,6 +74,8 @@ const AZ_FORBIDDEN: &[&str] = &[
     "functionapp keys",
     "functionapp function keys",
     "logicapp config appsettings",
+    // Cosmos DB account keys, read-only keys and connection strings.
+    "cosmosdb keys",
 ];
 
 /// `az` mentions that are not commands. Each needs a reason.
