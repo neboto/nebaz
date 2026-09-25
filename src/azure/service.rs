@@ -33,6 +33,9 @@ pub enum ServiceType {
     AppService,
     /// Azure SQL logical servers; databases and firewall rules lazy.
     Sql,
+    /// Cosmos DB accounts; databases lazy, on the account's API path.
+    /// Never keys or connection strings.
+    Cosmos,
     /// Foundry / AI Services / Azure OpenAI accounts; deployments and
     /// projects as lazy sections. Metadata only, never keys.
     Foundry,
@@ -83,6 +86,8 @@ pub enum JumpView {
     AppServicePlans,
     // SQL
     SqlServers,
+    // Cosmos DB
+    CosmosAccounts,
     // Foundry
     /// Every `Microsoft.CognitiveServices` account, `kind` on the row.
     AiAccounts,
@@ -104,6 +109,7 @@ impl JumpView {
             Registries => ServiceType::ContainerRegistry,
             WebApps | FunctionApps | AppServicePlans => ServiceType::AppService,
             SqlServers => ServiceType::Sql,
+            CosmosAccounts => ServiceType::Cosmos,
             AiAccounts => ServiceType::Foundry,
         }
     }
@@ -136,6 +142,7 @@ impl JumpView {
             FunctionApps => "function-apps",
             AppServicePlans => "plans",
             SqlServers => "sql-servers",
+            CosmosAccounts => "cosmos-accounts",
             AiAccounts => "ai-accounts",
         }
     }
@@ -168,6 +175,7 @@ impl JumpView {
             FunctionApps => "Functions",
             AppServicePlans => "Plans",
             SqlServers => "Servers",
+            CosmosAccounts => "Accounts",
             AiAccounts => "Resources",
         }
     }
@@ -208,6 +216,7 @@ impl JumpView {
             ("microsoft.web", ["sites"]) => JumpView::WebApps,
             ("microsoft.web", ["serverfarms"]) => JumpView::AppServicePlans,
             ("microsoft.sql", ["servers"]) => JumpView::SqlServers,
+            ("microsoft.documentdb", ["databaseaccounts"]) => JumpView::CosmosAccounts,
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
             _ => return None,
         })
@@ -234,6 +243,7 @@ impl ServiceType {
             ServiceType::ContainerRegistry,
             ServiceType::AppService,
             ServiceType::Sql,
+            ServiceType::Cosmos,
             ServiceType::Foundry,
         ]
     }
@@ -254,6 +264,7 @@ impl ServiceType {
             ServiceType::ContainerRegistry => "Containers",
             ServiceType::AppService => "Web",
             ServiceType::Sql => "Databases",
+            ServiceType::Cosmos => "Databases",
             ServiceType::Foundry => "AI",
         }
     }
@@ -270,6 +281,7 @@ impl ServiceType {
             ServiceType::ContainerRegistry => "Container Registry",
             ServiceType::AppService => "App Service",
             ServiceType::Sql => "SQL",
+            ServiceType::Cosmos => "Cosmos DB",
             ServiceType::Foundry => "Foundry",
         }
     }
@@ -287,6 +299,7 @@ impl ServiceType {
             ServiceType::ContainerRegistry => "ACR",
             ServiceType::AppService => "App Svc",
             ServiceType::Sql => "SQL",
+            ServiceType::Cosmos => "Cosmos",
             ServiceType::Foundry => "Foundry",
         }
     }
@@ -303,6 +316,7 @@ impl ServiceType {
             ServiceType::ContainerRegistry => "Container registries",
             ServiceType::AppService => "Web & function apps, plans",
             ServiceType::Sql => "SQL servers & databases",
+            ServiceType::Cosmos => "Cosmos DB accounts",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
         }
     }
@@ -332,6 +346,7 @@ impl ServiceType {
             ServiceType::ContainerRegistry => &[Registries],
             ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans],
             ServiceType::Sql => &[SqlServers],
+            ServiceType::Cosmos => &[CosmosAccounts],
             ServiceType::Foundry => &[AiAccounts],
         }
     }
@@ -399,6 +414,7 @@ impl ServiceType {
                 (ServiceType::AppService, Some(JumpView::FunctionApps))
             }
             "sql" | "sqlserver" | "sqlservers" | "azuresql" | "db" | "dbs" => (ServiceType::Sql, None),
+            "cosmos" | "cosmosdb" | "documentdb" | "docdb" => (ServiceType::Cosmos, None),
             "plan" | "plans" | "asp" | "serverfarm" | "serverfarms" => {
                 (ServiceType::AppService, Some(JumpView::AppServicePlans))
             }
@@ -429,6 +445,7 @@ impl ServiceType {
             ServiceType::ContainerRegistry => "@acr",
             ServiceType::AppService => "@app",
             ServiceType::Sql => "@sql",
+            ServiceType::Cosmos => "@cosmos",
             ServiceType::Foundry => "@foundry",
         }
     }
@@ -441,7 +458,7 @@ impl ServiceType {
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@foundry"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -581,6 +598,11 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/serverfarms/plan")), Some(JumpView::AppServicePlans));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop/slots/staging")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.DocumentDB/databaseAccounts/cosmos-prod")),
+            Some(JumpView::CosmosAccounts)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DocumentDB/databaseAccounts/cosmos-prod/sqlDatabases/orders")), None);
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.ContainerRegistry/registries/acrprod")),
             Some(JumpView::Registries)

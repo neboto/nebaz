@@ -19,6 +19,7 @@ use crate::azure::services::compute::ComputeService;
 use crate::azure::services::app_service::AppServiceService;
 use crate::azure::services::foundry::FoundryService;
 use crate::azure::services::container_registry::ContainerRegistryService;
+use crate::azure::services::cosmos::CosmosService;
 use crate::azure::services::sql::SqlService;
 use crate::azure::services::identity::IdentityService;
 use crate::azure::services::keyvault::KeyVaultService;
@@ -278,6 +279,7 @@ impl AzureClients {
             ServiceType::ContainerRegistry => Arc::new(ContainerRegistryService::new(scope)),
             ServiceType::AppService => Arc::new(AppServiceService::new(scope)),
             ServiceType::Sql => Arc::new(SqlService::new(scope)),
+            ServiceType::Cosmos => Arc::new(CosmosService::new(scope)),
             ServiceType::Foundry => Arc::new(FoundryService::new(scope)),
         }
     }
