@@ -44,6 +44,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "azurewebsites.net",
     // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).
     "database.windows.net",
+    // Container Registry: repositories, tags and manifests (the registry's
+    // login server).
+    "azurecr.io",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.

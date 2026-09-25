@@ -70,6 +70,13 @@ each one backs are in the catalog table
   Role assignments (what an identity can do) are not read.
 - **AKS**: `Microsoft.ContainerService/managedClusters/read` (node pools
   arrive embedded as `agentPoolProfiles` in the same list).
+- **Container Registry**: `Microsoft.ContainerRegistry/registries/read`;
+  the lazy Replications and Webhooks sections:
+  `Microsoft.ContainerRegistry/registries/replications/read`,
+  `Microsoft.ContainerRegistry/registries/webhooks/read`. Repositories and
+  tags are data plane (the registry's login server is on the guard's
+  list); admin credentials (`listCredentials`) and a webhook's service URI
+  (`getCallbackConfig`) are `POST` actions nebaz never sends.
 - **App Service**: `Microsoft.Web/sites/read` (web, function and logic
   apps), `Microsoft.Web/serverfarms/read` (plans); the lazy Configuration
   section: `Microsoft.Web/sites/config/read` (`config/web` only). App

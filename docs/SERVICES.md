@@ -83,13 +83,13 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
 9. **`az` commands** are `show --ids {id}` for every ARM row except those
    whose `show` takes no `--ids` (`az account show`, `az group show`,
    `az keyvault show`, `az aks show`, `az aks nodepool show`,
-   `az cognitiveservices account show`, `az functionapp show`,
-   `az logicapp show`), which use the name form with `--subscription`.
+   `az cognitiveservices account show`, `az acr show`,
+   `az functionapp show`, `az logicapp show`), which use the name form with `--subscription`.
    `functionapp show` re-declares its name argument without an `id_part`,
    so its `--ids` support is not certain from the source; the name form
    works either way. Verified live 2026-09-23; the Cognitive Services one
-   from the CLI's parameter table (no `id_part` on the account name,
-   2026-09-24), not yet live. The
+   and ACR ones from the CLI's parameter table (no `id_part` on the
+   account or registry name, 2026-09-24), not yet live. The
    guard requires a read verb on every `az` literal in `src/`.
 10. **Partial failures**: a phase failure (the power-state pass, a lazy
     section) sends `ResourceLoadWarning` and keeps going; `ResourceLoadError`
@@ -123,6 +123,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Identity · Identities | Federated credentials ⧗ (issuer, subject, audiences) · (Overview: client id, principal id, tenant, isolation scope; both ids searchable) | stateless | — (users list the identity in their own Related) | `az identity show` |
 | AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons | ladder, then `powerState` | node resource group, user-assigned identities, kubelet identity | `az aks show -n {name} -g {rg} --subscription {sub}` |
 | AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show --cluster-name {cluster} -g {rg} -n {pool} --subscription {sub}` |
+| Container Registry · Registries | Security (admin user and anonymous pull flagged, public access, network default action, trusted-services bypass, IP rules, encryption service- or customer-managed, zone redundancy, identity, private endpoints) · Replications ⧗ (Premium only, no call otherwise: location with the home region marked, status, zone redundancy, regional endpoint) · Webhooks ⧗ (status, actions, scope; never the service URI) · (Overview: SKU, login server, created, retention, data endpoint, role assignment mode) | ladder only | private endpoints, user-assigned identities (the CMK key is a URL, shown in Security) | `az acr show -n {name} -g {rg} --subscription {sub}` |
 | App Service · Apps | Configuration ⧗ (`config/web`: runtime, always on, TLS, FTPS, HTTP/2, health check, VNet routing, access restrictions; never app settings or connection strings) · Hostnames (TLS state, SCM flagged) · Networking (public access, VNet integration subnet, outbound IPs) | ladder, then `state` (`Running` / `Stopped`) | plan, VNet integration subnet, Container Apps environment, user-assigned identities, Key Vault reference identity | web apps `az webapp show --ids`; function and logic apps `az functionapp` / `az logicapp show -n {name} -g {rg} --subscription {sub}` |
 | App Service · Functions | the same rows as Apps, filtered to `kind` containing `functionapp` (Logic Apps Standard included) | as Apps | as Apps | as Apps |
 | App Service · Plans | — (Overview: SKU · tier, OS, workers of max, apps, zone redundancy, per-app and elastic scaling) | ladder, then `status` (`Ready` → Available) | — (apps list their plan) | `az appservice plan show` |
@@ -130,7 +131,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @pdns @kv @id @aks @pool @app @func @plan @sql @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @pdns @kv @id @aks @pool @acr @app @func @plan @sql @foundry` (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -164,6 +165,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |
 | Secrets, Keys | 1 each per vault, on demand | `{vault}/secrets` · `{vault}/keys` · `2026-05-15` |
 | Clusters, Node pools | 1 each (same list) | `/providers/Microsoft.ContainerService/managedClusters` · `2026-06-01` |
+| Registries | 1 | `/providers/Microsoft.ContainerRegistry/registries` · `2025-11-01` |
+| Replications, Webhooks | 1 each per registry, on demand (replications only for Premium) | `{registry}/replications` · `{registry}/webhooks` · `2025-11-01` |
 | Apps, Functions | 1 each (the same sites list; Apps is every site because a site id does not say its kind) | `/providers/Microsoft.Web/sites` · `2026-03-15` |
 | Plans | 1 | `/providers/Microsoft.Web/serverfarms` · `2026-03-15` |
 | App Configuration | 1 per app, on demand | `{site}/config/web` · `2026-03-15` |
