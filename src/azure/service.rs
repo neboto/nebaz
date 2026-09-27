@@ -54,6 +54,8 @@ pub enum JumpView {
     // Subscriptions
     Subscriptions,
     ResourceGroups,
+    /// Every resource in the subscription, any type (the generic list).
+    AllResources,
     // Virtual Machines
     VirtualMachines,
     Disks,
@@ -104,7 +106,7 @@ impl JumpView {
     pub fn service(&self) -> ServiceType {
         use JumpView::*;
         match self {
-            Subscriptions | ResourceGroups => ServiceType::Subscriptions,
+            Subscriptions | ResourceGroups | AllResources => ServiceType::Subscriptions,
             VirtualMachines | Disks | Nics => ServiceType::VirtualMachines,
             StorageAccounts => ServiceType::Storage,
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
@@ -127,6 +129,7 @@ impl JumpView {
         match self {
             Subscriptions => "subscriptions",
             ResourceGroups => "resource-groups",
+            AllResources => "all-resources",
             VirtualMachines => "vms",
             Disks => "disks",
             Nics => "nics",
@@ -162,6 +165,7 @@ impl JumpView {
         match self {
             Subscriptions => "Subscriptions",
             ResourceGroups => "Resource Groups",
+            AllResources => "All resources",
             VirtualMachines => "VMs",
             Disks => "Disks",
             Nics => "NICs",
@@ -232,6 +236,18 @@ impl JumpView {
             ("microsoft.operationalinsights", ["workspaces"]) => JumpView::LogWorkspaces,
             ("microsoft.insights", ["components"]) => JumpView::AppInsights,
             _ => return None,
+        })
+    }
+
+    /// Where a jump to an ARM id lands: its typed sub-tab, else All
+    /// resources for a top-level resource in a group (the generic list has
+    /// every one). A child of an unbrowsed type (a vault's secret) is in
+    /// no list: `None`, and the jump copies the id instead.
+    pub fn landing_for_arm_id(id: &str) -> Option<JumpView> {
+        use crate::azure::resource::{arm_type_chain, resource_group_of};
+        JumpView::for_arm_id(id).or_else(|| match arm_type_chain(id) {
+            Some((_, chain)) if chain.len() == 1 && resource_group_of(id).is_some() => Some(JumpView::AllResources),
+            _ => None,
         })
     }
 
@@ -323,7 +339,7 @@ impl ServiceType {
 
     pub fn description(&self) -> &str {
         match self {
-            ServiceType::Subscriptions => "Subscriptions & Resource Groups",
+            ServiceType::Subscriptions => "Subscriptions, groups & all resources",
             ServiceType::VirtualMachines => "Virtual Machines, Disks & NICs",
             ServiceType::Storage => "Storage Accounts & Containers",
             ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
@@ -344,7 +360,7 @@ impl ServiceType {
     pub fn views(&self) -> &'static [JumpView] {
         use JumpView::*;
         match self {
-            ServiceType::Subscriptions => &[Subscriptions, ResourceGroups],
+            ServiceType::Subscriptions => &[Subscriptions, ResourceGroups, AllResources],
             ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics],
             ServiceType::Storage => &[StorageAccounts],
             ServiceType::Network => &[
@@ -401,6 +417,9 @@ impl ServiceType {
             "sub" | "subs" | "subscription" | "subscriptions" => (ServiceType::Subscriptions, None),
             "rg" | "rgs" | "resourcegroup" | "resourcegroups" | "group" | "groups" => {
                 (ServiceType::Subscriptions, Some(JumpView::ResourceGroups))
+            }
+            "all" | "resources" | "allresources" | "everything" => {
+                (ServiceType::Subscriptions, Some(JumpView::AllResources))
             }
             "vm" | "vms" | "compute" | "virtualmachines" => (ServiceType::VirtualMachines, None),
             "disk" | "disks" => (ServiceType::VirtualMachines, Some(JumpView::Disks)),
@@ -480,7 +499,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan", "@law", "@appi"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan", "@law", "@appi"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -625,6 +644,10 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/serverfarms/plan")), Some(JumpView::AppServicePlans));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop/slots/staging")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/staticSites/docs")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Web/staticSites/docs")), Some(JumpView::AllResources));
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.KeyVault/vaults/kv/secrets/db")), None);
         assert_eq!(
             JumpView::for_arm_id(&p("microsoft.operationalinsights/workspaces/law-prod")),
             Some(JumpView::LogWorkspaces)

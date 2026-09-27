@@ -134,6 +134,17 @@ pub trait Resource: Send + Sync + Debug {
         )
     }
 
+    /// The list's dim second column: the id when it adds to the name,
+    /// blank otherwise. A row whose type is the useful part (All
+    /// resources) shows that instead.
+    fn list_cell(&self) -> String {
+        if self.id() != self.name() {
+            self.id().to_string()
+        } else {
+            String::new()
+        }
+    }
+
     /// Details for display pane (key-value pairs)
     fn details(&self) -> Vec<(String, String)>;
 

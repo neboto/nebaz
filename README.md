@@ -46,7 +46,8 @@ metadata only; AKS links to its workspace). Every row has an **Access**
 section (the role assignments that apply to it, inherited ones jumping to
 where they were made; an identity also shows what it can do) and a
 **Related** section listing the ARM ids it points at; Enter on one jumps
-there. The detail pane has a line cursor,
+there; a link to a type nebaz does not browse yet lands in **All
+resources**, which lists every resource in the subscription. The detail pane has a line cursor,
 vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`) and a flat
 view (`\`) that puts every section in one scroll. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
@@ -110,6 +111,7 @@ documented in [`config.example.toml`](config.example.toml).
 cargo build            # debug   (cargo build --release for release)
 cargo run -- -s sub    # subscriptions + resource groups (needs `az login`)
 cargo run -- -s rg     # straight to the Resource Groups sub-tab
+cargo run -- -s all    # every resource in the subscription; Enter on a → row opens its typed tab
 cargo run -- -s vm     # virtual machines (Tab / 2 / 3 for Disks, NICs)
 cargo run -- -s kv     # key vaults; 4 / 5 on a row list secret and key names
 cargo run -- -s id     # managed identities; search by client or principal id

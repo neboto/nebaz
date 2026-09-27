@@ -31,7 +31,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / storage / vnet / kv / id / aks / acr / app / sql / cosmos / foundry / law / appi
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / storage / vnet / kv / id / aks / acr / app / sql / cosmos / foundry / law / appi
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 cargo test --test readonly_guard    # just the guard
 cargo clippy --all-targets          # CI runs this; keep it clean
@@ -112,7 +112,11 @@ untouched by a location change.
 ARM-id line → `jump_to_arm_id` → `NavLocation` (service, view,
 subscription, selected id) → `restore_nav_location`, with `pending_jump`
 resolving once the target list loads (lifting the location filter, with
-a toast). Unbrowsed types copy the id instead.
+a toast). The landing is `JumpView::landing_for_arm_id`: the typed
+sub-tab, else **All resources** for a top-level resource nebaz does not
+browse yet; a child of an unbrowsed type is in no list, so its id is
+copied instead. In All resources, Enter on a browsed row opens it in its
+typed tab.
 
 **Copy** (`src/clipboard.rs`): OSC 52 to the terminal (tmux passthrough)
 plus one long-lived arboard handle; `y` copies the id, `C` the `az`
