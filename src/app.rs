@@ -41,6 +41,9 @@ use crate::azure::services::app_service::{
 use crate::azure::services::container_registry::{
     registry_child_path, registry_section_lines, RegistryDetailSection, RegistryRow, ACR_API_VERSION,
 };
+use crate::azure::services::cosmos::{
+    cosmos_section_lines, databases_path, CosmosAccountRow, CosmosDetailSection, COSMOS_API_VERSION,
+};
 use crate::azure::services::sql::{
     server_child_path, sql_server_section_lines, SqlServerDetailSection, SqlServerRow, SQL_API_VERSION,
 };
@@ -1376,6 +1379,23 @@ impl App {
         );
     }
 
+    /// On-enter hook for an account's Databases: one list per account, on
+    /// the path its API picks.
+    pub fn trigger_cosmos_databases(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(api) = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<CosmosAccountRow>())
+            .map(|r| r.api)
+        else {
+            return;
+        };
+        app.trigger_selected(
+            |s| &mut s.cosmos_databases,
+            event_tx,
+            move |c, id| c.list_fetch(&databases_path(id, api), COSMOS_API_VERSION),
+        );
+    }
+
     /// On-enter hook for a registry's Replications: one list per
     /// registry, and none for a non-Premium one (it cannot replicate).
     pub fn trigger_acr_replications(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -1763,6 +1783,13 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<NodePoolRow>() {
             return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<CosmosAccountRow>() {
+            return Some(cosmos_section_lines(
+                r,
+                CosmosDetailSection::from_index(idx),
+                self.lazy.cosmos_databases.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<RegistryRow>() {
             return Some(registry_section_lines(

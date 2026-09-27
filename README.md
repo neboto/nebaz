@@ -26,7 +26,8 @@ function apps and plans, never app settings), SQL (since `v0.1.0`;
 servers, with databases and firewall rules lazy), AKS
 (+ node pools). Since `v0.1.0`: Container Registry (registry metadata;
 replications and webhooks lazy, never repositories, tags or credentials),
-and Foundry (every Cognitive Services
+Cosmos DB (accounts, with databases lazy on whichever API the account
+uses; never keys or connection strings), and Foundry (every Cognitive Services
 account, Azure OpenAI included; model deployments and projects lazy, never
 keys). Every row has a **Related** section listing the ARM ids it
 points at; Enter on one jumps there. The detail pane has a line cursor,
@@ -99,6 +100,7 @@ cargo run -- -s id     # managed identities; search by client or principal id
 cargo run -- -s app    # App Service apps (2 Functions, 3 Plans); 2 on a row loads Configuration
 cargo run -- -s sql    # SQL servers; 3 / 4 on a row list databases and firewall rules
 cargo run -- -s acr    # container registries; 3 / 4 on a row list replications and webhooks
+cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
 cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe / pdns)
 cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments
 cargo test             # all tests, including the read-only guard
@@ -141,7 +143,7 @@ The promise is held at three layers, not by convention
 1. the single request constructor only builds `GET`s, and a pipeline policy
    refuses any other method at runtime;
 2. `tests/readonly_guard.rs` fails `cargo test` if the source gains another
-   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, container registries),
+   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, container registries, Cosmos DB),
    a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
 

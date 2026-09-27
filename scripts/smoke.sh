@@ -103,6 +103,11 @@ run acr-tab ok acr '[6.0]' \
   "Container registries" \
   "cannot reach 127.0.0.1"
 
+# The Cosmos DB tab loads and lists accounts through ARM.
+run cosmos-tab ok cosmos '[6.0]' \
+  "Cosmos DB accounts" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 

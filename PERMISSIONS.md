@@ -87,6 +87,16 @@ each one backs are in the catalog table
   Firewall sections: `Microsoft.Sql/servers/databases/read`,
   `Microsoft.Sql/servers/firewallRules/read`. Metadata only: nebaz never
   connects to a database (the server endpoints are on the guard's list).
+- **Cosmos DB**: `Microsoft.DocumentDB/databaseAccounts/read`; the lazy
+  Databases section, one of (the account's API picks):
+  `Microsoft.DocumentDB/databaseAccounts/sqlDatabases/read`,
+  `Microsoft.DocumentDB/databaseAccounts/mongodbDatabases/read`,
+  `Microsoft.DocumentDB/databaseAccounts/cassandraKeyspaces/read`,
+  `Microsoft.DocumentDB/databaseAccounts/gremlinDatabases/read`,
+  `Microsoft.DocumentDB/databaseAccounts/tables/read`. Keys, read-only keys
+  and connection strings are `POST` actions nebaz never sends; the
+  document endpoints are on the guard's list, and `az cosmosdb keys` is
+  named forbidden.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,
