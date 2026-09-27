@@ -139,6 +139,15 @@ pub struct LazyStore {
     /// `GET {server}/firewallRules`, keyed by server id.
     pub sql_firewall_rules: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Access (every type) ──────────────────────────────────────────────
+    /// `GET {id}/…/roleAssignments?$filter=atScope()`, keyed by ARM id.
+    pub role_assignments: LazyMap<Vec<serde_json::Value>>,
+    /// `GET /subscriptions/{sub}/…/roleDefinitions`, keyed by
+    /// `/subscriptions/{sub}`: role GUID → name for every Access section.
+    pub role_definitions: LazyMap<Vec<serde_json::Value>>,
+    /// An identity's own assignments (`principalId eq`), keyed by identity id.
+    pub identity_role_assignments: LazyMap<Vec<serde_json::Value>>,
+
     // ── Cosmos DB ────────────────────────────────────────────────────────
     /// `GET {account}/{sqlDatabases|mongodbDatabases|…}` — the path the
     /// account's API picks, keyed by account id.

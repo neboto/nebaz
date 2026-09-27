@@ -323,6 +323,27 @@ impl AzureClients {
         }
     }
 
+    /// `GET {path}?{query}` as a whole collection: a lazy list that needs
+    /// a `$filter` (role assignments).
+    pub fn list_fetch_query(
+        &self,
+        path: &str,
+        api_version: &'static str,
+        query: Vec<(String, String)>,
+    ) -> impl Future<Output = std::result::Result<Vec<serde_json::Value>, String>> + Send + 'static {
+        let arm = self.arm_for_path(path);
+        let path = path.to_string();
+        async move {
+            let arm = arm?;
+            let query: Vec<(&str, &str)> = query.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            let mut all = Vec::new();
+            arm.list_pages(&path, api_version, &query, |page| all.extend(page))
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok(all)
+        }
+    }
+
     /// `GET /subscriptions/{id}` for a subscription row's Details section.
     pub fn subscription_details_fetch(
         &self,

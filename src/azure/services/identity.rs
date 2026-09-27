@@ -30,6 +30,8 @@ crate::sections! {
     pub static IDENTITY_SECTIONS = [
         Overview "Overview",
         FederatedCredentials "Federated credentials" => crate::app::App::trigger_federated_credentials,
+        CanDo "Can do" => crate::app::App::trigger_identity_can_do,
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         Tags "Tags",
     ]
@@ -106,12 +108,18 @@ pub fn identity_section_lines(
     r: &IdentityRow,
     section: IdentityDetailSection,
     federated: Option<&Lazy<Vec<Value>>>,
+    can_do: Option<&Lazy<Vec<Value>>>,
+    roles: Option<&Lazy<Vec<Value>>>,
 ) -> Vec<(String, String)> {
     match section {
         IdentityDetailSection::Overview => overview_rows(r),
         IdentityDetailSection::FederatedCredentials => {
             lazy_list_rows(federated, "Federated credentials", |items| federated_rows(items, r))
         }
+        IdentityDetailSection::CanDo => {
+            crate::azure::services::access::can_do_rows(r.principal_id.as_deref(), &r.base.id, can_do, roles)
+        }
+        IdentityDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         IdentityDetailSection::Related => {
             let mut lines = related_rows(r);
             lines.push((
@@ -241,7 +249,7 @@ mod tests {
     #[test]
     fn section_labels_put_overview_first_related_second_to_last_tags_last() {
         let labels: Vec<&str> = IDENTITY_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(labels, ["Overview", "Federated credentials", "Related", "Tags"]);
+        assert_eq!(labels, ["Overview", "Federated credentials", "Can do", "Access", "Related", "Tags"]);
     }
 
     #[test]
@@ -268,7 +276,7 @@ mod tests {
                 "audiences": ["api://AzureADTokenExchange"]
             }
         })];
-        let lines = identity_section_lines(&row, IdentityDetailSection::FederatedCredentials, Some(&Lazy::Loaded(items)));
+        let lines = identity_section_lines(&row, IdentityDetailSection::FederatedCredentials, Some(&Lazy::Loaded(items)), None, None);
         assert!(lines.iter().any(|(k, v)| k == "aks-app" && v.is_empty()));
         assert!(lines.iter().any(|(k, v)| k == "  Subject" && v == "system:serviceaccount:app:api"));
         assert!(lines.iter().any(|(k, v)| k == "  Audiences" && v == "api://AzureADTokenExchange"));
@@ -276,7 +284,7 @@ mod tests {
             lines.last().unwrap().1,
             "az identity federated-credential list --identity-name id-app -g rg-id --subscription 0000"
         );
-        let none = identity_section_lines(&row, IdentityDetailSection::FederatedCredentials, Some(&Lazy::Loaded(vec![])));
+        let none = identity_section_lines(&row, IdentityDetailSection::FederatedCredentials, Some(&Lazy::Loaded(vec![])), None, None);
         assert_eq!(none[0].1, "No federated credentials");
         assert_eq!(
             federated_credentials_path(&row.base.id),

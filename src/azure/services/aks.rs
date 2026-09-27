@@ -24,9 +24,10 @@ crate::sections! {
     pub static CLUSTER_SECTIONS = [
         Overview "Overview",
         Network "Network",
-        Access "Access",
+        ApiAccess "API access",
         NodePools "Node pools",
         AddOns "Add-ons",
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         Tags "Tags",
     ]
@@ -36,6 +37,7 @@ crate::sections! {
     pub enum NodePoolDetailSection,
     pub static NODE_POOL_SECTIONS = [
         Overview "Overview",
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         Tags "Tags",
     ]
@@ -272,7 +274,7 @@ pub fn cluster_section_lines(r: &ClusterRow, section: ClusterDetailSection) -> V
             }
             lines
         }
-        ClusterDetailSection::Access => {
+        ClusterDetailSection::ApiAccess => {
             let mut lines = vec![
                 ("Kubernetes RBAC".into(), json::yes_no(r.enable_rbac)),
                 ("Entra integration".into(), json::yes_no(r.aad_managed)),
@@ -323,6 +325,7 @@ pub fn cluster_section_lines(r: &ClusterRow, section: ClusterDetailSection) -> V
                 enabled
             }
         }
+        ClusterDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         ClusterDetailSection::Related => related_rows(r),
         ClusterDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -565,6 +568,7 @@ impl Resource for NodePoolRow {
 pub fn node_pool_section_lines(r: &NodePoolRow, section: NodePoolDetailSection) -> Vec<(String, String)> {
     match section {
         NodePoolDetailSection::Overview => overview_rows(r),
+        NodePoolDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         NodePoolDetailSection::Related => related_rows(r),
         NodePoolDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -701,7 +705,7 @@ mod tests {
         let related = row.related();
         assert_eq!(related[2].0, "Node resource group MC_rg-aks_aks-prod_westeurope");
         assert_eq!(related[2].1, "/subscriptions/0000/resourceGroups/MC_rg-aks_aks-prod_westeurope");
-        let access = cluster_section_lines(&row, ClusterDetailSection::Access);
+        let access = cluster_section_lines(&row, ClusterDetailSection::ApiAccess);
         assert!(access.iter().any(|(k, v)| k == "Azure RBAC for Kubernetes" && v == "yes"));
         assert!(access.iter().any(|(k, v)| k == "OIDC issuer" && v == "https://oidc.example/"));
         assert!(access.iter().any(|(k, _)| k == "User identity · id-aks"));

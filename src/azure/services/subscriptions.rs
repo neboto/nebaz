@@ -35,6 +35,7 @@ crate::sections! {
         Overview "Overview",
         Details "Details" => crate::app::App::trigger_subscription_details,
         Locations "Locations" => crate::app::App::trigger_selected_subscription_locations,
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         // A subscription's tags live on the ARM object, so this shares
         // the Details fetch.
@@ -46,6 +47,7 @@ crate::sections! {
     pub enum ResourceGroupDetailSection,
     pub static RESOURCE_GROUP_SECTIONS = [
         Overview "Overview",
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         Tags "Tags",
     ]
@@ -405,6 +407,7 @@ pub fn subscription_section_lines(
 ) -> Vec<(String, String)> {
     match section {
         SubscriptionDetailSection::Overview => overview_rows(r),
+        SubscriptionDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         SubscriptionDetailSection::Related => related_rows(r),
         SubscriptionDetailSection::Tags => match details {
             None | Some(Lazy::Loading) => vec![("Tags".into(), "Loading…".into())],
@@ -482,6 +485,7 @@ pub fn resource_group_section_lines(
 ) -> Vec<(String, String)> {
     match section {
         ResourceGroupDetailSection::Overview => overview_rows(r),
+        ResourceGroupDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         ResourceGroupDetailSection::Related => related_rows(r),
         ResourceGroupDetailSection::Tags => tag_rows(r.tags()),
     }

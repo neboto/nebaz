@@ -64,10 +64,15 @@ each one backs are in the catalog table
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:
   they return names and attributes only. Certificates are not listed.
+- **Access** (every type, and an identity's Can do):
+  `Microsoft.Authorization/roleAssignments/read`,
+  `Microsoft.Authorization/roleDefinitions/read`. Principal names are not
+  resolved: that would take Microsoft Graph, a separate permission, and
+  `graph.microsoft.com` is on the guard's list.
 - **Managed Identity**: `Microsoft.ManagedIdentity/userAssignedIdentities/read`;
   the lazy Federated credentials section:
   `Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/read`.
-  Role assignments (what an identity can do) are not read.
+  The Can do section reads role assignments (below).
 - **AKS**: `Microsoft.ContainerService/managedClusters/read` (node pools
   arrive embedded as `agentPoolProfiles` in the same list).
 - **Container Registry**: `Microsoft.ContainerRegistry/registries/read`;

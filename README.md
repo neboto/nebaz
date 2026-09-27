@@ -6,15 +6,27 @@ Azure sibling of [neboto](https://github.com/neboto/neboto-tui) (the AWS one).
 Built in Rust with [Ratatui](https://ratatui.rs/). Website and guide will live
 at **[neboto.dev/azure](https://neboto.dev/azure)** once there is a release.
 
+> [!WARNING]
+> **nebaz is experimental.** Most services were built against Azure's API
+> specs and tested offline (unit tests, a fake `az`, a dead endpoint), and
+> have **not** had in-depth real-world testing against live subscriptions.
+> Expect missing fields, wrong labels and rough edges, especially in the
+> services added since `v0.1.0`. The read-only guarantee does not depend on
+> any of that: every layer that keeps nebaz from changing anything is
+> enforced and tested (see [Why read-only](#why-read-only)). Issues and
+> reports from real tenants are very welcome.
+
 ## Status
 
-Pre-release. The provider-neutral core (event loop, lazy sections, section
+Experimental. What has been checked live is listed under "Verified live" in
+[`docs/SERVICES.md`](docs/SERVICES.md); everything else is untested against a
+real subscription. The provider-neutral core (event loop, lazy sections, section
 descriptors, search, macros, bookmarks, export, themes, `$EDITOR`) is ported
 from neboto — see [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md)
 for what came from where and what was changed. The foundation is in: the
 scoping model ([ADR 0002](docs/adr/0002-subscription-scoped-lists-location-as-filter.md)),
 auth through the Azure CLI ([ADR 0003](docs/adr/0003-azure-cli-credential-per-tenant.md))
-and the six first-release services are real, per the catalog in
+and the first-release services are real, per the catalog in
 [`docs/SERVICES.md`](docs/SERVICES.md): Subscriptions +
 Resource Groups, Virtual Machines (+ disks, NICs; power state on the row),
 Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
@@ -30,8 +42,11 @@ Cosmos DB (accounts, with databases lazy on whichever API the account
 uses; never keys or connection strings), Foundry (every Cognitive Services
 account, Azure OpenAI included; model deployments and projects lazy, never
 keys), and Monitor (Log Analytics workspaces and App Insights components,
-metadata only; AKS links to its workspace). Every row has a **Related** section listing the ARM ids it
-points at; Enter on one jumps there. The detail pane has a line cursor,
+metadata only; AKS links to its workspace). Every row has an **Access**
+section (the role assignments that apply to it, inherited ones jumping to
+where they were made; an identity also shows what it can do) and a
+**Related** section listing the ARM ids it points at; Enter on one jumps
+there. The detail pane has a line cursor,
 vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`) and a flat
 view (`\`) that puts every section in one scroll. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and

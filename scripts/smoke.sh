@@ -59,7 +59,7 @@ run arm-unreachable ok rg '[8.0]' \
 
 # Focus the pane, flat view, select three lines from the top, copy.
 run flat-and-select ok sub '[2.0, "\r", 0.3, "\\", 0.5, "V", "J", "J", "y", 1.0]' \
-  "━━ Overview" "━━ Related" \
+  "━━ Overview" "━━ Access" \
   "3 lines"
 
 # Ctrl-N moves down in a picker (it used to type `n` into the filter):
@@ -112,6 +112,13 @@ run cosmos-tab ok cosmos '[6.0]' \
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[6.0]' \
   "Log Analytics & App Insights" \
+  "cannot reach 127.0.0.1"
+
+# Access on a subscription row fetches role assignments from ARM; the
+# Subscriptions list itself makes no ARM call, so the error proves the
+# section fired.
+run access-section ok sub '[2.0, "\r", 0.3, "4", 10.0]' \
+  "Access" \
   "cannot reach 127.0.0.1"
 
 run not-logged-in nologin sub '[2.0]' \

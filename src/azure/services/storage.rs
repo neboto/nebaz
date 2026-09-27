@@ -25,6 +25,7 @@ crate::sections! {
         Endpoints "Endpoints",
         Security "Security",
         Containers "Containers" => crate::app::App::trigger_containers,
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         Tags "Tags",
     ]
@@ -185,6 +186,7 @@ pub fn storage_account_section_lines(
         StorageAccountDetailSection::Containers => {
             lazy_list_rows(containers, "Containers", |items| container_rows(items, &r.base.name))
         }
+        StorageAccountDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         StorageAccountDetailSection::Related => related_rows(r),
         StorageAccountDetailSection::Tags => tag_rows(r.tags()),
     }

@@ -20,7 +20,7 @@ use crate::sections::{key_for, SectionDescriptor};
 use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
         block::{Position, Title},
@@ -172,49 +172,17 @@ fn rule(width: u16) -> Paragraph<'static> {
 
 /// The section tab bar for a descriptor: `1 Overview │ 2 Details │ …`, the
 /// active chip highlighted, each chip recorded as a click region. Generic
-/// over every split pane — no per-type tab widgets.
+/// over every split pane — no per-type tab widgets. It scrolls around the
+/// active section with `‹`/`›` when the pane is too narrow, as the sub-tab
+/// bar does.
 pub fn descriptor_tabs(app: &App, desc: &'static SectionDescriptor, area: Rect) -> Line<'static> {
-    let mut spans: Vec<Span> = vec![Span::raw(" ")];
-    let mut x = area.x + 1;
-    for (i, section) in desc.sections.iter().enumerate() {
-        if i > 0 {
-            spans.push(Span::styled(" │ ", Style::default().fg(theme::text_dim())));
-            x += 3;
-        }
-        let key = key_for(i).unwrap_or(' ');
-        let is_active = i == app.detail_section_idx;
-        let w = section.label.chars().count() as u16 + 3;
-        app.push_click_region(
-            Rect {
-                x,
-                y: area.y,
-                width: w,
-                height: 1,
-            },
-            ClickAction::DetailSection(key),
-        );
-        x += w;
-        if is_active {
-            spans.push(Span::styled(
-                key.to_string(),
-                Style::default().fg(theme::brand()).add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::styled(
-                format!(" {} ", section.label),
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(theme::brand())
-                    .add_modifier(Modifier::BOLD),
-            ));
-        } else {
-            spans.push(Span::styled(key.to_string(), Style::default().fg(theme::accent())));
-            spans.push(Span::styled(
-                format!(" {} ", section.label),
-                Style::default().fg(theme::text_muted()),
-            ));
-        }
-    }
-    Line::from(spans)
+    let tabs: Vec<(char, &str, bool)> = desc
+        .sections
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (key_for(i).unwrap_or(' '), s.label, i == app.detail_section_idx))
+        .collect();
+    Line::from(crate::ui::widgets::subtab_bar::chip_spans(app, area, &tabs, ClickAction::DetailSection))
 }
 
 /// Adaptive key column: the widest key in the body, clamped to

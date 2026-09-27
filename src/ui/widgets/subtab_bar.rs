@@ -56,6 +56,18 @@ pub fn subtab_bar_spans(
     area: Rect,
     tabs: &[(char, &str, bool)],
 ) -> Vec<Span<'static>> {
+    chip_spans(app, area, tabs, ClickAction::Key)
+}
+
+/// The chip strip itself, with the click action a chip records: a sub-tab
+/// key, or a detail-pane section (`details_pane::descriptor_tabs`), so both
+/// bars scroll around their active chip the same way.
+pub fn chip_spans(
+    app: &App,
+    area: Rect,
+    tabs: &[(char, &str, bool)],
+    click: fn(char) -> ClickAction,
+) -> Vec<Span<'static>> {
     if tabs.is_empty() || area.width == 0 {
         return Vec::new();
     }
@@ -96,7 +108,7 @@ pub fn subtab_bar_spans(
         let w = chip_width(label);
         app.push_click_region(
             Rect { x, y: area.y, width: w, height: 1 },
-            ClickAction::Key(key),
+            click(key),
         );
         x += w;
 
