@@ -109,12 +109,26 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     subscription (direct only; group memberships are not followed). A
     new type gets Access by adding the one descriptor line
     (`Access "Access" => crate::app::App::trigger_access`) and the
-    `access::rendered_by_app()` arm.
+    `rendered_by_app()` arm.
+12. **Activity** is a section on every type, after Access, rendered the
+    same way (`src/azure/services/activity.rs`): the subscription's
+    activity log filtered to the row (`resourceUri eq` for a resource,
+    `resourceGroupName eq` for a group, time alone for a subscription),
+    the last 7 days, capped at 500 events (`list_pages_while` stops
+    paging). Events collapse to one entry per operation (correlation id +
+    operation name, the newest status wins), newest first; failures are
+    flagged. At a group or subscription each entry names its target, which
+    Enter jumps to. `$select` names the fields read, so the caller's token
+    `claims`, `httpRequest` and `properties` (request bodies) are never
+    fetched. A new type gets it with the descriptor line
+    (`Activity "Activity" => crate::app::App::trigger_activity`) and the
+    `rendered_by_app()` arm.
 
 ## The catalog
 
-Every type: Overview first, Access ⧗ (rule 11) then Related then Tags
-last, so Access is not repeated in the rows below; ⧗ marks a
+Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
+(rule 12), Related, and Tags last, so Access and Activity are not
+repeated in the rows below; ⧗ marks a
 lazy section; every `az` command is `show --ids {id}` unless stated.
 
 | Service · sub-tab | Sections between Overview and Related | State | Related (after Subscription, Resource group) | `az` |
@@ -181,6 +195,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Private DNS | 1 | `/providers/Microsoft.Network/privateDnsZones` · `2024-06-01` (its own spec) |
 | Records, VNet links | 1 each per zone, on demand | `{zone}/ALL` · `{zone}/virtualNetworkLinks` · `2024-06-01` |
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
+| Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |

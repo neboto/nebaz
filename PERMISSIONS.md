@@ -71,6 +71,9 @@ each one backs are in the catalog table
   `Microsoft.Authorization/roleDefinitions/read`. Principal names are not
   resolved: that would take Microsoft Graph, a separate permission, and
   `graph.microsoft.com` is on the guard's list.
+- **Activity** (every type): `Microsoft.Insights/eventtypes/values/read`.
+  Only named fields are selected; the caller's token claims and request
+  bodies are never fetched.
 - **Managed Identity**: `Microsoft.ManagedIdentity/userAssignedIdentities/read`;
   the lazy Federated credentials section:
   `Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/read`.

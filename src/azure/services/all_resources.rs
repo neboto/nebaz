@@ -30,6 +30,7 @@ crate::sections! {
     pub static GENERIC_RESOURCE_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -180,7 +181,8 @@ pub fn generic_resource_section_lines(
 ) -> Vec<(String, String)> {
     match section {
         GenericResourceDetailSection::Overview => overview_rows(r),
-        GenericResourceDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        GenericResourceDetailSection::Access => crate::azure::services::rendered_by_app(),
+        GenericResourceDetailSection::Activity => crate::azure::services::rendered_by_app(),
         GenericResourceDetailSection::Related => related_rows(r),
         GenericResourceDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -229,7 +231,7 @@ mod tests {
     #[test]
     fn section_labels_put_overview_first_related_second_to_last_tags_last() {
         let labels: Vec<&str> = GENERIC_RESOURCE_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(labels, ["Overview", "Access", "Related", "Tags"]);
+        assert_eq!(labels, ["Overview", "Access", "Activity", "Related", "Tags"]);
     }
 
     #[test]

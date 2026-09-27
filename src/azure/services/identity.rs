@@ -32,6 +32,7 @@ crate::sections! {
         FederatedCredentials "Federated credentials" => crate::app::App::trigger_federated_credentials,
         CanDo "Can do" => crate::app::App::trigger_identity_can_do,
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -119,7 +120,8 @@ pub fn identity_section_lines(
         IdentityDetailSection::CanDo => {
             crate::azure::services::access::can_do_rows(r.principal_id.as_deref(), &r.base.id, can_do, roles)
         }
-        IdentityDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        IdentityDetailSection::Access => crate::azure::services::rendered_by_app(),
+        IdentityDetailSection::Activity => crate::azure::services::rendered_by_app(),
         IdentityDetailSection::Related => {
             let mut lines = related_rows(r);
             lines.push((
@@ -249,7 +251,7 @@ mod tests {
     #[test]
     fn section_labels_put_overview_first_related_second_to_last_tags_last() {
         let labels: Vec<&str> = IDENTITY_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(labels, ["Overview", "Federated credentials", "Can do", "Access", "Related", "Tags"]);
+        assert_eq!(labels, ["Overview", "Federated credentials", "Can do", "Access", "Activity", "Related", "Tags"]);
     }
 
     #[test]

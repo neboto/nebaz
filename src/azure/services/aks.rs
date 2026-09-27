@@ -28,6 +28,7 @@ crate::sections! {
         NodePools "Node pools",
         AddOns "Add-ons",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -38,6 +39,7 @@ crate::sections! {
     pub static NODE_POOL_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -325,7 +327,8 @@ pub fn cluster_section_lines(r: &ClusterRow, section: ClusterDetailSection) -> V
                 enabled
             }
         }
-        ClusterDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        ClusterDetailSection::Access => crate::azure::services::rendered_by_app(),
+        ClusterDetailSection::Activity => crate::azure::services::rendered_by_app(),
         ClusterDetailSection::Related => related_rows(r),
         ClusterDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -568,7 +571,8 @@ impl Resource for NodePoolRow {
 pub fn node_pool_section_lines(r: &NodePoolRow, section: NodePoolDetailSection) -> Vec<(String, String)> {
     match section {
         NodePoolDetailSection::Overview => overview_rows(r),
-        NodePoolDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        NodePoolDetailSection::Access => crate::azure::services::rendered_by_app(),
+        NodePoolDetailSection::Activity => crate::azure::services::rendered_by_app(),
         NodePoolDetailSection::Related => related_rows(r),
         NodePoolDetailSection::Tags => tag_rows(r.tags()),
     }

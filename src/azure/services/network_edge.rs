@@ -21,6 +21,7 @@ crate::sections! {
     pub static PUBLIC_IP_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -34,6 +35,7 @@ crate::sections! {
         BackendPools "Backend pools",
         Rules "Rules",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -45,6 +47,7 @@ crate::sections! {
         Overview "Overview",
         Routes "Routes",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -55,6 +58,7 @@ crate::sections! {
     pub static NAT_GATEWAY_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -242,7 +246,8 @@ impl Resource for PublicIpRow {
 pub fn public_ip_section_lines(r: &PublicIpRow, section: PublicIpDetailSection) -> Vec<(String, String)> {
     match section {
         PublicIpDetailSection::Overview => overview_rows(r),
-        PublicIpDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        PublicIpDetailSection::Access => crate::azure::services::rendered_by_app(),
+        PublicIpDetailSection::Activity => crate::azure::services::rendered_by_app(),
         PublicIpDetailSection::Related => related_rows(r),
         PublicIpDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -452,7 +457,8 @@ pub fn load_balancer_section_lines(r: &LoadBalancerRow, section: LoadBalancerDet
             lines
         }
         LoadBalancerDetailSection::Rules => rule_lines(r),
-        LoadBalancerDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        LoadBalancerDetailSection::Access => crate::azure::services::rendered_by_app(),
+        LoadBalancerDetailSection::Activity => crate::azure::services::rendered_by_app(),
         LoadBalancerDetailSection::Related => related_rows(r),
         LoadBalancerDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -640,7 +646,8 @@ pub fn route_table_section_lines(r: &RouteTableRow, section: RouteTableDetailSec
                 })
                 .collect()
         }
-        RouteTableDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        RouteTableDetailSection::Access => crate::azure::services::rendered_by_app(),
+        RouteTableDetailSection::Activity => crate::azure::services::rendered_by_app(),
         RouteTableDetailSection::Related => related_rows(r),
         RouteTableDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -728,7 +735,8 @@ impl Resource for NatGatewayRow {
 pub fn nat_gateway_section_lines(r: &NatGatewayRow, section: NatGatewayDetailSection) -> Vec<(String, String)> {
     match section {
         NatGatewayDetailSection::Overview => overview_rows(r),
-        NatGatewayDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        NatGatewayDetailSection::Access => crate::azure::services::rendered_by_app(),
+        NatGatewayDetailSection::Activity => crate::azure::services::rendered_by_app(),
         NatGatewayDetailSection::Related => related_rows(r),
         NatGatewayDetailSection::Tags => tag_rows(r.tags()),
     }

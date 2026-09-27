@@ -36,6 +36,7 @@ crate::sections! {
         Networking "Networking",
         Storage "Storage",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -46,6 +47,7 @@ crate::sections! {
     pub static DISK_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -57,6 +59,7 @@ crate::sections! {
         Overview "Overview",
         IpConfigurations "IP configurations",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -314,7 +317,8 @@ pub fn vm_section_lines(
             }
             lines
         }
-        VmDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        VmDetailSection::Access => crate::azure::services::rendered_by_app(),
+        VmDetailSection::Activity => crate::azure::services::rendered_by_app(),
         VmDetailSection::Related => related_rows(r),
         VmDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -500,7 +504,8 @@ impl Resource for DiskRow {
 pub fn disk_section_lines(r: &DiskRow, section: DiskDetailSection) -> Vec<(String, String)> {
     match section {
         DiskDetailSection::Overview => overview_rows(r),
-        DiskDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        DiskDetailSection::Access => crate::azure::services::rendered_by_app(),
+        DiskDetailSection::Activity => crate::azure::services::rendered_by_app(),
         DiskDetailSection::Related => related_rows(r),
         DiskDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -663,7 +668,8 @@ pub fn nic_section_lines(r: &NicRow, section: NicDetailSection) -> Vec<(String, 
             }
             lines
         }
-        NicDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        NicDetailSection::Access => crate::azure::services::rendered_by_app(),
+        NicDetailSection::Activity => crate::azure::services::rendered_by_app(),
         NicDetailSection::Related => related_rows(r),
         NicDetailSection::Tags => tag_rows(r.tags()),
     }
