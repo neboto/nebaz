@@ -40,6 +40,7 @@ crate::sections! {
         Databases "Databases" => crate::app::App::trigger_sql_databases,
         Firewall "Firewall" => crate::app::App::trigger_sql_firewall,
         Networking "Networking",
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         Tags "Tags",
     ]
@@ -228,6 +229,7 @@ pub fn sql_server_section_lines(
             lines.push((String::new(), "· IP rules are in Firewall".into()));
             lines
         }
+        SqlServerDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         SqlServerDetailSection::Related => related_rows(r),
         SqlServerDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -420,7 +422,7 @@ mod tests {
     #[test]
     fn section_labels_put_overview_first_related_second_to_last_tags_last() {
         let labels: Vec<&str> = SQL_SERVER_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(labels, ["Overview", "Security", "Databases", "Firewall", "Networking", "Related", "Tags"]);
+        assert_eq!(labels, ["Overview", "Security", "Databases", "Firewall", "Networking", "Access", "Related", "Tags"]);
     }
 
     #[test]

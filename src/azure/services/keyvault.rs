@@ -30,10 +30,11 @@ crate::sections! {
     pub enum VaultDetailSection,
     pub static VAULT_SECTIONS = [
         Overview "Overview",
-        Access "Access",
+        AccessModel "Access model",
         Network "Network",
         Secrets "Secrets" => crate::app::App::trigger_vault_secrets,
         Keys "Keys" => crate::app::App::trigger_vault_keys,
+        Access "Access" => crate::app::App::trigger_access,
         Related "Related",
         Tags "Tags",
     ]
@@ -199,7 +200,7 @@ pub fn vault_section_lines(
 ) -> Vec<(String, String)> {
     match section {
         VaultDetailSection::Overview => overview_rows(r),
-        VaultDetailSection::Access => {
+        VaultDetailSection::AccessModel => {
             let mut lines = vec![("Access model".into(), r.access_model().into())];
             if r.rbac_authorization == Some(true) {
                 lines.push((String::new(), "Permissions are Azure role assignments on the vault".into()));
@@ -249,6 +250,7 @@ pub fn vault_section_lines(
             lazy_list_rows(secrets, "Secrets", |items| secret_rows(items, &r.base.name))
         }
         VaultDetailSection::Keys => lazy_list_rows(keys, "Keys", |items| key_rows(items, &r.base.name)),
+        VaultDetailSection::Access => crate::azure::services::access::rendered_by_app(),
         VaultDetailSection::Related => related_rows(r),
         VaultDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -416,7 +418,7 @@ mod tests {
         let row = VaultRow::from_json(&vault_json(false), Some("t-1")).unwrap();
         assert_eq!(row.state(), ResourceState::stateless());
         assert_eq!(row.access_model(), "access policies");
-        let access = vault_section_lines(&row, VaultDetailSection::Access, None, None);
+        let access = vault_section_lines(&row, VaultDetailSection::AccessModel, None, None);
         assert!(access.iter().any(|(k, v)| k == "Principal" && v == "obj-1"));
         assert!(access.iter().any(|(k, v)| k == "  Secrets" && v == "get, list"));
         assert!(access.iter().any(|(k, v)| k == "  Certificates" && v == "-"));
@@ -431,7 +433,7 @@ mod tests {
         );
 
         let rbac = VaultRow::from_json(&vault_json(true), None).unwrap();
-        let access = vault_section_lines(&rbac, VaultDetailSection::Access, None, None);
+        let access = vault_section_lines(&rbac, VaultDetailSection::AccessModel, None, None);
         assert_eq!(access[0].1, "Azure RBAC");
         assert!(access.iter().any(|(k, v)| k == "Access policies" && v == "1 (inactive under RBAC)"));
     }

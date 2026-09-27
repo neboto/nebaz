@@ -87,8 +87,10 @@ never sub-tabs.
 each type declares a **section descriptor** (`*_SECTIONS` in its service
 file: label + optional on-enter hook); digit keys, `Tab`, reset, snapshot
 and flat view all derive from it. `App::section_lines_for` dispatches by
-downcast to the type's `*_section_lines`. Every type has Overview first,
-**Related** second to last, Tags last. `details_scroll` is the body's
+downcast to the type's `*_section_lines`, except **Access** (RBAC), which
+every type carries just before Related and the app renders once, matched
+on the label (`src/azure/services/access.rs`). Every type has Overview
+first, then its own sections, Access, **Related**, Tags last. `details_scroll` is the body's
 line cursor (the pane scrolls to keep it visible); `detail_visual_anchor`
 is the vim-style linewise selection (`V`, `J`/`K`, `Ctrl-A`; `y` copies
 the range); `detail_flat_mode` (`\`, config `detail_flat`) renders every

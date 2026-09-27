@@ -107,6 +107,14 @@ state (power, attachment, primary status), else stateless. The label is
 always the resource's own word, never the bucket's.
 _Avoid_: per-type state tables that disagree on what `Succeeded` means
 
+**Access section**:
+The RBAC section every type carries just before Related: the role
+assignments that apply at the row's ARM id, made there or inherited from a
+resource group, subscription or management group. Principals are object ids
+(names would need Microsoft Graph). An identity's **Can do** section is the
+reverse: what its principal holds.
+_Avoid_: permissions (that is `PERMISSIONS.md`, what nebaz itself needs), IAM
+
 **Related section**:
 The detail section every type carries listing the ARM ids the row points at
 (its subscription and resource group first, then its own links); Enter on a

@@ -27,6 +27,10 @@ use crate::azure::services::network_edge::{
     LoadBalancerDetailSection, LoadBalancerRow, NatGatewayDetailSection, NatGatewayRow, PublicIpDetailSection,
     PublicIpRow, RouteTableDetailSection, RouteTableRow,
 };
+use crate::azure::services::access::{
+    access_rows, at_scope_filter, principal_filter, role_assignments_path, role_definitions_path,
+    role_definitions_scope, ACCESS_API_VERSION, ACCESS_LABEL,
+};
 use crate::azure::services::identity::{
     federated_credentials_path, identity_section_lines, IdentityDetailSection, IdentityRow, IDENTITY_API_VERSION,
 };
@@ -1346,6 +1350,45 @@ impl App {
         );
     }
 
+    /// On-enter hook for every type's Access section: the role assignments
+    /// that apply at the row's ARM id, and the subscription's role names.
+    pub fn trigger_access(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.role_assignments,
+            event_tx,
+            |c, id| c.list_fetch_query(&role_assignments_path(id), ACCESS_API_VERSION, at_scope_filter()),
+        );
+        app.trigger_role_definitions(event_tx);
+    }
+
+    /// On-enter hook for an identity's Can do: its principal's assignments
+    /// across its subscription.
+    pub fn trigger_identity_can_do(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some((principal, sub)) = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<IdentityRow>())
+            .and_then(|r| Some((r.principal_id.clone()?, role_definitions_scope(&r.base.id)?)))
+        else {
+            return;
+        };
+        app.trigger_selected(
+            |s| &mut s.identity_role_assignments,
+            event_tx,
+            move |c, _| c.list_fetch_query(&role_assignments_path(&sub), ACCESS_API_VERSION, principal_filter(&principal)),
+        );
+        app.trigger_role_definitions(event_tx);
+    }
+
+    /// The selected row's subscription role definitions, once per
+    /// subscription (shared by every Access and Can do section).
+    fn trigger_role_definitions(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(key) = self.get_selected_resource_id().and_then(|id| role_definitions_scope(&id)) else {
+            return;
+        };
+        let fut = self.azure_clients.list_fetch(&role_definitions_path(&key), ACCESS_API_VERSION);
+        self.trigger_lazy(|s| &mut s.role_definitions, key, event_tx, move || fut);
+    }
+
     /// On-enter hook for an identity's Federated credentials: one ARM list
     /// per identity, on demand.
     pub fn trigger_federated_credentials(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -1719,6 +1762,12 @@ impl App {
     /// downcast per split-pane type. `None` for types without a descriptor.
     fn section_lines_for(&self, resource: &dyn Resource, idx: usize) -> Option<Vec<(String, String)>> {
         let any = resource.as_any();
+        // Access is the same for every type: rendered here, not per type.
+        let label = resource.detail_sections().and_then(|d| d.sections.get(idx)).map(|s| s.label);
+        if label == Some(ACCESS_LABEL) {
+            let roles = role_definitions_scope(resource.id()).and_then(|k| self.lazy.role_definitions.get(&k));
+            return Some(access_rows(resource.id(), self.lazy.role_assignments.get(resource.id()), roles));
+        }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {
             return Some(subscription_section_lines(
                 sub,
@@ -1843,6 +1892,8 @@ impl App {
                 r,
                 IdentityDetailSection::from_index(idx),
                 self.lazy.federated_credentials.get(r.id()),
+                self.lazy.identity_role_assignments.get(r.id()),
+                role_definitions_scope(r.id()).and_then(|k| self.lazy.role_definitions.get(&k)),
             ));
         }
         if let Some(r) = any.downcast_ref::<FoundryRow>() {

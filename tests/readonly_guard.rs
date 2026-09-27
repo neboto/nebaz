@@ -52,6 +52,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // Monitor: log queries and App Insights data.
     "api.loganalytics.io",
     "api.applicationinsights.io",
+    // Microsoft Graph: principal names for Access (#24) would need it; a
+    // different host and permission, so adding it must be deliberate.
+    "graph.microsoft.com",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.

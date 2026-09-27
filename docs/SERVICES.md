@@ -96,10 +96,25 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     is for a first-phase failure where nothing can stream. Connection
     failures name the host and the root cause ("cannot reach
     management.azure.com: Connection refused (gave up after retries)").
+11. **Access** (RBAC) is a section on every type, just before Related,
+    rendered once by `App::section_lines_for` (matched on the label) and
+    never by a type's own renderer: `GET {id}/…/roleAssignments?$filter=atScope()`
+    lists what applies at the row, made there or inherited (Enter on an
+    inherited line jumps to the resource group or subscription it came
+    from). Role names come from the subscription's `roleDefinitions`, one
+    list per subscription per session; GUIDs show until it lands.
+    Principals are a type and an object id: names need Microsoft Graph,
+    another host and permission, which the guard forbids. Identity rows add
+    **Can do**, the identity principal's own assignments across its
+    subscription (direct only; group memberships are not followed). A
+    new type gets Access by adding the one descriptor line
+    (`Access "Access" => crate::app::App::trigger_access`) and the
+    `access::rendered_by_app()` arm.
 
 ## The catalog
 
-Every type: Overview first, Related second to last, Tags last; ⧗ marks a
+Every type: Overview first, Access ⧗ (rule 11) then Related then Tags
+last, so Access is not repeated in the rows below; ⧗ marks a
 lazy section; every `az` command is `show --ids {id}` unless stated.
 
 | Service · sub-tab | Sections between Overview and Related | State | Related (after Subscription, Resource group) | `az` |
@@ -119,9 +134,9 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Network · NAT | — (Overview: SKU, idle timeout, zones, counts) | stateless | public IPs (v4 and v6), prefixes, each subnet | `az network nat gateway show` |
 | Network · PEs | Connection (target, sub-resource, status, description, automatic or manual approval) · DNS (custom DNS configs: FQDN → IPs) | ladder, then connection status (`Approved` → Available, `Pending` → Pending, `Rejected` / `Disconnected` → Unavailable) | **target** (`privateLinkServiceId`: jumps to the vault, account, storage account… it fronts), subnet, NICs | `az network private-endpoint show` |
 | Network · Private DNS | Records ⧗ (name, type, TTL, values; auto-registered flagged) · VNet links ⧗ (each linked VNet jumps; auto-registration, state) | stateless; `location` is `global`, which passes every `R` filter | — (linked VNets are in VNet links) | `az network private-dns zone show` |
-| Key Vault · Vaults | Access (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
-| Identity · Identities | Federated credentials ⧗ (issuer, subject, audiences) · (Overview: client id, principal id, tenant, isolation scope; both ids searchable) | stateless | — (users list the identity in their own Related) | `az identity show` |
-| AKS · Clusters | Network · Access · Node pools (embedded) · Add-ons (the monitoring add-on's workspace under `omsagent`) | ladder, then `powerState` | node resource group, user-assigned identities, kubelet identity, Log Analytics workspace | `az aks show -n {name} -g {rg} --subscription {sub}` |
+| Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
+| Identity · Identities | Federated credentials ⧗ (issuer, subject, audiences) · Can do ⧗ (rule 11: each role the identity holds, its scope a jumpable id) · (Overview: client id, principal id, tenant, isolation scope; both ids searchable) | stateless | — (users list the identity in their own Related) | `az identity show` |
+| AKS · Clusters | Network · API access · Node pools (embedded) · Add-ons (the monitoring add-on's workspace under `omsagent`) | ladder, then `powerState` | node resource group, user-assigned identities, kubelet identity, Log Analytics workspace | `az aks show -n {name} -g {rg} --subscription {sub}` |
 | AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show --cluster-name {cluster} -g {rg} -n {pool} --subscription {sub}` |
 | Container Registry · Registries | Security (admin user and anonymous pull flagged, public access, network default action, trusted-services bypass, IP rules, encryption service- or customer-managed, zone redundancy, identity, private endpoints) · Replications ⧗ (Premium only, no call otherwise: location with the home region marked, status, zone redundancy, regional endpoint) · Webhooks ⧗ (status, actions, scope; never the service URI) · (Overview: SKU, login server, created, retention, data endpoint, role assignment mode) | ladder only | private endpoints, user-assigned identities (the CMK key is a URL, shown in Security) | `az acr show -n {name} -g {rg} --subscription {sub}` |
 | App Service · Apps | Configuration ⧗ (`config/web`: runtime, always on, TLS, FTPS, HTTP/2, health check, VNet routing, access restrictions; never app settings or connection strings) · Hostnames (TLS state, SCM flagged) · Networking (public access, VNet integration subnet, outbound IPs) | ladder, then `state` (`Running` / `Stopped`) | plan, VNet integration subnet, Container Apps environment, user-assigned identities, Key Vault reference identity | web apps `az webapp show --ids`; function and logic apps `az functionapp` / `az logicapp show -n {name} -g {rg} --subscription {sub}` |
@@ -163,6 +178,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | PEs | 1 | `/providers/Microsoft.Network/privateEndpoints` · `2025-09-01` |
 | Private DNS | 1 | `/providers/Microsoft.Network/privateDnsZones` · `2024-06-01` (its own spec) |
 | Records, VNet links | 1 each per zone, on demand | `{zone}/ALL` · `{zone}/virtualNetworkLinks` · `2024-06-01` |
+| Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
+| Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
 | Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |

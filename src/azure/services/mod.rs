@@ -5,6 +5,7 @@
 //! over a [`Scope`], and `*_section_lines` bodies the app dispatches to.
 //! The helpers here are the pieces every service shares.
 
+pub mod access;
 pub mod aks;
 pub mod app_service;
 pub mod compute;
