@@ -108,6 +108,12 @@ run cosmos-tab ok cosmos '[6.0]' \
   "Cosmos DB accounts" \
   "cannot reach 127.0.0.1"
 
+# The Monitor tab loads through a routing prefix (the sub-tab it picks
+# is covered by the from_prefix unit tests).
+run monitor-appi ok appi '[6.0]' \
+  "Log Analytics & App Insights" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 

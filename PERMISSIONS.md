@@ -97,6 +97,12 @@ each one backs are in the catalog table
   and connection strings are `POST` actions nebaz never sends; the
   document endpoints are on the guard's list, and `az cosmosdb keys` is
   named forbidden.
+- **Monitor**: `Microsoft.OperationalInsights/workspaces/read`,
+  `Microsoft.Insights/components/read`. Metadata only: no log query is
+  ever run (the query hosts are on the guard's list), a workspace's shared
+  keys are a `POST` nebaz never sends, and a component's instrumentation
+  key and connection string, which its `GET` does return, are stripped
+  before the row keeps the JSON.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

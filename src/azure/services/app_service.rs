@@ -294,7 +294,14 @@ pub fn site_section_lines(
             lines.push((String::new(), "· access restrictions are in Configuration".into()));
             lines
         }
-        SiteDetailSection::Related => related_rows(r),
+        SiteDetailSection::Related => {
+            let mut lines = related_rows(r);
+            lines.push((
+                String::new(),
+                "· the App Insights link is an app setting, which nebaz never reads".into(),
+            ));
+            lines
+        }
         SiteDetailSection::Tags => tag_rows(r.tags()),
     }
 }

@@ -27,9 +27,10 @@ servers, with databases and firewall rules lazy), AKS
 (+ node pools). Since `v0.1.0`: Container Registry (registry metadata;
 replications and webhooks lazy, never repositories, tags or credentials),
 Cosmos DB (accounts, with databases lazy on whichever API the account
-uses; never keys or connection strings), and Foundry (every Cognitive Services
+uses; never keys or connection strings), Foundry (every Cognitive Services
 account, Azure OpenAI included; model deployments and projects lazy, never
-keys). Every row has a **Related** section listing the ARM ids it
+keys), and Monitor (Log Analytics workspaces and App Insights components,
+metadata only; AKS links to its workspace). Every row has a **Related** section listing the ARM ids it
 points at; Enter on one jumps there. The detail pane has a line cursor,
 vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`) and a flat
 view (`\`) that puts every section in one scroll. Verified against a live tenant:
@@ -103,6 +104,7 @@ cargo run -- -s acr    # container registries; 3 / 4 on a row list replications 
 cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
 cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe / pdns)
 cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments
+cargo run -- -s law    # Log Analytics workspaces (-s appi for App Insights)
 cargo test             # all tests, including the read-only guard
 cargo test --test readonly_guard   # just the guard (see "Why read-only")
 cargo clippy           # lint
@@ -143,7 +145,7 @@ The promise is held at three layers, not by convention
 1. the single request constructor only builds `GET`s, and a pipeline policy
    refuses any other method at runtime;
 2. `tests/readonly_guard.rs` fails `cargo test` if the source gains another
-   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, container registries, Cosmos DB),
+   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, container registries, Cosmos DB, log queries),
    a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
 

@@ -31,7 +31,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / storage / vnet / kv / id / aks / acr / app / sql / cosmos / foundry
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / storage / vnet / kv / id / aks / acr / app / sql / cosmos / foundry / law / appi
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 cargo test --test readonly_guard    # just the guard
 cargo clippy --all-targets          # CI runs this; keep it clean
@@ -149,6 +149,9 @@ verbatim where the concept is unchanged.
   `az` literal without a read verb, or a non-`/read` action in
   `PERMISSIONS.md`; `Reader` at subscription scope is the whole RBAC
   requirement. Test fixtures may carry a `vaultUri`; live code may not.
+  A credential the ARM `GET` itself returns (App Insights' instrumentation
+  key and connection string) is stripped before `ArmBase` keeps the raw
+  JSON, so the `e` view cannot show it either.
   A data-plane endpoint the ARM body returns (a SQL FQDN, a registry's
   login server, a Cosmos document endpoint) is shown as text and never
   requested; the guard forbids the host only as a literal in `src/`.
@@ -198,7 +201,7 @@ verbatim where the concept is unchanged.
 | `src/azure/service.rs` | `ServiceType`, `JumpView`, routing prefixes, `for_arm_id` |
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
-| `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry}.rs` | one file per service |
+| `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor}.rs` | one file per service |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |
