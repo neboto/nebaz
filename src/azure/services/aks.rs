@@ -86,6 +86,8 @@ pub struct ClusterRow {
     pub workload_identity: Option<bool>,
     /// `(name, enabled)`.
     pub addons: Vec<(String, bool)>,
+    /// The monitoring add-on's (`omsagent`) Log Analytics workspace.
+    pub log_workspace_id: Option<String>,
     pub pools: Vec<NodePoolRow>,
 }
 
@@ -150,6 +152,7 @@ impl ClusterRow {
                 .and_then(|_| json::str_at(v, &format!("{}/oidcIssuerProfile/issuerURL", p))),
             workload_identity: json::bool_at(v, &format!("{}/securityProfile/workloadIdentity/enabled", p)),
             addons,
+            log_workspace_id: log_workspace_id(v),
             pools,
             base,
         })
@@ -226,6 +229,9 @@ impl Resource for ClusterRow {
         if let Some(k) = &self.kubelet_identity_id {
             v.push((format!("Kubelet identity {}", name_of_id(k)), k.clone()));
         }
+        if let Some(w) = &self.log_workspace_id {
+            v.push((format!("Log Analytics workspace {}", name_of_id(w)), w.clone()));
+        }
         v
     }
     /// `az aks show` takes no `--ids` (checked on the Azure machine,
@@ -238,6 +244,20 @@ impl Resource for ClusterRow {
             shell_quote(subscription_of(&self.base.id)?)
         ))
     }
+}
+
+/// The enabled monitoring add-on's workspace id. The config key's case
+/// varies between clusters, so it is matched case-insensitively.
+fn log_workspace_id(v: &Value) -> Option<String> {
+    let oms = v.pointer("/properties/addonProfiles/omsagent")?;
+    if !json::bool_at(oms, "/enabled").unwrap_or(false) {
+        return None;
+    }
+    oms.get("config")?
+        .as_object()?
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case("logAnalyticsWorkspaceResourceID"))
+        .and_then(|(_, id)| json::arm_id(id.as_str().map(str::to_string)))
 }
 
 pub fn cluster_section_lines(r: &ClusterRow, section: ClusterDetailSection) -> Vec<(String, String)> {
@@ -290,11 +310,13 @@ pub fn cluster_section_lines(r: &ClusterRow, section: ClusterDetailSection) -> V
                 .collect()
         }
         ClusterDetailSection::AddOns => {
-            let enabled: Vec<(String, String)> = r
-                .addons
-                .iter()
-                .map(|(n, e)| (n.clone(), if *e { "enabled".into() } else { "disabled".into() }))
-                .collect();
+            let mut enabled: Vec<(String, String)> = Vec::new();
+            for (n, e) in &r.addons {
+                enabled.push((n.clone(), if *e { "enabled".into() } else { "disabled".into() }));
+                if let (true, Some(w)) = (n.eq_ignore_ascii_case("omsagent"), &r.log_workspace_id) {
+                    enabled.push((format!("  Workspace · {}", name_of_id(w)), w.clone()));
+                }
+            }
             if enabled.is_empty() {
                 vec![(String::new(), "No add-on profiles".into())]
             } else {
@@ -657,7 +679,7 @@ mod tests {
                 "oidcIssuerProfile": {"enabled": true, "issuerURL": "https://oidc.example/"},
                 "networkProfile": {"networkPlugin": "azure", "networkPolicy": "cilium", "serviceCidr": "10.2.0.0/16", "loadBalancerSku": "standard", "outboundType": "loadBalancer"},
                 "apiServerAccessProfile": {"enablePrivateCluster": false, "authorizedIPRanges": ["1.2.3.4/32"]},
-                "addonProfiles": {"omsagent": {"enabled": true}, "azurepolicy": {"enabled": false}},
+                "addonProfiles": {"omsagent": {"enabled": true, "config": {"logAnalyticsWorkspaceResourceID": "/subscriptions/0000/resourceGroups/rg-ops/providers/Microsoft.OperationalInsights/workspaces/law-prod"}}, "azurepolicy": {"enabled": false}},
                 "agentPoolProfiles": [
                     {"name": "system", "mode": "System", "count": 3, "vmSize": "Standard_D4s_v5", "osType": "Linux", "osSKU": "AzureLinux",
                      "orchestratorVersion": "1.31.2", "currentOrchestratorVersion": "1.31.2", "nodeImageVersion": "AKSAzureLinux-V2gen2-202409.01.0",
@@ -694,7 +716,10 @@ mod tests {
         assert_eq!(pools[0].0, "system · system · 3 × Standard_D4s_v5");
         assert!(pools[0].1.ends_with("/managedClusters/aks-prod/agentPools/system"));
         let addons = cluster_section_lines(&row, ClusterDetailSection::AddOns);
-        assert_eq!(addons, vec![("azurepolicy".to_string(), "disabled".to_string()), ("omsagent".to_string(), "enabled".to_string())]);
+        assert_eq!(addons[..2], [("azurepolicy".to_string(), "disabled".to_string()), ("omsagent".to_string(), "enabled".to_string())]);
+        assert_eq!(addons[2].0, "  Workspace · law-prod");
+        assert!(row.related().iter().any(|(l, id)| l == "Log Analytics workspace law-prod"
+            && JumpView::for_arm_id(id) == Some(JumpView::LogWorkspaces)));
         assert_eq!(row.cli_command().as_deref(), Some("az aks show -n aks-prod -g rg-aks --subscription 0000"));
     }
 

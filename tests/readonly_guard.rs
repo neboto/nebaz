@@ -49,6 +49,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "azurecr.io",
     // Cosmos DB: the accounts' document endpoints.
     "documents.azure.com",
+    // Monitor: log queries and App Insights data.
+    "api.loganalytics.io",
+    "api.applicationinsights.io",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.

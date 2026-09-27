@@ -51,7 +51,7 @@ of [`RELEASING.md`](RELEASING.md).
 - Azure Monitor metrics (`Microsoft.Insights/metrics`, control-plane, so
   `Reader` covers it — the cheapest of the three).
 - Log Analytics tail (data plane `api.loganalytics.io`, separate scope and
-  role: a new endpoint the read-only guard must learn about first).
+  role; a host the guard currently forbids by name).
 - Blob browser (data plane `blob.core.windows.net`, a host the guard
   currently forbids by name; listing blobs needs `Storage Blob Data
   Reader`, a data-plane role `PERMISSIONS.md` says is not needed today).

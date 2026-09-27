@@ -39,6 +39,9 @@ pub enum ServiceType {
     /// Foundry / AI Services / Azure OpenAI accounts; deployments and
     /// projects as lazy sections. Metadata only, never keys.
     Foundry,
+    /// Log Analytics workspaces and Application Insights components,
+    /// metadata only; never a query, a key or a connection string.
+    Monitor,
 }
 
 /// One sub-tab: the rows of one resource type within a service. A flat
@@ -91,6 +94,9 @@ pub enum JumpView {
     // Foundry
     /// Every `Microsoft.CognitiveServices` account, `kind` on the row.
     AiAccounts,
+    // Monitor
+    LogWorkspaces,
+    AppInsights,
 }
 
 impl JumpView {
@@ -111,6 +117,7 @@ impl JumpView {
             SqlServers => ServiceType::Sql,
             CosmosAccounts => ServiceType::Cosmos,
             AiAccounts => ServiceType::Foundry,
+            LogWorkspaces | AppInsights => ServiceType::Monitor,
         }
     }
 
@@ -144,6 +151,8 @@ impl JumpView {
             SqlServers => "sql-servers",
             CosmosAccounts => "cosmos-accounts",
             AiAccounts => "ai-accounts",
+            LogWorkspaces => "log-workspaces",
+            AppInsights => "app-insights",
         }
     }
 
@@ -177,6 +186,8 @@ impl JumpView {
             SqlServers => "Servers",
             CosmosAccounts => "Accounts",
             AiAccounts => "Resources",
+            LogWorkspaces => "Workspaces",
+            AppInsights => "App Insights",
         }
     }
 
@@ -218,6 +229,8 @@ impl JumpView {
             ("microsoft.sql", ["servers"]) => JumpView::SqlServers,
             ("microsoft.documentdb", ["databaseaccounts"]) => JumpView::CosmosAccounts,
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
+            ("microsoft.operationalinsights", ["workspaces"]) => JumpView::LogWorkspaces,
+            ("microsoft.insights", ["components"]) => JumpView::AppInsights,
             _ => return None,
         })
     }
@@ -245,12 +258,13 @@ impl ServiceType {
             ServiceType::Sql,
             ServiceType::Cosmos,
             ServiceType::Foundry,
+            ServiceType::Monitor,
         ]
     }
 
     /// Ordered picker categories. Every `category()` value must appear here.
     pub const CATEGORIES: &'static [&'static str] =
-        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "Web", "Databases", "AI"];
+        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "Web", "Databases", "AI", "Monitoring"];
 
     pub fn category(&self) -> &'static str {
         match self {
@@ -266,6 +280,7 @@ impl ServiceType {
             ServiceType::Sql => "Databases",
             ServiceType::Cosmos => "Databases",
             ServiceType::Foundry => "AI",
+            ServiceType::Monitor => "Monitoring",
         }
     }
 
@@ -283,6 +298,7 @@ impl ServiceType {
             ServiceType::Sql => "SQL",
             ServiceType::Cosmos => "Cosmos DB",
             ServiceType::Foundry => "Foundry",
+            ServiceType::Monitor => "Monitor",
         }
     }
 
@@ -301,6 +317,7 @@ impl ServiceType {
             ServiceType::Sql => "SQL",
             ServiceType::Cosmos => "Cosmos",
             ServiceType::Foundry => "Foundry",
+            ServiceType::Monitor => "Monitor",
         }
     }
 
@@ -318,6 +335,7 @@ impl ServiceType {
             ServiceType::Sql => "SQL servers & databases",
             ServiceType::Cosmos => "Cosmos DB accounts",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
+            ServiceType::Monitor => "Log Analytics & App Insights",
         }
     }
 
@@ -348,6 +366,7 @@ impl ServiceType {
             ServiceType::Sql => &[SqlServers],
             ServiceType::Cosmos => &[CosmosAccounts],
             ServiceType::Foundry => &[AiAccounts],
+            ServiceType::Monitor => &[LogWorkspaces, AppInsights],
         }
     }
 
@@ -421,6 +440,13 @@ impl ServiceType {
             "foundry" | "aifoundry" | "aiservices" | "openai" | "aoai" | "cognitive" | "cognitiveservices" | "cog" => {
                 (ServiceType::Foundry, None)
             }
+            "monitor" | "monitoring" => (ServiceType::Monitor, None),
+            "law" | "laws" | "loganalytics" | "workspace" | "workspaces" => {
+                (ServiceType::Monitor, Some(JumpView::LogWorkspaces))
+            }
+            "appi" | "insights" | "appinsights" | "applicationinsights" | "component" | "components" => {
+                (ServiceType::Monitor, Some(JumpView::AppInsights))
+            }
             _ => return None,
         };
         Some((service, view))
@@ -447,18 +473,19 @@ impl ServiceType {
             ServiceType::Sql => "@sql",
             ServiceType::Cosmos => "@cosmos",
             ServiceType::Foundry => "@foundry",
+            ServiceType::Monitor => "@monitor",
         }
     }
 
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan"];
+        &["@rg", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan", "@law", "@appi"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -598,6 +625,12 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/serverfarms/plan")), Some(JumpView::AppServicePlans));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop/slots/staging")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
+        assert_eq!(
+            JumpView::for_arm_id(&p("microsoft.operationalinsights/workspaces/law-prod")),
+            Some(JumpView::LogWorkspaces)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("microsoft.insights/components/appi-shop")), Some(JumpView::AppInsights));
+        assert_eq!(ServiceType::from_prefix("@ai"), None, "@ai is ambiguous (Foundry or App Insights)");
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.DocumentDB/databaseAccounts/cosmos-prod")),
             Some(JumpView::CosmosAccounts)

@@ -44,6 +44,10 @@ use crate::azure::services::container_registry::{
 use crate::azure::services::cosmos::{
     cosmos_section_lines, databases_path, CosmosAccountRow, CosmosDetailSection, COSMOS_API_VERSION,
 };
+use crate::azure::services::monitor::{
+    component_section_lines, workspace_section_lines, ComponentDetailSection, ComponentRow, WorkspaceDetailSection,
+    WorkspaceRow,
+};
 use crate::azure::services::sql::{
     server_child_path, sql_server_section_lines, SqlServerDetailSection, SqlServerRow, SQL_API_VERSION,
 };
@@ -1783,6 +1787,12 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<NodePoolRow>() {
             return Some(node_pool_section_lines(r, NodePoolDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<WorkspaceRow>() {
+            return Some(workspace_section_lines(r, WorkspaceDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<ComponentRow>() {
+            return Some(component_section_lines(r, ComponentDetailSection::from_index(idx)));
         }
         if let Some(r) = any.downcast_ref::<CosmosAccountRow>() {
             return Some(cosmos_section_lines(
