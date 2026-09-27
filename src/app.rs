@@ -30,6 +30,9 @@ use crate::azure::services::network_edge::{
 use crate::azure::services::all_resources::{
     generic_resource_section_lines, GenericResourceDetailSection, GenericResourceRow,
 };
+use crate::azure::services::activity::{
+    activity_path, activity_query, activity_rows, ACTIVITY_API_VERSION, ACTIVITY_LABEL, ACTIVITY_MAX_EVENTS,
+};
 use crate::azure::services::access::{
     access_rows, at_scope_filter, principal_filter, role_assignments_path, role_definitions_path,
     role_definitions_scope, ACCESS_API_VERSION, ACCESS_LABEL,
@@ -1375,6 +1378,23 @@ impl App {
         app.trigger_role_definitions(event_tx);
     }
 
+    /// On-enter hook for every type's Activity section: the last week of
+    /// the subscription's activity log, filtered to the row.
+    pub fn trigger_activity(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        app.trigger_selected(
+            |s| &mut s.activity,
+            event_tx,
+            move |c, id| {
+                let path = activity_path(id).unwrap_or_default();
+                c.list_fetch_query_capped(&path, ACTIVITY_API_VERSION, activity_query(id, now), ACTIVITY_MAX_EVENTS)
+            },
+        );
+    }
+
     /// On-enter hook for an identity's Can do: its principal's assignments
     /// across its subscription.
     pub fn trigger_identity_can_do(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -1778,6 +1798,9 @@ impl App {
         let any = resource.as_any();
         // Access is the same for every type: rendered here, not per type.
         let label = resource.detail_sections().and_then(|d| d.sections.get(idx)).map(|s| s.label);
+        if label == Some(ACTIVITY_LABEL) {
+            return Some(activity_rows(resource.id(), self.lazy.activity.get(resource.id())));
+        }
         if label == Some(ACCESS_LABEL) {
             let roles = role_definitions_scope(resource.id()).and_then(|k| self.lazy.role_definitions.get(&k));
             return Some(access_rows(resource.id(), self.lazy.role_assignments.get(resource.id()), roles));

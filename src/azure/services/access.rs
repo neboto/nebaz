@@ -28,12 +28,6 @@ pub const ACCESS_API_VERSION: &str = "2022-04-01";
 /// The section label `App::section_lines_for` dispatches on.
 pub const ACCESS_LABEL: &str = "Access";
 
-/// The `*_section_lines` arm for Access: the app renders it before the
-/// per-type dispatch, so a type's own renderer never does.
-pub fn rendered_by_app() -> Vec<(String, String)> {
-    Vec::new()
-}
-
 /// `{scope}/providers/Microsoft.Authorization/roleAssignments`.
 pub fn role_assignments_path(scope: &str) -> String {
     format!("{}/providers/Microsoft.Authorization/roleAssignments", scope.trim_end_matches('/'))

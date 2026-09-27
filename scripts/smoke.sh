@@ -127,6 +127,12 @@ run all-resources ok all '[8.0]' \
   "All resources" \
   "cannot reach 127.0.0.1"
 
+# Activity on a subscription row reads the activity log from ARM; like
+# Access, the error proves the section fired.
+run activity-section ok sub '[2.0, "\r", 0.3, "5", 10.0]' \
+  "Activity" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 
