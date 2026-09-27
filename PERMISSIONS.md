@@ -40,7 +40,9 @@ each one backs are in the catalog table
   from `az account list` (local, no ARM call). Details and Locations:
   `Microsoft.Resources/subscriptions/read`,
   `Microsoft.Resources/subscriptions/locations/read`. Resource groups:
-  `Microsoft.Resources/subscriptions/resourceGroups/read`.
+  `Microsoft.Resources/subscriptions/resourceGroups/read`. All resources:
+  `Microsoft.Resources/subscriptions/resources/read` (the generic list:
+  ids, types, SKUs and tags, never a resource's properties).
 - **Virtual Machines**: `Microsoft.Compute/virtualMachines/read` (the list,
   and the `statusOnly=true` pass that puts the power state on the row),
   `Microsoft.Compute/virtualMachines/instanceView/read` (Instance view

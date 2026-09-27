@@ -115,6 +115,12 @@ resource group, subscription or management group. Principals are object ids
 reverse: what its principal holds.
 _Avoid_: permissions (that is `PERMISSIONS.md`, what nebaz itself needs), IAM
 
+**All resources**:
+The Subscriptions sub-tab listing every resource in the subscription from
+the generic list, whatever its type (`→` marks a type with its own tab). It
+is where a jump to a type nebaz does not browse yet lands.
+_Avoid_: inventory, Resource Graph (a POST query nebaz does not use)
+
 **Related section**:
 The detail section every type carries listing the ARM ids the row points at
 (its subscription and resource group first, then its own links); Enter on a

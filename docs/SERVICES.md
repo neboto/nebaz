@@ -120,6 +120,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Service · sub-tab | Sections between Overview and Related | State | Related (after Subscription, Resource group) | `az` |
 |---|---|---|---|---|
 | Subscriptions · Subscriptions | Details ⧗ · Locations ⧗ · Tags (from Details) | subscription state; noise unless `Enabled` | — (root) | `az account show --subscription {id}` |
+| Subscriptions · All resources | — (Overview: type, kind, SKU, identity, managed by, created, changed, and whether nebaz browses the type) | ladder on the expanded `provisioningState` | `Open in {Service › Sub-tab}` when browsed (Enter on the list row does the same), `managedBy` | `az resource show --ids` |
 | Subscriptions · Resource Groups | — | stateless when `Succeeded` | `managedBy` id when set | `az group show -n {name} --subscription {sub}` |
 | Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) | power state | each NIC, OS and data disks, availability set, user-assigned identities | `az vm show` |
 | Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
@@ -163,6 +164,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Subscriptions | 0 ARM (`az account list`) | — |
 | Subscription Details / Locations | 1 each, per row, on demand | `/subscriptions/{id}` · `/subscriptions/{id}/locations` · `2022-12-01` |
 | Resource Groups | 1 | `/resourcegroups` · `2021-04-01` |
+| All resources | 1 (every type; the envelope only, never `properties`); `r` on a row lists its group filtered to its type | `/resources?$expand=createdTime,changedTime,provisioningState` · `2025-04-01` |
 | VMs | 2 | `/providers/Microsoft.Compute/virtualMachines` (+ `statusOnly=true`) · `2026-04-01` |
 | VM Instance view | 1 per VM, on demand | `{vm}/instanceView` · `2026-04-01` |
 | Disks | 1 | `/providers/Microsoft.Compute/disks` · `2026-03-02` |

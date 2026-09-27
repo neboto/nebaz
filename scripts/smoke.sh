@@ -121,6 +121,12 @@ run access-section ok sub '[2.0, "\r", 0.3, "4", 10.0]' \
   "Access" \
   "cannot reach 127.0.0.1"
 
+# @all lands on the All resources sub-tab, whose list goes to ARM (the
+# Subscriptions sub-tab itself makes no ARM call).
+run all-resources ok all '[8.0]' \
+  "All resources" \
+  "cannot reach 127.0.0.1"
+
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 

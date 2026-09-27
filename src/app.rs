@@ -27,6 +27,9 @@ use crate::azure::services::network_edge::{
     LoadBalancerDetailSection, LoadBalancerRow, NatGatewayDetailSection, NatGatewayRow, PublicIpDetailSection,
     PublicIpRow, RouteTableDetailSection, RouteTableRow,
 };
+use crate::azure::services::all_resources::{
+    generic_resource_section_lines, GenericResourceDetailSection, GenericResourceRow,
+};
 use crate::azure::services::access::{
     access_rows, at_scope_filter, principal_filter, role_assignments_path, role_definitions_path,
     role_definitions_scope, ACCESS_API_VERSION, ACCESS_LABEL,
@@ -875,7 +878,7 @@ impl App {
     /// `NavLocation` routed on its type, and the row resolves once its
     /// list has it. An id nebaz does not browse is copied instead.
     pub fn jump_to_arm_id(&mut self, id: &str, event_tx: &mpsc::UnboundedSender<Event>) {
-        let Some(view) = JumpView::for_arm_id(id) else {
+        let Some(view) = JumpView::landing_for_arm_id(id) else {
             if id.starts_with("/subscriptions/") {
                 self.copy_to_clipboard(id, "id (not a type nebaz browses)");
             }
@@ -893,6 +896,17 @@ impl App {
             detail_section: None,
         };
         self.restore_nav_location(loc, event_tx);
+        if view == JumpView::AllResources {
+            self.toast("Not browsed yet: showing it in All resources");
+        }
+    }
+
+    /// Whether the selected All resources row is a type nebaz lists in a
+    /// typed tab (Enter on the list then opens it there).
+    fn selected_routes_to_typed_tab(&self) -> bool {
+        self.get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<GenericResourceRow>())
+            .is_some_and(|r| r.view.is_some())
     }
 
     /// Enter on a detail line: jump when its value is an ARM id.
@@ -1782,6 +1796,9 @@ impl App {
                 ResourceGroupDetailSection::from_index(idx),
             ));
         }
+        if let Some(r) = any.downcast_ref::<GenericResourceRow>() {
+            return Some(generic_resource_section_lines(r, GenericResourceDetailSection::from_index(idx)));
+        }
         if let Some(r) = any.downcast_ref::<VmRow>() {
             return Some(vm_section_lines(
                 r,
@@ -2584,6 +2601,11 @@ impl App {
             KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.redraw_requested = true
             }
+            KeyCode::Enter if self.current_view == JumpView::AllResources && self.selected_routes_to_typed_tab() => {
+                if let Some(id) = self.get_selected_resource_id() {
+                    self.jump_to_arm_id(&id, event_tx);
+                }
+            }
             KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
                 if self.selected_index.is_some() {
                     self.details_focused = true;
@@ -3034,7 +3056,7 @@ fn is_arm_id(value: &str) -> bool {
 pub fn detail_jump_view(value: &str) -> Option<JumpView> {
     let value = value.trim();
     if is_arm_id(value) {
-        JumpView::for_arm_id(value)
+        JumpView::landing_for_arm_id(value)
     } else {
         None
     }
@@ -3120,13 +3142,18 @@ mod tests {
     }
 
     #[test]
-    fn only_browsed_arm_ids_carry_the_jump_marker() {
+    fn only_arm_ids_with_a_landing_carry_the_jump_marker() {
         let rg = "/subscriptions/0/resourceGroups/rg";
         assert_eq!(detail_jump_view(rg), Some(JumpView::ResourceGroups));
         let nic = format!(" {}/providers/Microsoft.Network/networkInterfaces/n ", rg);
         assert_eq!(detail_jump_view(&nic), Some(JumpView::Nics));
-        // Enter copies an unbrowsed id instead of jumping: no marker.
-        assert_eq!(detail_jump_view(&format!("{}/providers/Microsoft.Network/publicIPPrefixes/px", rg)), None);
+        // An unbrowsed top-level type lands in All resources.
+        assert_eq!(
+            detail_jump_view(&format!("{}/providers/Microsoft.Network/publicIPPrefixes/px", rg)),
+            Some(JumpView::AllResources)
+        );
+        // A child of an unbrowsed type is in no list: Enter copies, no marker.
+        assert_eq!(detail_jump_view(&format!("{}/providers/Microsoft.KeyVault/vaults/kv/secrets/db", rg)), None);
         assert_eq!(detail_jump_view("Standard_D2s_v3"), None);
         assert_eq!(detail_jump_view(""), None);
     }

@@ -7,6 +7,7 @@
 
 pub mod access;
 pub mod aks;
+pub mod all_resources;
 pub mod app_service;
 pub mod compute;
 pub mod container_registry;

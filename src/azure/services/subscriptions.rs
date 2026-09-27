@@ -11,6 +11,9 @@
 //! `is_noise`, the exact section tables): they follow the skeleton's
 //! conventions and are expected to be tuned there, not frozen here.
 
+use crate::azure::services::all_resources::{
+    refresh_query, GenericResourceRow, RESOURCES_API_VERSION, RESOURCES_EXPAND, RESOURCES_PATH,
+};
 use crate::azure::auth::SubscriptionEntry;
 use crate::azure::location::LocationInfo;
 use crate::azure::resource::{resource_group_of, shell_quote, Resource, ResourceState};
@@ -348,6 +351,10 @@ impl AzureService for SubscriptionsService {
 
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
         match view {
+            JumpView::AllResources => {
+                let items = self.scope.list(RESOURCES_PATH, RESOURCES_API_VERSION).await?;
+                Ok(generic_rows(&items, self.scope.tenant()))
+            }
             JumpView::ResourceGroups => {
                 let items = self.scope.list("/resourcegroups", RESOURCE_GROUPS_API_VERSION).await?;
                 Ok(self.rows_from_page(items))
@@ -364,6 +371,16 @@ impl AzureService for SubscriptionsService {
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
+        if view == JumpView::AllResources {
+            let tenant = self.scope.tenant().map(str::to_string);
+            let r = self
+                .scope
+                .stream(RESOURCES_PATH, RESOURCES_API_VERSION, &[RESOURCES_EXPAND], service_type, "Listing all resources…", &event_tx, |page| {
+                    generic_rows(&page, tenant.as_deref())
+                })
+                .await;
+            return finish_stream(service_type, r, &event_tx);
+        }
         if view != JumpView::ResourceGroups {
             let _ = event_tx.send(Event::ResourcesLoaded {
                 service: service_type,
@@ -381,6 +398,24 @@ impl AzureService for SubscriptionsService {
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
+        // A resource inside a group is an All resources row: no per-type
+        // GET, so list its group filtered to its type.
+        if let Some((path, query)) = refresh_query(id) {
+            let query: Vec<(&str, &str)> = query.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            let mut found = None;
+            self.scope
+                .arm()?
+                .list_pages(&path, RESOURCES_API_VERSION, &query, |page| {
+                    found = found.take().or_else(|| {
+                        page.into_iter().find(|v| json::text(v, "/id").eq_ignore_ascii_case(id))
+                    });
+                })
+                .await?;
+            return found
+                .and_then(|v| GenericResourceRow::from_json(&v, self.scope.tenant()))
+                .map(|r| Box::new(r) as Box<dyn Resource>)
+                .ok_or_else(|| Error::ResourceNotFound(id.to_string()));
+        }
         if resource_group_of(id).is_some() {
             let v = self.scope.get(id, RESOURCE_GROUPS_API_VERSION).await?;
             return ResourceGroupRow::from_json(&v, self.scope.tenant())
@@ -394,6 +429,14 @@ impl AzureService for SubscriptionsService {
             .map(|e| Box::new(SubscriptionRow::new(e)) as Box<dyn Resource>)
             .ok_or_else(|| Error::ResourceNotFound(id.to_string()))
     }
+}
+
+/// All resources rows from one page of the generic list.
+fn generic_rows(page: &[Value], tenant: Option<&str>) -> Vec<Box<dyn Resource>> {
+    page.iter()
+        .filter_map(|v| GenericResourceRow::from_json(v, tenant))
+        .map(|r| Box::new(r) as Box<dyn Resource>)
+        .collect()
 }
 
 // ── Section bodies ────────────────────────────────────────────────────

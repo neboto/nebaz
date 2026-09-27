@@ -12,15 +12,11 @@ use ratatui::{
     Frame,
 };
 
-/// The dim second column: the id when it adds to the name (for ARM rows the
-/// full `/subscriptions/…` id, which the wide layout bounds to a third of the
-/// pane), blank otherwise.
+/// The dim second column: `Resource::list_cell`, by default the id when it
+/// adds to the name (for ARM rows the full `/subscriptions/…` id, which the
+/// wide layout bounds to a third of the pane), blank otherwise.
 fn id_cell(resource: &dyn crate::azure::resource::Resource) -> String {
-    if resource.id() != resource.name() {
-        resource.id().to_string()
-    } else {
-        String::new()
-    }
+    resource.list_cell()
 }
 
 /// Floor for the name column, not a ceiling: it's what the name gets on a
