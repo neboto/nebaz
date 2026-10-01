@@ -20,8 +20,8 @@ bin-dir = "{ bin }{ binary-ext }"
 
 [dependencies]
 # TUI
-ratatui = "0.26"
-crossterm = "0.27"
+ratatui = "0.30"
+crossterm = "0.29"
 
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
@@ -38,18 +38,18 @@ azure_identity = { version = "1", features = ["tokio"] }
 fuzzy-matcher = "0.3"
 
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Serialization + config
 serde = { version = "1.0", features = ["derive"] }
 # preserve_order keeps detail/export JSON keys in on-screen order instead of
 # alphabetizing them (sections and fields read top-to-bottom like the pane).
 serde_json = { version = "1.0", features = ["preserve_order"] }
-toml = "0.8"
+toml = "1.1"
 
 # Clipboard
 arboard = "3.3"
-base64 = "0.22"
+base64 = "0.23"
 
 # Temporary files ($EDITOR)
 tempfile = "3.8"
