@@ -15,7 +15,12 @@
 //!    everywhere, and the Graph module never names a certificate's `key`.
 //! 3. Every `az …` command string in `src/` uses a read verb, or is on a
 //!    written allowlist; the Key Vault value-returning commands and the
-//!    AI account key listing are named forbidden outright.
+//!    AI account key listing are named forbidden outright. The one
+//!    exception is the `C` catalogue (ADR 0005): `src/azure/cli_actions.rs`
+//!    may also hold the Connect and Change verbs listed here, for commands
+//!    the user copies and runs; it spawns nothing, and only the picker
+//!    (which hands a command to the clipboard) uses it. A destructive verb
+//!    or a secret-revealing command or flag is refused there too.
 //! 4. Every ARM action `PERMISSIONS.md` grants ends in `/read`.
 //!
 //! There is deliberately no API-path allowlist here: the paths are
@@ -101,9 +106,67 @@ const GRAPH_FORBIDDEN_OPTIONS: &[&str] = &["$select", "select="];
 /// Crates that could open an HTTP connection behind the pipeline's back.
 const HTTP_CLIENT_CRATES: &[&str] = &["reqwest", "hyper", "ureq", "curl", "isahc", "attohttpc", "minreq"];
 
-/// `az <group…> <verb>` verbs that read. `get-access-token` is what
-/// azure_identity runs; nebaz itself runs `az account list`.
-const AZ_READ_VERBS: &[&str] = &["show", "list", "get-access-token"];
+/// `az <group…> <verb>` verbs that read, matched as whole words.
+/// `get-access-token` is what azure_identity runs; nebaz itself runs
+/// `az account list`. The rest are reads the `C` catalogue offers.
+const AZ_READ_VERBS: &[&str] = &[
+    "show",
+    "list",
+    "get-access-token",
+    "get-instance-view",
+    "get-boot-log",
+    "get-upgrades",
+    "list-effective-nsg",
+    "show-effective-route-table",
+    "list-instances",
+];
+
+/// The `C` command catalogue (ADR 0005, #47): the one file that may hold
+/// an `az` command whose verb is on [`AZ_CONNECT_VERBS`] or
+/// [`AZ_CHANGE_VERBS`]. The user copies those and runs them; nebaz never
+/// does.
+const CLI_CATALOGUE_FILE: &str = "src/azure/cli_actions.rs";
+
+/// The only files that may name the catalogue: the catalogue, the picker
+/// glue on `App` (which hands the chosen command to the clipboard) and the
+/// picker widget (which draws it).
+const CLI_CATALOGUE_USERS: &[&str] = &[CLI_CATALOGUE_FILE, "src/app/command_picker.rs", "src/ui/widgets/command_picker.rs"];
+
+/// Verbs that open a session or configure a local tool and change nothing
+/// in Azure (`ssh vm`, `aks get-credentials`, `acr login`, `webapp log
+/// tail`). Catalogue only.
+const AZ_CONNECT_VERBS: &[&str] = &["ssh", "rdp", "connect", "get-credentials", "exec", "login", "tail"];
+
+/// Reversible operational changes. Catalogue only, shown under a warning.
+const AZ_CHANGE_VERBS: &[&str] = &["start", "stop", "restart", "deallocate", "scale"];
+
+/// Verbs refused in every `az` literal, the catalogue included: they
+/// destroy, overwrite, run code on the target, or mint and print a
+/// credential (`ad sp credential reset`).
+const AZ_DESTRUCTIVE: &[&str] = &[
+    "delete",
+    "purge",
+    "remove",
+    "reset",
+    "regenerate",
+    "rotate",
+    "renew",
+    "revoke",
+    "invoke",
+    "run-command",
+    "reimage",
+    "redeploy",
+    "set",
+    "create",
+    "update",
+    "import",
+    "restore",
+];
+
+/// Flags refused in every `az` literal: each makes a command print a
+/// credential (`aks get-credentials --admin`, `acr login --expose-token`,
+/// `containerapp secret list --show-values`).
+const AZ_FORBIDDEN_FLAGS: &[&str] = &["--admin", "--expose-token", "--show-values", "--show-secrets"];
 
 /// Command chains that read nothing but must never appear: they return
 /// secret material to the terminal. `cognitiveservices account keys list`
@@ -127,6 +190,15 @@ const AZ_FORBIDDEN: &[&str] = &[
     // show` print values (the ARM side is the `listSecrets` POST).
     "containerapp secret",
     "containerapp job secret",
+    // Registry admin password, storage account keys, SAS tokens and
+    // connection strings, publishing profiles (deployment passwords).
+    "acr credential",
+    "storage account keys",
+    "storage account show-connection-string",
+    "storage account generate-sas",
+    "sql db show-connection-string",
+    "webapp deployment list-publishing",
+    "functionapp deployment list-publishing",
 ];
 
 /// `az` mentions that are not commands. Each needs a reason.
@@ -373,48 +445,144 @@ fn the_graph_rules_catch_what_they_should() {
     assert!(graph_problems(GRAPH_FILE, "// a doc comment may say $select=key\n").is_empty());
 }
 
+/// The `az` problems in one file's comment-free text, and how many `az`
+/// mentions it holds. Words are judged whole; the chain is the words
+/// before the first flag, at most four groups plus the verb (the deepest
+/// in use is `network private-dns link vnet list`).
+fn az_problems(rel_path: &str, text: &str) -> (usize, Vec<String>) {
+    let in_catalogue = rel_path == CLI_CATALOGUE_FILE;
+    let mut problems = Vec::new();
+    let mut seen = 0usize;
+    for (offset, literal) in string_literals(text) {
+        if literal == "az" && rel_path != "src/azure/auth.rs" && !in_catalogue {
+            problems.push(format!(
+                "{}:{}: a bare \"az\" (only auth.rs runs az; only the catalogue builds commands)",
+                rel_path,
+                line_of(text, offset)
+            ));
+        }
+        let mut rest = literal.as_str();
+        while let Some(i) = rest.find("az ") {
+            let at_word_start = i == 0 || !rest.as_bytes()[i - 1].is_ascii_alphanumeric();
+            rest = &rest[i + 3..];
+            if !at_word_start {
+                continue;
+            }
+            seen += 1;
+            // `az login`, 'az login', "az upgrade," — strip the quoting and
+            // punctuation around each word before judging it.
+            let words: Vec<String> = rest
+                .split_whitespace()
+                .take_while(|w| !w.starts_with('-'))
+                .map(|w| w.trim_matches(|c: char| !c.is_ascii_alphanumeric()).to_ascii_lowercase())
+                .take_while(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
+                .take(5)
+                .collect();
+            let words: Vec<&str> = words.iter().map(String::as_str).collect();
+            let chain = words.join(" ");
+            let flags: Vec<&str> = rest.split_whitespace().filter(|w| w.starts_with("--")).collect();
+            let where_ = format!("{}:{}: `az {}`", rel_path, line_of(text, offset), chain);
+            if AZ_FORBIDDEN.iter().any(|f| chain.starts_with(f)) {
+                problems.push(format!("{} returns secret material", where_));
+            } else if let Some(f) = flags.iter().find(|f| AZ_FORBIDDEN_FLAGS.contains(f)) {
+                problems.push(format!("{} with `{}` prints a credential", where_, f));
+            } else if let Some(v) = words.iter().find(|w| AZ_DESTRUCTIVE.contains(w)) {
+                problems.push(format!("{} uses `{}`: never offered, not even to copy", where_, v));
+            } else if words.iter().any(|w| AZ_READ_VERBS.contains(w)) {
+                // a read command
+            } else if in_catalogue && words.iter().any(|w| AZ_CONNECT_VERBS.contains(w) || AZ_CHANGE_VERBS.contains(w)) {
+                // a copied Connect / Change command (ADR 0005)
+            } else if words.first().is_some_and(|w| AZ_ALLOW.iter().any(|(a, _)| a == w)) {
+                // allowlisted prose
+            } else if in_catalogue {
+                problems.push(format!("{} has no read, Connect or Change verb", where_));
+            } else {
+                problems.push(format!("{} has no read verb (add a reason to AZ_ALLOW if it is not a command)", where_));
+            }
+        }
+    }
+    (seen, problems)
+}
+
 #[test]
 fn every_az_command_reads() {
     let mut problems = Vec::new();
     let mut seen = 0usize;
     for path in rust_sources() {
         let text = without_line_comments(&fs::read_to_string(&path).unwrap());
-        for (offset, literal) in string_literals(&text) {
-            let mut rest = literal.as_str();
-            while let Some(i) = rest.find("az ") {
-                let at_word_start = i == 0 || !rest.as_bytes()[i - 1].is_ascii_alphanumeric();
-                rest = &rest[i + 3..];
-                if !at_word_start {
-                    continue;
-                }
-                seen += 1;
-                // `az login`, 'az login', "az upgrade," — strip the quoting
-                // and punctuation around each word before judging it.
-                let words: Vec<String> = rest
-                    .split_whitespace()
-                    .map(|w| w.trim_matches(|c: char| !c.is_ascii_alphanumeric()).to_ascii_lowercase())
-                    .take_while(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
-                    // Four command groups plus the verb: the deepest chain in
-                    // use is `network private-dns link vnet list`.
-                    .take(5)
-                    .collect();
-                let words: Vec<&str> = words.iter().map(String::as_str).collect();
-                let chain = words.join(" ");
-                let where_ = format!("{}:{}: `az {}`", rel(&path), line_of(&text, offset), chain);
-                if AZ_FORBIDDEN.iter().any(|f| chain.starts_with(f)) {
-                    problems.push(format!("{} returns secret material", where_));
-                } else if words.iter().any(|w| AZ_READ_VERBS.contains(w)) {
-                    // a read command
-                } else if words.first().is_some_and(|w| AZ_ALLOW.iter().any(|(a, _)| a == w)) {
-                    // allowlisted prose
-                } else {
-                    problems.push(format!("{} has no read verb (add a reason to AZ_ALLOW if it is not a command)", where_));
-                }
-            }
-        }
+        let (n, p) = az_problems(&rel(&path), &text);
+        seen += n;
+        problems.extend(p);
     }
     assert!(seen >= 20, "only {} `az` mentions found — did the scan break?", seen);
     assert!(problems.is_empty(), "read-only guard (az commands):\n  {}", problems.join("\n  "));
+}
+
+/// The catalogue only produces text: it spawns nothing, nothing that
+/// spawns names it, and its only users are the picker's glue and widget.
+#[test]
+fn the_cli_catalogue_is_only_copied() {
+    let catalogue = without_line_comments(&fs::read_to_string(root().join(CLI_CATALOGUE_FILE)).expect("the catalogue"));
+    for needle in ["process::", "Command::new", "spawn", "std::process"] {
+        assert!(!catalogue.contains(needle), "{} must never run anything: found `{}`", CLI_CATALOGUE_FILE, needle);
+    }
+    let mut problems = Vec::new();
+    for path in rust_sources() {
+        let r = rel(&path);
+        // Tests may call it (they assert on what it builds); the module
+        // tree declares it.
+        if r.starts_with("src/harness_tests/") {
+            continue;
+        }
+        let file = without_line_comments(&fs::read_to_string(&path).unwrap());
+        let text = non_test_part(&file).replace("pub mod cli_actions;", "");
+        if text.contains("cli_actions") && !CLI_CATALOGUE_USERS.contains(&r.as_str()) {
+            problems.push(format!("{}: names the C catalogue (only {:?} may)", r, CLI_CATALOGUE_USERS));
+        }
+        if CLI_CATALOGUE_USERS.contains(&r.as_str()) && (text.contains("process::") || text.contains("Command::new")) {
+            problems.push(format!("{}: a catalogue user spawns a process", r));
+        }
+    }
+    assert!(problems.is_empty(), "read-only guard (C catalogue):\n  {}", problems.join("\n  "));
+}
+
+/// The `az` rules on synthetic files: a regression here means a real
+/// violation could pass unnoticed.
+#[test]
+fn the_az_rules_catch_what_they_should() {
+    let count = |path: &str, line: &str| az_problems(path, line).1.len();
+    let elsewhere = "src/app.rs";
+    // Reads pass everywhere.
+    assert_eq!(count(elsewhere, "let c = \"az vm show --ids {}\";"), 0);
+    assert_eq!(count(elsewhere, "let c = \"az vm get-instance-view --ids {}\";"), 0);
+    // Connect and Change verbs: the catalogue only.
+    for cmd in ["az vm start --ids {}", "az aks get-credentials -n {}", "az ssh vm -n {}", "az aks nodepool scale --node-count 3"] {
+        let line = format!("let c = \"{}\";", cmd);
+        assert_eq!(count(elsewhere, &line), 1, "{cmd} outside the catalogue");
+        assert_eq!(count(CLI_CATALOGUE_FILE, &line), 0, "{cmd} in the catalogue");
+    }
+    // Refused in the catalogue too.
+    for cmd in [
+        "az vm delete --ids {}",
+        "az ad sp credential reset --id {}",
+        "az keyvault secret show --id {}",
+        "az storage account keys list -n {}",
+        "az acr credential show -n {}",
+        "az aks get-credentials -n {} --admin",
+        "az acr login -n {} --expose-token",
+        "az vm run-command invoke --ids {}",
+        "az webapp update --ids {}",
+    ] {
+        let line = format!("let c = \"{}\";", cmd);
+        assert_eq!(count(CLI_CATALOGUE_FILE, &line), 1, "{cmd} must be refused in the catalogue");
+    }
+    // A verb hidden behind a placeholder reads as no verb at all.
+    assert_eq!(count(CLI_CATALOGUE_FILE, "let c = format!(\"az vm {} --ids {}\", v, id);"), 1);
+    // A bare "az" outside auth.rs and the catalogue.
+    assert_eq!(count(elsewhere, "let a = \"az\";"), 1);
+    assert_eq!(count("src/azure/auth.rs", "let a = \"az\";"), 0);
+    // Prose stays allowed.
+    assert_eq!(count(elsewhere, "let m = \"run `az login`\";"), 0);
 }
 
 #[test]

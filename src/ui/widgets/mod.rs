@@ -1,4 +1,5 @@
 pub mod banner;
+pub mod command_picker;
 pub mod details_pane;
 pub mod help_overlay;
 pub mod jump_list;

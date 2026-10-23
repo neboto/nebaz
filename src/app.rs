@@ -118,6 +118,7 @@ use tokio::sync::mpsc;
 mod all_search;
 /// The metrics view (`m`): open, fetch, keys.
 mod metrics;
+mod command_picker;
 mod network_lens;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
@@ -544,6 +545,8 @@ pub struct App {
 
     /// Network access lens (`N`, #50): owns the detail pane while open.
     pub network_lens: Option<crate::ui::widgets::network_lens::NetworkLensState>,
+    /// The `C` command picker (#47): `Some` while open.
+    pub command_picker: Option<crate::ui::widgets::command_picker::CommandPickerState>,
     /// Bumped per lens fetch; a result for an older one is dropped.
     network_lens_generation: u64,
     /// Azure Monitor metrics view (`m`, #51): owns the detail pane while open.
@@ -699,6 +702,7 @@ impl App {
             metrics: None,
             metrics_generation: 0,
             metrics_window: Default::default(),
+            command_picker: None,
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             mouse: MouseState::default(),
@@ -2840,6 +2844,7 @@ impl App {
             || self.bookmarks_visible
             || self.message_history_visible
             || self.macro_picker_visible
+            || self.command_picker.is_some()
     }
 
     /// Recording (classify the key just dispatched by diffing state) and
@@ -3212,6 +3217,10 @@ impl App {
             self.handle_macro_picker_key(key);
             return;
         }
+        if self.command_picker.is_some() {
+            self.handle_command_picker_key(key);
+            return;
+        }
 
         // Search input.
         if self.search_active {
@@ -3558,15 +3567,9 @@ impl App {
                     self.copy_to_clipboard(&id, "resource id");
                 }
             }
-            KeyCode::Char('C') => {
-                // Copied verbatim: `--ids` carries the subscription, and the
-                // commands without `--ids` carry `--subscription` themselves.
-                let cmd = self.get_selected_resource().and_then(|r| r.cli_command());
-                match cmd {
-                    Some(cmd) => self.copy_to_clipboard(&cmd, "az command"),
-                    None => self.error_message = Some("No CLI command for this resource".into()),
-                }
-            }
+            // Copied verbatim, never run: `--ids` carries the subscription,
+            // and the commands without `--ids` carry `--subscription`.
+            KeyCode::Char('C') => self.open_command_picker(),
             KeyCode::Char('O') => {
                 let url = self.get_selected_resource().and_then(|r| r.portal_url());
                 match url {

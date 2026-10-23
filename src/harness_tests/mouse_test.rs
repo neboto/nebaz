@@ -420,3 +420,47 @@ async fn metrics_rows_and_range_chips_take_clicks() {
     h.click(at).await;
     assert!(h.app.metrics.is_none());
 }
+
+/// The `C` command picker (#47) is a mouse modal like the others: a click
+/// highlights a command, a click on the highlighted one or a double-click
+/// copies it, the wheel moves the highlight, and a right-click or a click
+/// outside closes it, a typed filter and all, copying nothing.
+#[tokio::test]
+async fn the_command_picker_is_a_mouse_modal() {
+    let mut h = vms(&["vm-a"]).await;
+    let catalogue = crate::azure::cli_actions::actions_for(h.app.get_selected_resource().unwrap());
+    let command = |label: &str| catalogue.iter().find(|a| a.label == label).unwrap().command.clone();
+
+    h.press(KeyCode::Char('C')).await;
+    let at = h.find("vm get-instance-view");
+    h.click(at).await;
+    let picker = h.app.command_picker.as_ref().expect("one click never copies");
+    assert_eq!(picker.selected, 1);
+    assert_eq!(h.app.clipboard.last(), None);
+    h.click(at).await;
+    assert!(h.app.command_picker.is_none(), "a click on the highlighted row copies");
+    assert_eq!(h.app.clipboard.last(), Some(command("vm get-instance-view").as_str()));
+
+    h.press(KeyCode::Char('C')).await;
+    let popup = h.app.mouse.popup.borrow().area.expect("the picker records its rect");
+    let inside = (popup.x + 2, popup.y + 2);
+    h.scroll(inside, true).await;
+    h.scroll(inside, true).await;
+    h.scroll(inside, false).await;
+    assert_eq!(h.app.command_picker.as_ref().unwrap().selected, 1, "the wheel moves the highlight");
+    let restart = h.find("vm restart");
+    h.double_click(restart).await;
+    assert!(h.app.command_picker.is_none());
+    assert_eq!(h.app.clipboard.last(), Some(command("vm restart").as_str()));
+
+    h.press(KeyCode::Char('C')).await;
+    h.press(KeyCode::Char('/')).await;
+    h.type_str("vm").await;
+    h.right_click(inside).await;
+    assert!(h.app.command_picker.is_none(), "a right-click closes, filter or not");
+
+    h.press(KeyCode::Char('C')).await;
+    h.click((0, 0)).await;
+    assert!(h.app.command_picker.is_none(), "a click outside closes");
+    assert_eq!(h.app.clipboard.last(), Some(command("vm restart").as_str()), "and copies nothing");
+}
