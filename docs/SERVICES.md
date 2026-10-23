@@ -142,6 +142,28 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `expired`, `expiring` (within 30 days), `ok`, or stateless with no
     credentials.
 
+13. **DNS is its own tab** although every DNS type is Microsoft.Network:
+    Network with Private DNS, public zones, resolvers, rulesets and DNS
+    policies was thirteen sub-tabs, past the ten digit keys, and DNS is
+    debugged as one workflow (which zone answers, which resolver forwards,
+    which ruleset rule, which VNet is linked) that VNets and subnets only
+    touch through their Related lines. Private DNS moved with it; its
+    prefix (`@pdns`), view and cache key are unchanged.
+14. **DNS topology** (`network_dns.rs`): what ties resolvers, endpoints,
+    subnets, rulesets, policies, private zones and VNets together lives in
+    child lists no list body carries, and the API's reverse lookups
+    (`virtualNetworks/listDnsResolvers`, `listDnsForwardingRulesets`) are
+    `POST`s. So one lazy fetch per subscription (`App::trigger_dns_topology`,
+    keyed `/subscriptions/{sub}`) lists the resolvers with their endpoints
+    and the rulesets, DNS security policies and private DNS zones with their
+    VNet links; a child list that fails is a warning line, only the resolver
+    list failing fails the whole. The resolver's Endpoints and Rulesets,
+    every VNet links section of a ruleset or policy, and the extra lines of
+    a resolver's, ruleset's, policy's, VNet's and subnet's **Related** read
+    it (those Related sections carry the trigger as their on-enter hook).
+    It is read once per session: `r` on a row does not refresh it, a
+    subscription switch does.
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -158,15 +180,19 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
 | Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
-| Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet | `az network vnet show` |
-| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so) | `az network vnet subnet show` |
+| Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet; ⧗ (rule 14) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
+| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 14) the DNS resolver endpoints in it | `az network vnet subnet show` |
 | Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
 | Network · Public IPs | — (Overview: address, allocation, version, SKU · tier, attached to, DNS label, FQDN, idle timeout, zones, DDoS) | attached / unattached | the owner of its IP configuration (NIC, load balancer, gateway, firewall, bastion), NAT gateway, prefix | `az network public-ip show` |
 | Network · LBs | Frontends (public IP, or private IP + subnet) · Backend pools (NICs, deduplicated from IP configurations; or addresses) · Rules (LB rules, health probes, inbound NAT, outbound) | stateless | frontend public IPs and subnets, backend NICs | `az network lb show` |
 | Network · Routes | Routes (prefix → next hop type and IP) | stateless | each associated subnet | `az network route-table show` |
 | Network · NAT | — (Overview: SKU, idle timeout, zones, counts) | stateless | public IPs (v4 and v6), prefixes, each subnet | `az network nat gateway show` |
 | Network · PEs | Connection (target, sub-resource, status, description, automatic or manual approval) · DNS (custom DNS configs: FQDN → IPs) | ladder, then connection status (`Approved` → Available, `Pending` → Pending, `Rejected` / `Disconnected` → Unavailable) | **target** (`privateLinkServiceId`: jumps to the vault, account, storage account… it fronts), subnet, NICs | `az network private-endpoint show` |
-| Network · Private DNS | Records ⧗ (name, type, TTL, values; auto-registered flagged) · VNet links ⧗ (each linked VNet jumps; auto-registration, state) | stateless; `location` is `global`, which passes every `R` filter | — (linked VNets are in VNet links) | `az network private-dns zone show` |
+| DNS · Private DNS | Records ⧗ (name, type, TTL, values; auto-registered flagged) · VNet links ⧗ (each linked VNet jumps; auto-registration, state) | stateless; `location` is `global`, which passes every `R` filter | — (linked VNets are in VNet links) | `az network private-dns zone show` |
+| DNS · DNS zones | Records ⧗ (name, type, TTL, values, TXT cut at 60 characters; an alias record set's target is its own line and jumps; the first 1,000 record sets) · Delegation (the name servers, as text; never resolved) · (Overview: zone type, record sets of max, records per set) | stateless; `location` is `global` | alias targets (once Records has loaded: public IPs, Traffic Manager and Front Door land in All resources, record sets copy), a legacy private zone's VNets | `az network dns zone show` |
+| DNS · Resolvers | Endpoints ⧗ (inbound: private IP, subnet, allocation; outbound: subnet) · Rulesets ⧗ (those forwarding through its outbound endpoints) | ladder, then `dnsResolverState` (`Connected` → Available, `Disconnected` → Unavailable) | VNet; then ⧗ each endpoint's subnet, each ruleset | `az dns-resolver show` (the `dns-resolver` CLI extension) |
+| DNS · Rulesets | Rules ⧗ (domain → target servers and ports, enabled) · VNet links ⧗ (each linked VNet jumps; metadata) | ladder only | each outbound endpoint's resolver; then ⧗ the endpoints' subnets, the resolver's VNet, each linked VNet | `az dns-resolver forwarding-ruleset show` (extension) |
+| DNS · DNS policies | Rules ⧗ (security rules by priority: action, state, each domain list, which lands in All resources) · VNet links ⧗ | ladder only | ⧗ each linked VNet | `az dns-resolver policy show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
 | Identity · App registrations (Graph, rule 13) | Credentials · Federated credentials ⧗ (issuer, subject, audiences) · API permissions (`requiredResourceAccess`, each API's service principal fetched by app id to name it and its permissions) · Redirect URIs (web, SPA, public client) · Owners ⧗ · Exposed API (identifier URIs, scopes, app roles) · Tags; no Access or Activity | worst credential expiry | its service principal (by app id) | `az ad app show --id {appId}` |
@@ -188,7 +214,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @pdns @kv @id @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -218,6 +244,11 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | PEs | 1 | `/providers/Microsoft.Network/privateEndpoints` · `2025-09-01` |
 | Private DNS | 1 | `/providers/Microsoft.Network/privateDnsZones` · `2024-06-01` (its own spec) |
 | Records, VNet links | 1 each per zone, on demand | `{zone}/ALL` · `{zone}/virtualNetworkLinks` · `2024-06-01` |
+| DNS zones | 1 | `/providers/Microsoft.Network/dnszones` · `2018-05-01` (its own spec; the newest stable, DNSSEC is preview-only) |
+| DNS zone Records (and Related's alias targets) | 1 per zone, on demand, stopping at 1,000 record sets | `{zone}/all` · `2018-05-01` |
+| Resolvers, Rulesets, DNS policies | 1 each | `/providers/Microsoft.Network/dnsResolvers` · `dnsForwardingRulesets` · `dnsResolverPolicies` · `2025-05-01` (the resolver spec) |
+| Ruleset Rules, policy Rules | 1 per ruleset or policy, on demand | `{ruleset}/forwardingRules` · `{policy}/dnsSecurityRules` · `2025-05-01` |
+| DNS topology (resolver Endpoints / Rulesets, ruleset and policy VNet links, the DNS lines of VNet and subnet Related; rule 14) | once per subscription per session, on demand: `4 + 2·resolvers + rulesets + policies + private zones`, each parent list followed for its first 100 | the three resolver lists, then `{resolver}/inboundEndpoints` · `{resolver}/outboundEndpoints` · `{ruleset}/virtualNetworkLinks` · `{policy}/virtualNetworkLinks` (`2025-05-01`); `privateDnsZones`, then `{zone}/virtualNetworkLinks` (`2024-06-01`) |
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
@@ -283,3 +314,10 @@ it; that floor is #63.
   for that reason, `filter_location`), and whether any policy carries an
   Azure region instead; how the list answers in a subscription where
   `Microsoft.PowerPlatform` is not registered.
+- DNS (#37), built without an Azure login. To check: the DNS
+  api-versions (`2018-05-01` public zones, `2025-05-01` resolver, both the
+  newest stable in azure-rest-api-specs on 2026-10-23); the record-set
+  JSON's casing (`TTL`, `ARecords`, …, as the spec spells it); and that
+  `az network dns zone show` and the `dns-resolver` extension's `show`,
+  `forwarding-ruleset show` and `policy show` take `--ids` (their CLI
+  parameter tables give the name an `id_part`).

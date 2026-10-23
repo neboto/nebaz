@@ -18,8 +18,12 @@ pub enum ServiceType {
     /// Storage accounts + blob containers (via ARM).
     Storage,
     /// Virtual networks, subnets, NSGs, public IPs, load balancers, route
-    /// tables, NAT gateways, private endpoints, private DNS zones.
+    /// tables, NAT gateways, private endpoints.
     Network,
+    /// Private and public DNS zones, the DNS Private Resolver, forwarding
+    /// rulesets, DNS security policies. Microsoft.Network, but its own tab
+    /// (SERVICES.md says why).
+    Dns,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
     /// User-assigned managed identities (ARM); service principals and app
@@ -79,7 +83,14 @@ pub enum JumpView {
     RouteTables,
     NatGateways,
     PrivateEndpoints,
+    // DNS
     PrivateDnsZones,
+    /// Public DNS zones (`Microsoft.Network/dnszones`).
+    DnsZones,
+    DnsResolvers,
+    DnsForwardingRulesets,
+    /// DNS security policies (`dnsResolverPolicies`).
+    DnsResolverPolicies,
     // Key Vault
     KeyVaults,
     // Identity
@@ -129,7 +140,8 @@ impl JumpView {
             VirtualMachines | Disks | Nics => ServiceType::VirtualMachines,
             StorageAccounts => ServiceType::Storage,
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
-            | NatGateways | PrivateEndpoints | PrivateDnsZones => ServiceType::Network,
+            | NatGateways | PrivateEndpoints => ServiceType::Network,
+            PrivateDnsZones | DnsZones | DnsResolvers | DnsForwardingRulesets | DnsResolverPolicies => ServiceType::Dns,
             KeyVaults => ServiceType::KeyVault,
             Identities | ServicePrincipals | AppRegistrations => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
@@ -164,6 +176,10 @@ impl JumpView {
             NatGateways => "nat-gateways",
             PrivateEndpoints => "private-endpoints",
             PrivateDnsZones => "private-dns-zones",
+            DnsZones => "dns-zones",
+            DnsResolvers => "dns-resolvers",
+            DnsForwardingRulesets => "dns-forwarding-rulesets",
+            DnsResolverPolicies => "dns-resolver-policies",
             KeyVaults => "vaults",
             Identities => "identities",
             ServicePrincipals => "service-principals",
@@ -206,6 +222,10 @@ impl JumpView {
             NatGateways => "NAT",
             PrivateEndpoints => "PEs",
             PrivateDnsZones => "Private DNS",
+            DnsZones => "DNS zones",
+            DnsResolvers => "Resolvers",
+            DnsForwardingRulesets => "Rulesets",
+            DnsResolverPolicies => "DNS policies",
             KeyVaults => "Vaults",
             Identities => "Identities",
             ServicePrincipals => "Service principals",
@@ -255,6 +275,10 @@ impl JumpView {
             ("microsoft.network", ["natgateways"]) => JumpView::NatGateways,
             ("microsoft.network", ["privateendpoints"]) => JumpView::PrivateEndpoints,
             ("microsoft.network", ["privatednszones"]) => JumpView::PrivateDnsZones,
+            ("microsoft.network", ["dnszones"]) => JumpView::DnsZones,
+            ("microsoft.network", ["dnsresolvers"]) => JumpView::DnsResolvers,
+            ("microsoft.network", ["dnsforwardingrulesets"]) => JumpView::DnsForwardingRulesets,
+            ("microsoft.network", ["dnsresolverpolicies"]) => JumpView::DnsResolverPolicies,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
@@ -318,6 +342,7 @@ impl ServiceType {
             ServiceType::VirtualMachines,
             ServiceType::Storage,
             ServiceType::Network,
+            ServiceType::Dns,
             ServiceType::KeyVault,
             ServiceType::Identity,
             ServiceType::Aks,
@@ -342,6 +367,7 @@ impl ServiceType {
             ServiceType::VirtualMachines => "Compute",
             ServiceType::Storage => "Storage",
             ServiceType::Network => "Networking",
+            ServiceType::Dns => "Networking",
             ServiceType::KeyVault => "Security",
             ServiceType::Identity => "Security",
             ServiceType::Aks => "Containers",
@@ -362,6 +388,7 @@ impl ServiceType {
             ServiceType::VirtualMachines => "Virtual Machines",
             ServiceType::Storage => "Storage",
             ServiceType::Network => "Virtual Network",
+            ServiceType::Dns => "DNS",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Managed Identity",
             ServiceType::Aks => "AKS",
@@ -383,6 +410,7 @@ impl ServiceType {
             ServiceType::VirtualMachines => "VMs",
             ServiceType::Storage => "Storage",
             ServiceType::Network => "VNet",
+            ServiceType::Dns => "DNS",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Identity",
             ServiceType::Aks => "AKS",
@@ -403,6 +431,7 @@ impl ServiceType {
             ServiceType::VirtualMachines => "Virtual Machines, Disks & NICs",
             ServiceType::Storage => "Storage Accounts & Containers",
             ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
+            ServiceType::Dns => "DNS zones, Private Resolver & rulesets",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Identity => "Managed identities, service principals & app registrations",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
@@ -434,8 +463,8 @@ impl ServiceType {
                 RouteTables,
                 NatGateways,
                 PrivateEndpoints,
-                PrivateDnsZones,
             ],
+            ServiceType::Dns => &[PrivateDnsZones, DnsZones, DnsResolvers, DnsForwardingRulesets, DnsResolverPolicies],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Identity => &[Identities, ServicePrincipals, AppRegistrations],
             ServiceType::Aks => &[Clusters, NodePools],
@@ -501,8 +530,19 @@ impl ServiceType {
             "pe" | "pes" | "privateendpoint" | "privateendpoints" => {
                 (ServiceType::Network, Some(JumpView::PrivateEndpoints))
             }
+            "dns" => (ServiceType::Dns, None),
             "pdns" | "privatedns" | "privatednszone" | "privatednszones" => {
-                (ServiceType::Network, Some(JumpView::PrivateDnsZones))
+                (ServiceType::Dns, Some(JumpView::PrivateDnsZones))
+            }
+            "dnsz" | "dnszone" | "dnszones" | "publicdns" => (ServiceType::Dns, Some(JumpView::DnsZones)),
+            "dnsr" | "resolver" | "resolvers" | "dnsresolver" | "dnsresolvers" => {
+                (ServiceType::Dns, Some(JumpView::DnsResolvers))
+            }
+            "dnsfr" | "ruleset" | "rulesets" | "forwardingruleset" | "forwardingrulesets" => {
+                (ServiceType::Dns, Some(JumpView::DnsForwardingRulesets))
+            }
+            "dnsp" | "dnspolicy" | "dnspolicies" | "dnssecuritypolicy" | "dnssecuritypolicies" => {
+                (ServiceType::Dns, Some(JumpView::DnsResolverPolicies))
             }
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
@@ -565,6 +605,7 @@ impl ServiceType {
             ServiceType::VirtualMachines => "@vm",
             ServiceType::Storage => "@storage",
             ServiceType::Network => "@vnet",
+            ServiceType::Dns => "@dns",
             ServiceType::KeyVault => "@kv",
             ServiceType::Identity => "@id",
             ServiceType::Aks => "@aks",
@@ -582,12 +623,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -773,6 +814,31 @@ mod tests {
             Some(JumpView::PrivateDnsZones)
         );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/privateDnsZones/z/A/www")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/dnszones/example.com")), Some(JumpView::DnsZones));
+        assert_eq!(JumpView::DnsZones.service(), ServiceType::Dns);
+        assert_eq!(JumpView::PrivateDnsZones.service(), ServiceType::Dns, "Private DNS moved to the DNS tab");
+        assert_eq!(
+            JumpView::landing_for_arm_id(&p("Microsoft.Network/dnsForwardingRulesets/rs")),
+            Some(JumpView::DnsForwardingRulesets)
+        );
+        assert_eq!(ServiceType::from_prefix("@dns"), Some((ServiceType::Dns, None)));
+        assert_eq!(ServiceType::Dns.default_view(), JumpView::PrivateDnsZones);
+        assert_eq!(ServiceType::from_prefix("@pdns"), Some((ServiceType::Dns, Some(JumpView::PrivateDnsZones))));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/dnsZones/example.com/A/www")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/dnsResolvers/r")), Some(JumpView::DnsResolvers));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/dnsResolvers/r/inboundEndpoints/in")), None);
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.Network/dnsForwardingRulesets/rs")),
+            Some(JumpView::DnsForwardingRulesets)
+        );
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.Network/dnsResolverPolicies/pol")),
+            Some(JumpView::DnsResolverPolicies)
+        );
+        assert_eq!(
+            JumpView::landing_for_arm_id(&p("Microsoft.Network/dnsResolverDomainLists/blocked")),
+            Some(JumpView::AllResources)
+        );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s/x/y")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/containerApps/api")), Some(JumpView::ContainerApps));
         assert_eq!(

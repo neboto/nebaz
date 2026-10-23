@@ -4,8 +4,10 @@
 //! groups. All three are stateless: only a provisioning transition or
 //! failure colours a row. The edge types (public IPs, load balancers,
 //! route tables, NAT gateways) live in `network_edge.rs`, private
-//! endpoints and private DNS zones in `network_private.rs`; the provider
-//! here lists all nine.
+//! endpoints in `network_private.rs`; the provider here lists all eight.
+//! Private DNS zones (`network_private.rs`) and the rest of DNS
+//! (`network_dns.rs`) are Microsoft.Network too but list under the DNS
+//! tab (`DnsService`).
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
@@ -13,9 +15,7 @@ use crate::azure::services::network_edge::{
     LoadBalancerRow, NatGatewayRow, PublicIpRow, RouteTableRow, LOAD_BALANCERS_PATH, NAT_GATEWAYS_PATH,
     PUBLIC_IPS_PATH, ROUTE_TABLES_PATH,
 };
-use crate::azure::services::network_private::{
-    PrivateDnsZoneRow, PrivateEndpointRow, PRIVATE_DNS_API_VERSION, PRIVATE_DNS_ZONES_PATH, PRIVATE_ENDPOINTS_PATH,
-};
+use crate::azure::services::network_private::{PrivateEndpointRow, PRIVATE_ENDPOINTS_PATH};
 use crate::azure::services::{arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope};
 use crate::error::{Error, Result};
 use crate::event::Event;
@@ -36,7 +36,8 @@ crate::sections! {
         Peerings "Peerings",
         Access "Access" => crate::app::App::trigger_access,
         Activity "Activity" => crate::app::App::trigger_activity,
-        Related "Related",
+        // The DNS resolvers, rulesets, policies and zones pointing here.
+        Related "Related" => crate::app::App::trigger_dns_topology,
         Tags "Tags",
     ]
 }
@@ -47,7 +48,8 @@ crate::sections! {
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
         Activity "Activity" => crate::app::App::trigger_activity,
-        Related "Related",
+        // The DNS resolver endpoints placed in it.
+        Related "Related" => crate::app::App::trigger_dns_topology,
         Tags "Tags",
     ]
 }
@@ -621,7 +623,7 @@ impl NetworkService {
 
     /// The sub-tabs that are one plain list each (every Network type but
     /// VNets, their embedded subnets and NSGs): path, api-version, and
-    /// the loading label. Private DNS is its own spec, on its own version.
+    /// the loading label.
     fn flat_list(view: JumpView) -> Option<(&'static str, &'static str, &'static str)> {
         Some(match view {
             JumpView::PublicIps => (PUBLIC_IPS_PATH, NETWORK_API_VERSION, "Listing public IPs…"),
@@ -629,7 +631,6 @@ impl NetworkService {
             JumpView::RouteTables => (ROUTE_TABLES_PATH, NETWORK_API_VERSION, "Listing route tables…"),
             JumpView::NatGateways => (NAT_GATEWAYS_PATH, NETWORK_API_VERSION, "Listing NAT gateways…"),
             JumpView::PrivateEndpoints => (PRIVATE_ENDPOINTS_PATH, NETWORK_API_VERSION, "Listing private endpoints…"),
-            JumpView::PrivateDnsZones => (PRIVATE_DNS_ZONES_PATH, PRIVATE_DNS_API_VERSION, "Listing private DNS zones…"),
             _ => return None,
         })
     }
@@ -650,9 +651,6 @@ impl NetworkService {
             }
             JumpView::PrivateEndpoints => {
                 Self::boxed(page.iter().filter_map(|v| PrivateEndpointRow::from_json(v, tenant)).collect())
-            }
-            JumpView::PrivateDnsZones => {
-                Self::boxed(page.iter().filter_map(|v| PrivateDnsZoneRow::from_json(v, tenant)).collect())
             }
             _ => Vec::new(),
         }

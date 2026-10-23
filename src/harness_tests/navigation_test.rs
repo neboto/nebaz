@@ -84,6 +84,46 @@ async fn a_related_jump_lands_when_the_target_list_loads() {
     assert_eq!(h.app.get_selected_resource().map(|r| r.name().to_string()).as_deref(), Some("vm-1"));
 }
 
+/// A VNet's Related asks for the subscription's DNS topology; once it
+/// lands, the resolver in the VNet and the ruleset linked to it are lines
+/// that jump to the DNS tab.
+#[tokio::test]
+async fn a_vnet_related_lists_its_dns_once_the_topology_lands() {
+    let mut h = Harness::new().await;
+    h.open(JumpView::VirtualNetworks).await;
+    h.land(vec![super::mocks::vnet("vnet-hub", "westeurope")]).await;
+    h.press(KeyCode::Enter).await;
+    let related = h.section_labels().iter().position(|l| *l == "Related").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(related).unwrap())).await;
+
+    let key = format!("/subscriptions/{}", super::SUB_DEV);
+    assert!(
+        matches!(h.app.lazy.dns_topology.get(&key), Some(crate::lazy::Lazy::Loading)),
+        "entering Related fired the topology fetch"
+    );
+    assert!(h.app.get_detail_lines().iter().any(|(k, v)| k == "DNS links" && v == "Loading…"));
+
+    let topology = super::mocks::dns_topology("vnet-hub", "vnet-hub");
+    let apply: Box<dyn FnOnce(&mut App) + Send> =
+        Box::new(move |app: &mut App| app.lazy.dns_topology.apply(key, Ok(topology)));
+    let epoch = h.app.lazy.epoch();
+    h.send(Event::Lazy(LazyApply { epoch, apply })).await;
+
+    let resolver = arm_id("Microsoft.Network/dnsResolvers/dnspr-hub");
+    let ruleset = arm_id("Microsoft.Network/dnsForwardingRulesets/rs-onprem");
+    let lines = h.app.get_detail_lines();
+    assert!(lines.contains(&("DNS resolver dnspr-hub".to_string(), resolver.clone())), "{lines:#?}");
+    assert!(lines.contains(&("Forwarding ruleset rs-onprem".to_string(), ruleset)), "{lines:#?}");
+    assert!(h.render().contains("DNS resolver dnspr-hub"));
+
+    // Enter on the resolver line opens the DNS tab's Resolvers sub-tab.
+    h.cursor_to_value(&resolver).await;
+    h.press(KeyCode::Enter).await;
+    assert_eq!(h.app.current_service, Some(ServiceType::Dns));
+    assert_eq!(h.app.current_view, JumpView::DnsResolvers);
+    assert_eq!(h.app.pending_jump, Some((resolver, true)));
+}
+
 /// A jump whose list ends without the row clears with a message.
 #[tokio::test]
 async fn a_jump_to_a_missing_row_clears_when_the_load_ends() {

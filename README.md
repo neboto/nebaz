@@ -125,7 +125,8 @@ cargo run -- -s app    # App Service apps (2 Functions, 3 Plans); 2 on a row loa
 cargo run -- -s sql    # SQL servers; 3 / 4 on a row list databases and firewall rules
 cargo run -- -s acr    # container registries; 3 / 4 on a row list replications and webhooks
 cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
-cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe / pdns)
+cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe)
+cargo run -- -s dns    # DNS: Private DNS, zones, Private Resolver (3), rulesets (4), DNS policies (5); -s dnsr for resolvers
 cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments
 cargo run -- -s law    # Log Analytics workspaces (-s appi for App Insights)
 cargo run -- -s pp     # Power Platform enterprise policies; a delegated subnet's Related links back

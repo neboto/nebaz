@@ -95,10 +95,25 @@ each one backs are in the catalog table
   `Microsoft.Network/loadBalancers/read` (frontends, pools, rules and
   probes arrive embedded); route tables: `Microsoft.Network/routeTables/read`;
   NAT gateways: `Microsoft.Network/natGateways/read`; private endpoints:
-  `Microsoft.Network/privateEndpoints/read`; private DNS zones:
+  `Microsoft.Network/privateEndpoints/read`.
+- **DNS**: private DNS zones:
   `Microsoft.Network/privateDnsZones/read`, and the lazy Records and VNet
   links sections: `Microsoft.Network/privateDnsZones/ALL/read`,
-  `Microsoft.Network/privateDnsZones/virtualNetworkLinks/read`.
+  `Microsoft.Network/privateDnsZones/virtualNetworkLinks/read`. Public DNS
+  zones: `Microsoft.Network/dnszones/read`, and the lazy Records section:
+  `Microsoft.Network/dnszones/all/read`. DNS Private Resolver:
+  `Microsoft.Network/dnsResolvers/read`,
+  `Microsoft.Network/dnsResolvers/inboundEndpoints/read`,
+  `Microsoft.Network/dnsResolvers/outboundEndpoints/read`; forwarding
+  rulesets: `Microsoft.Network/dnsForwardingRulesets/read`,
+  `Microsoft.Network/dnsForwardingRulesets/forwardingRules/read`,
+  `Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks/read`; DNS
+  security policies: `Microsoft.Network/dnsResolverPolicies/read`,
+  `Microsoft.Network/dnsResolverPolicies/dnsSecurityRules/read`,
+  `Microsoft.Network/dnsResolverPolicies/virtualNetworkLinks/read`. The
+  VNet ⇄ resolver lookups the resolver API offers
+  (`virtualNetworks/listDnsResolvers`, `listDnsForwardingRulesets`) are
+  `POST`s and are never sent; the links are gathered from the `GET`s above.
 - **Key Vault**: `Microsoft.KeyVault/vaults/read`; the lazy Secrets and Keys
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:

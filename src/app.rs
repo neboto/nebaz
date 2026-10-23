@@ -10,7 +10,8 @@ use crate::azure::client::AzureClients;
 use crate::azure::location::{Location, LocationRow, ALL_DISPLAY};
 use crate::azure::resource::{Resource, ResourceState};
 use crate::azure::service::{JumpView, ServiceType};
-use crate::azure::resource::{name_of_id, subscription_of};
+use crate::azure::resource::{name_of_id, subscription_id_of, subscription_of};
+use crate::azure::services::related_lines;
 use crate::azure::services::aks::{
     cluster_section_lines, node_pool_section_lines, ClusterDetailSection, ClusterRow, NodePoolDetailSection,
     NodePoolRow,
@@ -43,6 +44,12 @@ use crate::azure::services::directory::{
 };
 use crate::azure::services::identity::{
     federated_credentials_path, identity_section_lines, IdentityDetailSection, IdentityRow, IDENTITY_API_VERSION,
+};
+use crate::azure::services::network_dns::{
+    dns_child_path, dns_policy_section_lines, dns_resolver_section_lines, dns_ruleset_section_lines,
+    dns_zone_section_lines, fetch_dns_topology, subnet_dns_related, vnet_dns_related, DnsPolicyDetailSection,
+    DnsPolicyRow, DnsResolverDetailSection, DnsResolverRow, DnsRulesetDetailSection, DnsRulesetRow,
+    DnsTopology, DnsZoneDetailSection, DnsZoneRow, DNS_API_VERSION, DNS_RECORDS_MAX, DNS_RESOLVER_API_VERSION,
 };
 use crate::azure::services::network_private::{
     private_dns_zone_section_lines, private_endpoint_section_lines, zone_child_path, PrivateDnsZoneDetailSection,
@@ -1450,6 +1457,57 @@ impl App {
         );
     }
 
+    /// On-enter hook for a public DNS zone's Records (and Related, for the
+    /// alias targets): every record set, capped like Activity.
+    pub fn trigger_public_dns_records(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.public_dns_records,
+            event_tx,
+            |c, id| c.list_fetch_query_capped(&dns_child_path(id, "all"), DNS_API_VERSION, Vec::new(), DNS_RECORDS_MAX),
+        );
+    }
+
+    /// On-enter hook for a forwarding ruleset's Rules.
+    pub fn trigger_dns_forwarding_rules(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.dns_forwarding_rules,
+            event_tx,
+            |c, id| c.list_fetch(&dns_child_path(id, "forwardingRules"), DNS_RESOLVER_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a DNS security policy's Rules.
+    pub fn trigger_dns_security_rules(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.dns_security_rules,
+            event_tx,
+            |c, id| c.list_fetch(&dns_child_path(id, "dnsSecurityRules"), DNS_RESOLVER_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for every DNS link section (a resolver's Endpoints and
+    /// Rulesets, VNet links, and the DNS lines of a VNet's or subnet's
+    /// Related): the selected row's subscription's DNS topology, once per
+    /// subscription per session.
+    pub fn trigger_dns_topology(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(key) = app.get_selected_resource_id().and_then(|id| subscription_id_of(&id)) else {
+            return;
+        };
+        let arm = app
+            .azure_clients
+            .arm_for_subscription(subscription_of(&key).unwrap_or_default())
+            .map_err(|e| e.to_string());
+        let sub = key.clone();
+        app.trigger_lazy(|s| &mut s.dns_topology, key, event_tx, move || async move {
+            fetch_dns_topology(arm?, sub).await
+        });
+    }
+
+    /// The loaded (or loading) DNS topology of an ARM id's subscription.
+    fn dns_topology_for(&self, id: &str) -> Option<&crate::lazy::Lazy<DnsTopology>> {
+        subscription_id_of(id).and_then(|k| self.lazy.dns_topology.get(&k))
+    }
+
     /// On-enter hook for every type's Access section: the role assignments
     /// that apply at the row's ARM id, and the subscription's role names.
     pub fn trigger_access(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -2063,7 +2121,13 @@ impl App {
             ));
         }
         if let Some(r) = any.downcast_ref::<VnetRow>() {
-            return Some(vnet_section_lines(r, VnetDetailSection::from_index(idx)));
+            let section = VnetDetailSection::from_index(idx);
+            if section == VnetDetailSection::Related {
+                let mut rel = r.related();
+                rel.extend(vnet_dns_related(self.dns_topology_for(r.id()), r.id()));
+                return Some(related_lines(rel));
+            }
+            return Some(vnet_section_lines(r, section));
         }
         if let Some(r) = any.downcast_ref::<SubnetRow>() {
             // The reverse link to a Power Platform policy: the warm
@@ -2072,11 +2136,9 @@ impl App {
                 self.cache
                     .get_ref(&ServiceType::PowerPlatform, sub, Some(JumpView::EnterprisePolicies.as_str()))
             });
-            return Some(subnet_section_lines(
-                r,
-                SubnetDetailSection::from_index(idx),
-                subnet_policy_lines(r, policies),
-            ));
+            let mut extra = subnet_policy_lines(r, policies);
+            extra.extend(subnet_dns_related(self.dns_topology_for(r.id()), r.id()));
+            return Some(subnet_section_lines(r, SubnetDetailSection::from_index(idx), extra));
         }
         if let Some(r) = any.downcast_ref::<NsgRow>() {
             return Some(nsg_section_lines(r, NsgDetailSection::from_index(idx)));
@@ -2188,6 +2250,36 @@ impl App {
             if let Some(r) = any.downcast_ref::<AppRegistrationRow>() {
                 return Some(app_registration_section_lines(r, AppRegistrationDetailSection::from_index(idx), &lazy, now));
             }
+        }
+        if let Some(r) = any.downcast_ref::<DnsZoneRow>() {
+            return Some(dns_zone_section_lines(
+                r,
+                DnsZoneDetailSection::from_index(idx),
+                self.lazy.public_dns_records.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<DnsResolverRow>() {
+            return Some(dns_resolver_section_lines(
+                r,
+                DnsResolverDetailSection::from_index(idx),
+                self.dns_topology_for(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<DnsRulesetRow>() {
+            return Some(dns_ruleset_section_lines(
+                r,
+                DnsRulesetDetailSection::from_index(idx),
+                self.lazy.dns_forwarding_rules.get(r.id()),
+                self.dns_topology_for(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<DnsPolicyRow>() {
+            return Some(dns_policy_section_lines(
+                r,
+                DnsPolicyDetailSection::from_index(idx),
+                self.lazy.dns_security_rules.get(r.id()),
+                self.dns_topology_for(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<IdentityRow>() {
             return Some(identity_section_lines(

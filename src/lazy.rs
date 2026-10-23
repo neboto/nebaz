@@ -127,6 +127,18 @@ pub struct LazyStore {
     pub dns_records: LazyMap<Vec<serde_json::Value>>,
     /// `GET {zone}/virtualNetworkLinks`, keyed by zone id.
     pub dns_vnet_links: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {zone}/all` — a public DNS zone's record sets, keyed by zone
+    /// id; capped at `DNS_RECORDS_MAX`.
+    pub public_dns_records: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {ruleset}/forwardingRules`, keyed by ruleset id.
+    pub dns_forwarding_rules: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {policy}/dnsSecurityRules`, keyed by policy id.
+    pub dns_security_rules: LazyMap<Vec<serde_json::Value>>,
+    /// Every resolver endpoint and ruleset / policy / private zone VNet
+    /// link in a subscription, keyed by `/subscriptions/{sub}`: what the
+    /// resolver, ruleset and policy sections and the VNet and subnet
+    /// Related sections read.
+    pub dns_topology: LazyMap<crate::azure::services::network_dns::DnsTopology>,
 
     // ── App Service ──────────────────────────────────────────────────────
     /// `GET {site}/config/web` — the Configuration section, keyed by site

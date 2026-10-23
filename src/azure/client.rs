@@ -22,6 +22,7 @@ use crate::azure::services::foundry::FoundryService;
 use crate::azure::services::container_registry::ContainerRegistryService;
 use crate::azure::services::cosmos::CosmosService;
 use crate::azure::services::monitor::MonitorService;
+use crate::azure::services::network_dns::DnsService;
 use crate::azure::services::power_platform::PowerPlatformService;
 use crate::azure::services::sql::SqlService;
 use crate::azure::services::identity::IdentityService;
@@ -291,6 +292,7 @@ impl AzureClients {
             ServiceType::Monitor => Arc::new(MonitorService::new(scope)),
             ServiceType::PowerPlatform => Arc::new(PowerPlatformService::new(scope)),
             ServiceType::ContainerApps => Arc::new(ContainerAppsService::new(scope)),
+            ServiceType::Dns => Arc::new(DnsService::new(scope)),
         }
     }
 

@@ -180,6 +180,13 @@ subscription changes, so no lazy data can survive a switch — reset is by
 construction, not by convention. A location change never touches it.
 _Avoid_: subscription-scoped state (as a scattered convention)
 
+**DNS topology**:
+One lazy fetch per subscription that gathers every DNS link no list body
+carries: resolver endpoints, and the VNet links of forwarding rulesets, DNS
+security policies and private DNS zones. Several sections and the VNet and
+subnet Related sections read the same entry.
+_Avoid_: DNS graph, DNS map
+
 **List cache**:
 The store of fetched lists, one entry per service, subscription and sub-tab.
 It outlives a subscription switch, so switching back is instant, and a
