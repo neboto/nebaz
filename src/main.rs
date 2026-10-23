@@ -140,6 +140,8 @@ async fn run(cli: cli::Cli) -> Result<()> {
         // Flat detail view: fire the lazy sections once per focused
         // resource and keep the tab bar on the section under the cursor.
         app.flat_tick(&event_tx);
+        // An armed `X`: fire its lazy sections, write once they land.
+        app.export_tick(&event_tx);
 
         if let Some(ref mut t) = tui {
             if std::mem::take(&mut app.redraw_requested) {

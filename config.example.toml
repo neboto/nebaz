@@ -70,6 +70,17 @@
 # Separators are optional; "mocha" and "latte" also resolve.
 # theme = "gruvbox-dark"
 
+# ── Export ───────────────────────────────────────────────────────────────────
+
+# Which files `X` (one resource) and `Ctrl-X` (the list) write: any of
+# "json", "csv", "md" ("markdown" also works). Default all three. An unknown
+# value warns at startup and is ignored.
+# export_formats = ["json", "csv", "md"]
+
+# Where exports land (`~/` expanded, created on the first export). Default:
+# the working directory. The NEBAZ_EXPORT_DIR environment variable wins.
+# export_dir = "~/nebaz-exports"
+
 # ── Tables (keep these last: a `[table]` header claims every key below it) ──
 
 # Per-color overrides by palette field name — #rrggbb or an ANSI color name.

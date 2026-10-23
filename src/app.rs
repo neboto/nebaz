@@ -119,6 +119,8 @@ mod all_search;
 /// The metrics view (`m`): open, fetch, keys.
 mod metrics;
 mod network_lens;
+/// `X` / `Ctrl-X`: the export wait and the writes.
+mod export;
 
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
 
@@ -536,6 +538,13 @@ pub struct App {
     pub watch: WatchState,
     pub watch_staging: Option<Vec<Box<dyn Resource>>>,
     pub deep_export_progress: Option<String>,
+    /// The export `X` armed, finished by `export_tick` (see `app/export.rs`).
+    pub pending_export: Option<export::PendingExport>,
+    /// Which formats and where exports write (config `export_formats` /
+    /// `export_dir`).
+    pub export_options: crate::export::ExportOptions,
+    /// The files the last export wrote (the harness reads them back).
+    pub last_export_paths: Vec<std::path::PathBuf>,
 
     // `$EDITOR`.
     pub editor_requested: bool,
@@ -573,6 +582,12 @@ impl App {
             config.theme_colors.as_ref(),
         );
         crate::ui::theme::init_palette(palette);
+        let (export_formats, export_warnings) =
+            crate::export::ExportFormats::from_config(config.export_formats.as_deref());
+        let export_options = crate::export::ExportOptions {
+            formats: export_formats,
+            dir: config.export_dir.as_deref().map(crate::export::expand_home),
+        };
 
         let subscription_id = azure_clients.current_subscription().map(str::to_string);
         let subscription_name = azure_clients.current_subscription_name().map(str::to_string);
@@ -679,6 +694,9 @@ impl App {
             watch: WatchState::new(config.watch.unwrap_or(false), config.watch_interval),
             watch_staging: None,
             deep_export_progress: None,
+            pending_export: None,
+            export_options,
+            last_export_paths: Vec::new(),
             editor_requested: false,
             network_lens: None,
             network_lens_generation: 0,
@@ -694,6 +712,9 @@ impl App {
         }
         if !theme_warnings.is_empty() {
             app.error_message = Some(format!("theme: {}", theme_warnings.join("; ")));
+        }
+        if !export_warnings.is_empty() {
+            app.error_message = Some(export_warnings.join("; "));
         }
         if let Some(s) = current_service {
             app.visited_services.insert(s);
@@ -3311,6 +3332,16 @@ impl App {
             return;
         }
 
+        // An armed export: Esc cancels it, from either pane (the detail
+        // filter's input keeps its own Esc).
+        if key.code == KeyCode::Esc
+            && self.pending_export.is_some()
+            && !(self.details_focused && self.detail_search_active)
+        {
+            self.cancel_pending_export();
+            return;
+        }
+
         // Detail pane focused.
         if self.details_focused {
             // `/` filter input owns the keyboard while typing.
@@ -3533,8 +3564,6 @@ impl App {
                     self.toast("Bookmarked");
                 }
             }
-            KeyCode::Char('X') if key.modifiers.contains(KeyModifiers::CONTROL) => self.export_list(),
-            KeyCode::Char('X') => self.export_detail(),
             _ => self.handle_global_key(key, event_tx),
         }
     }
@@ -3548,6 +3577,11 @@ impl App {
             // `\` works from either pane so the preview follows the mode.
             KeyCode::Char('\\') => self.toggle_detail_flat_mode(),
             KeyCode::Char('q') => self.running = false,
+            // Ctrl-X arrives as `x` (or `X` with Shift) plus CONTROL.
+            KeyCode::Char('x') | KeyCode::Char('X') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.export_list()
+            }
+            KeyCode::Char('X') => self.export_current(_event_tx),
             KeyCode::Char('?') => {
                 self.help_visible = true;
                 self.help_scroll = 0;
@@ -3711,38 +3745,6 @@ impl App {
                 }
             }
         });
-    }
-
-    fn export_list(&mut self) {
-        let rows: Vec<&dyn Resource> = self
-            .filtered_resources
-            .iter()
-            .map(|&i| self.resources[i].as_ref())
-            .collect();
-        let label = self
-            .current_service
-            .map(|s| s.short_name().to_string())
-            .unwrap_or_else(|| "resources".into());
-        match crate::export::export_list(&rows, &label) {
-            Ok(paths) => self.toast(format!("Exported {} file(s)", paths.len())),
-            Err(e) => self.error_message = Some(format!("Export failed: {}", e)),
-        }
-    }
-
-    fn export_detail(&mut self) {
-        let Some(resource) = self.get_selected_resource() else {
-            return;
-        };
-        let sections = self.detail_sections_snapshot();
-        if crate::export::any_section_unloaded(&sections) {
-            self.error_message = Some("Some sections not loaded yet — open them, then X again".into());
-            return;
-        }
-        let label = resource.name().to_string();
-        match crate::export::export_detail(resource, &sections, &label) {
-            Ok(paths) => self.toast(format!("Exported {} file(s)", paths.len())),
-            Err(e) => self.error_message = Some(format!("Export failed: {}", e)),
-        }
     }
 
     // ── Picker keys ─────────────────────────────────────────────────────

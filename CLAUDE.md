@@ -142,7 +142,10 @@ typed tab.
 
 **Copy** (`src/clipboard.rs`): OSC 52 to the terminal (tmux passthrough)
 plus one long-lived arboard handle; `y` copies the id, `C` the `az`
-command. Search (`src/search/`), macros (`src/macros.rs`), bookmarks,
+command. **Export** (`src/export.rs`, `src/app/export.rs`): `X` arms a
+wait that fires every section's hook and writes once nothing reads
+`Loading…` (2-minute limit, `Esc` cancels); every format comes from the
+same captured sections. Search (`src/search/`), macros (`src/macros.rs`), bookmarks,
 export (`src/export.rs`), themes and `$EDITOR` are neboto's, ported
 verbatim where the concept is unchanged.
 

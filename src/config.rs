@@ -57,6 +57,18 @@ pub struct Config {
     /// Start with long detail values wrapped onto continuation rows instead
     /// of clipped at the pane edge. `Ctrl-W` toggles it at runtime.
     pub detail_wrap: Option<bool>,
+    /// Which files `X` / `Ctrl-X` write: any of `"json"`, `"csv"`, `"md"`
+    /// (`"markdown"` also works). Default all three. Unknown values warn at
+    /// startup and are ignored; a list with no valid value writes all three.
+    ///
+    /// ```toml
+    /// export_formats = ["json"]
+    /// ```
+    pub export_formats: Option<Vec<String>>,
+    /// Directory exports are written to (`~/` expanded, created on the
+    /// first export). Default: the working directory. The
+    /// `NEBAZ_EXPORT_DIR` environment variable overrides it.
+    pub export_dir: Option<String>,
     /// Base resource-cache freshness window in seconds (default 300). A list
     /// reload within this window serves cached data instead of refetching.
     pub cache_ttl: Option<u64>,
@@ -231,6 +243,8 @@ default_location = "WestEurope"
         assert_eq!(config.default_location.as_deref(), Some("westeurope"));
         assert_eq!(config.endpoint_url.as_deref(), Some("https://management.usgovcloudapi.net"));
         assert_eq!(config.theme.as_deref(), Some("gruvbox-dark"));
+        assert_eq!(config.export_formats.as_ref().map(Vec::len), Some(3));
+        assert_eq!(config.export_dir.as_deref(), Some("~/nebaz-exports"));
         assert_eq!(config.cache_ttls.as_ref().and_then(|m| m.get("storage")), Some(&600));
         assert_eq!(config.theme_colors.as_ref().and_then(|m| m.get("accent")).map(String::as_str), Some("#ff8800"));
         assert_eq!(config.pinned_service_types(), (
@@ -282,6 +296,19 @@ nosuchservice = 5
         );
         // The unknown prefix parses but resolves to nothing.
         assert_eq!(overrides.len(), 2);
+    }
+
+    #[test]
+    fn parses_export_keys() {
+        let config: Config = toml::from_str(
+            r#"
+export_formats = ["json", "md"]
+export_dir = "~/nebaz-exports"
+"#,
+        )
+        .unwrap();
+        assert_eq!(config.export_formats, Some(vec!["json".to_string(), "md".to_string()]));
+        assert_eq!(config.export_dir.as_deref(), Some("~/nebaz-exports"));
     }
 
     #[test]

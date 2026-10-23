@@ -268,10 +268,13 @@ An export of list-row fields only — one row per resource, no sections
 fetched. Costs zero Azure calls, so it is never capped.
 _Avoid_: inventory export, list export
 
-**Press-again export**:
-The two-step deep export of not-yet-loaded data: the first press fires the
-lazy triggers and says so; pressing again once they land exports complete
-data. The selection survives the first press by definition.
+**Export wait**:
+How a deep export gets its lazy data: the press **arms** the export, fires
+every section's on-enter hook, and the main loop writes the files once no
+section reads `Loading…` (at once when all are warm), or after two minutes
+with the still-loading sections marked not loaded. `Esc` cancels. The rows
+are held by id, so the wait outlives a positional selection.
+_Avoid_: press-again export (what it replaced)
 
 ### Macros
 

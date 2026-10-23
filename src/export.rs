@@ -1,14 +1,22 @@
-// ported from neboto-tui src/export.rs @ d483900
-//! Export the current resource list or a single resource's detail to JSON, CSV,
-//! and Markdown files in the working directory. Used by the `X` key.
+// ported from neboto-tui src/export.rs @ d483900; the export fixes re-ported
+// from @ 03760c0 (bcfb8d1, feb0ebe, 6b03ab1; see docs/PORTED-FROM-NEBOTO.md)
+//! Export the current list (`Ctrl-X`) or one resource's detail (`X`) to
+//! JSON, CSV and Markdown files (the formats config `export_formats`
+//! enables, in `export_dir`; `NEBAZ_EXPORT_DIR` wins).
 //!
-//! Fidelity: the JSON/CSV outputs each carry the resource's core fields
-//! (type/id/name/state), the real key:value pairs from `details()` (group
-//! headers, table rows, and spacers are skipped), and its tags. The Markdown
-//! output instead mirrors the on-screen layout: a list becomes a table, and a
-//! single resource becomes a document with one `##` heading per detail-pane
-//! section (passed in by the caller via `get_detail_lines`), so the split-pane
-//! richness the UI shows is preserved rather than the thin `details()` fallback.
+//! Every format of one export carries the same data:
+//! - a list: the row's core fields (type/id/name/state), every list-level
+//!   field from `details()` and its tags, over one column set
+//!   (`list_columns`) shared by the CSV and the Markdown table; the JSON is
+//!   one object per row with the same keys.
+//! - one resource: the detail-pane sections the caller captured
+//!   (`App::detail_sections_snapshot`): the JSON is the `detail_json`
+//!   object, the CSV the long `ID,Section,Key,Value` form, the Markdown a
+//!   document with a heading per section.
+//!
+//! Only what the panes render is exported, so a credential the service
+//! module strips before the row keeps its JSON (App Insights keys,
+//! Container Apps secret values) cannot reach a file.
 
 use crate::azure::resource::Resource;
 use crate::error::Result;
@@ -45,15 +53,22 @@ fn tags_sorted(resource: &dyn Resource) -> Vec<(String, String)> {
     tags
 }
 
+/// The keys every `resource_object` carries, whatever the type.
+pub(crate) const CORE_KEYS: [&str; 5] = ["type", "id", "name", "state", "tags"];
+
 /// JSON object for one resource: core fields + details + nested tags.
-fn resource_object(resource: &dyn Resource) -> Value {
+pub(crate) fn resource_object(resource: &dyn Resource) -> Value {
     let mut obj = Map::new();
     obj.insert("type".into(), json!(resource.resource_type()));
     obj.insert("id".into(), json!(resource.id()));
     obj.insert("name".into(), json!(resource.name()));
     obj.insert("state".into(), json!(resource.state_label()));
+    // The core keys are the stable contract every row carries;
+    // a list-level field that happens to share a name must not replace one.
     for (k, v) in resource_fields(resource) {
-        obj.insert(k, json!(v));
+        if !CORE_KEYS.contains(&k.as_str()) {
+            obj.insert(k, json!(v));
+        }
     }
     let mut tags = Map::new();
     for (k, v) in tags_sorted(resource) {
@@ -160,6 +175,118 @@ fn is_unloaded(lines: &[(String, String)]) -> bool {
     saw_content
 }
 
+/// Where a TUI key hint starts in `s`, if it has one: `press <key> …` at the
+/// start of the text or after a separator (`—`, `·`, `│`, `→`, `(`). The
+/// renderers write hints like "press t to tail" into the rows because the
+/// pane is where the key works; an export has no keys, so
+/// the hint is noise there. Hints are always trailing, so everything from the
+/// separator on goes. The key token is short (`t`, `2`, `⏎`, `Enter`), which
+/// keeps prose like "Express" or "press release" out of it.
+fn key_hint_start(s: &str) -> Option<usize> {
+    if is_key_chip_run(s) {
+        return Some(0);
+    }
+    let lower = s.to_ascii_lowercase();
+    for (i, _) in lower.match_indices("press ") {
+        if i > 0 && lower.as_bytes()[i - 1].is_ascii_alphanumeric() {
+            continue;
+        }
+        let token = s[i + 6..].split_whitespace().next().unwrap_or("");
+        let token = token.trim_end_matches([',', '.', ')']);
+        if token.is_empty() || !(token.chars().count() <= 2 || token.eq_ignore_ascii_case("enter")) {
+            continue;
+        }
+        let before = s[..i].trim_end();
+        if before.is_empty() {
+            return Some(0);
+        }
+        for sep in ['(', '—', '·', '│', '→'] {
+            if before.ends_with(sep) {
+                return Some(before.len() - sep.len_utf8());
+            }
+        }
+    }
+    None
+}
+
+/// A row that is nothing but key chips — `x reveal · Y copy`, the secret
+/// panes' Value row: two or more `<key> <verb>` chunks joined by ` · `,
+/// each a single non-digit key and one or two lowercase words.
+fn is_key_chip_run(s: &str) -> bool {
+    let chunks: Vec<&str> = s.trim().split(" · ").collect();
+    chunks.len() >= 2
+        && chunks.iter().all(|chunk| {
+            let mut words = chunk.split(' ');
+            let key = words.next().unwrap_or("");
+            let rest: Vec<&str> = words.collect();
+            key.chars().count() == 1
+                && !key.starts_with(|c: char| c.is_ascii_digit())
+                && (1..=2).contains(&rest.len())
+                && rest.iter().all(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase()))
+        })
+}
+
+/// `s` with a trailing key hint removed (see `key_hint_start`).
+fn strip_key_hint(s: &str) -> &str {
+    match key_hint_start(s) {
+        Some(at) => s[..at].trim_end(),
+        None => s,
+    }
+}
+
+/// The rows as an export writes them: key hints stripped, and a row that was
+/// nothing but a hint dropped (rather than left as an empty key/value, which
+/// would read as a spacer or, worse, a group header).
+fn export_rows(lines: &[(String, String)]) -> Vec<(String, String)> {
+    let mut out = Vec::with_capacity(lines.len());
+    for (k, v) in lines {
+        if k.is_empty() && v.is_empty() {
+            out.push((String::new(), String::new()));
+            continue;
+        }
+        let key = strip_key_hint(k);
+        let value = strip_key_hint(v);
+        let key_hinted = key.len() != k.len();
+        let value_hinted = value.len() != v.len();
+        if (key_hinted && key.trim().is_empty() && value.is_empty())
+            || (value_hinted && value.trim().is_empty())
+        {
+            continue;
+        }
+        out.push((key.to_string(), value.to_string()));
+    }
+    out
+}
+
+/// A status glyph leading a value (`✓ UPDATE_COMPLETE`) is how the pane
+/// colours it; in JSON it's noise a consumer would have to strip before
+/// comparing. A bare glyph (`✓` meaning "yes") is the whole value, so kept.
+fn strip_status_glyph(v: &str) -> &str {
+    for g in ["✓ ", "✗ ", "● ", "○ "] {
+        if let Some(rest) = v.strip_prefix(g) {
+            if !rest.trim().is_empty() {
+                return rest;
+            }
+        }
+    }
+    v
+}
+
+/// Remove the indent every line in a plain-content run shares — the pane's
+/// two-space body margin, plus any a code preview carried — keeping the
+/// relative indentation a template or fixed-width table needs.
+fn dedent(lines: &mut [String]) {
+    let indent = lines
+        .iter()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.len() - l.trim_start_matches(' ').len())
+        .min()
+        .unwrap_or(0);
+    for l in lines.iter_mut() {
+        *l = l.get(indent..).map(str::to_string).unwrap_or_default();
+    }
+}
+
 /// Render detail (key, value) rows — the same tuples the UI styles — into
 /// Markdown, honouring the conventions in `style_detail_row`:
 /// - group header (`("X", "")`)            → bold line
@@ -185,6 +312,7 @@ fn lines_to_markdown(lines: &[(String, String)]) -> String {
         if code.is_empty() {
             return;
         }
+        dedent(code);
         out.push_str("```\n");
         for line in code.drain(..) {
             out.push_str(&line);
@@ -193,7 +321,7 @@ fn lines_to_markdown(lines: &[(String, String)]) -> String {
         out.push_str("```\n\n");
     }
 
-    for (k, v) in lines {
+    for (k, v) in &export_rows(lines) {
         let blank = k.is_empty() && v.is_empty();
         let plain = v.is_empty() && k.starts_with(' ');
         let header = v.is_empty() && !k.is_empty() && !k.starts_with(' ');
@@ -220,7 +348,8 @@ fn lines_to_markdown(lines: &[(String, String)]) -> String {
 }
 
 /// Insert into `map` under `key`, suffixing `" (2)"`, `" (3)"`, … on a
-/// collision so repeated detail keys (e.g. several `Rule` rows) all survive.
+/// collision. Only for section names (a contract key, so never an array);
+/// rows inside a section use `insert_repeated`.
 fn insert_unique(map: &mut Map<String, Value>, key: &str, value: Value) {
     if !map.contains_key(key) {
         map.insert(key.to_string(), value);
@@ -235,22 +364,53 @@ fn insert_unique(map: &mut Map<String, Value>, key: &str, value: Value) {
     }
 }
 
-/// One detail-pane section's rows as a JSON value, honouring the
-/// `style_detail_row` conventions:
-/// - group header (`("X", "")`)    → a nested object under that name
-/// - key/value row                 → a string field (duplicates suffixed)
-/// - plain content line (`(" …", "")`) → collected into a `"content"` array
-///   (verbatim, so fixed-width tables keep their alignment)
-/// - blank spacer                  → dropped
-fn lines_to_json(lines: &[(String, String)]) -> Value {
-    let mut root = Map::new();
-    let mut group: Option<(String, Map<String, Value>)> = None;
-
-    fn flush(group: &mut Option<(String, Map<String, Value>)>, root: &mut Map<String, Value>) {
-        if let Some((name, map)) = group.take() {
-            insert_unique(root, &name, Value::Object(map));
+/// Insert into `map` under `key`; a repeated key collects its values into
+/// an array in row order, so a section that is really a list of records
+/// (stack events per logical id, task ids per status) reads as one.
+fn insert_repeated(map: &mut Map<String, Value>, key: &str, value: Value) {
+    match map.get_mut(key) {
+        None => {
+            map.insert(key.to_string(), value);
+        }
+        Some(Value::Array(arr)) => arr.push(value),
+        Some(prev) => {
+            let first = prev.take();
+            *prev = Value::Array(vec![first, value]);
         }
     }
+}
+
+/// A group header's name without the count the pane shows beside it —
+/// `Inbound (2 rules)`, `Streams (3, newest first)`, `Members (1)` — so the
+/// JSON key doesn't change whenever the count does. Only a parenthetical
+/// that starts with a number goes: `Size (GiB)` keeps its unit.
+fn strip_count(name: &str) -> &str {
+    let Some(body) = name.strip_suffix(')') else { return name };
+    let Some(open) = body.rfind(" (") else { return name };
+    let inner = &body[open + 2..];
+    let digits = inner.len() - inner.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+    let rest = &inner[digits..];
+    if digits > 0 && (rest.is_empty() || rest.starts_with(' ') || rest.starts_with(',')) {
+        name[..open].trim_end()
+    } else {
+        name
+    }
+}
+
+/// One detail-pane section's rows as a JSON value, honouring the
+/// `style_detail_row` conventions:
+/// - group header (`("X", "")`)    → a nested object under that name, its
+///   count suffix dropped (`strip_count`)
+/// - key/value row                 → a string field
+/// - key/value row followed by indented rows (`("Roles", "(2)")` then
+///   `("  orders-api", "")`) → an object: the row's value as `"summary"`,
+///   the indented rows inside it
+/// - a repeated key (in any of the above) → an array of its values
+/// - empty-key note (`("", "No tags")`) → a `"note"` field
+/// - plain content line (`(" …", "")`) → collected into a `"content"` array
+///   (verbatim, so fixed-width tables keep their alignment)
+/// - blank spacer                  → dropped (and ends an indented block)
+fn lines_to_json(lines: &[(String, String)]) -> Value {
     fn push_content(map: &mut Map<String, Value>, line: &str) {
         // Render the SG-rule tab marker as the same inline note the UI shows.
         let line = line.replace('\t', "  — ");
@@ -261,34 +421,97 @@ fn lines_to_json(lines: &[(String, String)]) -> Value {
             }
         }
     }
+    fn push_row(map: &mut Map<String, Value>, k: &str, v: &str) {
+        if v.is_empty() {
+            push_content(map, k.trim_end());
+        } else {
+            // An empty-key note ("No tags", "No policies attached") would
+            // otherwise land under the key "".
+            let key = if k.trim().is_empty() { "note" } else { k.trim() };
+            insert_repeated(map, key, json!(strip_status_glyph(v)));
+        }
+    }
+    let indented = |k: &str| k.starts_with(' ') && !k.trim().is_empty();
 
-    for (k, v) in lines {
+    let rows = export_rows(lines);
+    let mut root = Map::new();
+    let mut group: Option<(String, Map<String, Value>)> = None;
+    // A key/value row heading the indented rows under it.
+    let mut parent: Option<(String, Map<String, Value>)> = None;
+
+    fn flush_parent(
+        parent: &mut Option<(String, Map<String, Value>)>,
+        group: &mut Option<(String, Map<String, Value>)>,
+        root: &mut Map<String, Value>,
+    ) {
+        if let Some((key, map)) = parent.take() {
+            let target = group.as_mut().map(|(_, m)| m).unwrap_or(root);
+            insert_repeated(target, &key, Value::Object(map));
+        }
+    }
+
+    for (i, (k, v)) in rows.iter().enumerate() {
         let blank = k.trim().is_empty() && v.is_empty();
-        let plain = v.is_empty() && k.starts_with(' ');
         let header = v.is_empty() && !k.is_empty() && !k.starts_with(' ');
+        if parent.is_some() && !indented(k) {
+            flush_parent(&mut parent, &mut group, &mut root);
+        }
         if blank {
             continue;
         }
-        if header {
-            flush(&mut group, &mut root);
-            group = Some((k.trim().to_string(), Map::new()));
-        } else if plain {
-            let target = group.as_mut().map(|(_, m)| m).unwrap_or(&mut root);
-            push_content(target, k.trim_end());
+        if let Some((_, map)) = parent.as_mut() {
+            push_row(map, k, v);
+        } else if header {
+            if let Some((name, map)) = group.take() {
+                insert_repeated(&mut root, &name, Value::Object(map));
+            }
+            group = Some((strip_count(k.trim()).to_string(), Map::new()));
+        } else if !k.trim().is_empty()
+            && !indented(k)
+            && rows.get(i + 1).is_some_and(|(nk, _)| indented(nk))
+        {
+            let mut map = Map::new();
+            map.insert("summary".into(), json!(strip_status_glyph(v)));
+            parent = Some((k.trim().to_string(), map));
         } else {
             let target = group.as_mut().map(|(_, m)| m).unwrap_or(&mut root);
-            insert_unique(target, k.trim(), json!(v));
+            push_row(target, k, v);
         }
     }
-    flush(&mut group, &mut root);
-    Value::Object(root)
+    flush_parent(&mut parent, &mut group, &mut root);
+    if let Some((name, map)) = group.take() {
+        insert_repeated(&mut root, &name, Value::Object(map));
+    }
+    let mut root = Value::Object(root);
+    dedent_content(&mut root);
+    root
+}
+
+/// Dedent every `"content"` array in a section value (see `dedent`).
+fn dedent_content(v: &mut Value) {
+    if let Value::Object(map) = v {
+        for (k, child) in map.iter_mut() {
+            match child {
+                Value::Array(arr) if k == "content" => {
+                    let mut lines: Vec<String> =
+                        arr.iter().map(|l| l.as_str().unwrap_or_default().to_string()).collect();
+                    dedent(&mut lines);
+                    *arr = lines.into_iter().map(Value::String).collect();
+                }
+                Value::Object(_) => dedent_content(child),
+                // A repeated group's objects (see `insert_repeated`).
+                Value::Array(arr) => arr.iter_mut().for_each(dedent_content),
+                _ => {}
+            }
+        }
+    }
 }
 
 /// The whole detail pane as pretty-printed JSON: identity + one entry per
 /// section (as captured from `get_detail_lines`) + tags. This is what `e`
 /// opens in `$EDITOR` when no richer content (template, policy, raw finding
 /// JSON…) applies — full split-pane fidelity, unlike the thin `details()`
-/// fallback. Lazy sections not yet fetched become a "not loaded" note.
+/// fallback. Lazy sections not yet fetched are `null`.
 pub fn detail_json(
     resource: &dyn Resource,
     sections: &[(String, Vec<(String, String)>)],
@@ -299,7 +522,7 @@ pub fn detail_json(
 
 /// The `detail_json` object as a `Value` — shared by the single-resource
 /// string form above and the multi-resource array export.
-fn detail_value(
+pub(crate) fn detail_value(
     resource: &dyn Resource,
     sections: &[(String, Vec<(String, String)>)],
 ) -> Value {
@@ -314,7 +537,9 @@ fn detail_value(
     let mut secs = Map::new();
     for (name, lines) in sections {
         let value = if is_unloaded(lines) {
-            json!("(not loaded — open this section in the UI to capture it)")
+            // Still fetching when captured: null, so a consumer can test for
+            // it rather than match a sentence.
+            Value::Null
         } else {
             lines_to_json(lines)
         };
@@ -331,11 +556,33 @@ fn detail_value(
     Value::Object(root)
 }
 
-/// True when any captured section is still a lazy-load placeholder — the
-/// signal that a deep export fired triggers and should be pressed again once
-/// they land, rather than exporting "not loaded" notes.
-pub fn any_section_unloaded(sections: &[(String, Vec<(String, String)>)]) -> bool {
-    sections.iter().any(|(_, lines)| is_unloaded(lines))
+/// True when one row of an otherwise loaded section is still a lazy
+/// placeholder — `("Configuration", "Loading…")` under a loaded Overview,
+/// or the Access footer while Microsoft Graph names the principals.
+/// `is_unloaded` only sees a section that is *nothing but* placeholders, so
+/// an export used to stop waiting with this row still spinning.
+fn has_loading_row(lines: &[(String, String)]) -> bool {
+    lines.iter().any(|(k, v)| {
+        let text = if v.is_empty() { k.trim() } else { v.trim() };
+        (text.starts_with("Loading") && text.ends_with('…')) || text.contains(" are loading")
+    })
+}
+
+/// Names of the captured sections still loading, wholly or in part.
+pub(crate) fn unloaded_sections(sections: &[(String, Vec<(String, String)>)]) -> Vec<String> {
+    sections
+        .iter()
+        .filter(|(_, lines)| is_unloaded(lines) || has_loading_row(lines))
+        .map(|(name, _)| name.trim().to_string())
+        .collect()
+}
+
+/// True when any captured section is still loading — a whole-section
+/// placeholder or a single `Loading…` row — the signal that an export
+/// fired triggers and should wait for them to land.
+#[cfg(test)]
+fn any_section_unloaded(sections: &[(String, Vec<(String, String)>)]) -> bool {
+    sections.iter().any(|(_, lines)| is_unloaded(lines) || has_loading_row(lines))
 }
 
 /// One resource as a Markdown document: a title + identity line, then a
@@ -361,7 +608,7 @@ fn detail_markdown_at(
     for (name, lines) in sections {
         md.push_str(&format!("{} {}\n\n", h_section, name));
         if is_unloaded(lines) {
-            md.push_str("_Not loaded — open this section in the UI to capture it._\n\n");
+            md.push_str("_Not loaded — still fetching when this was captured._\n\n");
             continue;
         }
         let body = lines_to_markdown(lines);
@@ -393,59 +640,182 @@ fn detail_markdown_at(
     md
 }
 
-fn detail_markdown(resource: &dyn Resource, sections: &[(String, Vec<(String, String)>)]) -> String {
+pub(crate) fn detail_markdown(resource: &dyn Resource, sections: &[(String, Vec<(String, String)>)]) -> String {
     detail_markdown_at(resource, sections, 1)
 }
 
-/// A homogeneous list as a Markdown table over the same columns as the CSV.
-/// The list Markdown is a *readable* summary, so it sticks to core columns
-/// (the full per-field union lives in the `.csv` / `.json`). A wide
-/// union-of-all-detail-keys table is unreadable for rich resources like S3.
+/// A homogeneous list as a Markdown table over the same columns as the CSV
+/// (`list_columns`). It used to keep to Type/ID/Name/State/Tags for
+/// readability, which silently dropped every list-level field the `.json`
+/// and `.csv` beside it carried; a Markdown viewer scrolls the wider table.
 pub fn list_markdown(resources: &[&dyn Resource], label: &str) -> String {
-    const COLUMNS: [&str; 5] = ["Type", "ID", "Name", "State", "Tags"];
+    let columns = list_columns(resources);
     let mut md = format!("# {} ({})\n\n", label, resources.len());
+    let header: Vec<String> = columns.iter().map(|c| md_cell(c)).collect();
     md.push_str(&format!(
         "| {} |\n|{}\n",
-        COLUMNS.join(" | "),
-        " --- |".repeat(COLUMNS.len())
+        header.join(" | "),
+        " --- |".repeat(columns.len())
     ));
     for r in resources {
-        let row = [
-            r.resource_type().to_string(),
-            r.id().to_string(),
-            r.name().to_string(),
-            r.state_label(),
-            flatten_tags(*r),
-        ];
-        let cells: Vec<String> = row.iter().map(|c| md_cell(c)).collect();
+        let fields: std::collections::HashMap<String, String> =
+            resource_fields(*r).into_iter().collect();
+        let cells: Vec<String> = columns
+            .iter()
+            .map(|c| md_cell(&list_cell(*r, &fields, c)))
+            .collect();
         md.push_str(&format!("| {} |\n", cells.join(" | ")));
     }
     md
 }
 
-/// The directory export files land in: the working directory normally;
-/// `NEBAZ_EXPORT_DIR` redirects (the test harness points it at a temp dir so
-/// test runs never litter the repo).
-fn export_dir() -> PathBuf {
-    std::env::var_os("NEBAZ_EXPORT_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_default()
+/// Which files an export writes (config `export_formats`, default all
+/// three). Applies to `X`, `Ctrl-X` and the deep export alike.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ExportFormats {
+    pub json: bool,
+    pub csv: bool,
+    pub md: bool,
 }
 
-/// Export a homogeneous list to `<slug>-<ts>.json` + `.csv` + `.md`. Returns the
-/// written paths.
-pub fn export_list(resources: &[&dyn Resource], label: &str) -> Result<Vec<PathBuf>> {
+impl Default for ExportFormats {
+    fn default() -> Self {
+        ExportFormats {
+            json: true,
+            csv: true,
+            md: true,
+        }
+    }
+}
+
+impl ExportFormats {
+    /// Parse config `export_formats`. Case-insensitive; `markdown` aliases
+    /// `md`. Unknown values warn and are ignored, and a list left empty
+    /// falls back to all three with a warning — a bad value is never fatal
+    /// (the `[theme_colors]` precedent).
+    pub fn from_config(list: Option<&[String]>) -> (Self, Vec<String>) {
+        let Some(list) = list else {
+            return (Self::default(), Vec::new());
+        };
+        let mut f = ExportFormats {
+            json: false,
+            csv: false,
+            md: false,
+        };
+        let mut warnings = Vec::new();
+        for v in list {
+            match v.trim().to_ascii_lowercase().as_str() {
+                "json" => f.json = true,
+                "csv" => f.csv = true,
+                "md" | "markdown" => f.md = true,
+                other => warnings.push(format!(
+                    "export_formats: unknown format {other:?} (use json, csv, md)"
+                )),
+            }
+        }
+        if !(f.json || f.csv || f.md) {
+            warnings.push("export_formats: no valid format — writing all three".to_string());
+            f = Self::default();
+        }
+        (f, warnings)
+    }
+}
+
+/// Where and what an export writes — resolved once from config at startup.
+#[derive(Debug, Clone, Default)]
+pub struct ExportOptions {
+    pub formats: ExportFormats,
+    /// Config `export_dir` (`~` expanded). `NEBAZ_EXPORT_DIR` still wins.
+    pub dir: Option<PathBuf>,
+}
+
+impl ExportOptions {
+    /// The directory export files land in: `NEBAZ_EXPORT_DIR` if set (the
+    /// test harness points it at a temp dir so test runs never litter the
+    /// repo), else config `export_dir` (created if missing), else the
+    /// working directory.
+    fn dir(&self) -> Result<PathBuf> {
+        if let Some(env) = std::env::var_os("NEBAZ_EXPORT_DIR") {
+            return Ok(PathBuf::from(env));
+        }
+        match &self.dir {
+            Some(d) => {
+                fs::create_dir_all(d)?;
+                Ok(d.clone())
+            }
+            None => Ok(PathBuf::new()),
+        }
+    }
+}
+
+/// Expand a leading `~/` in a configured path.
+pub fn expand_home(path: &str) -> PathBuf {
+    match path.strip_prefix("~/") {
+        Some(rest) => std::env::var_os("HOME")
+            .map(|h| PathBuf::from(h).join(rest))
+            .unwrap_or_else(|| PathBuf::from(path)),
+        None => PathBuf::from(path),
+    }
+}
+
+/// Write the enabled formats, each built lazily so a skipped format costs
+/// nothing. Returns the written paths in json/csv/md order.
+fn write_formats(
+    base: &std::path::Path,
+    formats: ExportFormats,
+    json: impl FnOnce() -> Result<String>,
+    csv: impl FnOnce() -> String,
+    md: impl FnOnce() -> String,
+) -> Result<Vec<PathBuf>> {
+    let mut written = Vec::new();
+    if formats.json {
+        let path = base.with_extension("json");
+        fs::write(&path, json()?)?;
+        written.push(path);
+    }
+    if formats.csv {
+        let path = base.with_extension("csv");
+        fs::write(&path, csv())?;
+        written.push(path);
+    }
+    if formats.md {
+        let path = base.with_extension("md");
+        fs::write(&path, md())?;
+        written.push(path);
+    }
+    Ok(written)
+}
+
+/// Export a homogeneous list to `<slug>-<ts>.json` + `.csv` + `.md` (the
+/// formats `opts` enables). Returns the written paths.
+pub fn export_list(
+    resources: &[&dyn Resource],
+    label: &str,
+    opts: &ExportOptions,
+) -> Result<Vec<PathBuf>> {
     let ts = timestamp();
-    let base = export_dir().join(format!("nebaz-{}-{}", slug(label), ts));
-    let json_path = base.with_extension("json");
-    let csv_path = base.with_extension("csv");
-    let md_path = base.with_extension("md");
+    let base = opts.dir()?.join(format!("nebaz-{}-{}", slug(label), ts));
+    write_formats(
+        &base,
+        opts.formats,
+        // JSON: array of resource objects.
+        || {
+            let arr: Vec<Value> = resources.iter().map(|r| resource_object(*r)).collect();
+            Ok(serde_json::to_string_pretty(&Value::Array(arr))?)
+        },
+        || list_csv(resources),
+        // Markdown: a concise, readable summary table (core columns only —
+        // the full per-field data is in the .csv / .json).
+        || list_markdown(resources, label),
+    )
+}
 
-    // JSON: array of resource objects.
-    let arr: Vec<Value> = resources.iter().map(|r| resource_object(*r)).collect();
-    fs::write(&json_path, serde_json::to_string_pretty(&Value::Array(arr))?)?;
-
-    // CSV: core columns + union of detail keys (first-seen order) + Tags.
+/// The list export's CSV: core columns + union of detail keys (first-seen
+/// order) + Tags.
+/// The list exports' columns: identity, then every list-level field any row
+/// carries (first-seen order), then Tags — shared by the CSV and Markdown
+/// so the two never disagree on what a row holds.
+fn list_columns(resources: &[&dyn Resource]) -> Vec<String> {
     let mut columns: Vec<String> = vec![
         "Type".into(),
         "ID".into(),
@@ -461,76 +831,111 @@ pub fn export_list(resources: &[&dyn Resource], label: &str) -> Result<Vec<PathB
         }
     }
     columns.push("Tags".into());
+    columns
+}
 
+/// One list row's cell for `col` (see `list_columns`).
+fn list_cell(r: &dyn Resource, fields: &std::collections::HashMap<String, String>, col: &str) -> String {
+    match col {
+        "Type" => r.resource_type().to_string(),
+        "ID" => r.id().to_string(),
+        "Name" => r.name().to_string(),
+        "State" => r.state_label(),
+        "Tags" => flatten_tags(r),
+        other => fields.get(other).cloned().unwrap_or_default(),
+    }
+}
+
+/// The list export's CSV over `list_columns`.
+pub(crate) fn list_csv(resources: &[&dyn Resource]) -> String {
+    let columns = list_columns(resources);
     let mut out = String::new();
     out.push_str(&columns.iter().map(|c| csv_escape(c)).collect::<Vec<_>>().join(","));
     out.push('\n');
     for r in resources {
         let fields: std::collections::HashMap<String, String> =
             resource_fields(*r).into_iter().collect();
-        let mut row: Vec<String> = Vec::with_capacity(columns.len());
-        for col in &columns {
-            let cell = match col.as_str() {
-                "Type" => r.resource_type().to_string(),
-                "ID" => r.id().to_string(),
-                "Name" => r.name().to_string(),
-                "State" => r.state_label(),
-                "Tags" => flatten_tags(*r),
-                other => fields.get(other).cloned().unwrap_or_default(),
-            };
-            row.push(csv_escape(&cell));
-        }
+        let row: Vec<String> = columns
+            .iter()
+            .map(|col| csv_escape(&list_cell(*r, &fields, col)))
+            .collect();
         out.push_str(&row.join(","));
         out.push('\n');
     }
-    fs::write(&csv_path, out)?;
-
-    // Markdown: a concise, readable summary table (core columns only — the full
-    // per-field data is in the .csv / .json above).
-    fs::write(&md_path, list_markdown(resources, label))?;
-
-    Ok(vec![json_path, csv_path, md_path])
+    out
 }
 
-/// Export one resource to `<slug>-<ts>.json` (object) + `.csv` (Key,Value) +
-/// `.md` (a document mirroring the detail pane). `sections` is the per-section
-/// `(name, lines)` captured from `get_detail_lines`; for a flat resource it's a
-/// single "Details" section.
+/// Export one resource to `<slug>-<ts>.json` (the `detail_json` object) +
+/// `.csv` (long `ID,Section,Key,Value`) + `.md` (a document mirroring the
+/// detail pane) — all three from the same captured sections, in the
+/// formats `opts` enables. `sections` is the per-section `(name, lines)` captured from
+/// `get_detail_lines`; for a flat resource it's a single "Details" section.
 pub fn export_detail(
     resource: &dyn Resource,
     sections: &[(String, Vec<(String, String)>)],
     label: &str,
+    opts: &ExportOptions,
 ) -> Result<Vec<PathBuf>> {
     let ts = timestamp();
-    let base = export_dir().join(format!("nebaz-{}-{}", slug(label), ts));
-    let json_path = base.with_extension("json");
-    let csv_path = base.with_extension("csv");
-    let md_path = base.with_extension("md");
+    let base = opts.dir()?.join(format!("nebaz-{}-{}", slug(label), ts));
+    write_formats(
+        &base,
+        opts.formats,
+        // JSON: the `e` object — identity, every section, tags.
+        || Ok(detail_json(resource, sections)),
+        // CSV: long format, as the deep export writes it.
+        || multi_detail_csv(&[(resource, sections.to_vec())]),
+        // Markdown: the detail pane mirrored as a document.
+        || detail_markdown(resource, sections),
+    )
+}
 
-    fs::write(&json_path, serde_json::to_string_pretty(&resource_object(resource))?)?;
+/// The CSV value of a section still loading when the export was written.
+const NOT_LOADED: &str = "(not loaded)";
 
-    let mut out = String::from("Key,Value\n");
-    let core = [
-        ("Type", resource.resource_type().to_string()),
-        ("ID", resource.id().to_string()),
-        ("Name", resource.name().to_string()),
-        ("State", resource.state_label()),
-    ];
-    for (k, v) in core {
-        out.push_str(&format!("{},{}\n", csv_escape(k), csv_escape(&v)));
+/// Captured detail-pane sections for one resource: `(section name, rows)` as
+/// produced by `detail_sections_snapshot`.
+pub type DetailSections = Vec<(String, Vec<(String, String)>)>;
+
+/// The detail exports' CSV: long format (`ID, Section, Key, Value`) — one
+/// row per detail line, filterable in a spreadsheet. Plain content lines
+/// (leading-space key, empty value) carry their text in the Value column so
+/// fixed-width tables and code previews survive. A section still loading
+/// when the wait gave up is one `(not loaded)` row, as the JSON's `null`
+/// and the Markdown's note say the same.
+pub(crate) fn multi_detail_csv(items: &[(&dyn Resource, DetailSections)]) -> String {
+    let mut csv = String::from("ID,Section,Key,Value\n");
+    for (r, sections) in items {
+        for (section, lines) in sections {
+            if is_unloaded(lines) {
+                csv.push_str(&format!(
+                    "{},{},,{}\n",
+                    csv_escape(r.id()),
+                    csv_escape(section.trim()),
+                    NOT_LOADED
+                ));
+                continue;
+            }
+            for (k, v) in &export_rows(lines) {
+                if k.trim().is_empty() && v.is_empty() {
+                    continue;
+                }
+                let (key, value) = if v.is_empty() && k.starts_with(' ') {
+                    ("", k.trim())
+                } else {
+                    (k.trim(), v.as_str())
+                };
+                csv.push_str(&format!(
+                    "{},{},{},{}\n",
+                    csv_escape(r.id()),
+                    csv_escape(section.trim()),
+                    csv_escape(key),
+                    csv_escape(value)
+                ));
+            }
+        }
     }
-    for (k, v) in resource_fields(resource) {
-        out.push_str(&format!("{},{}\n", csv_escape(&k), csv_escape(&v)));
-    }
-    for (k, v) in tags_sorted(resource) {
-        out.push_str(&format!("{},{}\n", csv_escape(&format!("tag:{}", k)), csv_escape(&v)));
-    }
-    fs::write(&csv_path, out)?;
-
-    // Markdown: the detail pane mirrored as a document.
-    fs::write(&md_path, detail_markdown(resource, sections))?;
-
-    Ok(vec![json_path, csv_path, md_path])
+    csv
 }
 
 #[cfg(test)]
@@ -636,8 +1041,7 @@ mod tests {
         let v = lines_to_json(&lines);
         assert_eq!(v["State"], "running");
         assert_eq!(v["Identity"]["Instance ID"], "i-123");
-        assert_eq!(v["Identity"]["Rule"], "allow 80");
-        assert_eq!(v["Identity"]["Rule (2)"], "allow 443");
+        assert_eq!(v["Identity"]["Rule"], json!(["allow 80", "allow 443"]));
         let content = v["Ports"]["content"].as_array().unwrap();
         assert!(content[0].as_str().unwrap().contains("TCP    443"));
         assert!(content[1].as_str().unwrap().contains("desc  — my home ip"));
@@ -663,8 +1067,8 @@ mod tests {
         assert_eq!(v["resource"]["id"], "mock-1");
         assert_eq!(v["resource"]["type"], "Mock");
         assert_eq!(v["sections"]["Overview"]["Name"], "mock");
-        // Unloaded lazy section becomes a note, not a spinner dump.
-        assert!(v["sections"]["Breakdown"].as_str().unwrap().contains("not loaded"));
+        // Unloaded lazy section becomes null, not a spinner dump.
+        assert!(v["sections"]["Breakdown"].is_null());
         assert_eq!(v["tags"]["env"], "prod");
         // preserve_order: sections and fields appear in on-screen order.
         assert!(out.find("Overview").unwrap() < out.find("Breakdown").unwrap());
@@ -681,6 +1085,57 @@ mod tests {
         assert!(!is_unloaded(&[("Cost".into(), "$10.00".into())]));
         // Genuinely empty section is not flagged as unloaded.
         assert!(!is_unloaded(&[("".into(), "".into())]));
+    }
+
+    #[test]
+    fn the_access_names_footer_keeps_the_export_waiting() {
+        let access = vec![(
+            "Access".to_string(),
+            vec![
+                ("Owner".to_string(), "User · 1111".to_string()),
+                (String::new(), "· principal names are loading (Microsoft Graph)".to_string()),
+            ],
+        )];
+        assert!(any_section_unloaded(&access));
+    }
+
+    #[test]
+    fn a_single_loading_row_keeps_the_export_waiting() {
+        let partial = vec![(
+            "Overview".to_string(),
+            vec![
+                ("  Created".to_string(), "2024-04-25".to_string()),
+                ("  Last Activity".to_string(), "Loading…".to_string()),
+            ],
+        )];
+        assert!(any_section_unloaded(&partial));
+        assert_eq!(unloaded_sections(&partial), ["Overview"]);
+        // Prose that merely starts with the word isn't a placeholder.
+        let loaded = vec![("Overview".to_string(), vec![
+            ("Name".to_string(), "warehouse".to_string()),
+            ("Note".to_string(), "Loading dock B".to_string()),
+        ])];
+        assert!(!any_section_unloaded(&loaded));
+    }
+
+    #[test]
+    fn single_export_json_and_csv_carry_the_sections() {
+        let r = MockResource { tags: Default::default() };
+        let sections = vec![(
+            "Trust Policy".to_string(),
+            vec![("  {\"Version\": \"2012-10-17\"}".to_string(), String::new())],
+        )];
+        let dir = std::env::temp_dir().join("nebaz-test-exports-single");
+        let opts = ExportOptions { formats: ExportFormats::default(), dir: Some(dir) };
+        let paths = export_detail(&r, &sections, "SingleSections", &opts).unwrap();
+        let read = |ext: &str| {
+            std::fs::read_to_string(paths.iter().find(|p| p.extension().unwrap() == ext).unwrap()).unwrap()
+        };
+        let v: Value = serde_json::from_str(&read("json")).unwrap();
+        assert_eq!(v["sections"]["Trust Policy"]["content"], json!(["{\"Version\": \"2012-10-17\"}"]));
+        assert!(read("csv").starts_with("ID,Section,Key,Value\n"));
+        assert!(read("csv").contains("Trust Policy"));
+        assert!(read("md").contains("## Trust Policy"));
     }
 
     #[test]
@@ -711,4 +1166,315 @@ mod tests {
         assert!(solo.contains("\n## Overview\n"));
     }
 
+    #[test]
+    fn multi_detail_csv_is_long_format() {
+        let a = MockResource { tags: Default::default() };
+        let b = MockResource { tags: Default::default() };
+        let items: Vec<(&dyn Resource, DetailSections)> = vec![
+            (
+                &a,
+                vec![(
+                    "Overview".to_string(),
+                    vec![
+                        ("Name".to_string(), "mock".to_string()),
+                        ("".to_string(), "".to_string()), // spacer dropped
+                        ("  fixed-width row".to_string(), "".to_string()),
+                    ],
+                )],
+            ),
+            (
+                &b,
+                vec![(
+                    "Rules".to_string(),
+                    vec![("Loading…".to_string(), "".to_string())], // unloaded: one row
+                )],
+            ),
+        ];
+        let csv = multi_detail_csv(&items);
+        let lines: Vec<&str> = csv.lines().collect();
+        assert_eq!(lines[0], "ID,Section,Key,Value");
+        assert_eq!(lines[1], "mock-1,Overview,Name,mock");
+        // Plain content line: empty key, text in the Value column.
+        assert_eq!(lines[2], "mock-1,Overview,,fixed-width row");
+        // The unloaded section is one "(not loaded)" row, as the JSON's
+        // null and the Markdown's note say.
+        assert_eq!(lines[3], "mock-1,Rules,,(not loaded)");
+        assert_eq!(lines.len(), 4);
+    }
+
+    fn strings(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn export_formats_default_is_all_three() {
+        let (f, w) = ExportFormats::from_config(None);
+        assert_eq!(f, ExportFormats::default());
+        assert!(f.json && f.csv && f.md);
+        assert!(w.is_empty());
+    }
+
+    #[test]
+    fn export_formats_parse_alias_case_and_unknowns() {
+        let (f, w) = ExportFormats::from_config(Some(&strings(&["JSON", "Markdown", "xlsx"])));
+        assert_eq!(
+            f,
+            ExportFormats {
+                json: true,
+                csv: false,
+                md: true
+            }
+        );
+        assert_eq!(w.len(), 1);
+        assert!(w[0].contains("xlsx"), "{w:?}");
+    }
+
+    #[test]
+    fn export_formats_empty_or_all_invalid_falls_back_to_all() {
+        for list in [strings(&[]), strings(&["pdf"])] {
+            let (f, w) = ExportFormats::from_config(Some(&list));
+            assert_eq!(f, ExportFormats::default());
+            assert!(w.iter().any(|m| m.contains("writing all three")), "{w:?}");
+        }
+    }
+
+    #[test]
+    fn exports_write_only_the_configured_formats() {
+        let r = MockResource {
+            tags: Default::default(),
+        };
+        let only = |json, csv, md| ExportOptions {
+            formats: ExportFormats { json, csv, md },
+            dir: Some(std::env::temp_dir().join("nebaz-test-exports")),
+        };
+        let exts = |paths: &[PathBuf]| -> Vec<String> {
+            paths
+                .iter()
+                .inspect(|p| assert!(p.exists(), "{} not written", p.display()))
+                .map(|p| p.extension().unwrap().to_string_lossy().into_owned())
+                .collect()
+        };
+
+        let paths = export_list(&[&r], "FmtList", &only(true, false, false)).unwrap();
+        assert_eq!(exts(&paths), ["json"]);
+
+        let sections = vec![("Details".to_string(), vec![("K".to_string(), "v".to_string())])];
+        let paths = export_detail(&r, &sections, "FmtDetail", &only(false, true, true)).unwrap();
+        assert_eq!(exts(&paths), ["csv", "md"]);
+    }
+
+    #[test]
+    fn expand_home_only_touches_a_leading_tilde() {
+        assert_eq!(expand_home("/tmp/x"), PathBuf::from("/tmp/x"));
+        if let Some(home) = std::env::var_os("HOME") {
+            assert_eq!(expand_home("~/exports"), PathBuf::from(home).join("exports"));
+        }
+    }
+    #[test]
+    fn key_hints_are_stripped_from_exports() {
+        let cases = [
+            ("press t to tail", ""),
+            ("  Press d to download & extract the source package", ""),
+            ("  (press e for the raw policy JSON)", ""),
+            ("Period: 7d │ press m for full chart overlay", "Period: 7d"),
+            ("2026-01-01 → now    (press m for full chart)", "2026-01-01 → now"),
+            ("  … +12 more lines — press e for the full JSON", "  … +12 more lines"),
+            ("inline → press 2", "inline"),
+            ("x reveal · Y copy", ""),
+            // Not hints: prose, a long "key", no separator before it.
+            ("Express checkout", "Express checkout"),
+            ("the press release", "the press release"),
+            ("Press Enterprise", "Press Enterprise"),
+            ("Rotation · 30 days", "Rotation · 30 days"),
+        ];
+        for (input, want) in cases {
+            assert_eq!(strip_key_hint(input), want, "{input:?}");
+        }
+    }
+
+    #[test]
+    fn hint_only_rows_are_dropped_not_left_as_headers() {
+        let rows = export_rows(&[
+            ("Log Group".into(), "/aws/lambda/x".into()),
+            ("".into(), "press t to tail".into()),
+            ("Value".into(), "x reveal · Y copy".into()),
+            ("  Press 2 to load live status".into(), "".into()),
+            ("".into(), "".into()),
+        ]);
+        assert_eq!(
+            rows,
+            vec![
+                ("Log Group".to_string(), "/aws/lambda/x".to_string()),
+                (String::new(), String::new()),
+            ]
+        );
+    }
+
+    #[test]
+    fn json_values_drop_status_glyphs_and_content_is_dedented() {
+        let v = lines_to_json(&[
+            ("Status".into(), "✓ UPDATE_COMPLETE".into()),
+            ("Encrypted".into(), "✓".into()),
+            ("Template".into(), "".into()),
+            ("  Resources:".into(), "".into()),
+            ("    Bucket: {}".into(), "".into()),
+        ]);
+        assert_eq!(v["Status"], "UPDATE_COMPLETE");
+        assert_eq!(v["Encrypted"], "✓");
+        assert_eq!(v["Template"]["content"], json!(["Resources:", "  Bucket: {}"]));
+    }
+
+    #[test]
+    fn repeated_keys_and_groups_become_arrays() {
+        let v = lines_to_json(&[
+            ("RUNNING".into(), "task-a".into()),
+            ("RUNNING".into(), "task-b".into()),
+            ("RUNNING".into(), "task-c".into()),
+            ("OrdersQueue".into(), "".into()),
+            ("Status".into(), "UPDATE_COMPLETE".into()),
+            ("OrdersQueue".into(), "".into()),
+            ("Status".into(), "UPDATE_IN_PROGRESS".into()),
+        ]);
+        assert_eq!(v["RUNNING"], json!(["task-a", "task-b", "task-c"]));
+        assert_eq!(
+            v["OrdersQueue"],
+            json!([{"Status": "UPDATE_COMPLETE"}, {"Status": "UPDATE_IN_PROGRESS"}])
+        );
+    }
+
+    #[test]
+    fn group_names_drop_their_count() {
+        assert_eq!(strip_count("Inbound (2 rules)"), "Inbound");
+        assert_eq!(strip_count("Streams (3, newest first)"), "Streams");
+        assert_eq!(strip_count("Running / Active (5)"), "Running / Active");
+        assert_eq!(strip_count("Size (GiB)"), "Size (GiB)");
+        assert_eq!(strip_count("Retention (7d)"), "Retention (7d)");
+        assert_eq!(strip_count("(3)"), "(3)");
+        let v = lines_to_json(&[("Members (1)".into(), "".into()), ("  jsmith".into(), "".into())]);
+        assert_eq!(v["Members"]["content"], json!(["jsmith"]));
+    }
+
+    #[test]
+    fn a_row_heading_indented_rows_nests_them() {
+        let v = lines_to_json(&[
+            ("Roles".into(), "(2)".into()),
+            ("  orders-api".into(), "".into()),
+            ("  reports".into(), "".into()),
+            ("".into(), "".into()),
+            ("Users".into(), "None".into()),
+            ("Rules".into(), "".into()),
+            ("Priority 1".into(), "expire untagged after 7 days".into()),
+            ("  Matches".into(), "2 loaded images".into()),
+            ("  Due in 7 Days".into(), "2".into()),
+            ("Priority 2".into(), "keep the last 10 images".into()),
+            ("  Matches".into(), "5 loaded images".into()),
+            ("Policy".into(), "set".into()),
+        ]);
+        assert_eq!(v["Roles"], json!({"summary": "(2)", "content": ["orders-api", "reports"]}));
+        assert_eq!(v["Users"], "None", "no indented rows → stays a plain field");
+        assert_eq!(
+            v["Rules"]["Priority 1"],
+            json!({"summary": "expire untagged after 7 days", "Matches": "2 loaded images", "Due in 7 Days": "2"})
+        );
+        assert_eq!(v["Rules"]["Priority 2"]["Matches"], "5 loaded images");
+        assert_eq!(v["Rules"]["Policy"], "set", "a non-indented row ends the block");
+    }
+
+    /// A resource whose list-level fields and tags are not empty, for the
+    /// parity tests.
+    #[derive(Debug, Clone)]
+    struct RichResource {
+        tags: std::collections::HashMap<String, String>,
+    }
+    impl Resource for RichResource {
+        fn id(&self) -> &str {
+            "/subscriptions/s/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm-1"
+        }
+        fn name(&self) -> &str {
+            "vm-1"
+        }
+        fn resource_type(&self) -> &str {
+            "Virtual machine"
+        }
+        fn state(&self) -> crate::azure::resource::ResourceState {
+            crate::azure::resource::ResourceState::Available
+        }
+        fn tags(&self) -> &std::collections::HashMap<String, String> {
+            &self.tags
+        }
+        fn details(&self) -> Vec<(String, String)> {
+            vec![
+                ("Size".into(), "Standard_B2s".into()),
+                ("Location".into(), "westeurope".into()),
+                ("Group".into(), "".into()), // a header: not a field
+            ]
+        }
+        fn clone_box(&self) -> Box<dyn Resource> {
+            Box::new(self.clone())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    fn rich() -> RichResource {
+        RichResource { tags: [("env".to_string(), "prod".to_string())].into_iter().collect() }
+    }
+
+    /// Every list format carries the same fields: the CSV header and the
+    /// Markdown header are one column list, and each JSON object has a key
+    /// (or the tags map) for every column.
+    #[test]
+    fn list_formats_carry_the_same_fields() {
+        let r = rich();
+        let rows: Vec<&dyn Resource> = vec![&r];
+        let csv = list_csv(&rows);
+        let md = list_markdown(&rows, "VMs");
+        let header: Vec<&str> = csv.lines().next().unwrap().split(',').collect();
+        assert_eq!(header, ["Type", "ID", "Name", "State", "Size", "Location", "Tags"]);
+        assert!(md.contains(&format!("| {} |", header.join(" | "))), "{md}");
+        let obj = resource_object(&r);
+        for col in &header {
+            assert!(obj.get(col.to_lowercase()).is_some() || obj.get(*col).is_some(), "json lacks {col}: {obj}");
+        }
+        for value in ["Standard_B2s", "westeurope", "env=prod"] {
+            assert!(csv.contains(value) && md.contains(value), "{value}");
+        }
+        assert_eq!(obj["tags"]["env"], "prod");
+    }
+
+    /// One resource's JSON, CSV and Markdown are built from the same
+    /// captured sections: every section name and every key/value pair
+    /// appears in all three.
+    #[test]
+    fn detail_formats_carry_the_same_fields() {
+        let r = rich();
+        let sections: DetailSections = vec![
+            (
+                "Overview".to_string(),
+                vec![("Size".to_string(), "Standard_B2s".to_string()), ("Power".to_string(), "running".to_string())],
+            ),
+            (
+                "Access".to_string(),
+                vec![(String::new(), "⚠ role assignments: 403 Forbidden".to_string())],
+            ),
+            ("Rules".to_string(), vec![("Rules".to_string(), "Loading…".to_string())]),
+        ];
+        let json: Value = serde_json::from_str(&detail_json(&r, &sections)).unwrap();
+        let csv = multi_detail_csv(&[(&r as &dyn Resource, sections.clone())]);
+        let md = detail_markdown(&r, &sections);
+        for (section, k, v) in [("Overview", "Size", "Standard_B2s"), ("Overview", "Power", "running")] {
+            assert_eq!(json["sections"][section][k], v);
+            assert!(csv.contains(&format!("{},{},{},{}", r.id(), section, k, v)), "{csv}");
+            assert!(md.contains(&format!("| {} | {} |", k, v)), "{md}");
+        }
+        // A denied lazy section exports its warning line, in every format.
+        let warning = "⚠ role assignments: 403 Forbidden";
+        assert_eq!(json["sections"]["Access"]["note"], warning);
+        assert!(csv.contains(warning) && md.contains(warning));
+        // A section still loading is marked, never silently empty.
+        assert!(json["sections"]["Rules"].is_null() || json["sections"]["Rules"]["Rules"] == "Loading…");
+        assert!(csv.contains("Rules"));
+        assert!(md.contains("## Rules"));
+    }
 }

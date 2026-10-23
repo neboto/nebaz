@@ -57,7 +57,10 @@ resources**, which lists every resource in the subscription. The detail pane has
 vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`), a flat
 view (`\`) that puts every section in one scroll, a body filter (`/`,
 `n`/`N` while it is on), group jumps (`[[`/`]]`) and `Ctrl-W` to wrap long
-values such as ARM ids; `H`/`L` step sub-tabs from either pane. `N` on a VM, NIC,
+values such as ARM ids; `H`/`L` step sub-tabs from either pane. `X` exports the
+selected resource (every section, after waiting for the lazy ones to load;
+`Esc` cancels) and `Ctrl-X` the list, as JSON, CSV and Markdown carrying
+the same data (`export_formats` / `export_dir` in the config). `N` on a VM, NIC,
 subnet or NSG opens the **network access lens**: the NSG rules that apply,
 subnet then NIC, in priority order, defaults included, shadowed rules and
 rules the other layer blocks marked (computed from the rules with GETs
