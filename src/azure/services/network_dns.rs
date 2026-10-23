@@ -457,10 +457,16 @@ pub fn vnet_dns_related(topo: Option<&Lazy<DnsTopology>>, vnet_id: &str) -> Vec<
 }
 
 /// The DNS lines a subnet's Related section gains: the resolver endpoints
-/// placed in it.
+/// placed in it. A failed topology, or a resolver whose endpoints could
+/// not be listed, is a warning line: the subnet may hold an endpoint the
+/// section cannot see, which is not the same as holding none.
 pub fn subnet_dns_related(topo: Option<&Lazy<DnsTopology>>, subnet_id: &str) -> Vec<(String, String)> {
-    let Some(Lazy::Loaded(t)) = topo else {
-        return Vec::new();
+    let t = match topo {
+        Some(Lazy::Loaded(t)) => t,
+        Some(Lazy::Error(e)) => {
+            return vec![(String::new(), String::new()), (String::new(), format!("⚠ DNS resolver endpoints: {}", e))]
+        }
+        None | Some(Lazy::Loading) => return Vec::new(),
     };
     let mut lines = Vec::new();
     for r in &t.resolvers {
@@ -470,6 +476,12 @@ pub fn subnet_dns_related(topo: Option<&Lazy<DnsTopology>>, subnet_id: &str) -> 
             }
         }
     }
+    lines.extend(
+        t.warnings
+            .iter()
+            .filter(|w| w.starts_with("inboundEndpoints of") || w.starts_with("outboundEndpoints of"))
+            .map(|w| (String::new(), format!("⚠ {}", w))),
+    );
     if !lines.is_empty() {
         lines.insert(0, (String::new(), String::new()));
     }
@@ -600,8 +612,12 @@ pub fn dns_zone_section_lines(
                 }
             }
             let mut lines = related_lines(rel);
-            if !matches!(records, Some(Lazy::Loaded(_))) {
-                lines.push((String::new(), "· alias targets appear once Records has loaded".into()));
+            match records {
+                Some(Lazy::Loaded(_)) => {}
+                Some(Lazy::Error(e)) => lines.push((String::new(), format!("⚠ alias targets unavailable, Records failed: {}", e))),
+                None | Some(Lazy::Loading) => {
+                    lines.push((String::new(), "· alias targets appear once Records has loaded".into()))
+                }
             }
             lines
         }
@@ -1373,6 +1389,9 @@ mod tests {
         );
         let related = dns_zone_section_lines(&zone, DnsZoneDetailSection::Related, Some(&Lazy::Loaded(records)));
         assert!(related.iter().any(|(k, v)| k == "Alias target pip-web" && *v == pip));
+        let failed = dns_zone_section_lines(&zone, DnsZoneDetailSection::Related, Some(&Lazy::Error("403 denied".into())));
+        assert!(failed.iter().any(|(_, v)| v == "⚠ alias targets unavailable, Records failed: 403 denied"), "{failed:?}");
+        assert!(!failed.iter().any(|(_, v)| v.contains("once Records has loaded")));
         assert_eq!(dns_child_path(&zone.base.id, "all"), format!("{}/all", id("dnszones/example.com")));
     }
 
@@ -1462,6 +1481,15 @@ mod tests {
         let subnet = subnet_dns_related(Some(&topo), &id("virtualNetworks/vnet-hub/subnets/dns-in"));
         assert!(subnet.iter().any(|(k, _)| k == "DNS resolver dnspr-hub · inbound endpoint in"));
         assert!(subnet_dns_related(None, "x").is_empty());
+        let failed = Lazy::Error("Azure error: 403 AuthorizationFailed: no dnsResolvers/read".to_string());
+        let lines = subnet_dns_related(Some(&failed), "x");
+        assert!(lines.iter().any(|(_, v)| v.starts_with("⚠ DNS resolver endpoints:") && v.contains("403")), "{lines:?}");
+        let mut partial = topology();
+        partial.warnings.push("inboundEndpoints of dnspr-hub: Azure error: 403 AuthorizationFailed: denied".into());
+        partial.warnings.push("private DNS zones: unrelated".into());
+        let lines = subnet_dns_related(Some(&Lazy::Loaded(partial)), &id("virtualNetworks/other/subnets/s"));
+        assert!(lines.iter().any(|(_, v)| v.starts_with("⚠ inboundEndpoints of dnspr-hub")), "{lines:?}");
+        assert!(!lines.iter().any(|(_, v)| v.contains("private DNS zones")), "{lines:?}");
     }
 
     #[test]
