@@ -5,9 +5,9 @@
 //! *what* to GET.
 //!
 //! The guard (`tests/readonly_guard.rs`) allows the Graph hosts here and
-//! nowhere else, and forbids `getByIds` (a `POST`) and a `key` field in
-//! any literal here: a certificate's `key` only comes back when selected,
-//! and nebaz never selects it.
+//! nowhere else, and forbids `getByIds` (a `POST`), any `$select` and a
+//! `key` field in the literals here: Graph returns a certificate's `key`
+//! when `keyCredentials` is selected, so nebaz selects nothing.
 
 use crate::azure::services::json;
 use serde_json::Value;

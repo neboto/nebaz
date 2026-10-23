@@ -37,8 +37,9 @@ registrations. Graph is a second host behind the **same** machinery as ARM
   `getByIds` as a literal.
 - **No secret material**: a Graph `GET` never returns a secret value
   (`secretText` only comes back from the `addPassword` `POST`), and a
-  certificate's `key` only with `$select=key`. nebaz never selects `key`
-  (the guard forbids the field in the Graph module's literals) and shows a
+  certificate's public `key` only when `keyCredentials` is `$select`ed.
+  nebaz never uses `$select` on Graph (the guard forbids it, and a `key`
+  field, in the Graph module's literals), so `key` stays null; it shows a
   credential's display name, key id, start, end and an expiry state, never
   the `hint`.
 - **Permission**: the signed-in user's own directory read. Members can read

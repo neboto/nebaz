@@ -167,7 +167,8 @@ verbatim where the concept is unchanged.
 - **Microsoft Graph** (ADR 0004): directory reads only, GET only, through
   the same client flavoured for Graph; every Graph path and host lives in
   `src/azure/graph.rs` (the guard allows the host nowhere else). A 403 is
-  a section warning; never `getByIds` (POST), never `$select=key`.
+  a section warning; never `getByIds` (POST), never a Graph `$select`
+  (it would return a certificate's `key`).
 - **State**: never a per-type state table. `state_ladder(provisioning,
   runtime)` and the native word lowercased as the label
   (`native_state_label`).

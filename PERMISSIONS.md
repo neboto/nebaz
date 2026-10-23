@@ -10,7 +10,7 @@ Resource Manager (ARM), or to Microsoft Graph for directory objects
 2. **Guard test** — `tests/readonly_guard.rs` fails `cargo test` (and so
    CI) if the source gains another request builder, an HTTP client crate,
    a data-plane host, a Graph host outside `src/azure/graph.rs`, Graph's
-   `getByIds` (a `POST`) or a `key` field selection, a mutating `az`
+   `getByIds` (a `POST`) or a Graph `$select`, a mutating `az`
    command, or a non-read action in this file.
 3. **RBAC** — the role below is a pure `*/read` footprint, so the
    subscription itself cannot be changed through nebaz even if the first
@@ -50,7 +50,7 @@ The Graph calls (all `GET`, all under `/v1.0`):
 
 Never sent: `directoryObjects/getByIds` (a `POST`), `addPassword` /
 `addKey` (the only calls that return a secret value), and any `$select`
-naming a certificate's `key`.
+(selecting `keyCredentials` would return the certificate's key).
 
 ## Per-service actions
 

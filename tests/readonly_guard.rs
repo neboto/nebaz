@@ -90,8 +90,13 @@ const GRAPH_HOSTS: &[&str] = &[
 const GRAPH_FORBIDDEN: &[&str] = &["getByIds", "addPassword", "addKey", "secretText"];
 
 /// Fields the Graph module must never name in a literal: a certificate's
-/// `key` is only returned when `$select`ed.
+/// `key` is only returned when selected.
 const GRAPH_FORBIDDEN_FIELDS: &[&str] = &["key"];
+
+/// Query options the Graph module must never use. Graph returns a
+/// certificate's `key` whenever `keyCredentials` is `$select`ed, so nebaz
+/// selects nothing: the default projection leaves `key` null.
+const GRAPH_FORBIDDEN_OPTIONS: &[&str] = &["$select", "select="];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.
 const HTTP_CLIENT_CRATES: &[&str] = &["reqwest", "hyper", "ureq", "curl", "isahc", "attohttpc", "minreq"];
@@ -276,6 +281,15 @@ fn graph_problems(rel_path: &str, file: &str) -> Vec<String> {
             }
         }
         if rel_path == GRAPH_FILE {
+            if let Some(option) = GRAPH_FORBIDDEN_OPTIONS.iter().find(|o| literal.contains(*o)) {
+                problems.push(format!(
+                    "{}:{}: Graph `{}` in {:?} (selecting keyCredentials returns the key)",
+                    rel_path,
+                    line_of(text, offset),
+                    option,
+                    literal
+                ));
+            }
             let tokens = literal.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '@'));
             for token in tokens {
                 if GRAPH_FORBIDDEN_FIELDS.contains(&token) {
@@ -343,13 +357,19 @@ fn the_graph_rules_catch_what_they_should() {
     let post = graph_problems("src/azure/client.rs", "let p = \"/v1.0/directoryObjects/getByIds\";\n");
     assert_eq!(post.len(), 1, "{:?}", post);
     assert_eq!(graph_problems(GRAPH_FILE, "let s = \"/v1.0/applications/{}/addPassword\";\n").len(), 1);
-    let select_key = graph_problems(GRAPH_FILE, "let q = (\"$select\", \"id,displayName,keyCredentials,key\");\n");
-    assert_eq!(select_key.len(), 1, "{:?}", select_key);
-    assert!(graph_problems(GRAPH_FILE, "let q = \"$select=key\";\n").len() == 1);
-    assert!(
-        graph_problems(GRAPH_FILE, "let q = (\"$select\", \"id,keyCredentials,passwordCredentials\");\n").is_empty(),
-        "the credential lists themselves are fine: Graph leaves key null unless selected"
+    let select_key = graph_problems(GRAPH_FILE, "let q = (\"$select\", \"id,displayName,key\");\n");
+    assert_eq!(select_key.len(), 2, "the option and the field: {:?}", select_key);
+    assert_eq!(graph_problems(GRAPH_FILE, "let q = \"$select=key\";\n").len(), 2);
+    assert_eq!(
+        graph_problems(GRAPH_FILE, "let q = (\"$select\", \"id,keyCredentials\");\n").len(),
+        1,
+        "selecting keyCredentials returns the key: no $select at all"
     );
+    assert!(
+        graph_problems(GRAPH_FILE, "let p = \"/keyCredentials\";\n").is_empty(),
+        "reading the default projection's keyCredentials (key null) is fine"
+    );
+    assert_eq!(graph_problems("src/azure/services/x.rs", "let q = \"$select=id\";\n").len(), 0, "ARM selects fields freely");
     assert!(graph_problems(GRAPH_FILE, "// a doc comment may say $select=key\n").is_empty());
 }
 
