@@ -11,13 +11,16 @@
 //! holds anywhere in its subscription.
 //!
 //! Role names come from the subscription's role definitions, one list per
-//! subscription for the session. Principal names would need Microsoft
-//! Graph, a different host and permission (on the guard's list), so a
+//! subscription for the session. Principal names come from Microsoft
+//! Graph (ADR 0004): one `GET directoryObjects/{id}` per principal, lazily,
+//! keyed by object id, for the first [`PRINCIPAL_NAMES_MAX`] principals of
+//! a section. Until a name lands (or when directory read is denied) a
 //! principal is its type and object id.
 
+use crate::azure::graph;
 use crate::azure::resource::{name_of_id, shell_quote, subscription_of};
 use crate::azure::services::{json, lazy_list_rows};
-use crate::lazy::Lazy;
+use crate::lazy::{Lazy, LazyMap};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -100,12 +103,68 @@ fn inherited_from(scope: &str, here: &str) -> Option<String> {
     })
 }
 
-fn principal(a: &Value) -> String {
-    format!(
-        "{} · {}",
-        json::opt(json::str_at(a, "/properties/principalType")),
-        json::text(a, "/properties/principalId")
-    )
+/// How many principals one Access section resolves to names: a bound on
+/// the Graph GETs a busy scope (a subscription with hundreds of
+/// assignments) can trigger.
+pub const PRINCIPAL_NAMES_MAX: usize = 50;
+
+/// The principal ids a loaded Access list resolves, lowercased, unique, in
+/// list order, at most [`PRINCIPAL_NAMES_MAX`]: the app triggers exactly
+/// these, and the footer counts against them.
+pub fn principal_ids(items: &[Value]) -> Vec<String> {
+    let mut seen = Vec::new();
+    for a in items {
+        if let Some(id) = json::str_at(a, "/properties/principalId").map(|s| s.to_lowercase()) {
+            if graph::is_object_id(&id) && !seen.contains(&id) {
+                seen.push(id);
+            }
+        }
+    }
+    seen.truncate(PRINCIPAL_NAMES_MAX);
+    seen
+}
+
+fn principal(a: &Value, names: &LazyMap<Value>) -> String {
+    let kind = json::opt(json::str_at(a, "/properties/principalType"));
+    let id = json::text(a, "/properties/principalId");
+    match names.get(&id.to_lowercase()) {
+        // An assignment made before principalType existed has none: the
+        // directory object's own type says it.
+        Some(Lazy::Loaded(v)) if kind == "-" => format!("{} · {} · {}", graph::object_kind(v), graph::object_display(v), id),
+        Some(Lazy::Loaded(v)) => format!("{} · {} · {}", kind, graph::object_display(v), id),
+        Some(Lazy::Error(e)) if graph::is_not_found(e) => format!("{} · not in the directory (deleted?) · {}", kind, id),
+        _ => format!("{} · {}", kind, id),
+    }
+}
+
+/// The footer line on principal names: loading, denied, failed, or capped.
+fn names_footer(items: &[Value], names: &LazyMap<Value>) -> Vec<String> {
+    let ids = principal_ids(items);
+    let states: Vec<Option<&Lazy<Value>>> = ids.iter().map(|id| names.get(id)).collect();
+    let mut out = Vec::new();
+    let errors: Vec<&String> = states
+        .iter()
+        .filter_map(|s| match s {
+            Some(Lazy::Error(e)) if !graph::is_not_found(e) => Some(e),
+            _ => None,
+        })
+        .collect();
+    if errors.iter().any(|e| graph::is_denied(e)) {
+        out.push(format!("· ⚠ {}: principals are object ids", graph::DIRECTORY_READ_DENIED));
+    } else if let Some(e) = errors.first() {
+        out.push(format!("· ⚠ principal names unavailable: {}", e));
+    } else if states.iter().any(|s| matches!(s, None | Some(Lazy::Loading))) {
+        out.push("· principal names are loading (Microsoft Graph)".into());
+    }
+    let total = items
+        .iter()
+        .filter_map(|a| json::str_at(a, "/properties/principalId").map(|s| s.to_lowercase()))
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    if total > ids.len() {
+        out.push(format!("· names resolved for the first {} of {} principals", ids.len(), total));
+    }
+    out
 }
 
 fn condition_line(a: &Value) -> Option<(String, String)> {
@@ -120,6 +179,7 @@ pub fn access_rows(
     id: &str,
     assignments: Option<&Lazy<Vec<Value>>>,
     roles: Option<&Lazy<Vec<Value>>>,
+    principals: &LazyMap<Value>,
 ) -> Vec<(String, String)> {
     let names = role_names(roles);
     lazy_list_rows(assignments, "Access", |items| {
@@ -139,7 +199,7 @@ pub fn access_rows(
             let scope = json::text(a, "/properties/scope");
             lines.push((String::new(), String::new()));
             lines.push((role, String::new()));
-            lines.push(("  Principal".into(), principal(a)));
+            lines.push(("  Principal".into(), principal(a, principals)));
             match inherited_from(&scope, id) {
                 None => lines.push(("  Scope".into(), "assigned here".into())),
                 // An ARM id value, so Enter jumps to where it was made.
@@ -148,6 +208,7 @@ pub fn access_rows(
             lines.extend(condition_line(a));
         }
         footer(&mut lines, &names);
+        lines.extend(names_footer(items, principals).into_iter().map(|l| (String::new(), l)));
         lines.push((
             "Read command".into(),
             format!("az role assignment list --scope {} --include-inherited", shell_quote(id)),
@@ -204,7 +265,6 @@ fn footer(lines: &mut Vec<(String, String)>, names: &Option<HashMap<String, Stri
     if names.is_none() {
         lines.push((String::new(), "· role names are loading; GUIDs until then".into()));
     }
-    lines.push((String::new(), "· principals are object ids (names need Microsoft Graph)".into()));
 }
 
 #[cfg(test)]
@@ -246,7 +306,7 @@ mod tests {
             assignment(RG, READER, "User", "usr-1"),
             conditional,
         ];
-        let lines = access_rows(KV, Some(&Lazy::Loaded(items)), Some(&roles()));
+        let lines = access_rows(KV, Some(&Lazy::Loaded(items)), Some(&roles()), &LazyMap::default());
         let roles_in_order: Vec<&str> = lines
             .iter()
             .filter(|(k, v)| !k.is_empty() && !k.starts_with(' ') && v.is_empty())
@@ -267,7 +327,7 @@ mod tests {
     #[test]
     fn role_guids_show_until_the_definitions_load() {
         let items = vec![assignment(SUB, READER, "User", "usr-1")];
-        let lines = access_rows(SUB, Some(&Lazy::Loaded(items)), Some(&Lazy::Loading));
+        let lines = access_rows(SUB, Some(&Lazy::Loaded(items)), Some(&Lazy::Loading), &LazyMap::default());
         assert!(lines.iter().any(|(k, _)| k == READER));
         assert!(lines.iter().any(|(_, v)| v.contains("role names are loading")));
     }
@@ -279,7 +339,7 @@ mod tests {
             Some("management group corp")
         );
         assert_eq!(inherited_from("/", KV).as_deref(), Some("root"));
-        let none = access_rows(KV, Some(&Lazy::Loaded(vec![])), None);
+        let none = access_rows(KV, Some(&Lazy::Loaded(vec![])), None, &LazyMap::default());
         assert_eq!(none[0].1, "No role assignments apply here");
     }
 
@@ -295,6 +355,51 @@ mod tests {
             "az role assignment list --assignee pid --all --subscription 0000"
         );
         assert_eq!(can_do_rows(None, &id, None, None)[0].1, "No principal id on this identity");
+    }
+
+    #[test]
+    fn principals_resolve_to_names_and_a_denied_read_says_so() {
+        let (u, g, s) = (
+            "aaaaaaaa-0000-0000-0000-000000000001",
+            "aaaaaaaa-0000-0000-0000-000000000002",
+            "AAAAAAAA-0000-0000-0000-000000000003",
+        );
+        let items = vec![assignment(SUB, READER, "User", u), assignment(RG, READER, "Group", g), assignment(KV, READER, "ServicePrincipal", s)];
+        assert_eq!(principal_ids(&items), [u, g, &s.to_lowercase()], "unique, lowercased, list order");
+
+        let mut names: LazyMap<Value> = LazyMap::default();
+        names.apply(
+            u.into(),
+            Ok(serde_json::json!({"@odata.type": "#microsoft.graph.user", "id": u, "displayName": "Ada", "userPrincipalName": "ada@contoso.com"})),
+        );
+        names.insert_loading(g.into());
+        names.apply(s.to_lowercase(), Err("404 Not Found Request_ResourceNotFound".into()));
+        let lines = access_rows(KV, Some(&Lazy::Loaded(items.clone())), Some(&roles()), &names);
+        let principals: Vec<&str> = lines.iter().filter(|(k, _)| k == "  Principal").map(|(_, v)| v.as_str()).collect();
+        assert!(principals.contains(&format!("User · Ada (ada@contoso.com) · {}", u).as_str()), "{:?}", principals);
+        assert!(principals.contains(&format!("Group · {}", g).as_str()), "loading: the id alone");
+        assert!(principals.iter().any(|p| p.contains("not in the directory")), "{:?}", principals);
+        assert!(lines.iter().any(|(_, v)| v.contains("principal names are loading")));
+
+        let mut denied: LazyMap<Value> = LazyMap::default();
+        for id in principal_ids(&items) {
+            denied.apply(id, Err("403 Forbidden Authorization_RequestDenied: Insufficient privileges".into()));
+        }
+        let lines = access_rows(KV, Some(&Lazy::Loaded(items)), Some(&roles()), &denied);
+        assert!(lines.iter().any(|(_, v)| v.contains(graph::DIRECTORY_READ_DENIED)), "{:?}", lines);
+        assert!(!lines.iter().any(|(_, v)| v.contains("loading (Microsoft Graph)")));
+    }
+
+    #[test]
+    fn name_resolution_is_bounded_per_section() {
+        let items: Vec<Value> = (0..PRINCIPAL_NAMES_MAX + 5)
+            .map(|i| assignment(SUB, READER, "User", &format!("00000000-0000-0000-0000-{:012x}", i)))
+            .collect();
+        assert_eq!(principal_ids(&items).len(), PRINCIPAL_NAMES_MAX);
+        let lines = access_rows(SUB, Some(&Lazy::Loaded(items)), Some(&roles()), &LazyMap::default());
+        assert!(lines
+            .iter()
+            .any(|(_, v)| v == &format!("· names resolved for the first {} of {} principals", PRINCIPAL_NAMES_MAX, PRINCIPAL_NAMES_MAX + 5)));
     }
 
     #[test]

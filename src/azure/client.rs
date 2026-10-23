@@ -48,6 +48,9 @@ pub struct AzureClients {
     current: Option<usize>,
     /// One pipeline per tenant, built on first use.
     pipelines: Mutex<HashMap<String, Arc<ArmClient>>>,
+    /// One Graph pipeline per tenant (ADR 0004), built on the first
+    /// directory read.
+    graph_pipelines: Mutex<HashMap<String, Arc<ArmClient>>>,
     /// The auth condition met while reading the subscription list, if
     /// any — the TUI opens with it on the status bar and an empty picker.
     auth_error: Option<AuthError>,
@@ -85,6 +88,7 @@ impl AzureClients {
             subscriptions: Vec::new(),
             current: None,
             pipelines: Mutex::new(HashMap::new()),
+            graph_pipelines: Mutex::new(HashMap::new()),
             auth_error: None,
         };
         clients.load_subscriptions().await?;
@@ -374,6 +378,50 @@ impl AzureClients {
         }
     }
 
+    // ── Microsoft Graph (ADR 0004) ──────────────────────────────────────
+
+    /// The Graph pipeline for a tenant, built once; an error when the
+    /// cloud has no known Graph endpoint.
+    pub fn graph_for_tenant(&self, tenant_id: &str) -> Result<Arc<ArmClient>> {
+        let graph = crate::azure::graph::graph_endpoint_for(&self.endpoint)
+            .ok_or_else(|| Error::Azure(crate::azure::graph::no_graph_for(&self.endpoint)))?;
+        let mut map = self.graph_pipelines.lock().expect("graph pipeline map poisoned");
+        if let Some(c) = map.get(tenant_id) {
+            return Ok(c.clone());
+        }
+        let client = Arc::new(ArmClient::new_graph(self.source, tenant_id, graph)?);
+        map.insert(tenant_id.to_string(), client.clone());
+        Ok(client)
+    }
+
+    /// The Graph pipeline for the tenant an ARM id's subscription belongs
+    /// to (a role assignment's principal lives in that directory).
+    fn graph_for_arm_id(&self, arm_id: &str) -> std::result::Result<Arc<ArmClient>, String> {
+        let sub = subscription_of(arm_id).ok_or_else(|| format!("not an ARM path: {}", arm_id))?;
+        let entry = self
+            .subscriptions
+            .iter()
+            .find(|s| s.id.eq_ignore_ascii_case(sub))
+            .ok_or_else(|| format!("subscription {} is not in the picker's list", sub))?;
+        self.graph_for_tenant(&entry.tenant_id).map_err(|e| e.to_string())
+    }
+
+    /// `GET /v1.0/directoryObjects/{id}` in the directory of `arm_id`'s
+    /// tenant, as a future the lazy store can own (a principal's name).
+    pub fn directory_object_fetch(
+        &self,
+        arm_id: &str,
+        object_id: &str,
+    ) -> impl Future<Output = std::result::Result<serde_json::Value, String>> + Send + 'static {
+        let graph = self.graph_for_arm_id(arm_id);
+        let path = crate::azure::graph::directory_object_path(object_id)
+            .ok_or_else(|| format!("not a directory object id: {}", object_id));
+        async move {
+            let graph = graph?;
+            graph.graph_get(&path?, &[]).await.map_err(|e| e.to_string())
+        }
+    }
+
     /// `GET /subscriptions/{id}` for a subscription row's Details section.
     pub fn subscription_details_fetch(
         &self,
@@ -435,6 +483,7 @@ mod tests {
             subscriptions: subs,
             current: None,
             pipelines: Mutex::new(HashMap::new()),
+            graph_pipelines: Mutex::new(HashMap::new()),
             auth_error: None,
         }
     }
@@ -517,5 +566,18 @@ mod tests {
         assert!(c.set_subscription("zeta").is_err());
         assert_eq!(c.current_subscription(), Some("c"));
         assert_eq!(c.current_endpoint(), None);
+    }
+
+    #[test]
+    fn graph_pipelines_are_per_tenant_and_need_a_known_cloud() {
+        let c = clients(vec![entry("a", "Alpha", "t-1", "Enabled", true)]);
+        let g = c.graph_for_tenant("t-1").unwrap();
+        assert_eq!(g.api(), crate::azure::arm::Api::Graph);
+        assert!(Arc::ptr_eq(&g, &c.graph_for_tenant("t-1").unwrap()));
+        assert!(!Arc::ptr_eq(&g, &c.arm_for_tenant("t-1").unwrap()), "Graph and ARM never share a pipeline");
+        let mut odd = clients(Vec::new());
+        odd.endpoint = "https://127.0.0.1:9".into();
+        let err = odd.graph_for_tenant("t-1").unwrap_err().to_string();
+        assert!(err.contains("no Microsoft Graph endpoint"), "{}", err);
     }
 }

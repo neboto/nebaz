@@ -113,8 +113,9 @@ _Avoid_: per-type state tables that disagree on what `Succeeded` means
 **Access section**:
 The RBAC section every type carries just before Related: the role
 assignments that apply at the row's ARM id, made there or inherited from a
-resource group, subscription or management group. Principals are object ids
-(names would need Microsoft Graph). An identity's **Can do** section is the
+resource group, subscription or management group. Principals are named
+through Microsoft Graph when the account may read the directory, object ids
+otherwise. An identity's **Can do** section is the
 reverse: what its principal holds.
 _Avoid_: permissions (that is `PERMISSIONS.md`, what nebaz itself needs), IAM
 

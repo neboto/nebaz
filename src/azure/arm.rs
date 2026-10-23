@@ -10,6 +10,12 @@
 //! method is not `GET` before it leaves the process. `tests/readonly_guard.rs`
 //! checks the source for both facts (and for `az` command verbs and
 //! data-plane hosts) under `cargo test`.
+//!
+//! **Two flavours, one constructor** (ADR 0004). The same client, built
+//! with [`ArmClient::new_graph`], talks to Microsoft Graph: the request
+//! constructor then puts no `api-version` on the URL (Graph versions in
+//! the path) and paging follows `@odata.nextLink`. The Graph paths and
+//! hosts themselves live in `src/azure/graph.rs`.
 
 use crate::auth_scope;
 use crate::azure::auth::{CliCredential, CredentialSource};
@@ -51,19 +57,60 @@ impl Policy for ReadOnlyPolicy {
     }
 }
 
-/// One ARM connection: a pipeline whose bearer policy holds one tenant's
-/// token.
+/// Which REST surface a client speaks: the two differ only in where the
+/// version goes and what the continuation link is called.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Api {
+    /// Azure Resource Manager: `?api-version=` on every request, `nextLink`.
+    Arm,
+    /// Microsoft Graph: the version is the path's first segment (`/v1.0`),
+    /// `@odata.nextLink`.
+    Graph,
+}
+
+impl Api {
+    /// The list body's continuation-link property.
+    pub fn next_link_key(self) -> &'static str {
+        match self {
+            Api::Arm => "nextLink",
+            Api::Graph => "@odata.nextLink",
+        }
+    }
+}
+
+/// An extra request header: a lowercase static name and its value
+/// (`consistencylevel: eventual` for a Graph advanced query).
+pub type Header = (&'static str, String);
+
+/// One connection: a pipeline whose bearer policy holds one tenant's
+/// token for one API (ARM, or Graph for directory reads).
 #[derive(Debug)]
 pub struct ArmClient {
     pipeline: Pipeline,
     endpoint: Url,
     tenant_id: String,
+    api: Api,
 }
 
 impl ArmClient {
     /// Build the pipeline for one tenant. Cheap and synchronous: the
     /// first token is minted on the first request.
     pub fn new(source: CredentialSource, tenant_id: &str, endpoint: &str) -> Result<ArmClient> {
+        let endpoint = parse_endpoint(endpoint)?;
+        let scope = auth_scope!(endpoint.as_str().trim_end_matches('/'));
+        Self::build(source, tenant_id, endpoint, scope, Api::Arm)
+    }
+
+    /// The Graph flavour for one tenant (ADR 0004): `graph_endpoint` is the
+    /// cloud's Graph base URL (`src/azure/graph.rs` derives it) and the
+    /// token scope is `{graph}/.default`: one slash, unlike ARM's.
+    pub fn new_graph(source: CredentialSource, tenant_id: &str, graph_endpoint: &str) -> Result<ArmClient> {
+        let endpoint = parse_endpoint(graph_endpoint)?;
+        let scope = format!("{}/.default", endpoint.as_str().trim_end_matches('/'));
+        Self::build(source, tenant_id, endpoint, scope, Api::Graph)
+    }
+
+    fn build(source: CredentialSource, tenant_id: &str, endpoint: Url, scope: String, api: Api) -> Result<ArmClient> {
         let credential: Arc<dyn TokenCredential> = match source {
             CredentialSource::Cli => CliCredential::new(tenant_id)?,
             other => {
@@ -73,12 +120,14 @@ impl ArmClient {
                 )))
             }
         };
-        Self::with_credential(credential, tenant_id, endpoint)
+        Self::pipeline_over(credential, tenant_id, endpoint, scope, api)
     }
 
-    /// The pipeline over any token source: `new`'s CLI credential, or the
-    /// wiring harness's offline one (`src/harness_tests`), which never
-    /// yields a token so nothing leaves the process.
+    /// The ARM pipeline over the wiring harness's offline credential
+    /// (`src/harness_tests`), which never yields a token so nothing leaves
+    /// the process. `new` and `new_graph` reach the same pipeline through
+    /// `build`.
+    #[cfg(test)]
     pub(crate) fn with_credential(
         credential: Arc<dyn TokenCredential>,
         tenant_id: &str,
@@ -86,6 +135,18 @@ impl ArmClient {
     ) -> Result<ArmClient> {
         let endpoint = parse_endpoint(endpoint)?;
         let scope = auth_scope!(endpoint.as_str().trim_end_matches('/'));
+        Self::pipeline_over(credential, tenant_id, endpoint, scope, Api::Arm)
+    }
+
+    /// The one pipeline both flavours share: `ReadOnlyPolicy` first, then
+    /// the bearer policy for `scope`.
+    fn pipeline_over(
+        credential: Arc<dyn TokenCredential>,
+        tenant_id: &str,
+        endpoint: Url,
+        scope: String,
+        api: Api,
+    ) -> Result<ArmClient> {
         let bearer = BearerTokenAuthorizationPolicy::new(credential, [scope]);
         // The SDK default is 8 exponential retries up to 30 s apart — over a
         // minute before a dead endpoint shows in the status bar. A TUI wants
@@ -111,41 +172,67 @@ impl ArmClient {
             pipeline,
             endpoint,
             tenant_id: tenant_id.to_string(),
+            api,
         })
+    }
+
+    pub fn api(&self) -> Api {
+        self.api
     }
 
     pub fn tenant_id(&self) -> &str {
         &self.tenant_id
     }
 
-    /// The single request constructor: an authorised `GET` of an ARM path
-    /// (`/subscriptions/…`) at one `api-version`, plus extra query pairs.
-    fn get_request(&self, path: &str, api_version: &str, query: &[(&str, &str)]) -> Result<Request> {
+    /// The single request constructor: an authorised `GET` of a path
+    /// (`/subscriptions/…`, or `/v1.0/…` on Graph), plus extra query pairs
+    /// and headers. ARM requests carry an `api-version`; Graph requests
+    /// must not (the version is in the path), and the flavour checks it.
+    fn get_request(
+        &self,
+        path: &str,
+        api_version: Option<&str>,
+        query: &[(&str, &str)],
+        headers: &[Header],
+    ) -> Result<Request> {
+        match (self.api, api_version) {
+            (Api::Arm, None) => return Err(Error::Azure(format!("ARM request without an api-version: {}", path))),
+            (Api::Graph, Some(_)) => return Err(Error::Azure(format!("Graph request with an api-version: {}", path))),
+            _ => {}
+        }
         let mut url = self
             .endpoint
             .join(path.trim_start_matches('/'))
-            .map_err(|e| Error::Azure(format!("bad ARM path {:?}: {}", path, e)))?;
-        {
+            .map_err(|e| Error::Azure(format!("bad request path {:?}: {}", path, e)))?;
+        if api_version.is_some() || !query.is_empty() {
             let mut q = url.query_pairs_mut();
-            q.append_pair("api-version", api_version);
+            if let Some(v) = api_version {
+                q.append_pair("api-version", v);
+            }
             for (k, v) in query {
                 q.append_pair(k, v);
             }
         }
-        Ok(Request::new(url, Method::Get))
+        let mut request = Request::new(url, Method::Get);
+        for (name, value) in headers {
+            request.insert_header(*name, value.clone());
+        }
+        Ok(request)
     }
 
-    /// A `GET` of an absolute continuation URL (`nextLink`), which already
-    /// carries its api-version and skip token.
-    fn get_link(&self, link: &str) -> Result<Request> {
+    /// A `GET` of an absolute continuation URL (`nextLink` /
+    /// `@odata.nextLink`), which already carries its version and skip
+    /// token; the first page's headers go with it.
+    fn get_link(&self, link: &str, headers: &[Header]) -> Result<Request> {
         let url = Url::parse(link).map_err(|e| Error::Azure(format!("bad nextLink {:?}: {}", link, e)))?;
         if url.origin() != self.endpoint.origin() {
-            return Err(Error::Azure(format!(
-                "nextLink points outside the ARM endpoint: {}",
-                link
-            )));
+            return Err(Error::Azure(format!("nextLink points outside the endpoint: {}", link)));
         }
-        Ok(Request::new(url, Method::Get))
+        let mut request = Request::new(url, Method::Get);
+        for (name, value) in headers {
+            request.insert_header(*name, value.clone());
+        }
+        Ok(request)
     }
 
     async fn send_json(&self, mut request: Request) -> Result<Value> {
@@ -177,7 +264,28 @@ impl ArmClient {
 
     /// `GET` one resource with extra query pairs (`$expand=instanceView`).
     pub async fn get_query(&self, path: &str, api_version: &str, query: &[(&str, &str)]) -> Result<Value> {
-        self.send_json(self.get_request(path, api_version, query)?).await
+        self.send_json(self.get_request(path, Some(api_version), query, &[])?).await
+    }
+
+    /// `GET` one Graph object (`/v1.0/directoryObjects/{id}`).
+    pub async fn graph_get(&self, path: &str, query: &[(&str, &str)]) -> Result<Value> {
+        self.send_json(self.get_request(path, None, query, &[])?).await
+    }
+
+    /// `GET` a Graph collection a page at a time, following
+    /// `@odata.nextLink` while `on_page` returns `true`; `headers` go on
+    /// every page (`ConsistencyLevel: eventual` for an advanced query).
+    pub async fn graph_list_pages_while<F>(
+        &self,
+        path: &str,
+        query: &[(&str, &str)],
+        headers: &[Header],
+        on_page: F,
+    ) -> Result<usize>
+    where
+        F: FnMut(Vec<Value>) -> bool + Send,
+    {
+        self.pages_while(path, None, query, headers, on_page).await
     }
 
     /// `GET` a whole collection, following `nextLink` to the end.
@@ -215,22 +323,37 @@ impl ArmClient {
         path: &str,
         api_version: &str,
         query: &[(&str, &str)],
+        on_page: F,
+    ) -> Result<usize>
+    where
+        F: FnMut(Vec<Value>) -> bool + Send,
+    {
+        self.pages_while(path, Some(api_version), query, &[], on_page).await
+    }
+
+    /// The one paging loop under both flavours.
+    async fn pages_while<F>(
+        &self,
+        path: &str,
+        api_version: Option<&str>,
+        query: &[(&str, &str)],
+        headers: &[Header],
         mut on_page: F,
     ) -> Result<usize>
     where
         F: FnMut(Vec<Value>) -> bool + Send,
     {
-        let mut request = Some(self.get_request(path, api_version, query)?);
+        let mut request = Some(self.get_request(path, api_version, query, headers)?);
         let mut pages = 0usize;
         while let Some(req) = request.take() {
             let body = self.send_json(req).await?;
             pages += 1;
-            let (value, next) = split_page(body);
+            let (value, next) = split_page_at(body, self.api.next_link_key());
             if !on_page(value) {
                 break;
             }
             if let Some(link) = next {
-                request = Some(self.get_link(&link)?);
+                request = Some(self.get_link(&link, headers)?);
             }
         }
         Ok(pages)
@@ -238,10 +361,17 @@ impl ArmClient {
 }
 
 /// Split an ARM list body into its `value` array and `nextLink`.
-pub fn split_page(body: Value) -> (Vec<Value>, Option<String>) {
+#[cfg(test)]
+fn split_page(body: Value) -> (Vec<Value>, Option<String>) {
+    split_page_at(body, Api::Arm.next_link_key())
+}
+
+/// Split a list body into its `value` array and the continuation link
+/// named `next_key` (`nextLink` on ARM, `@odata.nextLink` on Graph).
+pub fn split_page_at(body: Value, next_key: &str) -> (Vec<Value>, Option<String>) {
     let mut body = body;
     let next = body
-        .get("nextLink")
+        .get(next_key)
         .and_then(|n| n.as_str())
         .filter(|s| !s.is_empty())
         .map(str::to_string);
@@ -307,7 +437,7 @@ mod tests {
     fn get_request_is_a_get_with_api_version_and_query() {
         let client = ArmClient::new(CredentialSource::Cli, "t-1", DEFAULT_ENDPOINT).unwrap();
         let req = client
-            .get_request("/subscriptions/0/resourcegroups", "2021-04-01", &[("$top", "10")])
+            .get_request("/subscriptions/0/resourcegroups", Some("2021-04-01"), &[("$top", "10")], &[])
             .unwrap();
         assert_eq!(req.method(), Method::Get);
         assert_eq!(
@@ -315,10 +445,49 @@ mod tests {
             "https://management.azure.com/subscriptions/0/resourcegroups?api-version=2021-04-01&%24top=10"
         );
         let link = client
-            .get_link("https://management.azure.com/subscriptions/0/resourcegroups?api-version=2021-04-01&%24skiptoken=abc")
+            .get_link("https://management.azure.com/subscriptions/0/resourcegroups?api-version=2021-04-01&%24skiptoken=abc", &[])
             .unwrap();
         assert_eq!(link.method(), Method::Get);
-        assert!(client.get_link("https://evil.example/x").is_err());
+        assert!(client.get_link("https://evil.example/x", &[]).is_err());
+        assert!(client.get_request("/subscriptions/0", None, &[], &[]).is_err(), "ARM needs an api-version");
+    }
+
+    #[test]
+    fn the_graph_flavour_has_no_api_version_carries_headers_and_pages_on_odata_next_link() {
+        let client = ArmClient::new_graph(CredentialSource::Cli, "t-1", "https://graph.example.test").unwrap();
+        assert_eq!(client.api(), Api::Graph);
+        let eventual: Vec<Header> = vec![("consistencylevel", "eventual".to_string())];
+        let req = client
+            .get_request(
+                "/v1.0/servicePrincipals",
+                None,
+                &[("$filter", "servicePrincipalType eq 'ManagedIdentity'")],
+                &eventual,
+            )
+            .unwrap();
+        assert_eq!(req.method(), Method::Get);
+        assert_eq!(
+            req.url().as_str(),
+            "https://graph.example.test/v1.0/servicePrincipals?%24filter=servicePrincipalType+eq+%27ManagedIdentity%27"
+        );
+        assert_eq!(req.headers().get_optional_str(&"consistencylevel".into()), Some("eventual"));
+        let bare = client.get_request("/v1.0/directoryObjects/abc", None, &[], &[]).unwrap();
+        assert_eq!(bare.url().as_str(), "https://graph.example.test/v1.0/directoryObjects/abc");
+        assert!(client.get_request("/v1.0/x", Some("2021-04-01"), &[], &[]).is_err(), "Graph takes no api-version");
+        let link = client
+            .get_link("https://graph.example.test/v1.0/servicePrincipals?$skiptoken=x", &eventual)
+            .unwrap();
+        assert_eq!(link.headers().get_optional_str(&"consistencylevel".into()), Some("eventual"));
+        assert!(client.get_link("https://management.azure.com/x", &[]).is_err());
+
+        let (v, next) = split_page_at(
+            serde_json::json!({"value": [1], "@odata.nextLink": "https://graph.example.test/v1.0/x?$skiptoken=y"}),
+            Api::Graph.next_link_key(),
+        );
+        assert_eq!(v.len(), 1);
+        assert_eq!(next.as_deref(), Some("https://graph.example.test/v1.0/x?$skiptoken=y"));
+        let (_, next) = split_page(serde_json::json!({"value": [], "@odata.nextLink": "https://x/y"}));
+        assert!(next.is_none(), "ARM paging never follows an OData link");
     }
 
     #[test]

@@ -10,6 +10,9 @@
 //! 2. No data-plane host string exists in non-test code under `src/` — Key
 //!    Vault values, blob bodies and model calls live behind those hosts,
 //!    never behind ARM. (Test fixtures may carry a `vaultUri`, as real ARM rows do.)
+//!    Microsoft Graph (ADR 0004) is allowed in `src/azure/graph.rs` only;
+//!    `getByIds` (a `POST`) and the secret-returning calls are forbidden
+//!    everywhere, and the Graph module never names a certificate's `key`.
 //! 3. Every `az …` command string in `src/` uses a read verb, or is on a
 //!    written allowlist; the Key Vault value-returning commands and the
 //!    AI account key listing are named forbidden outright.
@@ -55,9 +58,6 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // Monitor: log queries and App Insights data.
     "api.loganalytics.io",
     "api.applicationinsights.io",
-    // Microsoft Graph: principal names for Access (#24) would need it; a
-    // different host and permission, so adding it must be deliberate.
-    "graph.microsoft.com",
     // Power Platform (#77): environments and their policy links live in
     // the admin APIs (BAP, public and US government; the Power Platform
     // API), Dataverse data in the environment's own host. Enterprise
@@ -66,7 +66,37 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "api.bap.microsoft.us",
     "api.powerplatform.com",
     "crm.dynamics.com",
+    // Azure AD Graph, retired: never, not even in the Graph module.
+    "graph.windows.net",
 ];
+
+/// The one file allowed to name a Microsoft Graph host (ADR 0004): every
+/// Graph path and query lives there, sent through the Graph flavour of the
+/// ARM client's one GET constructor.
+const GRAPH_FILE: &str = "src/azure/graph.rs";
+
+/// Microsoft Graph, public and sovereign clouds. Allowed in [`GRAPH_FILE`]
+/// only; anywhere else they are a data-plane host like the rest.
+const GRAPH_HOSTS: &[&str] = &[
+    "graph.microsoft.com",
+    "graph.microsoft.us",
+    "dod-graph.microsoft.us",
+    "microsoftgraph.chinacloudapi.cn",
+];
+
+/// Graph calls that write or return secret material, forbidden as a
+/// literal anywhere in `src/`: `getByIds` is a `POST`; `addPassword` and
+/// `addKey` are the only calls that return a secret value.
+const GRAPH_FORBIDDEN: &[&str] = &["getByIds", "addPassword", "addKey", "secretText"];
+
+/// Fields the Graph module must never name in a literal: a certificate's
+/// `key` is only returned when selected.
+const GRAPH_FORBIDDEN_FIELDS: &[&str] = &["key"];
+
+/// Query options the Graph module must never use. Graph returns a
+/// certificate's `key` whenever `keyCredentials` is `$select`ed, so nebaz
+/// selects nothing: the default projection leaves `key` null.
+const GRAPH_FORBIDDEN_OPTIONS: &[&str] = &["$select", "select="];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.
 const HTTP_CLIENT_CRATES: &[&str] = &["reqwest", "hyper", "ureq", "curl", "isahc", "attohttpc", "minreq"];
@@ -211,23 +241,136 @@ fn only_the_arm_client_builds_requests_and_only_gets() {
     assert!(problems.is_empty(), "read-only guard (HTTP layer):\n  {}", problems.join("\n  "));
 }
 
+/// The host problems in one file's non-test text: every data-plane host,
+/// and a Graph host outside [`GRAPH_FILE`].
+fn host_problems(rel_path: &str, file: &str) -> Vec<String> {
+    let text = non_test_part(file);
+    let mut problems = Vec::new();
+    for host in DATA_PLANE_HOSTS {
+        for (offset, _) in text.match_indices(host) {
+            problems.push(format!("{}:{}: data-plane host `{}`", rel_path, line_of(text, offset), host));
+        }
+    }
+    if rel_path != GRAPH_FILE {
+        for host in GRAPH_HOSTS {
+            for (offset, _) in text.match_indices(host) {
+                problems.push(format!(
+                    "{}:{}: Graph host `{}` outside {}",
+                    rel_path,
+                    line_of(text, offset),
+                    host,
+                    GRAPH_FILE
+                ));
+            }
+        }
+    }
+    problems
+}
+
+/// The Graph problems in one file's non-test, comment-free text: a
+/// forbidden call anywhere, and a forbidden field in a Graph-module
+/// literal (a `$select` list, a path, a query value).
+fn graph_problems(rel_path: &str, file: &str) -> Vec<String> {
+    let stripped = without_line_comments(file);
+    let text = non_test_part(&stripped);
+    let mut problems = Vec::new();
+    for (offset, literal) in string_literals(text) {
+        for call in GRAPH_FORBIDDEN {
+            if literal.contains(call) {
+                problems.push(format!("{}:{}: Graph `{}` (a write or a secret)", rel_path, line_of(text, offset), call));
+            }
+        }
+        if rel_path == GRAPH_FILE {
+            if let Some(option) = GRAPH_FORBIDDEN_OPTIONS.iter().find(|o| literal.contains(*o)) {
+                problems.push(format!(
+                    "{}:{}: Graph `{}` in {:?} (selecting keyCredentials returns the key)",
+                    rel_path,
+                    line_of(text, offset),
+                    option,
+                    literal
+                ));
+            }
+            let tokens = literal.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '@'));
+            for token in tokens {
+                if GRAPH_FORBIDDEN_FIELDS.contains(&token) {
+                    problems.push(format!(
+                        "{}:{}: Graph field `{}` in {:?} (a certificate's key is never selected)",
+                        rel_path,
+                        line_of(text, offset),
+                        token,
+                        literal
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
 #[test]
 fn no_data_plane_host_is_named_anywhere() {
     let mut problems = Vec::new();
     for path in rust_sources() {
         let file = fs::read_to_string(&path).unwrap();
-        let text = non_test_part(&file);
-        for host in DATA_PLANE_HOSTS {
-            for (offset, _) in text.match_indices(host) {
-                problems.push(format!("{}:{}: data-plane host `{}`", rel(&path), line_of(text, offset), host));
-            }
-        }
+        problems.extend(host_problems(&rel(&path), &file));
     }
     assert!(
         problems.is_empty(),
-        "read-only guard (data plane): nebaz talks to ARM only, never to a vault or storage endpoint\n  {}",
+        "read-only guard (data plane): nebaz talks to ARM, and to Graph from {} only, never to a vault or storage endpoint\n  {}",
+        GRAPH_FILE,
         problems.join("\n  ")
     );
+    let graph = fs::read_to_string(root().join(GRAPH_FILE)).expect("the Graph module");
+    assert!(
+        GRAPH_HOSTS.iter().any(|h| non_test_part(&graph).contains(h)),
+        "{} names no Graph host: did the module move? Update GRAPH_FILE",
+        GRAPH_FILE
+    );
+}
+
+#[test]
+fn graph_is_get_only_and_never_selects_a_key() {
+    let mut problems = Vec::new();
+    for path in rust_sources() {
+        let file = fs::read_to_string(&path).unwrap();
+        problems.extend(graph_problems(&rel(&path), &file));
+    }
+    assert!(problems.is_empty(), "read-only guard (Graph):\n  {}", problems.join("\n  "));
+}
+
+/// The guard's own rules, on synthetic files: a regression here means a
+/// real violation could pass unnoticed.
+#[test]
+fn the_graph_rules_catch_what_they_should() {
+    let graph_host = "let g = \"https://graph.microsoft.com\";\n";
+    assert!(host_problems(GRAPH_FILE, graph_host).is_empty(), "the Graph module may name its host");
+    let elsewhere = host_problems("src/azure/services/access.rs", graph_host);
+    assert_eq!(elsewhere.len(), 1, "{:?}", elsewhere);
+    assert!(elsewhere[0].contains("outside src/azure/graph.rs"), "{:?}", elsewhere);
+    assert_eq!(host_problems(GRAPH_FILE, "let v = \"vault.azure.net\";\n").len(), 1, "data-plane hosts stay forbidden in the Graph module");
+    assert_eq!(host_problems(GRAPH_FILE, "let a = \"https://graph.windows.net\";\n").len(), 1, "AAD Graph is retired");
+    assert!(
+        host_problems("src/x.rs", "fn f() {}\n#[cfg(test)]\nmod t { const H: &str = \"graph.microsoft.com\"; }\n").is_empty(),
+        "test fixtures are exempt, as for every host"
+    );
+
+    let post = graph_problems("src/azure/client.rs", "let p = \"/v1.0/directoryObjects/getByIds\";\n");
+    assert_eq!(post.len(), 1, "{:?}", post);
+    assert_eq!(graph_problems(GRAPH_FILE, "let s = \"/v1.0/applications/{}/addPassword\";\n").len(), 1);
+    let select_key = graph_problems(GRAPH_FILE, "let q = (\"$select\", \"id,displayName,key\");\n");
+    assert_eq!(select_key.len(), 2, "the option and the field: {:?}", select_key);
+    assert_eq!(graph_problems(GRAPH_FILE, "let q = \"$select=key\";\n").len(), 2);
+    assert_eq!(
+        graph_problems(GRAPH_FILE, "let q = (\"$select\", \"id,keyCredentials\");\n").len(),
+        1,
+        "selecting keyCredentials returns the key: no $select at all"
+    );
+    assert!(
+        graph_problems(GRAPH_FILE, "let p = \"/keyCredentials\";\n").is_empty(),
+        "reading the default projection's keyCredentials (key null) is fine"
+    );
+    assert_eq!(graph_problems("src/azure/services/x.rs", "let q = \"$select=id\";\n").len(), 0, "ARM selects fields freely");
+    assert!(graph_problems(GRAPH_FILE, "// a doc comment may say $select=key\n").is_empty());
 }
 
 #[test]

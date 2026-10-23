@@ -34,7 +34,7 @@ use crate::azure::services::activity::{
     activity_path, activity_query, activity_rows, ACTIVITY_API_VERSION, ACTIVITY_LABEL, ACTIVITY_MAX_EVENTS,
 };
 use crate::azure::services::access::{
-    access_rows, at_scope_filter, principal_filter, role_assignments_path, role_definitions_path,
+    access_rows, at_scope_filter, principal_filter, principal_ids, role_assignments_path, role_definitions_path,
     role_definitions_scope, ACCESS_API_VERSION, ACCESS_LABEL,
 };
 use crate::azure::services::identity::{
@@ -1242,6 +1242,26 @@ impl App {
         F: FnOnce() -> Fut,
         Fut: Future<Output = std::result::Result<T, String>> + Send + 'static,
     {
+        self.trigger_lazy_with(lens, key, event_tx, fut, true);
+    }
+
+    /// [`trigger_lazy`](Self::trigger_lazy), choosing whether the outcome
+    /// may raise or clear the app-wide auth line. A Microsoft Graph read
+    /// may not (ADR 0004): its token is a second scope, and a denied or
+    /// consent-gated directory read is that section's warning, never
+    /// "not logged in" for the whole app.
+    fn trigger_lazy_with<T, F, Fut>(
+        &mut self,
+        lens: fn(&mut LazyStore) -> &mut LazyMap<T>,
+        key: String,
+        event_tx: &mpsc::UnboundedSender<Event>,
+        fut: F,
+        affects_auth: bool,
+    ) where
+        T: Send + 'static,
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = std::result::Result<T, String>> + Send + 'static,
+    {
         let map = lens(&mut self.lazy);
         if map.contains(&key) {
             return;
@@ -1256,6 +1276,7 @@ impl App {
                 // A lazy fetch that failed for want of a token raises the
                 // app-wide line; one that succeeded proves the token works.
                 match &result {
+                    _ if !affects_auth => {}
                     Err(e) => {
                         if let Some(a) = AuthError::classify(e) {
                             app.auth_error = Some(a);
@@ -1434,6 +1455,29 @@ impl App {
             |c, id| c.list_fetch_query(&role_assignments_path(id), ACCESS_API_VERSION, at_scope_filter()),
         );
         app.trigger_role_definitions(event_tx);
+        app.trigger_principal_names(event_tx);
+    }
+
+    /// Resolve the selected row's Access principals to names through
+    /// Microsoft Graph, one `GET directoryObjects/{id}` each, bounded by
+    /// `PRINCIPAL_NAMES_MAX` (ADR 0004). A no-op until the assignments
+    /// have loaded; the `Event::Lazy` handler calls it again when they
+    /// land, and present keys never refetch.
+    fn trigger_principal_names(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(id) = self.get_selected_resource_id() else {
+            return;
+        };
+        let ids = match self.lazy.role_assignments.get(&id) {
+            Some(crate::lazy::Lazy::Loaded(items)) => principal_ids(items),
+            _ => return,
+        };
+        for oid in ids {
+            if self.lazy.principals.contains(&oid) {
+                continue;
+            }
+            let fut = self.azure_clients.directory_object_fetch(&id, &oid);
+            self.trigger_lazy_with(|s| &mut s.principals, oid, event_tx, move || fut, false);
+        }
     }
 
     /// On-enter hook for every type's Activity section: the last week of
@@ -1879,7 +1923,12 @@ impl App {
         }
         if label == Some(ACCESS_LABEL) {
             let roles = role_definitions_scope(resource.id()).and_then(|k| self.lazy.role_definitions.get(&k));
-            return Some(access_rows(resource.id(), self.lazy.role_assignments.get(resource.id()), roles));
+            return Some(access_rows(
+                resource.id(),
+                self.lazy.role_assignments.get(resource.id()),
+                roles,
+                &self.lazy.principals,
+            ));
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {
             return Some(subscription_section_lines(
@@ -2385,6 +2434,9 @@ impl App {
             Event::Lazy(apply) => {
                 if apply.epoch == self.lazy.epoch() {
                     (apply.apply)(self);
+                    // The Access list may just have landed: name its
+                    // principals (idempotent per object id).
+                    self.trigger_principal_names(event_tx);
                     // The locations list may have landed while `R` is open.
                     if self.location_selector.visible {
                         let rows = self.location_rows();
