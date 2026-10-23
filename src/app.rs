@@ -121,6 +121,8 @@ mod metrics;
 mod network_lens;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
+/// The list pane's visual selection (`V`, `Ctrl-A`, drag) and its verbs.
+mod list_visual;
 
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
 
@@ -538,6 +540,10 @@ pub struct App {
     pub watch: WatchState,
     pub watch_staging: Option<Vec<Box<dyn Resource>>>,
     pub deep_export_progress: Option<String>,
+    /// Anchor of the list pane's linewise visual selection (`V`): the range
+    /// is `min(anchor, cursor)..=max` over `filtered_resources`. Positional,
+    /// so `update_search` and a drill-in clear it (`app/list_visual.rs`).
+    pub list_visual_anchor: Option<usize>,
     /// The export `X` armed, finished by `export_tick` (see `app/export.rs`).
     pub pending_export: Option<export::PendingExport>,
     /// Which formats and where exports write (config `export_formats` /
@@ -694,6 +700,7 @@ impl App {
             watch: WatchState::new(config.watch.unwrap_or(false), config.watch_interval),
             watch_staging: None,
             deep_export_progress: None,
+            list_visual_anchor: None,
             pending_export: None,
             export_options,
             last_export_paths: Vec::new(),
@@ -1018,11 +1025,6 @@ impl App {
         self.resources.len() - self.location_hidden_count
     }
 
-    /// List visual selection is not ported yet; no row is ever "in" one.
-    pub fn list_row_in_selection(&self, _pos: usize) -> bool {
-        false
-    }
-
     pub fn record_list_geometry(&self, area: Rect) {
         self.list_area.set(area);
     }
@@ -1154,6 +1156,8 @@ impl App {
     /// Rebuild `filtered_resources` from the query, the location filter,
     /// the state filter, the noise toggle and the sort.
     pub fn update_search(&mut self) {
+        // The list selection is positional: a rebuild cancels it.
+        self.list_visual_anchor = None;
         let keep_id = self.get_selected_resource_id();
         let search_text = match self.sync_all_search() {
             all_search::AllSearchStep::Left => return,
@@ -3168,11 +3172,21 @@ impl App {
                             let offset = self.resource_list_state.borrow().offset();
                             let row = (mouse.row - list.y).saturating_sub(1) as usize + offset;
                             if row < self.filtered_resources.len() {
+                                self.list_visual_anchor = None;
                                 self.select(Some(row));
                                 self.leave_detail_pane();
                             }
                         }
                     }
+                }
+            }
+            // A left-drag over the list rows selects them (from the row
+            // the press landed on).
+            MouseEventKind::Drag(crossterm::event::MouseButton::Left) => {
+                let list = self.list_area.get();
+                if !self.details_focused && point_in(list, mouse.column, mouse.row) && mouse.row > list.y {
+                    let offset = self.resource_list_state.borrow().offset();
+                    self.list_drag_to((mouse.row - list.y - 1) as usize + offset);
                 }
             }
             MouseEventKind::ScrollDown => self.move_selection(1),
@@ -3463,7 +3477,10 @@ impl App {
             return;
         }
 
-        // List pane.
+        // List pane: the visual selection's keys first.
+        if self.handle_list_visual_key(key, event_tx) {
+            return;
+        }
         match key.code {
             KeyCode::Char('j') | KeyCode::Down => self.move_selection(1),
             KeyCode::Char('k') | KeyCode::Up => self.move_selection(-1),

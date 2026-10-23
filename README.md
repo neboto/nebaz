@@ -60,7 +60,11 @@ view (`\`) that puts every section in one scroll, a body filter (`/`,
 values such as ARM ids; `H`/`L` step sub-tabs from either pane. `X` exports the
 selected resource (every section, after waiting for the lazy ones to load;
 `Esc` cancels) and `Ctrl-X` the list, as JSON, CSV and Markdown carrying
-the same data (`export_formats` / `export_dir` in the config). `N` on a VM, NIC,
+the same data (`export_formats` / `export_dir` in the config). The list
+pane has its own visual selection (`V`, `J`/`K`, `Ctrl-A`, or a mouse
+drag): `y` copies the rows as a Markdown table, `Ctrl-X` exports just
+those rows and `X` deep-exports them (every section of up to 50 rows, in
+one file per format). `N` on a VM, NIC,
 subnet or NSG opens the **network access lens**: the NSG rules that apply,
 subnet then NIC, in priority order, defaults included, shadowed rules and
 rules the other layer blocks marked (computed from the rules with GETs

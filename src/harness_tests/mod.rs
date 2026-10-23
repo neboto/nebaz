@@ -41,6 +41,7 @@ mod all_search_test;
 mod directory_test;
 mod list_ux_test;
 mod export_test;
+mod list_visual_test;
 mod load_stream_test;
 pub(crate) mod mocks;
 mod detail_pane_test;
