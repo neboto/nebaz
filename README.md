@@ -85,7 +85,10 @@ loads the likely ones in the background. A dim **ownership ribbon** on the detai
 pane's top border says who owns the resource: what manages it (ARM's
 `managedBy`, also a Related line to jump to), Terraform / Bicep / azd hints
 and owner-ish tags (`ownership_tags` in the config), and the deployment that
-last touched it, read once per resource group when the pane is focused. Verified against a live tenant:
+last touched it, read once per resource group when the pane is focused. `W` opens the **change timeline**: the
+Activity Log's changes, Resource Health transitions, fired alerts and
+the deployments that touched the row, merged newest first over 7d / 30d
+/ 90d (`[`/`]`), `f` for one source. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in

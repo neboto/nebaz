@@ -74,6 +74,7 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("N", "network access (NSG rules)"),
             ("U", "referenced by (warm lists; L loads likely)"),
             ("m", "metrics (Azure Monitor)"),
+            ("W", "change timeline (f · [ / ])"),
             ("X / ^X", "export detail / list"),
             ("M", "message history"),
             (",", "macros (⏎ run · n record)"),

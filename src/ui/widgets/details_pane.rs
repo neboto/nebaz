@@ -70,6 +70,11 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
         crate::ui::widgets::network_lens::render_network_lens(app, area, frame);
         return;
     }
+    // So does the change timeline (`W`).
+    if app.timeline.is_some() {
+        crate::ui::widgets::timeline_lens::render_timeline_lens(app, area, frame);
+        return;
+    }
     // So does the metrics view (`m`).
     if app.metrics.is_some() {
         crate::ui::widgets::metrics_overlay::render_metrics_overlay(app, area, frame);

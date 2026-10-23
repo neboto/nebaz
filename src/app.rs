@@ -124,6 +124,7 @@ mod network_lens;
 mod refs_lens;
 /// The ownership ribbon (#48): what it says, the deployments trigger.
 mod ownership;
+mod timeline;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
 /// The mouse: click targets, double-click, drag, right-click back.
@@ -570,6 +571,13 @@ pub struct App {
     metrics_generation: u64,
     /// The last window the view used: sticky across opens.
     metrics_window: crate::azure::metrics::MetricWindow,
+    /// Change timeline (`W`, #52): owns the detail pane while open.
+    pub timeline: Option<crate::ui::widgets::timeline_lens::TimelineLensState>,
+    /// Bumped per timeline fetch; a source's answer for an older one is dropped.
+    timeline_generation: u64,
+    /// The timeline's window and `a` mode: sticky across opens.
+    timeline_window: crate::azure::timeline::LensWindow,
+    timeline_include_all: bool,
 
     // Mouse hit-testing, recorded by the read-only widgets each frame.
     click_regions: RefCell<Vec<ClickRegion>>,
@@ -725,6 +733,10 @@ impl App {
             metrics_generation: 0,
             metrics_window: Default::default(),
             command_picker: None,
+            timeline: None,
+            timeline_generation: 0,
+            timeline_window: Default::default(),
+            timeline_include_all: false,
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             mouse: MouseState::default(),
@@ -918,6 +930,7 @@ impl App {
         self.network_lens = None;
         self.refs_lens = None;
         self.metrics = None;
+        self.timeline = None;
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
             self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
@@ -1423,6 +1436,7 @@ impl App {
         self.network_lens = None;
         self.refs_lens = None;
         self.metrics = None;
+        self.timeline = None;
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
         Ok(())
@@ -2418,6 +2432,9 @@ impl App {
         if let Some(st) = &self.refs_lens {
             return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
         }
+        if let Some(st) = &self.timeline {
+            return crate::editor::spawn_editor_with_content(&st.editor_text(), ".txt");
+        }
         let Some(resource) = self.get_selected_resource() else {
             return Ok(());
         };
@@ -3316,6 +3333,11 @@ impl App {
             self.handle_metrics_key(key, event_tx);
             return;
         }
+        // And the change timeline.
+        if self.timeline.is_some() {
+            self.handle_timeline_key(key, event_tx);
+            return;
+        }
 
         // An armed export: Esc cancels it, from either pane (the detail
         // filter's input keeps its own Esc).
@@ -3588,6 +3610,7 @@ impl App {
             KeyCode::Char('N') => self.open_network_lens(_event_tx),
             KeyCode::Char('U') => self.open_refs_lens(_event_tx),
             KeyCode::Char('m') => self.open_metrics(_event_tx),
+            KeyCode::Char('W') => self.open_timeline(_event_tx),
             KeyCode::Char('b') => self.banner_visible = !self.banner_visible,
             KeyCode::Char('e') => {
                 if self.selected_index.is_some() {
