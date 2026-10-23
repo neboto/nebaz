@@ -366,6 +366,19 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
                 ("Esc", "back"),
                 ("?", "help"),
             ])
+        } else if app.all_search_mode {
+            // @* rows: ⏎ opens one in its tab, l peeks; then what it skipped.
+            let unchecked = app.all_search_unchecked_hint();
+            let mut hints: Vec<(&str, &str)> = vec![
+                ("⏎", "open in its tab"),
+                ("l", "peek"),
+                ("/", "edit query"),
+                ("Esc", "clear"),
+            ];
+            if !unchecked.is_empty() {
+                hints.push(("not checked:", unchecked.as_str()));
+            }
+            theme::hint_line(&hints)
         } else {
             let mut hints: Vec<(&str, &str)> = vec![
                 ("j/k", "move"),

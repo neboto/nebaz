@@ -85,6 +85,7 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("@rg @disk @nsg …", "switch to a sub-tab"),
             ("rg:name", "resource group filter"),
             ("tag:k=v", "exact tag filter"),
+            ("@* …", "search every cached list"),
             ("Tab", "complete @prefix"),
             ("↑ / ↓", "earlier searches"),
         ],

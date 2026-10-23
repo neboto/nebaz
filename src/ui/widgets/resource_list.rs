@@ -73,7 +73,8 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
     let focused = !app.details_focused;
 
     let title = if app.all_search_mode {
-        "All services (cached)".to_string()
+        let c = &app.all_search_coverage;
+        format!("@* every cached list · {} of {} lists warm", c.warm, c.total)
     } else {
         match app.current_service {
             Some(service) => service.description().to_string(),
@@ -172,17 +173,23 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
                 String::new(),
             )
         } else if app.all_search_mode {
-            // @all searches warm cache entries only — an empty result set
+            // @* searches warm cache entries only — an empty result set
             // needs to say whether nothing matched or nothing is cached yet.
             if app.resources.is_empty() {
                 (
                     "Nothing cached to search".to_string(),
-                    "@all searches services already visited this session".to_string(),
+                    "@* searches lists already loaded this session: open a tab to load it".to_string(),
                 )
             } else {
                 (
                     format!("No matches for “{}”", app.search_query),
-                    "searching cached services only · Esc clear".to_string(),
+                    match app.all_search_unchecked_hint() {
+                        u if u.is_empty() => format!("searched all {} lists · Esc clear", app.all_search_coverage.warm),
+                        u => format!(
+                            "searched {} cached lists · not checked (open a tab to load it): {}",
+                            app.all_search_coverage.warm, u
+                        ),
+                    },
                 )
             }
         } else if app.resources.is_empty() {
@@ -258,8 +265,19 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
     // layout doesn't shift while scrolling.
     const WIDE_MIN_INNER: usize = 70;
     let wide = inner_width >= WIDE_MIN_INNER;
-    // @all rows lead with a 6-col service badge; budget the wide columns for it.
-    let badge_w: usize = if app.all_search_mode { 6 } else { 0 };
+    // @* rows lead with a `Service/Sub-tab` badge; budget the wide columns for it.
+    const BADGE_CAP: usize = 22;
+    let badge_w: usize = if app.all_search_mode {
+        app.filtered_resources
+            .iter()
+            .map(|&i| app.all_search_badge(i).chars().count())
+            .max()
+            .unwrap_or(0)
+            .min(BADGE_CAP)
+            + 1
+    } else {
+        0
+    };
     let pol_badge_w: usize = 0;
     let (name_col, id_col, state_col) = if wide {
         let mut name_w = 0usize;
@@ -325,16 +343,12 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
                 Style::default().fg(indicator_color),
             )];
 
-            // @all cross-service rows lead with their owning service so
-            // results from sixty services stay tellable-apart.
+            // @* cross-cache rows lead with the list they came from so
+            // results from every service stay tellable-apart.
             if app.all_search_mode {
-                let label = app
-                    .all_search_sources
-                    .get(resource_idx)
-                    .map(|s| s.short_name())
-                    .unwrap_or("");
+                let label = app.all_search_badge(resource_idx);
                 spans.push(Span::styled(
-                    format!("{:<6}", label),
+                    format!("{} ", fit(&label, badge_w.saturating_sub(1))),
                     Style::default().fg(theme::brand()),
                 ));
             }

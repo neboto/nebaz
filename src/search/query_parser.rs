@@ -32,6 +32,29 @@ pub struct ParsedQuery {
 /// assert_eq!(parsed.search_text, "web-server");
 /// assert!(parsed.is_service_switch);
 /// ```
+/// The cross-cache search prefix (#38). neboto spells it `@all`; in nebaz
+/// `@all` is the All resources sub-tab's routing prefix (#23), so the
+/// cross-cache search is `@*` ("every list"), which no service word can
+/// ever clash with.
+pub const ALL_SEARCH_PREFIX: &str = "@*";
+
+/// `@* <text>` → the cross-cache search text: fuzzy-match every warm list
+/// cache entry of the current subscription instead of switching service.
+/// Checked before `parse_query` (which would call `*` an unknown service
+/// prefix). `@*x` is NOT a cross-cache query: the prefix must end the
+/// token. Copy-adapted from neboto's `parse_all_query` (see
+/// `docs/PORTED-FROM-NEBOTO.md`).
+pub fn parse_all_query(query: &str) -> Option<&str> {
+    let rest = query.trim_start().strip_prefix(ALL_SEARCH_PREFIX)?;
+    if rest.is_empty() {
+        Some("")
+    } else if rest.starts_with(char::is_whitespace) {
+        Some(rest.trim())
+    } else {
+        None
+    }
+}
+
 pub fn parse_query(query: &str) -> ParsedQuery {
     let trimmed = query.trim();
 
@@ -189,6 +212,29 @@ fn parse_colon_prefix(query: &str, colon_pos: usize) -> ParsedQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn all_query_requires_the_exact_prefix() {
+        assert_eq!(parse_all_query("@*"), Some(""));
+        assert_eq!(parse_all_query("@* "), Some(""));
+        assert_eq!(parse_all_query("@* api prod"), Some("api prod"));
+        assert_eq!(parse_all_query("  @* x"), Some("x"));
+        assert_eq!(parse_all_query("@* rg:prod tag:env=dev web"), Some("rg:prod tag:env=dev web"));
+        assert_eq!(parse_all_query("@*x"), None); // the prefix must end the token
+        assert_eq!(parse_all_query("@vm *"), None);
+        assert_eq!(parse_all_query("*"), None);
+        assert_eq!(parse_all_query("web @*"), None);
+    }
+
+    #[test]
+    fn at_all_stays_the_all_resources_routing_prefix() {
+        // `@all` is #23's sub-tab, not the cross-cache search.
+        assert_eq!(parse_all_query("@all web"), None);
+        let parsed = parse_query("@all web");
+        assert_eq!(parsed.service, Some(ServiceType::Subscriptions));
+        assert_eq!(parsed.view, Some(JumpView::AllResources));
+        assert_eq!(parsed.search_text, "web");
+    }
 
     #[test]
     fn empty_and_plain_queries_do_not_switch() {

@@ -203,6 +203,18 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     count (+ `private` for a legacy private zone); private DNS zone
     record sets · VNet links; DNS resolver `vnet {name}`; All resources `→`/`·` and
     the ARM type. Everything else shows the id.
+18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
+    one fuzzy search over every list of the current subscription that has
+    a warm cache entry (tenant-scoped Graph lists included), with the
+    same `rg:` / `tag:` tokens, location filter and noise toggle as any
+    list. It **never fetches**: a list not loaded this session (or past
+    its TTL) is not searched, the title counts the warm lists and the
+    status line names the services not checked. All resources rows only
+    add ids no typed list has. Each row carries its `Service/Sub-tab`
+    badge; `⏎` opens it in that tab through the jump path (an All
+    resources row of a browsed type in its typed tab), `l` peeks in
+    place, `Ctrl-O` returns to the results. Not `@all`: that is the All
+    resources routing prefix (#23), which lists the subscription from ARM.
 
 ## The catalog
 
