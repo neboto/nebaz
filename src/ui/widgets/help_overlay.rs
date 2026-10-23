@@ -70,6 +70,7 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("C", "copy az CLI command"),
             ("e", "open in $EDITOR"),
             ("N", "network access (NSG rules)"),
+            ("m", "metrics (Azure Monitor)"),
             ("X / ^X", "export detail / list"),
             ("M", "message history"),
             (",", "macros (⏎ run · n record)"),

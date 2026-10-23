@@ -216,6 +216,28 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     place, `Ctrl-O` returns to the results. Not `@all`: that is the All
     resources routing prefix (#23), which lists the subscription from ARM.
 
+19. **Metrics** (`m`, #51, `src/azure/metrics.rs`, drawn by
+    `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics
+    for the selected row, owning the detail pane until `Esc` (`Z` full
+    width). The default set is curated by **ARM type**, not row struct,
+    so an All resources row (a SQL database) gets it too: VM, AKS,
+    Container App, web app (and slot), App Service plan, SQL database,
+    storage account, Key Vault, Cosmos account, load balancer, public IP,
+    NAT gateway, container registry, Application Insights, Foundry /
+    Cognitive Services account (`curated_metrics` is the list). Any other
+    ARM resource opens on the `a` picker (its metric definitions);
+    `supports_metrics` drives the status-bar hint, so the hint and the
+    default set cannot drift. One call per aggregation (2–3 per open, no
+    `$filter`, so dimensions are aggregated away); a failed call of
+    several names is retried name by name (a vCore database has no DTU
+    metric, which fails the whole call), and whatever still fails is a
+    warning on its line. Windows 1h / 6h / 24h / 7d (`[` / `]`, `1`–`4`)
+    at `PT1M` / `PT5M` / `PT15M` / `PT1H` with `AutoAdjustTimegrain`;
+    every open, window change and `r` refetches (off the `LazyStore`, one
+    task, a generation drops a superseded answer). Opening from the list
+    fires the default section's on-enter hook first, so closing never
+    leaves a section waiting.
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -304,6 +326,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
+| Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
