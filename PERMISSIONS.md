@@ -126,6 +126,10 @@ each one backs are in the catalog table
 - **Referenced by** (`U`): no action of its own. It reads the list caches
   already loaded; its `L` key runs the ordinary list loads of the lists it
   names, with those lists' actions above.
+- **Ownership ribbon** (every type): `Microsoft.Resources/deployments/read`,
+  `Microsoft.Resources/deployments/operations/read` (the resource group's
+  deployments and, for the newest unfinished ones, their operations).
+  Without them the ribbon says `⚠ deployments: …` and keeps the rest.
 - **Access** (every type, and an identity's Can do):
   `Microsoft.Authorization/roleAssignments/read`,
   `Microsoft.Authorization/roleDefinitions/read`. Principal names come

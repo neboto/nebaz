@@ -81,7 +81,11 @@ metric the resource publishes. `U` shows what **references** the selected
 resource: every loaded row whose Related links point at it (the NICs, private
 endpoints and apps in a subnet, what attaches an identity), from the lists
 already loaded, with zero calls; it names the lists it did not check, and `L`
-loads the likely ones in the background. Verified against a live tenant:
+loads the likely ones in the background. A dim **ownership ribbon** on the detail
+pane's top border says who owns the resource: what manages it (ARM's
+`managedBy`, also a Related line to jump to), Terraform / Bicep / azd hints
+and owner-ish tags (`ownership_tags` in the config), and the deployment that
+last touched it, read once per resource group when the pane is focused. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in

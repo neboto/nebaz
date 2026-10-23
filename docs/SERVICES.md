@@ -294,6 +294,29 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     the lens rescans as each lands. `f` narrows to one service, `⏎`
     jumps through the jump path, `y` copies the id, `e` opens the list
     in `$EDITOR`, `r` rescans.
+22. **Ownership ribbon** (#48, `src/azure/ownership.rs`, `src/app/ownership.rs`,
+    drawn right-aligned on the detail pane's top border by
+    `details_pane.rs`): one dim line on every type, e.g. `⛓ managed by
+    aks-1 · terraform · owner alice · deployed by main 2026-10-20 14:03`,
+    cut to the border. In order: ARM's `managedBy` (read from the row's
+    raw ARM body; the Related section carries it as a `Managed by` line
+    for every type, so `⏎` jumps there); IaC hints (a `managed-by` /
+    `provisioner` / `iac` / `deployed-by` tag's value as written, and
+    `terraform` / `bicep` / `pulumi` / `azd` when a tag key or value names
+    one); the configured `ownership_tags` (default `owner`, `team`,
+    `CreatedBy`, `cost-center`, `azd-env-name`, `hidden-link:`; tried in
+    order, case-insensitively, a trailing `:` a key prefix, so App
+    Insights' `hidden-link:/subscriptions/…` reads `linked to app-1`); then
+    the **deployment that last touched it**. That last part is the one call:
+    with the pane focused on a row inside a group, the group's deployments
+    (one page of up to 100, newest first) are read once per group per
+    subscription visit and matched by `outputResources` and `dependencies`
+    id; for the newest three that did not succeed (no `outputResources`),
+    their operations are read too and matched by `targetResource.id`. An
+    inline template (Bicep, `-f`) names only the deployment; a template
+    spec or linked template is named. `⧗` while loading; a failure is
+    `⚠ deployments: …` on the ribbon in the warning colour, never an
+    error. `ownership_ribbon = false` hides it and skips the call.
 
 ## The catalog
 
@@ -386,6 +409,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
+| Ownership ribbon (rule 22) | 0 for tags and `managedBy`; with the pane focused, 1 per resource group per subscription visit, plus 1 per not-succeeded deployment among the newest 3 | `{group}/providers/Microsoft.Resources/deployments?$top=100` · `{group}/providers/Microsoft.Resources/deployments/{name}/operations` · `2025-04-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |

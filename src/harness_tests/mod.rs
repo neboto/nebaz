@@ -52,6 +52,7 @@ mod metrics_test;
 mod mouse_test;
 mod network_lens_test;
 mod refs_lens_test;
+mod ownership_test;
 mod wiring_test;
 
 /// The CLI's default subscription in the fixture account list.
@@ -151,6 +152,7 @@ impl Harness {
             self.app.macro_tick(&self.tx);
             self.app.flat_tick(&self.tx);
             self.app.export_tick(&self.tx);
+            self.app.ownership_tick(&self.tx);
             self.draw();
             self.app.process_pending_search();
             self.app.record_message_history();

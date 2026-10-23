@@ -157,6 +157,12 @@ caches only, with the cold lists named rather than fetched (`L` loads the
 likely ones).
 _Avoid_: dependencies (it only knows links some loaded row declares)
 
+**Ownership ribbon**:
+The dim line on the detail pane's top border saying who owns the resource:
+ARM's `managedBy`, IaC hints and owner-ish tags (zero calls), and the
+deployment that last touched it (one lazy read of the group's deployments).
+_Avoid_: owner (a tag value, one of the ribbon's parts)
+
 **Network lens**:
 The `N` view of the NSG rules that apply to a NIC, a subnet or an NSG (a
 VM through its NICs), in Azure's evaluation order: subnet NSG then NIC NSG

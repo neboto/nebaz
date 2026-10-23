@@ -122,6 +122,8 @@ mod command_picker;
 mod network_lens;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
 mod refs_lens;
+/// The ownership ribbon (#48): what it says, the deployments trigger.
+mod ownership;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
 /// The mouse: click targets, double-click, drag, right-click back.
@@ -469,6 +471,12 @@ pub struct App {
     /// continue on hanging-indent rows instead of clipping at the pane
     /// edge. Render-only: the cursor, `y` and `V` stay on logical rows.
     pub detail_wrap: bool,
+    /// The ownership ribbon on the detail pane (config `ownership_ribbon`).
+    pub ownership_ribbon: bool,
+    /// The tag keys it reads (config `ownership_tags`).
+    pub ownership_tags: Vec<String>,
+    /// The selected row's `managedBy`, parsed once per row.
+    managed_by_memo: RefCell<Option<(String, Option<String>)>>,
     /// First half of a `[[` / `]]` group-jump chord in the detail pane.
     pending_bracket: Option<char>,
     /// `H` / `L` from the detail pane: focus the new sub-tab's first row
@@ -659,6 +667,11 @@ impl App {
             detail_search_active: false,
             detail_search_query: String::new(),
             detail_wrap: config.detail_wrap.unwrap_or(false),
+            ownership_ribbon: config.ownership_ribbon.unwrap_or(true),
+            ownership_tags: config.ownership_tags.clone().unwrap_or_else(|| {
+                crate::azure::ownership::DEFAULT_OWNERSHIP_TAGS.iter().map(|s| s.to_string()).collect()
+            }),
+            managed_by_memo: RefCell::new(None),
             pending_bracket: None,
             pending_detail_focus: false,
             detail_section_idx: 0,
