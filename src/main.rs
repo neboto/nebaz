@@ -30,7 +30,7 @@ use tui::Tui;
 use ui::layout::AppLayout;
 use ui::theme;
 use ui::widgets::{
-    banner, details_pane, help_overlay, jump_list, location_selector, macro_picker,
+    banner, command_picker, details_pane, help_overlay, jump_list, location_selector, macro_picker,
     message_log, resource_list, search_bar, service_selector, service_tabs, splash,
     subscription_selector, subtab_bar,
 };
@@ -263,6 +263,9 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     }
     if app.macro_picker_visible {
         macro_picker::render_macro_picker(app, frame);
+    }
+    if app.command_picker.is_some() {
+        command_picker::render_command_picker(app, frame);
     }
 }
 

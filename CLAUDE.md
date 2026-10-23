@@ -19,7 +19,7 @@ Azure sibling of neboto (`neboto/neboto-tui`, the AWS one) and was built by
 | What a service actually renders today | the service file itself; it is the reference |
 | The ARM actions per service, the one role to assign | [`PERMISSIONS.md`](PERMISSIONS.md) |
 | The project's own vocabulary (subscription, location, ARM id, Lazy, LazyStore, epoch, state ladder, Related section, guard…) | [`CONTEXT.md`](CONTEXT.md) |
-| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph |
+| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands |
 | What `v0.1.0` is and is not | [`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md) |
 | What is not built yet, and what is parked | [GitHub issues](https://github.com/neboto/nebaz/issues) (`gh issue list`); the parity roadmap is #55 |
 | What came from neboto and what changed | [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md) |
@@ -143,8 +143,12 @@ copied instead. In All resources, Enter on a browsed row opens it in its
 typed tab.
 
 **Copy** (`src/clipboard.rs`): OSC 52 to the terminal (tmux passthrough)
-plus one long-lived arboard handle; `y` copies the id, `C` the `az`
-command. **Export** (`src/export.rs`, `src/app/export.rs`): `X` arms a
+plus one long-lived arboard handle; `y` copies the id. `C` opens the
+command picker (#47; catalogue `src/azure/cli_actions.rs`, glue
+`src/app/command_picker.rs`, widget `src/ui/widgets/command_picker.rs`):
+the row's `az` commands in Inspect / Connect / Change tiers, read command
+first, `/` filters, `⏎`/`y` copies; one command copies straight away.
+**Export** (`src/export.rs`, `src/app/export.rs`): `X` arms a
 wait that fires every section's hook and writes once nothing reads
 `Loading…` (2-minute limit, `Esc` cancels); every format comes from the
 same captured sections. The list pane's visual selection
@@ -183,7 +187,9 @@ verbatim where the concept is unchanged.
   requests and only GETs; `tests/readonly_guard.rs` fails the build on a
   `Method::` elsewhere, an HTTP client crate, a data-plane host
   (`vault.azure.net`, `blob.core.windows.net`, …) in non-test code, an
-  `az` literal without a read verb, or a non-`/read` action in
+  `az` literal without a read verb (Connect / Change verbs are allowed
+  in `src/azure/cli_actions.rs` only, copied never run, ADR 0005;
+  destructive and secret-revealing commands nowhere), or a non-`/read` action in
   `PERMISSIONS.md`; `Reader` at subscription scope is the whole RBAC
   requirement. Test fixtures may carry a `vaultUri`; live code may not.
   A credential the ARM `GET` itself returns (App Insights' instrumentation
@@ -226,7 +232,9 @@ verbatim where the concept is unchanged.
 - **`az` commands** are the name form for the `show` commands that take
   no `--ids` (`SERVICES.md` rule 9 lists them); every other row is
   `show --ids`. Check the CLI's parameter table (`id_part`) before
-  assuming either.
+  assuming either. The `C` catalogue's extra commands follow the same
+  rule per command (an `exec`, `logs` or `list-instances` often resets
+  `id_part`); a value-taking one is prefilled with the current value.
   The app never runs a copied command; it runs `az account list` and, via
   azure_identity, `az account get-access-token`, nothing else.
 - **Clipboard**: no `eprintln!` anywhere in the TUI path; arboard's
@@ -251,6 +259,7 @@ verbatim where the concept is unchanged.
 | `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps}.rs` | one file per service |
 | `src/headless.rs`, `src/app/headless.rs` | `nebaz services / ls / get`: a terminal-less `App`, the output contract, `skills/nebaz/SKILL.md` |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
+| `src/azure/cli_actions.rs` | the `C` catalogue: every copyable `az` command per type, tiers; the one file the guard lets spell a Connect / Change verb |
 | `src/azure/nsg_eval.rs` | the network lens's evaluation: rule order, shadowing, layers, resolution |
 | `src/azure/metrics.rs` | the metrics view's default sets, request builder, parsers and fetch |
 | `src/azure/cache.rs` | the list cache |

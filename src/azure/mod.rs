@@ -1,6 +1,7 @@
 pub mod arm;
 pub mod auth;
 pub mod cache;
+pub mod cli_actions;
 pub mod client;
 pub mod graph;
 pub mod location;

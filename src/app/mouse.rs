@@ -214,6 +214,9 @@ enum Modal {
     Bookmarks,
     Messages,
     Macros,
+    /// The `C` command picker (#47): its rows are recorded by
+    /// `render_command_picker` (wrapped, between tier headings).
+    Commands,
 }
 
 fn press(code: KeyCode) -> KeyEvent {
@@ -435,6 +438,8 @@ impl App {
             Modal::Messages
         } else if self.macro_picker_visible {
             Modal::Macros
+        } else if self.command_picker.is_some() {
+            Modal::Commands
         } else {
             return None;
         })
@@ -461,6 +466,11 @@ impl App {
             Modal::Bookmarks => (&mut self.bookmarks_selected, self.bookmarks.len()),
             Modal::Messages => (&mut self.message_history_selected, self.message_history.len()),
             Modal::Macros => (&mut self.macro_picker_selected, self.macros.len()),
+            Modal::Commands => {
+                let p = self.command_picker.as_mut()?;
+                let len = p.visible().len();
+                (&mut p.selected, len)
+            }
             Modal::Help => return None,
         };
         if idx >= len {
@@ -501,7 +511,7 @@ impl App {
                     (hits.contains(col, row), hits.row_at(col, row))
                 };
                 if !inside {
-                    self.handle_key(press(KeyCode::Esc), event_tx);
+                    self.close_modal_by_mouse(modal, event_tx);
                     return true;
                 }
                 let Some(idx) = hit else { return true };
@@ -516,10 +526,20 @@ impl App {
                     }
                 }
             }
-            MouseEventKind::Down(MouseButton::Right) => self.handle_key(press(KeyCode::Esc), event_tx),
+            MouseEventKind::Down(MouseButton::Right) => self.close_modal_by_mouse(modal, event_tx),
             _ => {}
         }
         true
+    }
+
+    /// A click outside a modal or a right-click: `Esc`, except the command
+    /// picker closes outright (its first `Esc` only clears a filter).
+    fn close_modal_by_mouse(&mut self, modal: Modal, event_tx: &mpsc::UnboundedSender<Event>) {
+        if modal == Modal::Commands {
+            self.command_picker = None;
+        } else {
+            self.handle_key(press(KeyCode::Esc), event_tx);
+        }
     }
 
     /// Mouse on an in-pane view (the network lens, metrics). Over the

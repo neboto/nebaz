@@ -169,8 +169,17 @@ _Avoid_: read-only mode (it is not a mode; there is no other one)
 **Guard**:
 The test that fails the build when the source could break the read-only
 guarantee: another request builder, a data-plane host, a mutating `az`
-command, a non-read permission in the permissions doc.
+command outside the command catalogue, a destructive or secret-revealing
+one anywhere, a non-read permission in the permissions doc.
 _Avoid_: linter, allowlist script (neboto's name for its Python version)
+
+**Command catalogue**:
+The `az` commands `C` offers for a row (`src/azure/cli_actions.rs`), in
+three **tiers**: **Inspect** (reads), **Connect** (opens a session or
+configures a local tool, changes nothing in Azure) and **Change**
+(start / stop / restart / scale). Copied to the clipboard, never run; the
+one file the guard lets spell a Connect or Change verb (ADR 0005).
+_Avoid_: actions (nebaz performs none), CLI actions
 
 ### Detail loading
 

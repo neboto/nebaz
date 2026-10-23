@@ -215,7 +215,6 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     resources row of a browsed type in its typed tab), `l` peeks in
     place, `Ctrl-O` returns to the results. Not `@all`: that is the All
     resources routing prefix (#23), which lists the subscription from ARM.
-
 19. **Metrics** (`m`, #51, `src/azure/metrics.rs`, drawn by
     `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics
     for the selected row, owning the detail pane until `Esc` (`Z` full
@@ -237,6 +236,41 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     task, a generation drops a superseded answer). Opening from the list
     fires the default section's on-enter hook first, so closing never
     leaves a section waiting.
+20. **`C` command picker** (#47, ADR 0005, `src/azure/cli_actions.rs`):
+    the row's read command first (rule 9; `⏎` on it is the old `C`),
+    then the type's commands in three tiers, then two reads every ARM
+    row shares (`role assignment list --scope {id} --include-inherited`;
+    for a resource, `monitor activity-log list --resource-id {id}
+    --offset 7d`). Copied, never run. `--ids` or the name form per
+    command from the CLI's `id_part`, checked 2026-10-23 against
+    azure-cli `dev` and azure-cli-extensions (`ssh`, `serial-console`):
+    `vm`, `webapp`, `containerapp` (not `exec` / `logs show` / `replica` /
+    `revision list`), `containerapp job` (not `execution`), `network nic`,
+    `nsg` / `route-table` / `vnet subnet show` take `--ids`; `aks`,
+    `functionapp`, `logicapp`, `ssh vm`, `serial-console`, `acr`,
+    `keyvault … list`, `storage account network-rule`, `sql … list` use
+    names. Per type: **VM** get-instance-view, boot log · ssh vm, Bastion
+    ssh (rdp on Windows; the Bastion host is a placeholder), serial
+    console · start, restart, stop, deallocate. **NIC** effective NSG and
+    routes (Azure `POST`s; not under `Reader`). **AKS** get-upgrades,
+    nodepool list · get-credentials (never `--admin`) · start, stop;
+    **node pool** get-upgrades · scale `--node-count <current>` (a no-op
+    as pasted; noted when the autoscaler owns it), start, stop.
+    **Container App** revision / replica list, last 50 log lines · exec,
+    log stream · restart the latest revision; **environment** its apps,
+    certificates · system log stream; **job** executions · start one.
+    **Web app** config, instances · ssh, log tail · restart, stop, start;
+    **function / logic app** restart, stop, start (function list).
+    **Key Vault** secret and key names, network rules (never a value).
+    **ACR** repositories, replications · `acr login` (never
+    `--expose-token`). **Storage** network rules, containers with
+    `--auth-mode login` (never the account key). **SQL server**
+    databases, firewall rules, Entra admin. **NSG** rules with defaults.
+    **Subnet** its NSG, its route table. **Service principal / app
+    registration** credential metadata, owners, federated credentials
+    (never `credential reset`). **Power Platform policy** each injected
+    subnet. A list visual selection (#39) merged into one `--ids a b c` command
+    (neboto's batch mode) is not built yet: `C` acts on the cursor row.
 
 ## The catalog
 

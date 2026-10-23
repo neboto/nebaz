@@ -11,7 +11,9 @@ Resource Manager (ARM), or to Microsoft Graph for directory objects
    CI) if the source gains another request builder, an HTTP client crate,
    a data-plane host, a Graph host outside `src/azure/graph.rs`, Graph's
    `getByIds` (a `POST`) or a Graph `$select`, a mutating `az`
-   command, or a non-read action in this file.
+   command outside the `C` catalogue (ADR 0005: copied, never run), a
+   destructive or secret-revealing `az` command anywhere, or a non-read
+   action in this file.
 3. **RBAC** — the role below is a pure `*/read` footprint, so the
    subscription itself cannot be changed through nebaz even if the first
    two layers failed.
@@ -204,7 +206,18 @@ nebaz runs two `az` commands itself, both reads of the CLI's own state:
   `azure_identity` to mint the ARM token (and, for directory reads, the
   Graph token) for the current tenant.
 
-`C` copies an `az … show` / `az … list` command to the clipboard for you to
-run; nebaz never executes it. `az keyvault secret show` and `key show` are
+`C` copies an `az` command to the clipboard for you to run; nebaz never
+executes it. The picker (#47, ADR 0005) offers **Inspect** commands
+(reads), **Connect** commands (`ssh vm`, `aks get-credentials`,
+`containerapp exec`, `acr login`) and **Change** commands (start, stop,
+restart, deallocate, scale), the last under a `⚠ changes Azure` heading.
+A pasted command runs under **your** `az login` with **your** roles, not
+under the `Reader` role above: Connect and Change commands need more
+(a VM login role, a VM's start action, …),
+and nebaz grants none of it. Nothing destructive (delete, purge, remove,
+reset, regenerate, run-command, update, …) and nothing that prints a
+credential (`--admin`, `--expose-token`, account keys, connection
+strings, `acr credential`) is ever offered; the guard refuses them even
+in the catalogue. `az keyvault secret show` and `key show` are
 never generated (the guard names them forbidden); the vault sections name
 `az keyvault secret list` / `key list`, which return names only.

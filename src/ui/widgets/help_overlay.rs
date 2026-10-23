@@ -69,7 +69,7 @@ const RIGHT_SECTIONS: &[Section] = &[
         entries: &[
             ("O", "open in Azure portal"),
             ("y", "copy resource id"),
-            ("C", "copy az CLI command"),
+            ("C", "copy an az command: inspect / connect / change (never run)"),
             ("e", "open in $EDITOR"),
             ("N", "network access (NSG rules)"),
             ("m", "metrics (Azure Monitor)"),

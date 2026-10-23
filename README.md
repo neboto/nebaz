@@ -240,5 +240,8 @@ workspace, `MicrosoftGraphActivityLogs | where UserAgent startswith "nebaz "`
 lists its directory reads, every one a `GET`. ARM's Activity Log records
 writes only, so nebaz should never appear in it at all.
 
-Where a change is what you want, **`C`** copies the `az … show` command for
-the selected resource; edit the verb and run it yourself.
+Where a change is what you want, **`C`** opens a picker of `az` commands
+for the selected resource — Inspect (reads), Connect (`ssh vm`,
+`aks get-credentials`, `containerapp exec`) and Change (start / stop /
+restart / scale, flagged ⚠) — and copies the one you pick for you to run
+yourself. nebaz never runs them (ADR 0005).
