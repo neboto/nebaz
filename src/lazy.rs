@@ -174,6 +174,13 @@ pub struct LazyStore {
     /// `GET {account}/projects` — Foundry projects, keyed by account id;
     /// only ever fetched for accounts with project management on.
     pub foundry_projects: LazyMap<Vec<serde_json::Value>>,
+
+    // ── Container Apps ───────────────────────────────────────────────────
+    /// `GET {app}/revisions`, keyed by app id. The template (env) is
+    /// never rendered.
+    pub aca_revisions: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {app}/authConfigs`, keyed by app id. Secret setting names only.
+    pub aca_auth_configs: LazyMap<Vec<serde_json::Value>>,
 }
 
 impl LazyStore {

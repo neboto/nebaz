@@ -49,6 +49,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "azurecr.io",
     // Cosmos DB: the accounts' document endpoints.
     "documents.azure.com",
+    // Container Apps: the apps themselves (the environment's default
+    // domain).
+    "azurecontainerapps.io",
     // Monitor: log queries and App Insights data.
     "api.loganalytics.io",
     "api.applicationinsights.io",
@@ -90,6 +93,10 @@ const AZ_FORBIDDEN: &[&str] = &[
     "logicapp config appsettings",
     // Cosmos DB account keys, read-only keys and connection strings.
     "cosmosdb keys",
+    // Container Apps secrets: `secret list --show-values` and `secret
+    // show` print values (the ARM side is the `listSecrets` POST).
+    "containerapp secret",
+    "containerapp job secret",
 ];
 
 /// `az` mentions that are not commands. Each needs a reason.

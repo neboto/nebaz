@@ -108,6 +108,11 @@ run cosmos-tab ok cosmos '[6.0]' \
   "Cosmos DB accounts" \
   "cannot reach 127.0.0.1"
 
+# The Container Apps tab loads through a routing prefix (environments).
+run aca-env ok acaenv '[6.0]' \
+  "Container apps, environments & jobs" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[6.0]' \
