@@ -143,7 +143,9 @@ verbatim where the concept is unchanged.
 5. `src/app.rs`: the `section_lines_for` downcast arm; a lazy section also
    needs a `LazyMap` in `src/lazy.rs`, a `trigger_*` fn and the on-enter
    hook.
-6. Docs: the row in `docs/SERVICES.md` (catalog **and** call table), the
+6. `src/harness_tests/mocks.rs`: a mock row for the new sub-tab's type
+   (`every_sub_tab_has_a_mock` fails until there is one).
+7. Docs: the row in `docs/SERVICES.md` (catalog **and** call table), the
    action in `PERMISSIONS.md`, the build line in `README.md`. The
    read-only guard will tell you if the `az` verb or the path is wrong.
 
@@ -214,6 +216,7 @@ verbatim where the concept is unchanged.
 | `src/sections.rs` | section descriptors and the section index |
 | `src/clipboard.rs` | OSC 52 + arboard |
 | `tests/readonly_guard.rs` | the guard |
+| `src/harness_tests/` | the offline wiring harness (`Harness`), its mocks and tests |
 | `scripts/smoke.sh`, `scripts/smoke/` | the offline pty run and its fake `az` |
 
 ## Testing
@@ -221,9 +224,16 @@ verbatim where the concept is unchanged.
 Unit tests live next to the code (row parsing, section labels, the state
 ladder, `for_arm_id`, the config example, auth classification, the
 clipboard encoding). The read-only guard is an integration test under
-`cargo test`. `scripts/smoke.sh` drives the binary in a pty with a fake
+`cargo test`. **The wiring harness** (`src/harness_tests/`, module doc
+for the API) drives the real `App` offline: fixture subscriptions, a
+dead endpoint, a credential that never yields a token (no network, no
+`az`, every fetch stays in flight); a test opens a sub-tab, lands rows
+as the current load's stream events, presses keys and asserts on the
+state or a `TestBackend` frame. A wiring bug (a key, a jump, a stale
+stream, a missing downcast arm) gets a harness test.
+`scripts/smoke.sh` drives the binary in a pty with a fake
 `az` and a dead endpoint and greps the screen (manual; needs python3).
-There is no offline wiring harness yet (#46). Live behaviour is
+Live behaviour is
 checked by hand on a machine with `az` (this dev machine has none):
 `docs/SPEC-v0.1.md` carries the tour checklist.
 

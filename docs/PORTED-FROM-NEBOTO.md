@@ -54,6 +54,8 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 | `src/ui/widgets/service_tabs.rs` (250, was 277) | same | badges read `aws_clients.current_assumed_role()` / `current_profile()` and `account_id/alias` → one subscription badge (`⦿ name (id)` degrading to `⦿ id`) |
 | `src/ui/widgets/subscription_selector.rs` (242, was 267) | `src/ui/widgets/profile_selector.rs` | `list_profiles()` from the AWS client → `azure::client::list_subscriptions()`; the assume-role synthetic entries dropped |
 | `src/ui/widgets/help_overlay.rs` (251, was 278) | same | key table listed AWS-only actions (console, CloudTrail lens, SSM session, S3 objects, secret reveal); now the Tier-1 set |
+| `src/harness_tests/mod.rs` (#46, from neboto `ae78599`) | `src/harness_tests/mod.rs` | `AwsClients::new_for_test` + `build_services` → `AzureClients::new_for_test` (fixture subscriptions, an offline credential that never yields a token); neboto's free functions (`select_mock`, `check_section_invariants`) → a `Harness` driver that runs `main`'s loop pass and lands rows as load-stream events; the 166-mock `mocks_*` batches → one `mocks.rs` built through `from_json` |
+| `src/harness_tests/load_stream_test.rs` (#46, from `ae78599`) | same | profile/region switch → subscription switch and sub-tab switch; the load-task abort case is not ported (nebaz does not track the task yet) |
 
 ## Written fresh for nebaz (nothing copied)
 
@@ -90,7 +92,7 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 - `src/aws/pagination.rs` — AWS `next_token` stop rules; ARM paging is `nextLink` through `azure_core::http::Pager`.
 - `src/aws/document.rs` — `aws_smithy_types::Document` conversion.
 - `src/ownership.rs`, `src/references.rs`, `src/timeline.rs`, `src/terraform.rs`, `src/html.rs` — ownership ribbon, refs lens, change timeline, Terraform state, HTML export: each needs its own Azure design (see the map's fog).
-- `src/harness_tests/` — layer-2 harness; nebaz gets its own once a real service exists.
+- `src/harness_tests/` per-service tests (`*_test.rs` beyond `load_stream_test.rs`) — AWS panes; nebaz's `wiring_test.rs` and `navigation_test.rs` are written fresh against the ported driver.
 - Every `src/aws/services/*.rs` and `src/ui/widgets/*_tabs.rs`, `metrics_overlay.rs`, `log_tail.rs`, `*_lens.rs`, `*_browser.rs`, `*_modal.rs`.
 
 ## Copied but not wired, then removed

@@ -437,6 +437,34 @@ mod tests {
         }
     }
 
+    impl AzureClients {
+        /// The wiring harness's client set (`src/harness_tests`): the
+        /// entries stand in for `az account list`, which is never run; the
+        /// endpoint is dead; and every tenant's pipeline is prebuilt over
+        /// `credential`, so `arm_for_tenant` never builds a CLI credential
+        /// and nothing spawns `az`.
+        pub(crate) fn new_for_test(
+            subscriptions: Vec<SubscriptionEntry>,
+            credential: Arc<dyn azure_core::credentials::TokenCredential>,
+        ) -> Self {
+            const DEAD_ENDPOINT: &str = "https://127.0.0.1:9";
+            let mut pipelines = HashMap::new();
+            for s in &subscriptions {
+                pipelines.entry(s.tenant_id.clone()).or_insert_with(|| {
+                    Arc::new(
+                        ArmClient::with_credential(credential.clone(), &s.tenant_id, DEAD_ENDPOINT)
+                            .expect("offline pipeline"),
+                    )
+                });
+            }
+            let mut c = clients(subscriptions);
+            c.endpoint = DEAD_ENDPOINT.to_string();
+            c.pipelines = Mutex::new(pipelines);
+            c.current = c.default_index();
+            c
+        }
+    }
+
     #[test]
     fn startup_prefers_the_flag_then_the_enabled_default_then_the_first_enabled() {
         let subs = vec![

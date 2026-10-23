@@ -73,6 +73,17 @@ impl ArmClient {
                 )))
             }
         };
+        Self::with_credential(credential, tenant_id, endpoint)
+    }
+
+    /// The pipeline over any token source: `new`'s CLI credential, or the
+    /// wiring harness's offline one (`src/harness_tests`), which never
+    /// yields a token so nothing leaves the process.
+    pub(crate) fn with_credential(
+        credential: Arc<dyn TokenCredential>,
+        tenant_id: &str,
+        endpoint: &str,
+    ) -> Result<ArmClient> {
         let endpoint = parse_endpoint(endpoint)?;
         let scope = auth_scope!(endpoint.as_str().trim_end_matches('/'));
         let bearer = BearerTokenAuthorizationPolicy::new(credential, [scope]);
