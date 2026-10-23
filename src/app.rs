@@ -121,6 +121,7 @@ mod metrics;
 mod command_picker;
 mod network_lens;
 mod timeline;
+mod changes;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
 /// The mouse: click targets, double-click, drag, right-click back.
@@ -563,6 +564,8 @@ pub struct App {
     /// The timeline's window and `a` mode: sticky across opens.
     timeline_window: crate::azure::timeline::LensWindow,
     timeline_include_all: bool,
+    /// `@changes`'s window (#61): `[` / `]` on its list.
+    pub changes_window: crate::azure::services::changes::ChangesWindow,
 
     // Mouse hit-testing, recorded by the read-only widgets each frame.
     click_regions: RefCell<Vec<ClickRegion>>,
@@ -715,6 +718,7 @@ impl App {
             timeline_generation: 0,
             timeline_window: Default::default(),
             timeline_include_all: false,
+            changes_window: Default::default(),
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             mouse: MouseState::default(),
@@ -788,6 +792,10 @@ impl App {
 
     /// The list cache variant for the active sub-tab.
     fn cache_variant(&self) -> &'static str {
+        // `@changes` is one list per window; its sub-tabs filter it.
+        if self.current_service == Some(ServiceType::Changes) {
+            return self.changes_window.variant();
+        }
         self.current_view.as_str()
     }
 
@@ -837,7 +845,10 @@ impl App {
         self.load_warnings.clear();
         let generation = self.supersede_loads();
         let view = self.current_view;
-        let provider = self.azure_clients.service(service);
+        let provider = match service {
+            ServiceType::Changes => self.azure_clients.changes_service(self.changes_window),
+            _ => self.azure_clients.service(service),
+        };
         let outer = event_tx.clone();
 
         // Forwarder: tag each stream event with this load's generation.
@@ -1188,6 +1199,7 @@ impl App {
             .filter(|(i, _)| admitted_set.contains(i))
             .filter(|(i, _)| tag_filters.iter().all(|f| f.matches(self.resources[*i].tags())))
             .filter(|(i, _)| rg_filter_admits(&rg_filters, self.resources[*i].resource_group()))
+            .filter(|(i, _)| changes::view_admits(self.current_view, self.resources[*i].as_ref()))
             .filter(|(i, _)| {
                 self.list_state_filter
                     .as_deref()
@@ -1210,6 +1222,10 @@ impl App {
         // Match score wins while searching; otherwise the chosen sort.
         if text.is_empty() {
             match self.list_sort {
+                // `@changes` streams a batch per source: newest first.
+                ListSort::Default if self.current_service == Some(ServiceType::Changes) => {
+                    matches.sort_by_key(|(i, _)| std::cmp::Reverse(changes::time_of(self.resources[*i].as_ref())))
+                }
                 ListSort::Default => {}
                 ListSort::NameAsc => matches.sort_by(|a, b| {
                     self.resources[a.0]
@@ -2455,6 +2471,10 @@ impl App {
         if let Some(r) = any.downcast_ref::<GenericResourceRow>() {
             return Some(generic_resource_section_lines(r, GenericResourceDetailSection::from_index(idx)));
         }
+        if let Some(r) = any.downcast_ref::<crate::azure::services::changes::ChangeRow>() {
+            use crate::azure::services::changes::{change_section_lines, ChangeDetailSection};
+            return Some(change_section_lines(r, ChangeDetailSection::from_index(idx)));
+        }
         if let Some(r) = any.downcast_ref::<VmRow>() {
             return Some(vm_section_lines(
                 r,
@@ -3535,6 +3555,9 @@ impl App {
                     LayoutMode::ListOnly => LayoutMode::Split,
                     _ => LayoutMode::ListOnly,
                 }
+            }
+            KeyCode::Char(c @ ('[' | ']')) if self.current_service == Some(ServiceType::Changes) => {
+                self.step_changes_window(c == ']')
             }
             KeyCode::Char('B') => {
                 if let Some(loc) = self.current_nav_location() {

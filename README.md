@@ -80,7 +80,11 @@ selected one, 1h / 6h / 24h / 7d windows (`[`/`]`), and `a` for every
 metric the resource publishes. `W` opens the **change timeline**: the
 Activity Log's changes, Resource Health transitions, fired alerts and
 the deployments that touched the row, merged newest first over 7d / 30d
-/ 90d (`[`/`]`), `f` for one source. Verified against a live tenant:
+/ 90d (`[`/`]`), `f` for one source. `@changes` lists what changed
+across the subscription in the last 15m … 7d (`[`/`]`): Activity Log
+changes, deployments and health transitions, with managed identities' and
+Azure's own changes as noise (`a`); `nebaz changes --since 6h` prints it.
+Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in
@@ -150,6 +154,7 @@ cargo run -- -s app    # App Service apps (2 Functions, 3 Plans); 2 on a row loa
 cargo run -- -s sql    # SQL servers; 3 / 4 on a row list databases and firewall rules
 cargo run -- -s acr    # container registries; 3 / 4 on a row list replications and webhooks
 cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
+cargo run -- -s changes # what changed recently, subscription-wide; [ / ] window, a hides noise
 cargo run -- -s subnet # subnets; N on one shows the NSG rules for anything placed in it
 cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe)
 cargo run -- -s dns    # DNS: Private DNS, zones, Private Resolver (3), rulesets (4), DNS policies (5); -s dnsr for resolvers

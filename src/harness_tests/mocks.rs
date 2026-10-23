@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
+    aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
     keyvault, monitor, network, network_dns, network_edge, network_private, power_platform, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
@@ -512,10 +512,50 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                 ),
             ),
         ),
+        m(JumpView::ChangesAll, "ChangeRow (activity)", change_activity("c-all", "Microsoft.Compute/virtualMachines/write")),
+        m(JumpView::ChangesActivity, "ChangeRow (activity)", change_activity("c-act", "Microsoft.Compute/virtualMachines/delete")),
+        m(JumpView::ChangesDeployments, "ChangeRow (deployment)", change_deployment()),
+        m(JumpView::ChangesHealth, "ChangeRow (health)", change_health()),
     ];
     // Lost coverage fails loudly. One row per sub-tab, except Function apps
     // (the sites list, SiteRow); `every_sub_tab_has_a_mock` names a gap.
     let sub_tabs: usize = crate::azure::service::ServiceType::all().iter().map(|s| s.views().len()).sum();
     assert!(out.len() >= sub_tabs - 1, "{} mock rows for {} sub-tabs", out.len(), sub_tabs);
     out
+}
+
+// ── @changes rows (#61) ──────────────────────────────────────────────────
+
+/// An Activity Log change on `vm-1` by a person.
+pub(crate) fn change_activity(correlation: &str, op: &str) -> Box<dyn Resource> {
+    let e = json!({
+        "eventTimestamp": "2026-10-23T10:00:00Z", "correlationId": correlation,
+        "operationName": {"value": op, "localizedValue": ""}, "status": {"value": "Succeeded"},
+        "caller": "ops@contoso.com", "level": "Informational",
+        "resourceId": arm_id("Microsoft.Compute/virtualMachines/vm-1")
+    });
+    let row = crate::azure::timeline::activity_rows(&[e], 0, false).remove(0);
+    Box::new(changes::ChangeRow::new(row, None, Some(TENANT.into())))
+}
+
+/// A deployment in the fixture group that deployed `vm-1`.
+pub(crate) fn change_deployment() -> Box<dyn Resource> {
+    let d = json!({
+        "id": arm_id("Microsoft.Resources/deployments/main"), "name": "main",
+        "properties": {"timestamp": "2026-10-23T09:00:00Z", "provisioningState": "Succeeded", "duration": "PT2M",
+            "outputResources": [{"id": arm_id("Microsoft.Compute/virtualMachines/vm-1")}]}
+    });
+    let row = crate::azure::timeline::deployment_rows(&[d], 0, None).remove(0);
+    Box::new(changes::ChangeRow::new(row, None, Some(TENANT.into())))
+}
+
+/// `vm-1` going unavailable.
+pub(crate) fn change_health() -> Box<dyn Resource> {
+    let vm = arm_id("Microsoft.Compute/virtualMachines/vm-1");
+    let h = json!({
+        "id": format!("{vm}/providers/Microsoft.ResourceHealth/availabilityStatuses/current"),
+        "properties": {"availabilityState": "Unavailable", "summary": "Stopped by a user", "occuredTime": "2026-10-23T11:00:00Z"}
+    });
+    let row = crate::azure::timeline::health_rows(&[h], 0).remove(0);
+    Box::new(changes::ChangeRow::new(row, None, Some(TENANT.into())))
 }

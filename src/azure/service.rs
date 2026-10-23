@@ -53,6 +53,10 @@ pub enum ServiceType {
     /// Container apps, their environments and jobs (`Microsoft.App`);
     /// revisions and auth settings lazy. Never a secret or env var value.
     ContainerApps,
+    /// What changed recently, subscription-wide (#61, ADR 0006): the
+    /// Activity Log's changes, deployments and health transitions over a
+    /// `[` / `]` window. A service that fetches, not a view over caches.
+    Changes,
 }
 
 /// One sub-tab: the rows of one resource type within a service. A flat
@@ -129,6 +133,11 @@ pub enum JumpView {
     ContainerApps,
     ContainerAppEnvironments,
     ContainerAppJobs,
+    // Changes: one list per window; the sub-tabs filter it by source.
+    ChangesAll,
+    ChangesActivity,
+    ChangesDeployments,
+    ChangesHealth,
 }
 
 impl JumpView {
@@ -153,6 +162,7 @@ impl JumpView {
             LogWorkspaces | AppInsights => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
+            ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
         }
     }
 
@@ -199,6 +209,10 @@ impl JumpView {
             ContainerApps => "container-apps",
             ContainerAppEnvironments => "container-app-environments",
             ContainerAppJobs => "container-app-jobs",
+            ChangesAll => "changes",
+            ChangesActivity => "changes-activity",
+            ChangesDeployments => "changes-deployments",
+            ChangesHealth => "changes-health",
         }
     }
 
@@ -245,6 +259,10 @@ impl JumpView {
             ContainerApps => "Apps",
             ContainerAppEnvironments => "Environments",
             ContainerAppJobs => "Jobs",
+            ChangesAll => "All",
+            ChangesActivity => "Activity",
+            ChangesDeployments => "Deployments",
+            ChangesHealth => "Health",
         }
     }
 
@@ -354,6 +372,7 @@ impl ServiceType {
             ServiceType::Monitor,
             ServiceType::PowerPlatform,
             ServiceType::ContainerApps,
+            ServiceType::Changes,
         ]
     }
 
@@ -379,6 +398,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitoring",
             ServiceType::PowerPlatform => "Management",
             ServiceType::ContainerApps => "Containers",
+            ServiceType::Changes => "Monitoring",
         }
     }
 
@@ -400,6 +420,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Platform",
             ServiceType::ContainerApps => "Container Apps",
+            ServiceType::Changes => "Changes",
         }
     }
 
@@ -422,6 +443,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Plat",
             ServiceType::ContainerApps => "ACA",
+            ServiceType::Changes => "Changes",
         }
     }
 
@@ -443,6 +465,7 @@ impl ServiceType {
             ServiceType::Monitor => "Log Analytics & App Insights",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::ContainerApps => "Container apps, environments & jobs",
+            ServiceType::Changes => "What changed recently, subscription-wide",
         }
     }
 
@@ -476,6 +499,7 @@ impl ServiceType {
             ServiceType::Monitor => &[LogWorkspaces, AppInsights],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
+            ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
         }
     }
 
@@ -531,6 +555,10 @@ impl ServiceType {
                 (ServiceType::Network, Some(JumpView::PrivateEndpoints))
             }
             "dns" => (ServiceType::Dns, None),
+            "changes" | "change" | "changed" | "recent" => (ServiceType::Changes, None),
+            "activity" | "operations" => (ServiceType::Changes, Some(JumpView::ChangesActivity)),
+            "deploys" | "deployments" => (ServiceType::Changes, Some(JumpView::ChangesDeployments)),
+            "health" | "resourcehealth" => (ServiceType::Changes, Some(JumpView::ChangesHealth)),
             "pdns" | "privatedns" | "privatednszone" | "privatednszones" => {
                 (ServiceType::Dns, Some(JumpView::PrivateDnsZones))
             }
@@ -617,18 +645,19 @@ impl ServiceType {
             ServiceType::Monitor => "@monitor",
             ServiceType::PowerPlatform => "@pp",
             ServiceType::ContainerApps => "@aca",
+            ServiceType::Changes => "@changes",
         }
     }
 
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@changes"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }

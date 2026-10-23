@@ -38,6 +38,7 @@ const LEFT_SECTIONS: &[Section] = &[
             ("V · J / K · ^A", "select rows · extend · all"),
             ("  y·c / X / ^X", "md table / deep / list export"),
             ("a", "hide noisy rows"),
+            ("[ / ]", "@changes window"),
             ("z", "cycle sort"),
             ("F", "cycle state filter"),
             ("r / F5", "refresh service"),

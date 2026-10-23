@@ -2,8 +2,9 @@
 // Log, Resource Health, fired alerts and ARM deployments in place of
 // CloudTrail, alarms, CloudFormation, ECS, Auto Scaling and RDS)
 //! The change timeline's row model: what changed around a resource, from
-//! several control-plane sources merged newest first, shown by the `W`
-//! lens (#52, `ui::widgets::timeline_lens`). It reads the Activity Log
+//! several control-plane sources merged newest first. The `W` lens (#52,
+//! `ui::widgets::timeline_lens`) shows one resource's; `@changes` (#61,
+//! `services::changes`) the subscription's. Both read the Activity Log
 //! through the Activity section's query (`services::activity`).
 //!
 //! - `ACT`  — Activity Log operations (`eventtypes/management/values`),
@@ -15,7 +16,8 @@
 //! - `DEP`  — ARM deployments (`Microsoft.Resources/deployments`), from
 //!   the resource group's deployment history.
 //!
-//! Every row keeps **named fields** only (for `$EDITOR`): never an event's `properties` bag, a deployment's parameters
+//! Every row keeps **named fields** only (for `$EDITOR` and `@changes`'s
+//! Overview): never an event's `properties` bag, a deployment's parameters
 //! or outputs, or the caller's token claims (rule 12).
 
 use crate::azure::resource::{name_of_id, resource_group_of, subscription_of};
@@ -40,6 +42,14 @@ pub const TIMELINE_MAX_EVENTS: usize = 1000;
 
 /// …and every other source after this many items.
 pub const TIMELINE_MAX_ITEMS: usize = 200;
+
+/// Tenants whose apps are Microsoft's own (an app's `appOwnerOrganizationId`):
+/// a caller that is one of them is the platform acting, not a person.
+pub const FIRST_PARTY_TENANTS: [&str; 3] = [
+    "f8cdef31-a31e-4b4a-93e4-5f571e91255a",
+    "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TimelineSource {
@@ -74,6 +84,16 @@ impl TimelineSource {
             TimelineSource::Health => "Resource Health",
             TimelineSource::Alert => "Alerts",
             TimelineSource::Deployment => "Deployments",
+        }
+    }
+
+    /// One row's kind (`@changes`'s type column).
+    pub fn kind(self) -> &'static str {
+        match self {
+            TimelineSource::Activity => "Activity Log",
+            TimelineSource::Health => "Resource Health",
+            TimelineSource::Alert => "Alert",
+            TimelineSource::Deployment => "Deployment",
         }
     }
 
@@ -342,7 +362,7 @@ impl TimelineRow {
             source: Some(TimelineSource::Deployment),
             what: format!("Deployment {}", state.to_lowercase()),
             subject: name.clone(),
-            who: name,
+            who: String::new(),
             detail,
             failed,
             status: state,
@@ -451,6 +471,50 @@ pub fn slot(source: TimelineSource) -> usize {
     source.index()
 }
 
+// ── Callers ─────────────────────────────────────────────────────────────
+
+/// What an Activity Log `caller` is, from the string alone: a person (a
+/// UPN), a principal (an object or app id: Graph says which), or the
+/// platform (a service name, or no caller at all).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallerKind {
+    Person,
+    Principal,
+    Platform,
+}
+
+pub fn caller_kind(caller: &str) -> CallerKind {
+    let c = caller.trim();
+    if c.contains('@') {
+        CallerKind::Person
+    } else if is_guid(c) {
+        CallerKind::Principal
+    } else {
+        CallerKind::Platform
+    }
+}
+
+/// `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+pub fn is_guid(s: &str) -> bool {
+    let parts: Vec<&str> = s.split('-').collect();
+    parts.len() == 5
+        && parts.iter().zip([8, 4, 4, 4, 12]).all(|(p, n)| p.len() == n && p.chars().all(|c| c.is_ascii_hexdigit()))
+}
+
+/// Why a directory object (a Graph service principal) is noise: a managed
+/// identity, or an app Microsoft owns. `None` for the tenant's own apps
+/// (a CI pipeline's deployments are changes someone made).
+pub fn principal_noise(v: &Value) -> Option<&'static str> {
+    if json::str_at(v, "/servicePrincipalType").is_some_and(|t| t.eq_ignore_ascii_case("ManagedIdentity")) {
+        return Some("managed identity");
+    }
+    let owner = json::str_at(v, "/appOwnerOrganizationId").unwrap_or_default();
+    if FIRST_PARTY_TENANTS.iter().any(|t| t.eq_ignore_ascii_case(&owner)) {
+        return Some("Azure first-party app");
+    }
+    None
+}
+
 // ── Windows ─────────────────────────────────────────────────────────────
 
 /// The `W` lens's window: `[` / `]`. 90 days is the Activity Log's
@@ -513,6 +577,11 @@ fn is_resource(id: &str) -> bool {
 /// resource's health history. Resources only (not a group or subscription).
 pub fn health_path(id: &str) -> Option<String> {
     is_resource(id).then(|| format!("{}/providers/Microsoft.ResourceHealth/availabilityStatuses", id))
+}
+
+/// Every resource's current health in a subscription.
+pub fn subscription_health_path(sub: &str) -> String {
+    format!("/subscriptions/{}/providers/Microsoft.ResourceHealth/availabilityStatuses", sub)
 }
 
 /// The resource a health status belongs to: its id up to the provider
@@ -735,6 +804,25 @@ pub(crate) mod tests {
             [TimelineSource::Deployment, TimelineSource::Health, TimelineSource::Activity, TimelineSource::Alert]
         );
         assert_eq!(merge(&lists, Some(TimelineSource::Health)).len(), 1);
+    }
+
+    #[test]
+    fn callers_classify_from_the_string_and_the_directory_object() {
+        assert_eq!(caller_kind("ops@contoso.com"), CallerKind::Person);
+        assert_eq!(caller_kind("1b2c3d4e-0000-4000-8000-0123456789ab"), CallerKind::Principal);
+        assert_eq!(caller_kind("Microsoft.Advisor"), CallerKind::Platform);
+        assert_eq!(caller_kind(""), CallerKind::Platform);
+        assert_eq!(principal_noise(&json!({"servicePrincipalType": "ManagedIdentity"})), Some("managed identity"));
+        assert_eq!(
+            principal_noise(&json!({"servicePrincipalType": "Application",
+                "appOwnerOrganizationId": "f8cdef31-a31e-4b4a-93e4-5f571e91255a"})),
+            Some("Azure first-party app")
+        );
+        assert_eq!(
+            principal_noise(&json!({"servicePrincipalType": "Application", "appOwnerOrganizationId": "my-tenant"})),
+            None,
+            "the tenant's own pipeline is not noise"
+        );
     }
 
     #[test]

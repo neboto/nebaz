@@ -19,7 +19,7 @@ Azure sibling of neboto (`neboto/neboto-tui`, the AWS one) and was built by
 | What a service actually renders today | the service file itself; it is the reference |
 | The ARM actions per service, the one role to assign | [`PERMISSIONS.md`](PERMISSIONS.md) |
 | The project's own vocabulary (subscription, location, ARM id, Lazy, LazyStore, epoch, state ladder, Related section, guard…) | [`CONTEXT.md`](CONTEXT.md) |
-| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands |
+| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands, 0006 `@changes` fetches |
 | What `v0.1.0` is and is not | [`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md) |
 | What is not built yet, and what is parked | [GitHub issues](https://github.com/neboto/nebaz/issues) (`gh issue list`); the parity roadmap is #55 |
 | What came from neboto and what changed | [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md) |
@@ -31,7 +31,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca / changes
 cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to stdout, exit codes in src/headless/contract.json
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 NEBAZ_BLESS=1 cargo test contract   # record an addition to the headless output contract
