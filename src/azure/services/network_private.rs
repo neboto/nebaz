@@ -279,6 +279,13 @@ impl PrivateDnsZoneRow {
 
 impl Resource for PrivateDnsZoneRow {
     arm_row!("Private DNS Zone");
+    /// How many record sets and VNet links.
+    fn list_summary(&self) -> Option<String> {
+        crate::azure::resource::summary_of([
+            self.record_sets.map(crate::azure::services::network_dns::record_sets_label),
+            self.vnet_links.map(|n| if n == 1 { "1 link".to_string() } else { format!("{n} links") }),
+        ])
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }
@@ -519,6 +526,7 @@ mod tests {
         .unwrap();
         assert_eq!(zone.location(), Some("global"));
         assert!(zone.details().iter().any(|(k, v)| k == "Record sets" && v == "3 of 25000"));
+        assert_eq!(zone.list_summary().as_deref(), Some("3 record sets · 1 link"));
 
         let records = vec![
             serde_json::json!({"name": "kv-prod", "type": "Microsoft.Network/privateDnsZones/A",

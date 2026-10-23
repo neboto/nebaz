@@ -290,6 +290,13 @@ impl CosmosAccountRow {
 
 impl Resource for CosmosAccountRow {
     arm_row!("Cosmos DB Account");
+    /// The API (`NoSQL`, `MongoDB`, …), plus `serverless` when it is.
+    fn list_summary(&self) -> Option<String> {
+        crate::azure::resource::summary_of([
+            Some(self.api.label()),
+            self.serverless.then_some("serverless"),
+        ])
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }

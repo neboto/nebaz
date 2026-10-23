@@ -180,6 +180,11 @@ impl SiteRow {
 
 impl Resource for SiteRow {
     arm_row!("App Service app");
+    /// What the site is, from `kind`: `Function app · Linux`. The runtime
+    /// stack is in `siteConfig`, which the list body does not carry.
+    fn list_summary(&self) -> Option<String> {
+        Some(self.kind_label())
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }
@@ -468,6 +473,10 @@ impl PlanRow {
 
 impl Resource for PlanRow {
     arm_row!("App Service plan");
+    /// `P1v3 · PremiumV3`: the SKU sets the price and the features.
+    fn list_summary(&self) -> Option<String> {
+        crate::azure::resource::summary_of([self.sku.as_deref(), self.tier.as_deref()])
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }

@@ -135,6 +135,11 @@ impl RegistryRow {
 
 impl Resource for RegistryRow {
     arm_row!("Container Registry");
+    /// The SKU (`Basic` / `Standard` / `Premium`: only Premium has
+    /// private endpoints, geo-replication and a firewall).
+    fn list_summary(&self) -> Option<String> {
+        self.sku.clone()
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }

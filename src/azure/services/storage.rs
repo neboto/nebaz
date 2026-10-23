@@ -109,6 +109,10 @@ impl StorageAccountRow {
 
 impl Resource for StorageAccountRow {
     arm_row!("Storage Account");
+    /// `StorageV2 · Standard_LRS`: the kind and the replication.
+    fn list_summary(&self) -> Option<String> {
+        crate::azure::resource::summary_of([self.kind.as_deref(), self.sku.as_deref()])
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }
@@ -335,6 +339,7 @@ mod tests {
             }
         });
         let row = StorageAccountRow::from_json(&v, Some("t-1")).unwrap();
+        assert_eq!(row.list_summary().as_deref(), Some("StorageV2 · Standard_LRS"));
         assert_eq!(row.state(), ResourceState::Available);
         assert_eq!(row.state_label(), "available");
         assert_eq!(row.endpoints.len(), 2);

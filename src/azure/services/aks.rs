@@ -177,6 +177,14 @@ impl ClusterRow {
 
 impl Resource for ClusterRow {
     arm_row!("Managed Cluster");
+    /// The Kubernetes version running (the requested one while an upgrade
+    /// has not reported yet).
+    fn list_summary(&self) -> Option<String> {
+        self.current_kubernetes_version
+            .clone()
+            .or_else(|| self.kubernetes_version.clone())
+            .map(|v| format!("k8s {v}"))
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }
@@ -453,6 +461,15 @@ impl NodePoolRow {
 }
 
 impl Resource for NodePoolRow {
+    /// `Standard_D4s_v5 × 3`: the node size and how many are running.
+    fn list_summary(&self) -> Option<String> {
+        match (&self.vm_size, self.count) {
+            (Some(size), Some(n)) => Some(format!("{size} × {n}")),
+            (Some(size), None) => Some(size.clone()),
+            (None, Some(n)) => Some(format!("× {n}")),
+            (None, None) => None,
+        }
+    }
     fn id(&self) -> &str {
         &self.id
     }
@@ -729,6 +746,14 @@ mod tests {
         assert!(row.related().iter().any(|(l, id)| l == "Log Analytics workspace law-prod"
             && JumpView::for_arm_id(id) == Some(JumpView::LogWorkspaces)));
         assert_eq!(row.cli_command().as_deref(), Some("az aks show -n aks-prod -g rg-aks --subscription 0000"));
+    }
+
+    #[test]
+    fn clusters_list_their_version_and_pools_their_size_and_count() {
+        let row = ClusterRow::from_json(&cluster_json(), None).unwrap();
+        assert_eq!(row.list_summary().as_deref(), Some("k8s 1.31.2"));
+        assert_eq!(row.pools[0].list_summary().as_deref(), Some("Standard_D4s_v5 × 3"));
+        assert_eq!(row.pools[1].list_summary().as_deref(), Some("Standard_D8s_v5 × 0"));
     }
 
     #[test]

@@ -85,6 +85,15 @@ pub struct Config {
     /// warning = "yellow"
     /// ```
     pub theme_colors: Option<std::collections::HashMap<String, String>>,
+    /// Services whose chips are on the service strip from startup, before
+    /// you've opened them: your usual set, one click away. Any prefix or
+    /// alias `@`-search accepts; nothing loads until a chip is opened.
+    /// Unknown prefixes warn at startup and are skipped.
+    ///
+    /// ```toml
+    /// pinned_services = ["vm", "aks", "kv", "storage"]
+    /// ```
+    pub pinned_services: Option<Vec<String>>,
     /// Set when the config file existed but failed to parse — the app starts
     /// on defaults and surfaces this in the status bar. Never silently: a
     /// TOML typo used to wipe every setting (default_service, roles, …) with
@@ -162,6 +171,23 @@ impl Config {
             })
             .collect()
     }
+
+    /// Resolve `pinned_services` to service types, plus a warning naming any
+    /// prefix that resolves to nothing (skipped, never fatal).
+    pub fn pinned_service_types(&self) -> (Vec<ServiceType>, Option<String>) {
+        let mut pinned = Vec::new();
+        let mut unknown = Vec::new();
+        for prefix in self.pinned_services.iter().flatten() {
+            match ServiceType::from_prefix_service(prefix) {
+                Some(s) if !pinned.contains(&s) => pinned.push(s),
+                Some(_) => {}
+                None => unknown.push(prefix.as_str()),
+            }
+        }
+        let warning = (!unknown.is_empty())
+            .then(|| format!("pinned_services: unknown service {}", unknown.join(", ")));
+        (pinned, warning)
+    }
 }
 
 #[cfg(test)]
@@ -204,6 +230,21 @@ default_location = "WestEurope"
         assert_eq!(config.theme.as_deref(), Some("gruvbox-dark"));
         assert_eq!(config.cache_ttls.as_ref().and_then(|m| m.get("storage")), Some(&600));
         assert_eq!(config.theme_colors.as_ref().and_then(|m| m.get("accent")).map(String::as_str), Some("#ff8800"));
+        assert_eq!(config.pinned_service_types(), (
+            vec![ServiceType::VirtualMachines, ServiceType::Aks, ServiceType::KeyVault, ServiceType::Storage],
+            None
+        ));
+    }
+
+    #[test]
+    fn pinned_services_resolve_aliases_and_warn_on_unknown() {
+        let config: Config =
+            toml::from_str(r#"pinned_services = ["vm", "@aks", "disk", "kv", "nosuchservice"]"#).unwrap();
+        let (pinned, warning) = config.pinned_service_types();
+        // `disk` routes to the VMs tab, which is already pinned.
+        assert_eq!(pinned, vec![ServiceType::VirtualMachines, ServiceType::Aks, ServiceType::KeyVault]);
+        assert_eq!(warning.as_deref(), Some("pinned_services: unknown service nosuchservice"));
+        assert_eq!(Config::default().pinned_service_types(), (vec![], None));
     }
 
     #[test]

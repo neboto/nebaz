@@ -38,6 +38,7 @@ use ratatui::Terminal;
 use std::sync::Arc;
 
 mod directory_test;
+mod list_ux_test;
 mod load_stream_test;
 pub(crate) mod mocks;
 mod navigation_test;
