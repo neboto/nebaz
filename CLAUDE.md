@@ -99,7 +99,16 @@ is the vim-style linewise selection (`V`, `J`/`K`, `Ctrl-A`; `y` copies
 the range); `detail_flat_mode` (`\`, config `detail_flat`) renders every
 section in one scroll with `━━ Name ━━` headers, digits and Tab jumping
 between headers, and `App::flat_tick` firing every lazy section once per
-focused resource.
+focused resource. `App::detail_body` is what every key indexes and the
+pane draws: the rows narrowed by the `/` filter (`filter_detail_rows`,
+group-aware, keeps a match's `━━` header; recomputed on each read, so a
+lazy section landing later is filtered; cleared when the pane loses
+focus), so the cursor, `V`, `y` and `⏎` act on the visible line; never
+index `get_detail_lines` with the cursor. `[[`/`]]` jump group headers;
+`Ctrl-W` (config `detail_wrap`) wraps long values in the renderer only
+(`layout_body`), rows stay logical. `H`/`L` step sub-tabs from either
+pane (from the detail pane the new tab's first row opens there, via
+`pending_detail_focus`).
 
 **Lazy loading** (`src/lazy.rs`): `LazyStore` owns every `LazyMap`
 (instance views, containers, vault secrets, vault keys) keyed by ARM id,

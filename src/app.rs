@@ -456,6 +456,22 @@ pub struct App {
     /// the sweep runs once per focused resource (the triggers are
     /// idempotent anyway).
     flat_triggered_for: Option<String>,
+    /// `/` in the focused detail pane: typing the body filter. Keys go to
+    /// the query until `⏎` (keep the filter) or `Esc` (drop it).
+    pub detail_search_active: bool,
+    /// The body filter (`filter_detail_rows`), applied while the pane is
+    /// focused and cleared when it loses focus. Recomputed on every read,
+    /// so a lazy section that lands later is filtered too.
+    pub detail_search_query: String,
+    /// Detail-body wrap (`Ctrl-W`, config `detail_wrap`): long values
+    /// continue on hanging-indent rows instead of clipping at the pane
+    /// edge. Render-only: the cursor, `y` and `V` stay on logical rows.
+    pub detail_wrap: bool,
+    /// First half of a `[[` / `]]` group-jump chord in the detail pane.
+    pending_bracket: Option<char>,
+    /// `H` / `L` from the detail pane: focus the new sub-tab's first row
+    /// once its list has one (the load may still be in flight).
+    pending_detail_focus: bool,
     pub layout_mode: LayoutMode,
 
     // Status messages.
@@ -606,6 +622,11 @@ impl App {
             detail_visual_anchor: None,
             detail_flat_mode: config.detail_flat.unwrap_or(false),
             flat_triggered_for: None,
+            detail_search_active: false,
+            detail_search_query: String::new(),
+            detail_wrap: config.detail_wrap.unwrap_or(false),
+            pending_bracket: None,
+            pending_detail_focus: false,
             detail_section_idx: 0,
             details_scroll: 0,
             layout_mode: LayoutMode::Split,
@@ -1015,6 +1036,8 @@ impl App {
             return;
         };
         self.push_nav_location();
+        // The filter belonged to the pane being left.
+        self.clear_detail_filter();
         let loc = NavLocation {
             service: view.service(),
             view: Some(view),
@@ -1041,7 +1064,7 @@ impl App {
 
     /// Enter on a detail line: jump when its value is an ARM id.
     fn follow_detail_line(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
-        let lines = self.get_detail_lines();
+        let lines = self.detail_body();
         let Some((_, value)) = lines.get(self.details_scroll) else {
             return;
         };
@@ -1295,7 +1318,8 @@ impl App {
     /// What a service or sub-tab switch resets: the pane focus, the
     /// section cursor, sort, state filter and query.
     fn reset_list_shaping(&mut self) {
-        self.details_focused = false;
+        self.leave_detail_pane();
+        self.pending_detail_focus = false;
         self.detail_section_idx = 0;
         self.list_sort = ListSort::Default;
         self.list_state_filter = None;
@@ -1936,8 +1960,22 @@ impl App {
 
     // ── Detail cursor, visual selection, flat view ───────────────────────
 
+    /// The body the pane shows and every key indexes: `get_detail_lines`
+    /// narrowed by the `/` filter while the pane is focused. The cursor,
+    /// `V`, `y`, `⏎`, `[[`/`]]` and the flat header jumps all read this, so
+    /// a filtered view copies and jumps from the line on screen. Rebuilt on
+    /// every call, so a lazy section that lands under a filter is filtered.
+    pub fn detail_body(&self) -> Vec<(String, String)> {
+        let lines = self.get_detail_lines();
+        if self.details_focused {
+            filter_detail_rows(lines, &self.detail_search_query)
+        } else {
+            lines
+        }
+    }
+
     fn detail_line_count(&self) -> usize {
-        self.get_detail_lines().len()
+        self.detail_body().len()
     }
 
     /// Move the detail cursor by `delta` lines, clamped to the body.
@@ -1986,7 +2024,7 @@ impl App {
     /// `y` in the detail pane: the selection as text when one is active,
     /// else the cursor line's value.
     fn copy_detail_selection(&mut self) {
-        let lines = self.get_detail_lines();
+        let lines = self.detail_body();
         match self.detail_visual_range() {
             Some((start, end)) => {
                 let text = selection_text(&lines, start, end);
@@ -2031,21 +2069,37 @@ impl App {
         });
     }
 
-    /// Body row indexes of the flat section headers, in order.
-    fn flat_header_rows(&self) -> Vec<usize> {
-        self.get_detail_lines()
+    /// `(body row, section name)` of each flat section header still in the
+    /// body, in order. Under a `/` filter a section with no match has no
+    /// header, so callers match on the name, never the position.
+    fn flat_headers(&self) -> Vec<(usize, String)> {
+        self.detail_body()
             .iter()
             .enumerate()
-            .filter(|(_, (k, v))| v.is_empty() && flat_header_name(k).is_some())
-            .map(|(i, _)| i)
+            .filter(|(_, (_, v))| v.is_empty())
+            .filter_map(|(i, (k, _))| flat_header_name(k).map(|n| (i, n.to_string())))
             .collect()
     }
 
-    /// `1`–`9` in the flat view: cursor to that section's header.
+    fn flat_header_rows(&self) -> Vec<usize> {
+        self.flat_headers().into_iter().map(|(i, _)| i).collect()
+    }
+
+    /// `1`–`9` in the flat view: cursor to that section's header (by label,
+    /// so a filter that dropped earlier sections still lands right).
     fn flat_jump_to_section(&mut self, idx: usize) {
-        if let Some(&row) = self.flat_header_rows().get(idx) {
-            self.detail_visual_anchor = None;
-            self.details_scroll = row;
+        let Some(label) = self.selected_descriptor().and_then(|d| d.sections.get(idx)).map(|s| s.label) else {
+            return;
+        };
+        match self.flat_headers().into_iter().find(|(_, n)| n == label) {
+            Some((row, _)) => {
+                self.detail_visual_anchor = None;
+                self.details_scroll = row;
+            }
+            None if !self.detail_search_query.is_empty() => {
+                self.toast(format!("No match in {}", label));
+            }
+            None => {}
         }
     }
 
@@ -2086,13 +2140,136 @@ impl App {
             }
         }
         let cursor = self.details_scroll;
-        let section = self
-            .flat_header_rows()
+        let name = self
+            .flat_headers()
+            .into_iter()
+            .take_while(|(row, _)| *row <= cursor)
+            .last()
+            .map(|(_, n)| n);
+        let section = name.and_then(|n| {
+            self.selected_descriptor()
+                .and_then(|d| d.sections.iter().position(|s| s.label == n))
+        });
+        self.detail_section_idx = section.unwrap_or(0);
+    }
+
+    // ── Detail body filter, group jumps, wrap ────────────────────────────
+
+    /// `Ctrl-W`: wrap long values onto continuation rows, or clip them at
+    /// the pane edge again. Render-only, so nothing else resets.
+    fn toggle_detail_wrap(&mut self) {
+        self.detail_wrap = !self.detail_wrap;
+        self.toast(if self.detail_wrap {
+            "Detail view: long values wrap (Ctrl-W to clip)"
+        } else {
+            "Detail view: long values clip (Ctrl-W to wrap)"
+        });
+    }
+
+    /// Drop the `/` filter (typing or applied).
+    fn clear_detail_filter(&mut self) {
+        self.detail_search_active = false;
+        self.detail_search_query.clear();
+    }
+
+    /// Back from the detail pane to the list (`h` / `←` / `⌫` / `Esc`): the
+    /// filter and the selection go with the focus.
+    fn leave_detail_pane(&mut self) {
+        self.details_focused = false;
+        self.detail_visual_anchor = None;
+        self.pending_bracket = None;
+        self.clear_detail_filter();
+    }
+
+    /// Body rows that match the filter themselves (not the headers and
+    /// spacers kept for context): what `n` / `N` step through.
+    pub fn detail_match_rows(&self) -> Vec<usize> {
+        if self.detail_search_query.is_empty() {
+            return Vec::new();
+        }
+        let q = self.detail_search_query.to_lowercase();
+        self.detail_body()
             .iter()
-            .take_while(|&&row| row <= cursor)
-            .count()
-            .saturating_sub(1);
-        self.detail_section_idx = section;
+            .enumerate()
+            .filter(|(_, (k, v))| row_matches(k, v, &q))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// The query changed: the cursor goes to the first match (row 0 when
+    /// nothing matches), and a positional selection would mean other rows.
+    fn detail_filter_changed(&mut self) {
+        self.detail_visual_anchor = None;
+        self.details_scroll = self.detail_match_rows().first().copied().unwrap_or(0);
+    }
+
+    /// `n` / `N`: the next / previous matching row, wrapping.
+    fn detail_match_step(&mut self, forward: bool) {
+        let rows = self.detail_match_rows();
+        let Some(&first) = rows.first() else {
+            return;
+        };
+        let cur = self.details_scroll;
+        self.details_scroll = if forward {
+            rows.iter().copied().find(|&i| i > cur).unwrap_or(first)
+        } else {
+            rows.iter().rev().copied().find(|&i| i < cur).unwrap_or(*rows.last().unwrap())
+        };
+    }
+
+    /// `]]` / `[[`: the next / previous group header (a section's bold
+    /// subheadings; in the flat view the `━━ Name ━━` headers too), or the
+    /// last / first line when there is none that way. Like `j`/`k` it
+    /// extends an active selection rather than dropping it.
+    // ported from neboto-tui src/app.rs @ 7330ba4 (detail_next_section /
+    // detail_prev_section, folded into one)
+    fn detail_group_jump(&mut self, forward: bool) {
+        let body = self.detail_body();
+        if body.is_empty() {
+            return;
+        }
+        let cur = self.details_scroll.min(body.len() - 1);
+        let mut headers = body.iter().enumerate().filter(|(_, (k, v))| is_group_header(k, v)).map(|(i, _)| i);
+        self.details_scroll = if forward {
+            headers.find(|&i| i > cur).unwrap_or(body.len() - 1)
+        } else {
+            headers.rfind(|&i| i < cur).unwrap_or(0)
+        };
+    }
+
+    /// `H` / `L`: previous / next sub-tab, from either pane, only where
+    /// the service has sub-tabs. From the detail pane the new tab's first
+    /// row opens there (now, from the cache, or when its list lands).
+    // after neboto-tui src/app.rs @ 40b402f (step_sub_tab; nebaz cycles
+    // the view directly and lands the focus when the list does)
+    fn step_sub_tab(&mut self, forward: bool, event_tx: &mpsc::UnboundedSender<Event>) {
+        if self.current_service.is_none_or(|s| s.views().len() < 2) {
+            return;
+        }
+        let from_details = self.details_focused;
+        if from_details {
+            self.leave_detail_pane();
+        }
+        self.cycle_view(forward);
+        if from_details {
+            self.pending_detail_focus = true;
+            self.resolve_pending_detail_focus(event_tx);
+        }
+    }
+
+    /// Land a pending `H` / `L` focus once the new list has a row; a load
+    /// that ends empty leaves the list focused.
+    fn resolve_pending_detail_focus(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        if !self.pending_detail_focus || self.pending_jump.is_some() {
+            return;
+        }
+        if self.selected_index.is_some() {
+            self.pending_detail_focus = false;
+            self.details_focused = true;
+            self.reset_detail_section_to_default(event_tx);
+        } else if !self.loading {
+            self.pending_detail_focus = false;
+        }
     }
 
     // ── Messages ────────────────────────────────────────────────────────
@@ -2833,6 +3010,7 @@ impl App {
                 self.loading_progress = Some(progress);
                 self.update_search();
                 self.resolve_pending_jump(event_tx);
+                self.resolve_pending_detail_focus(event_tx);
             }
             Event::ResourcesFullyLoaded { service, .. } => {
                 if Some(service) == self.current_service {
@@ -2845,6 +3023,7 @@ impl App {
                     self.loading_complete = true;
                     self.loading_progress = None;
                     self.pending_jump = None;
+                    self.pending_detail_focus = false;
                     match auth {
                         // One app-wide line, never a per-service error.
                         Some(a) => self.auth_error = Some(a),
@@ -2878,6 +3057,7 @@ impl App {
         }
         self.update_search();
         self.resolve_pending_jump(event_tx);
+        self.resolve_pending_detail_focus(event_tx);
     }
 
     fn handle_mouse(&mut self, mouse: MouseEvent, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -2914,7 +3094,7 @@ impl App {
                             let row = (mouse.row - list.y).saturating_sub(1) as usize + offset;
                             if row < self.filtered_resources.len() {
                                 self.select(Some(row));
-                                self.details_focused = false;
+                                self.leave_detail_pane();
                             }
                         }
                     }
@@ -3074,19 +3254,69 @@ impl App {
 
         // Detail pane focused.
         if self.details_focused {
+            // `/` filter input owns the keyboard while typing.
+            if self.detail_search_active {
+                match key.code {
+                    KeyCode::Esc => {
+                        self.clear_detail_filter();
+                        self.detail_filter_changed();
+                    }
+                    // Keep the filter, back to moving.
+                    KeyCode::Enter => self.detail_search_active = false,
+                    // Ctrl-W deletes a word, as in a shell (not the wrap toggle).
+                    KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        let q = self.detail_search_query.trim_end();
+                        let keep = q.rfind(' ').map(|i| i + 1).unwrap_or(0);
+                        self.detail_search_query.truncate(keep);
+                        self.detail_filter_changed();
+                    }
+                    KeyCode::Backspace => {
+                        self.detail_search_query.pop();
+                        self.detail_filter_changed();
+                    }
+                    KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        self.detail_search_query.push(c);
+                        self.detail_filter_changed();
+                    }
+                    _ => {}
+                }
+                return;
+            }
             let flat = self.flat_active();
+            // `[[` / `]]`: any key but the matching bracket cancels the chord.
+            let bracket = self.pending_bracket.take();
             match key.code {
-                // Esc drops an active selection first, then leaves the pane.
+                KeyCode::Char(c @ ('[' | ']')) if bracket == Some(c) => self.detail_group_jump(c == ']'),
+                KeyCode::Char(c @ ('[' | ']')) => self.pending_bracket = Some(c),
+                // Esc drops an active selection first, then the filter,
+                // then leaves the pane.
                 KeyCode::Esc if self.detail_visual_anchor.is_some() => {
                     self.detail_visual_anchor = None;
                 }
                 // ⌫ walks history (the footer's `⌫ back to …` names it);
-                // with nothing behind, it leaves the pane as `h` does.
-                KeyCode::Backspace if self.nav_back_index().is_some() => self.nav_back(event_tx),
-                KeyCode::Esc | KeyCode::Char('h') | KeyCode::Left | KeyCode::Backspace => {
-                    self.details_focused = false;
-                    self.detail_visual_anchor = None;
+                // with nothing behind, it leaves the pane as `h` does. The
+                // filter belonged to the pane being left.
+                KeyCode::Backspace if self.nav_back_index().is_some() => {
+                    self.clear_detail_filter();
+                    self.nav_back(event_tx)
                 }
+                KeyCode::Esc if !self.detail_search_query.is_empty() => {
+                    self.clear_detail_filter();
+                    self.detail_filter_changed();
+                }
+                KeyCode::Esc | KeyCode::Char('h') | KeyCode::Left | KeyCode::Backspace => {
+                    self.leave_detail_pane();
+                }
+                KeyCode::Char('/') => {
+                    self.detail_search_active = true;
+                    self.detail_search_query.clear();
+                    self.detail_filter_changed();
+                }
+                KeyCode::Char('n') if !self.detail_search_query.is_empty() => self.detail_match_step(true),
+                KeyCode::Char('N') if !self.detail_search_query.is_empty() => self.detail_match_step(false),
+                KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => self.toggle_detail_wrap(),
+                KeyCode::Char('H') => self.step_sub_tab(false, event_tx),
+                KeyCode::Char('L') => self.step_sub_tab(true, event_tx),
                 // Linewise visual selection (vim-style): `V` toggles it at the
                 // cursor; `J`/`K` and Shift-↓/↑ start-and-extend in one motion;
                 // once active, plain movement extends it (the anchor stays).
@@ -3184,6 +3414,8 @@ impl App {
             KeyCode::Backspace => self.nav_back(event_tx),
             KeyCode::Tab => self.cycle_view(true),
             KeyCode::BackTab => self.cycle_view(false),
+            KeyCode::Char('H') => self.step_sub_tab(false, event_tx),
+            KeyCode::Char('L') => self.step_sub_tab(true, event_tx),
             KeyCode::Char(c) if crate::sections::index_for_key(c).is_some() => {
                 self.switch_view_index(crate::sections::index_for_key(c).unwrap())
             }
@@ -3203,6 +3435,9 @@ impl App {
                     self.load_service_resources();
                 }
             }
+            // `Ctrl-W` reshapes the detail preview, like `\` (before the
+            // plain `w` arm, which matches any modifier).
+            KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => self.toggle_detail_wrap(),
             KeyCode::Char('w') => {
                 self.watch.enabled = !self.watch.enabled;
                 self.toast(if self.watch.enabled {
@@ -3700,6 +3935,94 @@ fn assemble_flat_detail(sections: &[(String, Vec<(String, String)>)]) -> Vec<(St
     lines
 }
 
+/// A group header in the detail body: a key, no value, no leading space
+/// (`style_detail_row`'s bold subheading; the flat `━━` headers too).
+fn is_group_header(key: &str, value: &str) -> bool {
+    !key.is_empty() && value.is_empty() && !key.starts_with(' ')
+}
+
+/// Case-insensitive substring match on a row's key or value; `q` is
+/// already lowercased.
+fn row_matches(key: &str, value: &str, q: &str) -> bool {
+    key.to_lowercase().contains(q) || value.to_lowercase().contains(q)
+}
+
+// ported from neboto-tui src/app.rs @ 7330ba4 (filter_detail_rows, with
+// c814b26's flat section-header rule)
+/// The `/` body filter: case-insensitive substring over key and value,
+/// group-aware so a match never loses its context. A group (a group
+/// header and the rows up to the next one) is kept whole when its header
+/// matches, and as header + matching rows (+ spacers) when a row does;
+/// the rows before the first header are kept when anything matched. In
+/// the flat view a `━━ Section ━━` header outranks the group headers
+/// inside it: whenever any of its rows survive, it is kept too, so the
+/// cursor's section (and the tab bar) still resolve. With no group
+/// headers at all it falls back to plain line filtering.
+pub fn filter_detail_rows(lines: Vec<(String, String)>, query: &str) -> Vec<(String, String)> {
+    if query.is_empty() {
+        return lines;
+    }
+    let q = query.to_lowercase();
+    let matches = |(k, v): &(String, String)| row_matches(k, v, &q);
+
+    struct Group {
+        start: usize,
+        end: usize,
+        header_matches: bool,
+        any_child_matches: bool,
+    }
+    let mut i = 0;
+    while i < lines.len() && !is_group_header(&lines[i].0, &lines[i].1) {
+        i += 1;
+    }
+    let preamble_end = i;
+    let mut groups: Vec<Group> = Vec::new();
+    while i < lines.len() {
+        let start = i;
+        let header_matches = matches(&lines[i]);
+        i += 1;
+        let mut any_child_matches = false;
+        while i < lines.len() && !is_group_header(&lines[i].0, &lines[i].1) {
+            any_child_matches |= matches(&lines[i]);
+            i += 1;
+        }
+        groups.push(Group { start, end: i, header_matches, any_child_matches });
+    }
+
+    let mut result = Vec::new();
+    if groups.iter().any(|g| g.header_matches || g.any_child_matches) && preamble_end > 0 {
+        result.extend(lines[..preamble_end].iter().cloned());
+    }
+    // A section header owns only the rows up to its first subgroup, so a
+    // match inside a subgroup would drop it (neboto #119): hold the latest
+    // unemitted section header and emit it before the first kept subgroup.
+    let mut pending_section: Option<usize> = None;
+    for g in &groups {
+        let included = g.header_matches || g.any_child_matches;
+        if flat_header_name(&lines[g.start].0).is_some() {
+            pending_section = (!included).then_some(g.start);
+        } else if included {
+            if let Some(h) = pending_section.take() {
+                result.push(lines[h].clone());
+            }
+        }
+        if g.header_matches {
+            result.extend(lines[g.start..g.end].iter().cloned());
+        } else if g.any_child_matches {
+            result.push(lines[g.start].clone());
+            for row in &lines[g.start + 1..g.end] {
+                if matches(row) || (row.0.is_empty() && row.1.is_empty()) {
+                    result.push(row.clone());
+                }
+            }
+        }
+    }
+    if result.is_empty() && !lines.is_empty() {
+        return lines.into_iter().filter(|r| matches(r)).collect();
+    }
+    result
+}
+
 /// The visual selection as clipboard text: `key: value` per row, headers
 /// and plain content lines as themselves, blank rows kept as blank lines.
 fn selection_text(lines: &[(String, String)], start: usize, end: usize) -> String {
@@ -3818,6 +4141,51 @@ mod tests {
         let lines = vec![s("Name", "vm-1"), s("Tags", ""), s("  env", "prod"), s("", "note"), s("", "")];
         assert_eq!(selection_text(&lines, 0, 4), "Name: vm-1\nTags\nenv: prod\nnote\n");
         assert_eq!(selection_text(&lines, 2, 2), "env: prod");
+    }
+
+    #[test]
+    fn body_filter_keeps_each_match_with_its_group_header() {
+        let lines = vec![
+            s("", "names only"),
+            s("Network", ""),
+            s("  Subnet", "default"),
+            s("  NSG", "nsg-web"),
+            s("", ""),
+            s("Storage", ""),
+            s("  OS disk", "vm-1-os"),
+        ];
+        // A row match: its header, the row, the spacers; the preamble.
+        assert_eq!(
+            filter_detail_rows(lines.clone(), "NSG-"),
+            vec![s("", "names only"), s("Network", ""), s("  NSG", "nsg-web"), s("", "")]
+        );
+        // A header match keeps the whole group.
+        assert_eq!(
+            filter_detail_rows(lines.clone(), "storage"),
+            vec![s("", "names only"), s("Storage", ""), s("  OS disk", "vm-1-os")]
+        );
+        assert_eq!(filter_detail_rows(lines.clone(), ""), lines);
+        assert!(filter_detail_rows(lines, "nothing").is_empty());
+        // No group headers at all: plain line filtering.
+        let flat = vec![s("Subscription", "/subscriptions/0"), s("NIC vm-1-nic", "/subscriptions/0/nic")];
+        assert_eq!(filter_detail_rows(flat, "nic"), vec![s("NIC vm-1-nic", "/subscriptions/0/nic")]);
+    }
+
+    /// neboto #119: a match under a subgroup keeps its `━━ Section` header,
+    /// once, before the subgroup.
+    #[test]
+    fn body_filter_keeps_the_flat_section_header_of_a_subgroup_match() {
+        let lines = assemble_flat_detail(&[
+            ("Overview".into(), vec![s("Name", "web-1")]),
+            ("Security".into(), vec![s("Role", "app-role"), s("Encryption", ""), s("KMS key", "needle")]),
+        ]);
+        let filtered = filter_detail_rows(lines.clone(), "needle");
+        assert_eq!(flat_header_name(&filtered[0].0), Some("Security"));
+        assert_eq!(filtered[1..], [s("Encryption", ""), s("KMS key", "needle")]);
+
+        let filtered = filter_detail_rows(lines, "security");
+        let headers = filtered.iter().filter(|(k, _)| flat_header_name(k) == Some("Security")).count();
+        assert_eq!(headers, 1);
     }
 }
 
