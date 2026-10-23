@@ -45,7 +45,9 @@ one `App` owns all state; a tokio task per load sends `Event`s over a
 channel (`ResourcesPartiallyLoaded` per page, `ResourcesLoaded` /
 `FullyLoaded`, `ResourceLoadWarning`, `ResourceLoadError`, plus the one
 **apply-closure event** every lazy fetch returns through). The draw loop
-never blocks; `Ctrl-L` clears and repaints.
+never blocks; `Ctrl-L` clears and repaints. A list load's events carry its
+generation; every bump goes through `App::supersede_loads`, which also
+aborts the superseded fetch so it stops paging ARM (`ListLoad`).
 
 **Scoping** (ADR 0002): `subscription` is the `P` slot, the one thing the
 app is pointed at; every list is subscription-wide. `location` is a

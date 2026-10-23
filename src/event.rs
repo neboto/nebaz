@@ -71,7 +71,7 @@ pub enum Event {
     },
     /// A list-load stream event (`ResourcesLoaded` / `PartiallyLoaded` /
     /// `FullyLoaded` / `LoadError` / `LoadWarning`) tagged by the forwarder in
-    /// `App::load_resources_async` with the `load_generation` it belongs to.
+    /// `App::load_resources_async` with the list-load generation it belongs to.
     /// `handle_event` re-checks the generation *when the event is handled*,
     /// not just when it was forwarded: while `handle_event` is blocked in a
     /// subscription switch (an awaited client build), a superseded stream's
@@ -89,7 +89,7 @@ pub enum Event {
     },
 
     /// The `P` slot: switch the active subscription (keeps the client and
-    /// the list cache, replaces the `LazyStore`, bumps `load_generation`).
+    /// the list cache, replaces the `LazyStore`, supersedes the list load).
     SubscriptionSwitchRequested {
         subscription_id: String,
     },

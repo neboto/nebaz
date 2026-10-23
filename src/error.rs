@@ -67,6 +67,14 @@ impl From<azure_core::Error> for Error {
         use azure_core::error::ErrorKind;
         match e.kind() {
             ErrorKind::Credential => Error::Auth(AuthError::from_message(&e.to_string())),
+            // ARM throttling: the retry policy already retried the 429
+            // honouring `Retry-After`; say so in words, not a status dump.
+            ErrorKind::HttpResponse { status, .. } if *status == azure_core::http::StatusCode::TooManyRequests => {
+                Error::Azure(
+                    "ARM is throttling this subscription (429 Too Many Requests); gave up after retries, press r to try again shortly"
+                        .to_string(),
+                )
+            }
             ErrorKind::HttpResponse { status, error_code, .. } => {
                 let code = error_code.as_deref().unwrap_or("");
                 let msg = e.to_string();
@@ -129,5 +137,21 @@ mod tests {
         let again = azure_core::Error::with_message(ErrorKind::Connection, "dns error: no such host")
             .with_context("retry policy expired");
         assert_eq!(root_cause(&again), "dns error: no such host");
+    }
+
+    #[test]
+    fn throttling_reads_as_throttling() {
+        use azure_core::error::ErrorKind;
+        let throttled = azure_core::Error::with_message(
+            ErrorKind::HttpResponse {
+                status: azure_core::http::StatusCode::TooManyRequests,
+                error_code: Some("TooManyRequests".to_string()),
+                raw_response: None,
+            },
+            "Number of read requests exceeded the limit",
+        );
+        let e: Error = throttled.into();
+        assert!(e.to_string().contains("throttling"), "{}", e);
+        assert!(e.auth_error().is_none());
     }
 }
