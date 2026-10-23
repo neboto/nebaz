@@ -53,8 +53,8 @@ view (`\`) that puts every section in one scroll. Verified against a live tenant
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in
-[`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md); what is deliberately not in it
-is in [`docs/BACKLOG.md`](docs/BACKLOG.md).
+[`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md); what is not built yet is tracked in
+[GitHub issues](https://github.com/neboto/nebaz/issues).
 
 ## Install
 

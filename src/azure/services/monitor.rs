@@ -1,6 +1,6 @@
 //! The Monitor service (issue #10): Log Analytics workspaces and
 //! Application Insights components, two subscription-wide lists,
-//! metadata only. Querying logs is data plane and stays on the backlog.
+//! metadata only. Querying logs is data plane and is parked in #69.
 //!
 //! A workspace's shared keys are a POST nebaz never sends. A component's
 //! GET body *does* carry ingestion credentials (the instrumentation key,

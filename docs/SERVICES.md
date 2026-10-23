@@ -74,12 +74,12 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
 7. **One call, two sub-tabs**: VNets/Subnets and Clusters/Node pools are
    two cache entries from the same list; switching sub-tab refetches
    (Network reads allow 10,000 per 5 min; AKS is a handful of rows).
-   Cross-filling both from one call is a backlog nicety.
+   Cross-filling both from one call is #64.
 8. **AKS node pools need no lazy call**: the list's `agentPoolProfiles`
    is the full agent-pool property set (autoscale bounds, power state,
    node image version, current version). Still to confirm on a
    subscription with a cluster; if the live JSON lacks those fields, add
-   a lazy Detail section per cluster rather than a per-pool call.
+   a lazy Detail section per cluster rather than a per-pool call (#66).
 9. **`az` commands** are `show --ids {id}` for every ARM row except those
    whose `show` takes no `--ids` (`az account show`, `az group show`,
    `az keyvault show`, `az aks show`, `az aks nodepool show`,
@@ -207,15 +207,15 @@ the Accounts view and its Containers sections touch the throttled Storage
 budget. **Watch mode** (`w`, presets 5–300 s) needs no floor for one
 watched view: the 5 s preset is 60 list calls per 5 minutes against the
 100 allowed. Two watched Storage views in one subscription would exceed
-it; that floor is on the backlog.
+it; that floor is #63.
 
 ## Verified live (2026-09-23, the Azure machine)
 
 - VM power state on the row through the `statusOnly=true` pass. Whether
   that pass also carries the full model (one call instead of two) is
-  unchecked; the two-call form stays.
+  unchecked (#65); the two-call form stays.
 - `az keyvault show`, `az aks show`, `az aks nodepool show` take no
   `--ids` (name form above).
 - The api-versions above were accepted.
 - Still to check: embedded `agentPoolProfiles` carry autoscale and power
-  (rule 8), on a subscription with an AKS cluster.
+  (rule 8), on a subscription with an AKS cluster (#66).

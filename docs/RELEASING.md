@@ -186,22 +186,8 @@ branch ruleset) is deliberately not, until after `v0.1.0`.
 `install.sh` honours `NEBAZ_VERSION` (pin a tag), `NEBAZ_INSTALL_DIR`
 (default `~/.local/bin`), `NEBAZ_NO_ATTEST=1` and `GITHUB_TOKEN`.
 
-## Not done yet (in rough priority order)
+## Not done yet
 
-- **First tag**: nothing is released; `Cargo.toml` is at `0.0.1`. The first
-  release is ticket 09's call (the first-release spec).
-- **Homebrew tap** (`brew install neboto/tap/nebaz`): needs a
-  `neboto/homebrew-tap` repo and a job that rewrites the formula's URLs +
-  SHAs on each release.
-- **crates.io publish**: `cargo publish` makes `cargo install nebaz` and
-  plain `cargo binstall nebaz` work.
-- **macOS signing / notarization**: the binaries are unsigned. Installing
-  through the script or `gh` is fine (no quarantine attribute), but a tarball
-  downloaded in a browser will trip Gatekeeper; users can
-  `xattr -d com.apple.quarantine nebaz`.
-- **Windows**: the CLI credential already runs `az.cmd` through `cmd /C`
-  (as azure_identity does) and `crossterm` supports it, but `$EDITOR` and
-  the browser opener are Unix-shaped. Untested, not in the matrix.
-- **musl Linux builds** for old-glibc distros / Alpine — `aws-lc-sys` needs a
-  musl C toolchain, so it's a `cross` job like the arm64 one.
-- **CHANGELOG.md**: release notes are GitHub's auto-generated PR list today.
+Tracked as issues labelled `area:release`: Homebrew tap (#71), crates.io
+(#72), macOS signing (#73), musl builds (#74), CHANGELOG / release notes
+by label (#75), Windows (#68).

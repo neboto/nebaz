@@ -21,7 +21,7 @@ Azure sibling of neboto (`neboto/neboto-tui`, the AWS one) and was built by
 | The project's own vocabulary (subscription, location, ARM id, Lazy, LazyStore, epoch, state ladder, Related section, guard…) | [`CONTEXT.md`](CONTEXT.md) |
 | Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth |
 | What `v0.1.0` is and is not | [`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md) |
-| What is deliberately unbuilt | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| What is not built yet, and what is parked | [GitHub issues](https://github.com/neboto/nebaz/issues) (`gh issue list`); the parity roadmap is #55 |
 | What came from neboto and what changed | [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md) |
 | How a release is cut, how users install | [`docs/RELEASING.md`](docs/RELEASING.md) |
 
@@ -222,7 +222,7 @@ ladder, `for_arm_id`, the config example, auth classification, the
 clipboard encoding). The read-only guard is an integration test under
 `cargo test`. `scripts/smoke.sh` drives the binary in a pty with a fake
 `az` and a dead endpoint and greps the screen (manual; needs python3).
-There is no offline wiring harness yet (backlog). Live behaviour is
+There is no offline wiring harness yet (#46). Live behaviour is
 checked by hand on a machine with `az` (this dev machine has none):
 `docs/SPEC-v0.1.md` carries the tour checklist.
 
