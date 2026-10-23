@@ -148,6 +148,11 @@ pub struct LazyStore {
     /// An identity's own assignments (`principalId eq`), keyed by identity id.
     pub identity_role_assignments: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Activity (every type) ────────────────────────────────────────────
+    /// The last week of the activity log filtered to the row, keyed by ARM
+    /// id; capped at `ACTIVITY_MAX_EVENTS`.
+    pub activity: LazyMap<Vec<serde_json::Value>>,
+
     // ── Cosmos DB ────────────────────────────────────────────────────────
     /// `GET {account}/{sqlDatabases|mongodbDatabases|…}` — the path the
     /// account's API picks, keyed by account id.

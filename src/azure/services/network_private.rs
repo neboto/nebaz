@@ -33,6 +33,7 @@ crate::sections! {
         Connection "Connection",
         Dns "DNS",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -45,6 +46,7 @@ crate::sections! {
         Records "Records" => crate::app::App::trigger_dns_records,
         VnetLinks "VNet links" => crate::app::App::trigger_dns_vnet_links,
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -232,7 +234,8 @@ pub fn private_endpoint_section_lines(
                 .map(|(fqdn, ips)| (fqdn.clone(), json::join(ips)))
                 .collect()
         }
-        PrivateEndpointDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        PrivateEndpointDetailSection::Access => crate::azure::services::rendered_by_app(),
+        PrivateEndpointDetailSection::Activity => crate::azure::services::rendered_by_app(),
         PrivateEndpointDetailSection::Related => related_rows(r),
         PrivateEndpointDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -319,7 +322,8 @@ pub fn private_dns_zone_section_lines(
         PrivateDnsZoneDetailSection::Overview => overview_rows(r),
         PrivateDnsZoneDetailSection::Records => lazy_list_rows(records, "Records", |items| record_rows(items, r)),
         PrivateDnsZoneDetailSection::VnetLinks => lazy_list_rows(links, "VNet links", |items| vnet_link_rows(items, r)),
-        PrivateDnsZoneDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        PrivateDnsZoneDetailSection::Access => crate::azure::services::rendered_by_app(),
+        PrivateDnsZoneDetailSection::Activity => crate::azure::services::rendered_by_app(),
         PrivateDnsZoneDetailSection::Related => {
             let mut lines = related_rows(r);
             lines.push((String::new(), "· linked VNets are in the VNet links section".into()));

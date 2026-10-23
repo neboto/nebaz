@@ -344,6 +344,32 @@ impl AzureClients {
         }
     }
 
+    /// [`list_fetch_query`](Self::list_fetch_query) that stops paging once
+    /// `max_items` have arrived (the activity log).
+    pub fn list_fetch_query_capped(
+        &self,
+        path: &str,
+        api_version: &'static str,
+        query: Vec<(String, String)>,
+        max_items: usize,
+    ) -> impl Future<Output = std::result::Result<Vec<serde_json::Value>, String>> + Send + 'static {
+        let arm = self.arm_for_path(path);
+        let path = path.to_string();
+        async move {
+            let arm = arm?;
+            let query: Vec<(&str, &str)> = query.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            let mut all = Vec::new();
+            arm.list_pages_while(&path, api_version, &query, |page| {
+                all.extend(page);
+                all.len() < max_items
+            })
+            .await
+            .map_err(|e| e.to_string())?;
+            all.truncate(max_items);
+            Ok(all)
+        }
+    }
+
     /// `GET /subscriptions/{id}` for a subscription row's Details section.
     pub fn subscription_details_fetch(
         &self,

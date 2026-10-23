@@ -38,6 +38,7 @@ crate::sections! {
     pub static WORKSPACE_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -48,6 +49,7 @@ crate::sections! {
     pub static COMPONENT_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -204,7 +206,8 @@ impl Resource for WorkspaceRow {
 pub fn workspace_section_lines(r: &WorkspaceRow, section: WorkspaceDetailSection) -> Vec<(String, String)> {
     match section {
         WorkspaceDetailSection::Overview => overview_rows(r),
-        WorkspaceDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        WorkspaceDetailSection::Access => crate::azure::services::rendered_by_app(),
+        WorkspaceDetailSection::Activity => crate::azure::services::rendered_by_app(),
         WorkspaceDetailSection::Related => {
             let mut lines = related_rows(r);
             lines.push((
@@ -335,7 +338,8 @@ pub fn component_section_lines(r: &ComponentRow, section: ComponentDetailSection
             lines.push((String::new(), "· the copied command needs the application-insights CLI extension".into()));
             lines
         }
-        ComponentDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        ComponentDetailSection::Access => crate::azure::services::rendered_by_app(),
+        ComponentDetailSection::Activity => crate::azure::services::rendered_by_app(),
         ComponentDetailSection::Related => related_rows(r),
         ComponentDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -477,7 +481,7 @@ mod tests {
     fn section_labels_put_overview_first_related_second_to_last_tags_last() {
         for d in [&WORKSPACE_SECTIONS, &COMPONENT_SECTIONS] {
             let labels: Vec<&str> = d.sections.iter().map(|s| s.label).collect();
-            assert_eq!(labels, ["Overview", "Access", "Related", "Tags"]);
+            assert_eq!(labels, ["Overview", "Access", "Activity", "Related", "Tags"]);
         }
     }
 

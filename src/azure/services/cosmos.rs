@@ -42,6 +42,7 @@ crate::sections! {
         Backup "Backup",
         Databases "Databases" => crate::app::App::trigger_cosmos_databases,
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -442,7 +443,8 @@ pub fn cosmos_section_lines(
             lines
         }
         CosmosDetailSection::Databases => lazy_list_rows(databases, "Databases", |items| database_rows(items, r)),
-        CosmosDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        CosmosDetailSection::Access => crate::azure::services::rendered_by_app(),
+        CosmosDetailSection::Activity => crate::azure::services::rendered_by_app(),
         CosmosDetailSection::Related => related_rows(r),
         CosmosDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -594,7 +596,7 @@ mod tests {
         let labels: Vec<&str> = COSMOS_SECTIONS.sections.iter().map(|s| s.label).collect();
         assert_eq!(
             labels,
-            ["Overview", "Replication", "Security", "Backup", "Databases", "Access", "Related", "Tags"]
+            ["Overview", "Replication", "Security", "Backup", "Databases", "Access", "Activity", "Related", "Tags"]
         );
     }
 

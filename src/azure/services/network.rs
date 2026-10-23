@@ -35,6 +35,7 @@ crate::sections! {
         Subnets "Subnets",
         Peerings "Peerings",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -45,6 +46,7 @@ crate::sections! {
     pub static SUBNET_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -58,6 +60,7 @@ crate::sections! {
         Outbound "Outbound",
         UsedBy "Used by",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -214,7 +217,8 @@ pub fn vnet_section_lines(r: &VnetRow, section: VnetDetailSection) -> Vec<(Strin
             }
             lines
         }
-        VnetDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        VnetDetailSection::Access => crate::azure::services::rendered_by_app(),
+        VnetDetailSection::Activity => crate::azure::services::rendered_by_app(),
         VnetDetailSection::Related => related_rows(r),
         VnetDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -399,7 +403,8 @@ impl Resource for SubnetRow {
 pub fn subnet_section_lines(r: &SubnetRow, section: SubnetDetailSection) -> Vec<(String, String)> {
     match section {
         SubnetDetailSection::Overview => overview_rows(r),
-        SubnetDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        SubnetDetailSection::Access => crate::azure::services::rendered_by_app(),
+        SubnetDetailSection::Activity => crate::azure::services::rendered_by_app(),
         SubnetDetailSection::Related => related_rows(r),
         SubnetDetailSection::Tags => vec![(String::new(), "Subnets carry no tags (the VNet's apply)".into())],
     }
@@ -580,7 +585,8 @@ pub fn nsg_section_lines(r: &NsgRow, section: NsgDetailSection) -> Vec<(String, 
             }
             lines
         }
-        NsgDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        NsgDetailSection::Access => crate::azure::services::rendered_by_app(),
+        NsgDetailSection::Activity => crate::azure::services::rendered_by_app(),
         NsgDetailSection::Related => related_rows(r),
         NsgDetailSection::Tags => tag_rows(r.tags()),
     }

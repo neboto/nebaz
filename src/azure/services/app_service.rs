@@ -43,6 +43,7 @@ crate::sections! {
         Hostnames "Hostnames",
         Networking "Networking",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -53,6 +54,7 @@ crate::sections! {
     pub static PLAN_SECTIONS = [
         Overview "Overview",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -296,7 +298,8 @@ pub fn site_section_lines(
             lines.push((String::new(), "· access restrictions are in Configuration".into()));
             lines
         }
-        SiteDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        SiteDetailSection::Access => crate::azure::services::rendered_by_app(),
+        SiteDetailSection::Activity => crate::azure::services::rendered_by_app(),
         SiteDetailSection::Related => {
             let mut lines = related_rows(r);
             lines.push((
@@ -519,7 +522,8 @@ impl Resource for PlanRow {
 pub fn plan_section_lines(r: &PlanRow, section: PlanDetailSection) -> Vec<(String, String)> {
     match section {
         PlanDetailSection::Overview => overview_rows(r),
-        PlanDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        PlanDetailSection::Access => crate::azure::services::rendered_by_app(),
+        PlanDetailSection::Activity => crate::azure::services::rendered_by_app(),
         PlanDetailSection::Related => {
             let mut lines = related_rows(r);
             lines.push((String::new(), "· the apps on this plan list it in their own Related".into()));

@@ -35,6 +35,7 @@ crate::sections! {
         Secrets "Secrets" => crate::app::App::trigger_vault_secrets,
         Keys "Keys" => crate::app::App::trigger_vault_keys,
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -250,7 +251,8 @@ pub fn vault_section_lines(
             lazy_list_rows(secrets, "Secrets", |items| secret_rows(items, &r.base.name))
         }
         VaultDetailSection::Keys => lazy_list_rows(keys, "Keys", |items| key_rows(items, &r.base.name)),
-        VaultDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        VaultDetailSection::Access => crate::azure::services::rendered_by_app(),
+        VaultDetailSection::Activity => crate::azure::services::rendered_by_app(),
         VaultDetailSection::Related => related_rows(r),
         VaultDetailSection::Tags => tag_rows(r.tags()),
     }

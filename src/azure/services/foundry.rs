@@ -40,6 +40,7 @@ crate::sections! {
         Network "Network",
         Security "Security",
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -284,7 +285,8 @@ pub fn foundry_section_lines(
             lines.push((String::new(), NEVER_KEYS.into()));
             lines
         }
-        FoundryDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        FoundryDetailSection::Access => crate::azure::services::rendered_by_app(),
+        FoundryDetailSection::Activity => crate::azure::services::rendered_by_app(),
         FoundryDetailSection::Related => related_rows(r),
         FoundryDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -503,7 +505,7 @@ mod tests {
     #[test]
     fn section_labels_put_overview_first_related_second_to_last_tags_last() {
         let labels: Vec<&str> = FOUNDRY_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(labels, ["Overview", "Deployments", "Projects", "Network", "Security", "Access", "Related", "Tags"]);
+        assert_eq!(labels, ["Overview", "Deployments", "Projects", "Network", "Security", "Access", "Activity", "Related", "Tags"]);
     }
 
     #[test]

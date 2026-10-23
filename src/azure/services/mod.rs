@@ -6,6 +6,7 @@
 //! The helpers here are the pieces every service shares.
 
 pub mod access;
+pub mod activity;
 pub mod aks;
 pub mod all_resources;
 pub mod app_service;
@@ -38,6 +39,13 @@ use tokio::sync::mpsc;
 // ── Section-body shapes ───────────────────────────────────────────────
 
 /// The one shape for a lazy-fetch failure in a section body.
+/// The `*_section_lines` arm for a section every type shares (Access,
+/// Activity): the app renders it before the per-type dispatch, matched on
+/// the label, so a type's own renderer never does.
+pub fn rendered_by_app() -> Vec<(String, String)> {
+    Vec::new()
+}
+
 pub fn error_rows(err: &str) -> Vec<(String, String)> {
     vec![
         (String::new(), String::new()),

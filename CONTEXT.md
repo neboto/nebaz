@@ -115,6 +115,12 @@ resource group, subscription or management group. Principals are object ids
 reverse: what its principal holds.
 _Avoid_: permissions (that is `PERMISSIONS.md`, what nebaz itself needs), IAM
 
+**Activity section**:
+The section every type carries after Access: the last week of control-plane
+operations on the row (who, what, when, whether it worked), from the
+subscription's activity log. One entry per operation, not per event.
+_Avoid_: audit log, logs (Log Analytics is Monitor's, and data plane)
+
 **All resources**:
 The Subscriptions sub-tab listing every resource in the subscription from
 the generic list, whatever its type (`→` marks a type with its own tab). It

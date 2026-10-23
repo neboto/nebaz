@@ -44,7 +44,9 @@ account, Azure OpenAI included; model deployments and projects lazy, never
 keys), and Monitor (Log Analytics workspaces and App Insights components,
 metadata only; AKS links to its workspace). Every row has an **Access**
 section (the role assignments that apply to it, inherited ones jumping to
-where they were made; an identity also shows what it can do) and a
+where they were made; an identity also shows what it can do), an
+**Activity** section (the last week of operations on it: who, what, when,
+whether it worked) and a
 **Related** section listing the ARM ids it points at; Enter on one jumps
 there; a link to a type nebaz does not browse yet lands in **All
 resources**, which lists every resource in the subscription. The detail pane has a line cursor,

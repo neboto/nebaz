@@ -189,13 +189,35 @@ impl ArmClient {
     where
         F: FnMut(Vec<Value>) + Send,
     {
+        self.list_pages_while(path, api_version, query, |page| {
+            on_page(page);
+            true
+        })
+        .await
+    }
+
+    /// [`list_pages`](Self::list_pages) that stops following `nextLink`
+    /// once `on_page` returns `false` (a capped lazy list: the activity
+    /// log).
+    pub async fn list_pages_while<F>(
+        &self,
+        path: &str,
+        api_version: &str,
+        query: &[(&str, &str)],
+        mut on_page: F,
+    ) -> Result<usize>
+    where
+        F: FnMut(Vec<Value>) -> bool + Send,
+    {
         let mut request = Some(self.get_request(path, api_version, query)?);
         let mut pages = 0usize;
         while let Some(req) = request.take() {
             let body = self.send_json(req).await?;
             pages += 1;
             let (value, next) = split_page(body);
-            on_page(value);
+            if !on_page(value) {
+                break;
+            }
             if let Some(link) = next {
                 request = Some(self.get_link(&link)?);
             }

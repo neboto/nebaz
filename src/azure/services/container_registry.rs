@@ -37,6 +37,7 @@ crate::sections! {
         Replications "Replications" => crate::app::App::trigger_acr_replications,
         Webhooks "Webhooks" => crate::app::App::trigger_acr_webhooks,
         Access "Access" => crate::app::App::trigger_access,
+        Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
         Tags "Tags",
     ]
@@ -207,7 +208,8 @@ pub fn registry_section_lines(
             lazy_list_rows(replications, "Replications", |items| replication_rows(items, r))
         }
         RegistryDetailSection::Webhooks => lazy_list_rows(webhooks, "Webhooks", |items| webhook_rows(items, r)),
-        RegistryDetailSection::Access => crate::azure::services::access::rendered_by_app(),
+        RegistryDetailSection::Access => crate::azure::services::rendered_by_app(),
+        RegistryDetailSection::Activity => crate::azure::services::rendered_by_app(),
         RegistryDetailSection::Related => related_rows(r),
         RegistryDetailSection::Tags => tag_rows(r.tags()),
     }
@@ -410,7 +412,7 @@ mod tests {
     #[test]
     fn section_labels_put_overview_first_related_second_to_last_tags_last() {
         let labels: Vec<&str> = REGISTRY_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(labels, ["Overview", "Security", "Replications", "Webhooks", "Access", "Related", "Tags"]);
+        assert_eq!(labels, ["Overview", "Security", "Replications", "Webhooks", "Access", "Activity", "Related", "Tags"]);
     }
 
     #[test]
