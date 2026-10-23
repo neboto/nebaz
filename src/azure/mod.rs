@@ -7,6 +7,7 @@ pub mod graph;
 pub mod location;
 pub mod metrics;
 pub mod nsg_eval;
+pub mod references;
 pub mod resource;
 pub mod service;
 pub mod services;

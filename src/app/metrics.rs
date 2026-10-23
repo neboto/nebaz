@@ -37,6 +37,7 @@ impl App {
         let queries = curated_queries(&id);
         let curated = !queries.is_empty();
         self.network_lens = None;
+        self.refs_lens = None;
         self.metrics = Some(MetricsState::open(id, title, queries, window));
         // From the list: the pane behind the view is the default section,
         // with its on-enter hook fired, so closing never leaves a spinner.

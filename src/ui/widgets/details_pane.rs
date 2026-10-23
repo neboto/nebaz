@@ -60,7 +60,12 @@ fn fit_hints(mut hints: Vec<(&str, &str)>, width: usize) -> Line<'static> {
 
 pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     app.mouse.detail_pane.set(Some(area));
-    // The network access lens (`N`) owns the pane while open.
+    // The referenced-by lens (`U`) owns the pane while open.
+    if app.refs_lens.is_some() {
+        crate::ui::widgets::refs_lens::render_refs_lens(app, area, frame);
+        return;
+    }
+    // So does the network access lens (`N`).
     if app.network_lens.is_some() {
         crate::ui::widgets::network_lens::render_network_lens(app, area, frame);
         return;

@@ -271,6 +271,29 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     (never `credential reset`). **Power Platform policy** each injected
     subnet. A list visual selection (#39) merged into one `--ids a b c` command
     (neboto's batch mode) is not built yet: `C` acts on the cursor row.
+21. **Referenced by** (`U`, #49, `src/azure/references.rs`, keys and the
+    cache walk in `src/app/refs_lens.rs`, drawn by
+    `src/ui/widgets/refs_lens.rs`): the reverse of Related. A reverse
+    index over every warm list of the current subscription (the `@*`
+    walk: typed lists first, All resources last for ids no typed list
+    has; the on-screen list stands in for a lapsed entry) maps each id a
+    row's `related()` points at, and each ARM id in a tag key or value
+    (`hidden-link:/subscriptions/…`), to the row. Ids match
+    case-insensitively; a link to a child (`…/subnets/s`) also counts
+    for its parent (`via Subnet s (in it)`); Graph `graph:/` ids match
+    through the target's own `matches_id` (a service principal's
+    `(appId='…')` alias). Not references: the subscription and resource
+    group links every row has, a row's own id, and containment either
+    way (a VNet listing its subnets). **Zero calls**: the index is kept
+    and reused while the cache's write generation, the subscription and
+    the warm-list count hold. The coverage line counts the lists searched
+    and names the cold ones likely to point at this type
+    (`likely_referrers`, a hand-kept table) as `not checked — load …`;
+    `L` loads those through their ordinary list load in the background
+    (into the cache, never onto the screen; a failure is a `⚠` line) and
+    the lens rescans as each lands. `f` narrows to one service, `⏎`
+    jumps through the jump path, `y` copies the id, `e` opens the list
+    in `$EDITOR`, `r` rescans.
 
 ## The catalog
 
@@ -362,6 +385,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
+| Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |

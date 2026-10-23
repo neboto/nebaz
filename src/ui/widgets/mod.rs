@@ -7,6 +7,7 @@ pub mod location_selector;
 pub mod macro_picker;
 pub mod metrics_overlay;
 pub mod network_lens;
+pub mod refs_lens;
 pub mod message_log;
 pub mod resource_list;
 pub mod search_bar;

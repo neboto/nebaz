@@ -16,7 +16,7 @@
 //! - [`MouseState::popup`] — the open centered modal's outer rect (a click
 //!   outside closes it) and its visible rows, by item index.
 //! - [`MouseState::pane_rows`] — the rows of an in-pane view (the network
-//!   lens, metrics) by item index.
+//!   lens, the referenced-by lens, metrics) by item index.
 //! - [`MouseState::detail_rows`] — the detail body's screen-row →
 //!   `detail_body()` row map, so a click lands on the right logical row
 //!   under `Ctrl-W` wrap and the `/` filter.
@@ -322,6 +322,7 @@ impl App {
         // row it was opened on. (A hint drawn by the view is its own key.)
         if !matches!(action, ClickAction::Press(_)) {
             self.network_lens = None;
+            self.refs_lens = None;
             self.metrics = None;
         }
         match action {
@@ -542,14 +543,15 @@ impl App {
         }
     }
 
-    /// Mouse on an in-pane view (the network lens, metrics). Over the
+    /// Mouse on an in-pane view (the network lens, the referenced-by lens,
+    /// metrics). Over the
     /// pane, the wheel is `↓` / `↑`, a click puts the cursor on a row, a
     /// double-click is `⏎` (go to the line's NSG; chart the picked metric)
     /// and a right-click is `Esc`. Outside it, a click or a scroll closes
     /// the view and goes on to what is under the pointer. Whether the view
     /// took the event.
     fn handle_pane_view_mouse(&mut self, mouse: MouseEvent, event_tx: &mpsc::UnboundedSender<Event>) -> bool {
-        if self.network_lens.is_none() && self.metrics.is_none() {
+        if self.network_lens.is_none() && self.refs_lens.is_none() && self.metrics.is_none() {
             return false;
         }
         let (col, row) = (mouse.column, mouse.row);
@@ -559,6 +561,7 @@ impl App {
                 MouseEventKind::Down(_) | MouseEventKind::ScrollDown | MouseEventKind::ScrollUp
             ) {
                 self.network_lens = None;
+                self.refs_lens = None;
                 self.metrics = None;
             }
             return false;
@@ -585,6 +588,11 @@ impl App {
         if let Some(lens) = self.network_lens.as_mut() {
             if idx < lens.lines.len() {
                 lens.selected = idx;
+                return true;
+            }
+        } else if let Some(st) = self.refs_lens.as_mut() {
+            if idx < st.rows.len() {
+                st.selected = idx;
                 return true;
             }
         } else if let Some(st) = self.metrics.as_mut() {
