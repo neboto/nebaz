@@ -1,0 +1,29 @@
+# Groups the auto-generated release notes (gh release --generate-notes) by PR
+# label. A PR lands in the FIRST category whose labels it carries, so Fixes
+# comes first (a bug fix labelled area:ux is still a fix). Unlabelled PRs land
+# under "Other changes" — label PRs when opening them (docs/RELEASING.md).
+# Every label here must exist in the repo; a missing one silently matches
+# nothing. Ported from neboto-tui c9b5997, plus nebaz's area:release.
+changelog:
+  exclude:
+    labels: [skip-changelog]
+    authors: ["dependabot[bot]"]
+  categories:
+    - title: Fixes
+      labels: [bug]
+    - title: Security
+      labels: [area:security]
+    - title: New services
+      labels: [area:new-service]
+    - title: Service depth
+      labels: [area:service-depth]
+    - title: UX
+      labels: [area:ux, accessibility, enhancement]
+    - title: Platform
+      labels: [area:platform]
+    - title: Documentation
+      labels: [documentation]
+    - title: Build and release
+      labels: [area:release, area:testing, dependencies, github_actions]
+    - title: Other changes
+      labels: ["*"]
