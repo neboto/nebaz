@@ -55,7 +55,11 @@ whether it worked) and a
 there; a link to a type nebaz does not browse yet lands in **All
 resources**, which lists every resource in the subscription. The detail pane has a line cursor,
 vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`) and a flat
-view (`\`) that puts every section in one scroll. Verified against a live tenant:
+view (`\`) that puts every section in one scroll. `N` on a VM, NIC,
+subnet or NSG opens the **network access lens**: the NSG rules that apply,
+subnet then NIC, in priority order, defaults included, shadowed rules and
+rules the other layer blocks marked (computed from the rules with GETs
+only, not Azure's effective view). Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in
@@ -125,6 +129,7 @@ cargo run -- -s app    # App Service apps (2 Functions, 3 Plans); 2 on a row loa
 cargo run -- -s sql    # SQL servers; 3 / 4 on a row list databases and firewall rules
 cargo run -- -s acr    # container registries; 3 / 4 on a row list replications and webhooks
 cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
+cargo run -- -s subnet # subnets; N on one shows the NSG rules for anything placed in it
 cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe)
 cargo run -- -s dns    # DNS: Private DNS, zones, Private Resolver (3), rulesets (4), DNS policies (5); -s dnsr for resolvers
 cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments

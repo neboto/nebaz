@@ -114,6 +114,9 @@ each one backs are in the catalog table
   VNet ⇄ resolver lookups the resolver API offers
   (`virtualNetworks/listDnsResolvers`, `listDnsForwardingRulesets`) are
   `POST`s and are never sent; the links are gathered from the `GET`s above.
+  The network access lens (`N`) needs nothing more: it reads NICs, VNets
+  and NSGs with the actions above and computes the rules itself, because a
+  NIC's effective rules and routes are POST actions nebaz never calls.
 - **Key Vault**: `Microsoft.KeyVault/vaults/read`; the lazy Secrets and Keys
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:

@@ -433,3 +433,27 @@ fn permissions_doc_grants_only_read_actions() {
     assert!(bad.is_empty(), "read-only guard (PERMISSIONS.md): non-read actions {:?}", bad);
     assert!(doc.contains("`Reader`"), "PERMISSIONS.md must name the built-in Reader role");
 }
+
+/// ARM reads that are POSTs (a NIC's effective NSG rules and routes):
+/// `ReadOnlyPolicy` would refuse them at runtime anyway; the guard keeps
+/// them out of `src/`. The network lens (#50) computes NSG access
+/// client-side from GETs instead.
+const POST_ONLY_READS: &[&str] = &["effectivenetworksecuritygroups", "effectiveroutetable"];
+
+#[test]
+fn no_post_only_read_is_requested() {
+    let mut problems = Vec::new();
+    for path in rust_sources() {
+        let file = without_line_comments(&fs::read_to_string(&path).unwrap());
+        let text = non_test_part(&file);
+        for (offset, literal) in string_literals(text) {
+            let lower = literal.to_lowercase();
+            for action in POST_ONLY_READS {
+                if lower.contains(action) {
+                    problems.push(format!("{}:{}: `{}` is a POST action", rel(&path), line_of(text, offset), action));
+                }
+            }
+        }
+    }
+    assert!(problems.is_empty(), "read-only guard (POST-only reads):\n  {}", problems.join("\n  "));
+}

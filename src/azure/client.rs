@@ -298,7 +298,7 @@ impl AzureClients {
 
     /// The pipeline for the tenant an ARM path belongs to, resolved
     /// synchronously so an auth condition surfaces as the fetch's error.
-    fn arm_for_path(&self, path: &str) -> std::result::Result<Arc<ArmClient>, String> {
+    pub fn arm_for_path(&self, path: &str) -> std::result::Result<Arc<ArmClient>, String> {
         let sub = subscription_of(path).ok_or_else(|| format!("not an ARM path: {}", path))?;
         self.arm_for_subscription(sub).map_err(|e| e.to_string())
     }

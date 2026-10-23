@@ -140,8 +140,17 @@ _Avoid_: inventory, Resource Graph (a POST query nebaz does not use)
 **Related section**:
 The detail section every type carries listing the ARM ids the row points at
 (its subscription and resource group first, then its own links); Enter on a
-line jumps to that resource. It is the app's only jump mechanism.
+line jumps to that resource. It is the app's only jump mechanism besides
+the network lens.
 _Avoid_: references, referenced-by (the reverse lens, not in the first release)
+
+**Network lens**:
+The `N` view of the NSG rules that apply to a NIC, a subnet or an NSG (a
+VM through its NICs), in Azure's evaluation order: subnet NSG then NIC NSG
+inbound, the reverse outbound, priority order within each. **Computed**
+from the NSGs' rules, never Azure's effective view. A rule is **shadowed**
+when an earlier rule of the same NSG matches everything it matches.
+_Avoid_: effective rules (Azure's POST-only view, which this is not)
 
 **Read-only guarantee**:
 The promise that nebaz never changes anything in Azure, and never fetches a

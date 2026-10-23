@@ -114,6 +114,9 @@ use std::future::Future;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
+/// The network access lens (`N`): open, fetch, keys.
+mod network_lens;
+
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
 
 /// Whether a screen cell (`col`, `row`) falls inside `area`.
@@ -480,6 +483,11 @@ pub struct App {
     // `$EDITOR`.
     pub editor_requested: bool,
 
+    /// Network access lens (`N`, #50): owns the detail pane while open.
+    pub network_lens: Option<crate::ui::widgets::network_lens::NetworkLensState>,
+    /// Bumped per lens fetch; a result for an older one is dropped.
+    network_lens_generation: u64,
+
     // Mouse hit-testing, recorded by the read-only widgets each frame.
     click_regions: RefCell<Vec<ClickRegion>>,
     list_area: Cell<Rect>,
@@ -599,6 +607,8 @@ impl App {
             watch_staging: None,
             deep_export_progress: None,
             editor_requested: false,
+            network_lens: None,
+            network_lens_generation: 0,
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             config,
@@ -771,6 +781,7 @@ impl App {
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
         self.flat_triggered_for = None;
         self.supersede_loads();
+        self.network_lens = None;
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
             self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
@@ -1224,6 +1235,7 @@ impl App {
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
         self.flat_triggered_for = None;
         self.supersede_loads();
+        self.network_lens = None;
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
         Ok(())
@@ -2053,6 +2065,9 @@ impl App {
     /// Called by `main` after the TUI is torn down: open the selected
     /// resource's raw content or its detail snapshot as JSON.
     pub fn open_in_editor(&mut self) -> Result<()> {
+        if let Some(st) = &self.network_lens {
+            return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
+        }
         let Some(resource) = self.get_selected_resource() else {
             return Ok(());
         };
@@ -2726,6 +2741,11 @@ impl App {
     }
 
     fn handle_mouse(&mut self, mouse: MouseEvent, event_tx: &mpsc::UnboundedSender<Event>) {
+        // A click or scroll leaves the network lens first: it belongs to
+        // the row it was opened on.
+        if self.network_lens.is_some() && !matches!(mouse.kind, MouseEventKind::Moved) {
+            self.network_lens = None;
+        }
         match mouse.kind {
             MouseEventKind::Down(_) => {
                 let hit = self
@@ -2890,6 +2910,12 @@ impl App {
                 }
                 _ => {}
             }
+            return;
+        }
+
+        // The network access lens owns the keyboard while open.
+        if self.network_lens.is_some() {
+            self.handle_network_lens_key(key, event_tx);
             return;
         }
 
@@ -3073,6 +3099,7 @@ impl App {
                 self.location_selector.show(&self.current_location, rows, state);
             }
             KeyCode::Char('P') => self.open_subscription_picker(),
+            KeyCode::Char('N') => self.open_network_lens(_event_tx),
             KeyCode::Char('b') => self.banner_visible = !self.banner_visible,
             KeyCode::Char('e') => {
                 if self.selected_index.is_some() {

@@ -141,15 +141,42 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     state is the worst credential's expiry through the ladder:
     `expired`, `expiring` (within 30 days), `ok`, or stateless with no
     credentials.
+14. **Network access lens** (`N`, `src/azure/nsg_eval.rs`, drawn by
+    `src/ui/widgets/network_lens.rs`): the NSG rules that apply to the
+    selected row, in the order Azure evaluates them, owning the detail
+    pane until `Esc`. It starts from an NSG (its own rules, and the
+    subnets and NICs it guards), a NIC, a subnet (what applies to anything
+    placed in it, plus the NICs in it that carry their own NSG, from the
+    warm lists), or any row whose Related lists NICs (a VM, a private
+    endpoint) or else subnets (a Container Apps environment's infrastructure subnet, a node pool, an app's VNet integration, a
+    Power Platform policy). Inbound runs the subnet's NSG, then the
+    NIC's; outbound the reverse; both must allow, and a layer with no NSG
+    allows everything. Within an NSG: priority order, first match wins,
+    the six default rules included (added when a body has none) and
+    labelled. A rule an earlier one fully covers is marked **shadowed**;
+    each live allow rule is run through the other layer's NSG and marked
+    allowed, blocked, or "depends on the flow" when the first rule there
+    only partly overlaps it. CIDRs compare numerically; service tags and
+    ASGs by name only, never expanded, so a claim about them errs to
+    "depends". It is **computed, not Azure's effective view** (the
+    effective-rules and effective-routes calls are POSTs; the guard
+    refuses their names) and says so on screen: Azure Firewall, UDRs and
+    AVNM admin rules are ignored, and a route table or delegation on the
+    path is a note line. Rows come from the warm NICs, VNets, Subnets and
+    NSGs lists, else one GET each, in one task delivered through the
+    apply-closure event (off the `LazyStore`; `r` refetches without the
+    caches). Anything unread is a warning line, never an error. `t`
+    cycles inbound + outbound / inbound / outbound; `⏎` jumps to the
+    line's NSG (or subnet, NIC); `y` copies a line; `e` opens it all.
 
-13. **DNS is its own tab** although every DNS type is Microsoft.Network:
+15. **DNS is its own tab** although every DNS type is Microsoft.Network:
     Network with Private DNS, public zones, resolvers, rulesets and DNS
     policies was thirteen sub-tabs, past the ten digit keys, and DNS is
     debugged as one workflow (which zone answers, which resolver forwards,
     which ruleset rule, which VNet is linked) that VNets and subnets only
     touch through their Related lines. Private DNS moved with it; its
     prefix (`@pdns`), view and cache key are unchanged.
-14. **DNS topology** (`network_dns.rs`): what ties resolvers, endpoints,
+16. **DNS topology** (`network_dns.rs`): what ties resolvers, endpoints,
     subnets, rulesets, policies, private zones and VNets together lives in
     child lists no list body carries, and the API's reverse lookups
     (`virtualNetworks/listDnsResolvers`, `listDnsForwardingRulesets`) are
@@ -180,8 +207,8 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
 | Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
-| Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet; ⧗ (rule 14) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
-| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 14) the DNS resolver endpoints in it | `az network vnet subnet show` |
+| Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet; ⧗ (rule 16) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
+| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 16) the DNS resolver endpoints in it | `az network vnet subnet show` |
 | Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
 | Network · Public IPs | — (Overview: address, allocation, version, SKU · tier, attached to, DNS label, FQDN, idle timeout, zones, DDoS) | attached / unattached | the owner of its IP configuration (NIC, load balancer, gateway, firewall, bastion), NAT gateway, prefix | `az network public-ip show` |
 | Network · LBs | Frontends (public IP, or private IP + subnet) · Backend pools (NICs, deduplicated from IP configurations; or addresses) · Rules (LB rules, health probes, inbound NAT, outbound) | stateless | frontend public IPs and subnets, backend NICs | `az network lb show` |
@@ -214,7 +241,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -248,10 +275,11 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | DNS zone Records (and Related's alias targets) | 1 per zone, on demand, stopping at 1,000 record sets | `{zone}/all` · `2018-05-01` |
 | Resolvers, Rulesets, DNS policies | 1 each | `/providers/Microsoft.Network/dnsResolvers` · `dnsForwardingRulesets` · `dnsResolverPolicies` · `2025-05-01` (the resolver spec) |
 | Ruleset Rules, policy Rules | 1 per ruleset or policy, on demand | `{ruleset}/forwardingRules` · `{policy}/dnsSecurityRules` · `2025-05-01` |
-| DNS topology (resolver Endpoints / Rulesets, ruleset and policy VNet links, the DNS lines of VNet and subnet Related; rule 14) | once per subscription per session, on demand: `4 + 2·resolvers + rulesets + policies + private zones`, each parent list followed for its first 100 | the three resolver lists, then `{resolver}/inboundEndpoints` · `{resolver}/outboundEndpoints` · `{ruleset}/virtualNetworkLinks` · `{policy}/virtualNetworkLinks` (`2025-05-01`); `privateDnsZones`, then `{zone}/virtualNetworkLinks` (`2024-06-01`) |
+| DNS topology (resolver Endpoints / Rulesets, ruleset and policy VNet links, the DNS lines of VNet and subnet Related; rule 16) | once per subscription per session, on demand: `4 + 2·resolvers + rulesets + policies + private zones`, each parent list followed for its first 100 | the three resolver lists, then `{resolver}/inboundEndpoints` · `{resolver}/outboundEndpoints` · `{ruleset}/virtualNetworkLinks` · `{policy}/virtualNetworkLinks` (`2025-05-01`); `privateDnsZones`, then `{zone}/virtualNetworkLinks` (`2024-06-01`) |
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
+| Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |

@@ -64,6 +64,7 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("y", "copy resource id"),
             ("C", "copy az CLI command"),
             ("e", "open in $EDITOR"),
+            ("N", "network access (NSG rules)"),
             ("X / ^X", "export detail / list"),
             ("M", "message history"),
             (",", "macros (⏎ run · n record)"),
