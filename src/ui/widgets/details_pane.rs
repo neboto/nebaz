@@ -22,6 +22,7 @@
 use crate::app::{detail_jump_view, App, ClickAction};
 use crate::sections::{key_for, SectionDescriptor};
 use crate::ui::theme;
+use crossterm::event::KeyCode;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -58,6 +59,7 @@ fn fit_hints(mut hints: Vec<(&str, &str)>, width: usize) -> Line<'static> {
 }
 
 pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
+    app.mouse.detail_pane.set(Some(area));
     // The network access lens (`N`) owns the pane while open.
     if app.network_lens.is_some() {
         crate::ui::widgets::network_lens::render_network_lens(app, area, frame);
@@ -119,6 +121,16 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     } else {
         theme::hint_line(&[("⏎", "focus"), ("e", "editor"), ("O", "portal"), ("\\", flat_hint)])
     };
+    // The footer's hints are click targets. It is right-aligned inside
+    // the bottom border's corners; a footer wider than that is cut by the
+    // block, so it gets no regions rather than wrong ones.
+    let inner_w = area.width.saturating_sub(2);
+    let footer_w = footer.width() as u16;
+    if area.height >= 2 && footer_w <= inner_w {
+        let x = area.x + 1 + inner_w - footer_w;
+        let y = area.y + area.height - 1;
+        crate::app::record_hint_regions(app, &footer, 0, x, y, x + footer_w);
+    }
     let block = theme::pane_block(&title, focused).title(
         Title::from(footer)
             .position(Position::Bottom)
@@ -126,6 +138,7 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     );
     let inner = block.inner(area);
     frame.render_widget(block, area);
+    record_frame_regions(app, area);
     if inner.height < 3 {
         return;
     }
@@ -221,11 +234,24 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
         let (k, v) = &lines[idx];
         wrap_indent(k, v, key_w)
     };
-    let styled = layout_body(lines.len(), body_area, cursor, app.detail_wrap, style_row, indent);
+    let top = app.mouse.detail_top.get();
+    let (styled, row_map) = layout_body(lines.len(), body_area, cursor, top, app.detail_wrap, style_row, indent);
     frame.render_widget(Paragraph::new(styled), body_area);
+    app.mouse.detail_top.set(row_map.first().copied().unwrap_or(0));
+    app.mouse.detail_body.set(Some(body_area));
+    *app.mouse.detail_rows.borrow_mut() = row_map;
 
     if let Some(bar) = bar_area {
         frame.render_widget(Paragraph::new(filter_bar(app)), bar);
+    }
+}
+
+/// The pane's top border (its title bar) toggles full width, as `Z` does
+/// from the pane: the mouse route to the one layout key with no visible
+/// control.
+fn record_frame_regions(app: &App, area: Rect) {
+    if area.height > 0 {
+        app.push_click_region(Rect { height: 1, ..area }, ClickAction::Detail(KeyCode::Char('Z')));
     }
 }
 
@@ -304,32 +330,45 @@ fn wrap_indent(key: &str, value: &str, key_w: usize) -> usize {
 }
 
 // ported from neboto-tui src/ui/widgets/details_pane/mod.rs @ 7330ba4
-// (layout_detail_body, wrap_styled_line, first_visible_row; nebaz has no
-// mouse row map, so the geometry recording is dropped)
+// (layout_detail_body, wrap_styled_line, first_visible_row; the screen-row
+// map came with the mouse, #42, and the scroll keeps last frame's top)
 /// Lay out the body into exactly the screen lines that fit `area`, keeping
-/// the logical `cursor` row fully on screen. `style_row(idx)` renders one
-/// logical row. Clip mode is one screen line per row. With `wrap` on, a
-/// long row continues on hanging-indent lines (`indent(idx)` columns),
-/// and the scroll is computed in screen rows, bottom-up from the cursor,
-/// so a wrapped cursor row is never cut off (`Paragraph::wrap` would
-/// anchor to the top and clip). Everything that indexes the body stays on
-/// logical rows; only the screen shape changes.
+/// the logical `cursor` row fully on screen, and say which logical row
+/// each screen line shows (the mouse maps a click through it).
+/// `style_row(idx)` renders one logical row. The view keeps `top`, last
+/// frame's first row, while the cursor stays fully on screen, so neither
+/// `k` nor a click scrolls a line out from under the pointer. Clip mode
+/// is one screen line per row. With `wrap` on, a long row continues on
+/// hanging-indent lines (`indent(idx)` columns), and a scroll is computed
+/// in screen rows, bottom-up from the cursor, so a wrapped cursor row is
+/// never cut off (`Paragraph::wrap` would anchor to the top and clip).
+/// Everything that indexes the body stays on logical rows; only the
+/// screen shape changes.
 fn layout_body(
     count: usize,
     area: Rect,
     cursor: usize,
+    top: usize,
     wrap: bool,
     style_row: impl Fn(usize) -> Line<'static>,
     indent: impl Fn(usize) -> usize,
-) -> Vec<Line<'static>> {
+) -> (Vec<Line<'static>>, Vec<usize>) {
     let height = area.height as usize;
     if count == 0 || height == 0 {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     }
     let cursor = cursor.min(count - 1);
     if !wrap {
-        let offset = cursor.saturating_sub(height - 1);
-        return (offset..count.min(offset + height)).map(style_row).collect();
+        let offset = if cursor < top {
+            cursor
+        } else if cursor >= top + height {
+            cursor + 1 - height
+        } else {
+            // No blank tail while there are rows above to show.
+            top.min(count.saturating_sub(height))
+        };
+        let rows: Vec<usize> = (offset..count.min(offset + height)).collect();
+        return (rows.iter().map(|&i| style_row(i)).collect(), rows);
     }
     let avail = (area.width as usize).saturating_sub(WRAP_ARROW_RESERVE).max(1);
     let wrapped = |idx: usize| -> Vec<Line<'static>> {
@@ -346,17 +385,21 @@ fn layout_body(
         }
         rows
     };
-    let first = first_visible_row(cursor, height, |idx| wrapped(idx).len());
+    // Keep `top` when every row from it through the cursor fits.
+    let fits_from_top = cursor >= top && (top..=cursor).map(|idx| wrapped(idx).len()).sum::<usize>() <= height;
+    let first = if fits_from_top { top } else { first_visible_row(cursor, height, |idx| wrapped(idx).len()) };
     let mut out: Vec<Line<'static>> = Vec::with_capacity(height);
+    let mut rows: Vec<usize> = Vec::with_capacity(height);
     for idx in first..count {
         for line in wrapped(idx) {
             if out.len() >= height {
-                return out;
+                return (out, rows);
             }
             out.push(line);
+            rows.push(idx);
         }
     }
-    out
+    (out, rows)
 }
 
 /// First logical row to draw so the cursor row ends up fully visible:
@@ -440,7 +483,14 @@ pub fn descriptor_tabs(app: &App, desc: &'static SectionDescriptor, area: Rect) 
         .enumerate()
         .map(|(i, s)| (key_for(i).unwrap_or(' '), s.label, i == app.detail_section_idx))
         .collect();
-    Line::from(crate::ui::widgets::subtab_bar::chip_spans(app, area, &tabs, ClickAction::DetailSection))
+    // `‹` / `›` step one section (or header, in the flat view), as Tab does.
+    Line::from(crate::ui::widgets::subtab_bar::chip_spans(
+        app,
+        area,
+        &tabs,
+        ClickAction::Detail,
+        (KeyCode::BackTab, KeyCode::Tab),
+    ))
 }
 
 /// Adaptive key column: the widest key in the body, clamped to

@@ -100,6 +100,17 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("@vm …", "switch via prefix"),
         ],
     },
+    Section {
+        title: "Mouse",
+        entries: &[
+            ("click", "row · line · chip · hint"),
+            ("double-click", "⏎ (open · jump)"),
+            ("right-click", "⌫ back · close a popup"),
+            ("drag", "select rows / lines"),
+            ("wheel", "scroll the pane under it"),
+            ("Shift-drag", "terminal text selection"),
+        ],
+    },
 ];
 
 /// Render the help overlay: two aligned key/description columns, sized to the
@@ -126,6 +137,7 @@ pub fn render_help_overlay(app: &App, frame: &mut Frame) {
     let offset = app.help_scroll.min(max_scroll);
 
     frame.render_widget(Clear, area);
+    app.mouse.popup.borrow_mut().record_area(area);
 
     let mut block = theme::popup_block("Help").title(
         Title::from(Span::styled(

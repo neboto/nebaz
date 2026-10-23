@@ -180,6 +180,7 @@ impl LocationSelectorState {
 pub fn render_location_selector(
     state: &LocationSelectorState,
     current_location: &Location,
+    hits: &std::cell::RefCell<crate::app::PopupHits>,
     frame: &mut Frame,
 ) {
     if !state.visible {
@@ -278,6 +279,7 @@ pub fn render_location_selector(
     }
 
     frame.render_stateful_widget(list, chunks[1], &mut list_state);
+    hits.borrow_mut().record_list(area, chunks[1], list_state.offset(), filtered.len());
 }
 
 /// Shared search-input row for the selector popups: `❯ <query>` (or a dim hint

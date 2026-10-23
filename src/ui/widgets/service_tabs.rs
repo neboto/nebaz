@@ -1,6 +1,7 @@
 // ported from neboto-tui src/ui/widgets/service_tabs.rs @ d483900
-use crate::app::App;
+use crate::app::{App, ClickAction};
 use crate::azure::service::ServiceType;
+use crossterm::event::KeyCode;
 use crate::ui::theme;
 use ratatui::{
     layout::Rect,
@@ -153,8 +154,13 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
     }
     let mut chip_x = area.x + prefix_w;
 
+    // The `‹` / `›` markers switch to the service just off that edge.
     if left_marker {
         spans.push(Span::styled("‹ ", Style::default().fg(theme::text_dim())));
+        app.push_click_region(
+            Rect { x: chip_x, y: area.y, width: MARKER_W, height: 1 },
+            ClickAction::Service(visible[lo - 1]),
+        );
         chip_x += MARKER_W;
     }
 
@@ -174,7 +180,7 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
                 width: chip_w,
                 height: 1,
             },
-            crate::app::ClickAction::Service(*service),
+            ClickAction::Service(*service),
         );
         chip_x += chip_w;
 
@@ -197,6 +203,10 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
 
     if right_marker {
         spans.push(Span::styled(" ›", Style::default().fg(theme::text_dim())));
+        app.push_click_region(
+            Rect { x: chip_x, y: area.y, width: MARKER_W, height: 1 },
+            ClickAction::Service(visible[hi + 1]),
+        );
     }
 
     // ── Compose: left chips, pad, badges (always rendered) ────────────────
@@ -205,7 +215,28 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
     if pad > 0 {
         spans.push(Span::raw(" ".repeat(pad as usize)));
     }
+    // A badge opens what it names: the subscription badge the `P` picker,
+    // the hint the `S` picker. (The endpoint badge has no key.)
+    let mut badge_x = area.x + left_width + pad;
     for (text, style) in right_parts {
+        let w = text.chars().count() as u16;
+        let key = if text == hint_text {
+            Some('S')
+        } else if !sub_full.is_empty() && (*text == sub_full || *text == sub_short) {
+            Some('P')
+        } else {
+            None
+        };
+        if let Some(k) = key {
+            let right = (area.x + area.width).min(badge_x + w);
+            if right > badge_x {
+                app.push_click_region(
+                    Rect { x: badge_x, y: area.y, width: right - badge_x, height: 1 },
+                    ClickAction::Press(KeyCode::Char(k)),
+                );
+            }
+        }
+        badge_x += w;
         spans.push(Span::styled(text.clone(), *style));
     }
 
