@@ -35,6 +35,11 @@ const KEY_COL_MAX: usize = 40;
 const JUMP_MARKER: &str = "  →";
 
 pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
+    // The network access lens (`N`) owns the pane while open.
+    if app.network_lens.is_some() {
+        crate::ui::widgets::network_lens::render_network_lens(app, area, frame);
+        return;
+    }
     let focused = app.details_focused;
     let Some(resource) = app.get_selected_resource() else {
         let block = theme::pane_block("Details", focused);

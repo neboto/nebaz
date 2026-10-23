@@ -4,6 +4,7 @@ pub mod cache;
 pub mod client;
 pub mod graph;
 pub mod location;
+pub mod nsg_eval;
 pub mod resource;
 pub mod service;
 pub mod services;

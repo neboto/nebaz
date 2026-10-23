@@ -4,6 +4,7 @@ pub mod help_overlay;
 pub mod jump_list;
 pub mod location_selector;
 pub mod macro_picker;
+pub mod network_lens;
 pub mod message_log;
 pub mod resource_list;
 pub mod search_bar;

@@ -25,8 +25,8 @@ use std::collections::HashMap;
 use tokio::sync::mpsc;
 
 pub const NETWORK_API_VERSION: &str = "2025-09-01";
-const VNETS_PATH: &str = "/providers/Microsoft.Network/virtualNetworks";
-const NSGS_PATH: &str = "/providers/Microsoft.Network/networkSecurityGroups";
+pub const VNETS_PATH: &str = "/providers/Microsoft.Network/virtualNetworks";
+pub const NSGS_PATH: &str = "/providers/Microsoft.Network/networkSecurityGroups";
 
 crate::sections! {
     pub enum VnetDetailSection,
@@ -250,6 +250,11 @@ pub struct SubnetRow {
     pub service_endpoints: Vec<String>,
     pub private_endpoint_policies: Option<String>,
     pub ip_configuration_count: usize,
+    /// The `ipConfigurations[].id`s: a NIC's
+    /// (`…/networkInterfaces/{nic}/ipConfigurations/{name}`) or another
+    /// owner's (a load balancer, a gateway). The network lens reads the
+    /// NICs in the subnet from them.
+    pub ip_configuration_ids: Vec<String>,
     pub private_endpoint_count: usize,
 }
 
@@ -298,6 +303,7 @@ impl SubnetRow {
                 .collect(),
             private_endpoint_policies: json::str_at(v, &format!("{}/privateEndpointNetworkPolicies", p)),
             ip_configuration_count: json::arr(v, &format!("{}/ipConfigurations", p)).len(),
+            ip_configuration_ids: json::ids_at(v, &format!("{}/ipConfigurations", p)),
             private_endpoint_count: json::arr(v, &format!("{}/privateEndpoints", p)).len(),
             id,
             name,
@@ -433,32 +439,59 @@ pub struct SecurityRule {
     pub direction: String,
     pub access: String,
     pub protocol: String,
+    /// Display forms: the prefixes, then each application security group
+    /// as `asg:name`, joined.
     pub source: String,
     pub source_port: String,
     pub destination: String,
     pub destination_port: String,
     pub is_default: bool,
+    /// The same fields as lists, for the network lens's evaluation
+    /// (`nsg_eval`): prefixes (CIDRs, service tags, `*`), ASG ids, ports.
+    pub source_prefixes: Vec<String>,
+    pub source_asgs: Vec<String>,
+    pub source_ports: Vec<String>,
+    pub destination_prefixes: Vec<String>,
+    pub destination_asgs: Vec<String>,
+    pub destination_ports: Vec<String>,
+    pub description: Option<String>,
 }
 
 impl SecurityRule {
-    fn from_json(v: &Value, is_default: bool) -> SecurityRule {
+    pub fn from_json(v: &Value, is_default: bool) -> SecurityRule {
         let p = "/properties";
-        let one_or_many = |one: &str, many: &str| -> String {
-            json::str_at(v, &format!("{}/{}", p, one))
-                .filter(|s| !s.is_empty())
-                .unwrap_or_else(|| json::join(&json::strings_at(v, &format!("{}/{}", p, many))))
+        // `sourceAddressPrefix` (one) or `sourceAddressPrefixes` (many);
+        // ARM fills one and leaves the other empty.
+        let one_or_many = |one: &str, many: &str| -> Vec<String> {
+            match json::str_at(v, &format!("{}/{}", p, one)).filter(|s| !s.is_empty()) {
+                Some(s) => vec![s],
+                None => json::strings_at(v, &format!("{}/{}", p, many)),
+            }
         };
+        let source_prefixes = one_or_many("sourceAddressPrefix", "sourceAddressPrefixes");
+        let source_asgs = json::ids_at(v, &format!("{}/sourceApplicationSecurityGroups", p));
+        let destination_prefixes = one_or_many("destinationAddressPrefix", "destinationAddressPrefixes");
+        let destination_asgs = json::ids_at(v, &format!("{}/destinationApplicationSecurityGroups", p));
+        let source_ports = one_or_many("sourcePortRange", "sourcePortRanges");
+        let destination_ports = one_or_many("destinationPortRange", "destinationPortRanges");
         SecurityRule {
             name: json::text(v, "/name"),
             priority: json::int_at(v, &format!("{}/priority", p)),
             direction: json::text(v, &format!("{}/direction", p)),
             access: json::text(v, &format!("{}/access", p)),
             protocol: json::text(v, &format!("{}/protocol", p)),
-            source: one_or_many("sourceAddressPrefix", "sourceAddressPrefixes"),
-            source_port: one_or_many("sourcePortRange", "sourcePortRanges"),
-            destination: one_or_many("destinationAddressPrefix", "destinationAddressPrefixes"),
-            destination_port: one_or_many("destinationPortRange", "destinationPortRanges"),
+            source: address_display(&source_prefixes, &source_asgs),
+            source_port: json::join(&source_ports),
+            destination: address_display(&destination_prefixes, &destination_asgs),
+            destination_port: json::join(&destination_ports),
             is_default,
+            source_prefixes,
+            source_asgs,
+            source_ports,
+            destination_prefixes,
+            destination_asgs,
+            destination_ports,
+            description: json::str_at(v, &format!("{}/description", p)).filter(|d| !d.is_empty()),
         }
     }
 
@@ -476,6 +509,15 @@ impl SecurityRule {
             ),
         )
     }
+}
+
+/// A rule side as text: the prefixes (CIDRs, service tags as their
+/// names, `*`), then each application security group as `asg:name`
+/// (named, never expanded). `-` when both are empty.
+pub fn address_display(prefixes: &[String], asgs: &[String]) -> String {
+    let mut parts: Vec<String> = prefixes.to_vec();
+    parts.extend(asgs.iter().map(|a| format!("asg:{}", name_of_id(a))));
+    json::join(&parts)
 }
 
 #[derive(Debug, Clone)]

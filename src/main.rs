@@ -349,6 +349,14 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
         left_is_hints = true;
         let mut line = if app.search_active {
             theme::hint_line(&[("⏎", "confirm"), ("Esc", "cancel"), ("@service", "switch")])
+        } else if app.network_lens.is_some() {
+            theme::hint_line(&[
+                ("j/k", "select"),
+                ("⏎", "go to NSG"),
+                ("t", "direction"),
+                ("e", "editor"),
+                ("Esc", "close"),
+            ])
         } else if app.details_focused {
             theme::hint_line(&[
                 ("j/k", "scroll"),
@@ -365,6 +373,9 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
                 ("⏎", "details"),
                 ("y", "copy id"),
             ];
+            if app.supports_network_lens() {
+                hints.push(("N", "access"));
+            }
             if app.noise_in_view {
                 hints.push(("a", if app.hide_noise { "show all" } else { "hide noise" }));
             }

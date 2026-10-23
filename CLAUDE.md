@@ -111,7 +111,12 @@ repeatedly. `App::trigger_selected` is the one way to start a fetch.
 sub-tab)`, survives a subscription switch (switching back is instant),
 untouched by a location change.
 
-**Jumps**: the Related section is the only jump mechanism. `Enter` on an
+**Network access lens** (`N`; `src/azure/nsg_eval.rs`, `src/app/network_lens.rs`,
+`src/ui/widgets/network_lens.rs`): owns the detail pane while open; NSG
+rules computed client-side from GETs (never the POST effective calls),
+`SERVICES.md` rule 14.
+
+**Jumps**: the Related section is the jump mechanism (the lens's `⏎` aside). `Enter` on an
 ARM-id line → `jump_to_arm_id` → `NavLocation` (service, view,
 subscription, selected id) → `restore_nav_location`, with `pending_jump`
 resolving once the target list loads (lifting the location filter, with
@@ -220,6 +225,7 @@ verbatim where the concept is unchanged.
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
 | `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps}.rs` | one file per service |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
+| `src/azure/nsg_eval.rs` | the network lens's evaluation: rule order, shadowing, layers, resolution |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |
 | `src/clipboard.rs` | OSC 52 + arboard |

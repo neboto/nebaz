@@ -141,6 +141,33 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     state is the worst credential's expiry through the ladder:
     `expired`, `expiring` (within 30 days), `ok`, or stateless with no
     credentials.
+14. **Network access lens** (`N`, `src/azure/nsg_eval.rs`, drawn by
+    `src/ui/widgets/network_lens.rs`): the NSG rules that apply to the
+    selected row, in the order Azure evaluates them, owning the detail
+    pane until `Esc`. It starts from an NSG (its own rules, and the
+    subnets and NICs it guards), a NIC, a subnet (what applies to anything
+    placed in it, plus the NICs in it that carry their own NSG, from the
+    warm lists), or any row whose Related lists NICs (a VM, a private
+    endpoint) or else subnets (a node pool, an app's VNet integration, a
+    Power Platform policy). Inbound runs the subnet's NSG, then the
+    NIC's; outbound the reverse; both must allow, and a layer with no NSG
+    allows everything. Within an NSG: priority order, first match wins,
+    the six default rules included (added when a body has none) and
+    labelled. A rule an earlier one fully covers is marked **shadowed**;
+    each live allow rule is run through the other layer's NSG and marked
+    allowed, blocked, or "depends on the flow" when the first rule there
+    only partly overlaps it. CIDRs compare numerically; service tags and
+    ASGs by name only, never expanded, so a claim about them errs to
+    "depends". It is **computed, not Azure's effective view** (the
+    effective-rules and effective-routes calls are POSTs; the guard
+    refuses their names) and says so on screen: Azure Firewall, UDRs and
+    AVNM admin rules are ignored, and a route table or delegation on the
+    path is a note line. Rows come from the warm NICs, VNets, Subnets and
+    NSGs lists, else one GET each, in one task delivered through the
+    apply-closure event (off the `LazyStore`; `r` refetches without the
+    caches). Anything unread is a warning line, never an error. `t`
+    cycles inbound + outbound / inbound / outbound; `⏎` jumps to the
+    line's NSG (or subnet, NIC); `y` copies a line; `e` opens it all.
 
 13. **DNS is its own tab** although every DNS type is Microsoft.Network:
     Network with Private DNS, public zones, resolvers, rulesets and DNS
@@ -252,6 +279,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
+| Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
