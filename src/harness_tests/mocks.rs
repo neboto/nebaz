@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, compute, container_registry, cosmos, foundry, identity, keyvault, monitor,
+    aks, all_resources, app_service, compute, container_apps, container_registry, cosmos, foundry, identity, keyvault, monitor,
     network, network_edge, network_private, power_platform, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
@@ -277,6 +277,80 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "networkInjection": {"virtualNetworks": [
                                 {"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1"), "subnet": {"name": "snet-pp"}}
                             ]}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ContainerApps,
+            "ContainerAppRow",
+            parse(
+                "ContainerAppRow",
+                container_apps::ContainerAppRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.App/containerApps/aca-1"),
+                        "name": "aca-1",
+                        "location": "East US",
+                        "identity": {"type": "UserAssigned", "userAssignedIdentities": {
+                            arm_id("Microsoft.ManagedIdentity/userAssignedIdentities/id-1"): {"clientId": "c-1", "principalId": "p-1"}
+                        }},
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "runningStatus": "Running",
+                            "environmentId": arm_id("Microsoft.App/managedEnvironments/cae-1"),
+                            "configuration": {
+                                "secrets": [{"name": "db-password"}],
+                                "ingress": {"external": true, "targetPort": 8080, "allowInsecure": false,
+                                    "ipSecurityRestrictions": [{"name": "office", "action": "Allow", "ipAddressRange": "203.0.113.0/24"}]}
+                            },
+                            "template": {"containers": [{"name": "api", "image": "example/api:1",
+                                "env": [{"name": "DB_PASSWORD", "secretRef": "db-password"}]}]}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ContainerAppEnvironments,
+            "EnvironmentRow",
+            parse(
+                "EnvironmentRow",
+                container_apps::EnvironmentRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.App/managedEnvironments/cae-1"),
+                        "name": "cae-1",
+                        "location": "East US",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "staticIp": "10.0.16.4",
+                            "defaultDomain": "cae-1.eastus.example",
+                            "vnetConfiguration": {"internal": true,
+                                "infrastructureSubnetId": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/snet-aca")}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ContainerAppJobs,
+            "JobRow",
+            parse(
+                "JobRow",
+                container_apps::JobRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.App/jobs/job-1"),
+                        "name": "job-1",
+                        "location": "East US",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "environmentId": arm_id("Microsoft.App/managedEnvironments/cae-1"),
+                            "configuration": {"triggerType": "Schedule", "replicaTimeout": 600,
+                                "scheduleTriggerConfig": {"cronExpression": "0 2 * * *", "parallelism": 1}},
+                            "template": {"containers": [{"name": "run", "image": "example/job:1"}]}
                         }
                     }),
                     t,
