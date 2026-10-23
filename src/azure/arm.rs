@@ -123,9 +123,11 @@ impl ArmClient {
         Self::pipeline_over(credential, tenant_id, endpoint, scope, api)
     }
 
-    /// The ARM pipeline over any token source: `new`'s CLI credential, or
-    /// the wiring harness's offline one (`src/harness_tests`), which never
-    /// yields a token so nothing leaves the process.
+    /// The ARM pipeline over the wiring harness's offline credential
+    /// (`src/harness_tests`), which never yields a token so nothing leaves
+    /// the process. `new` and `new_graph` reach the same pipeline through
+    /// `build`.
+    #[cfg(test)]
     pub(crate) fn with_credential(
         credential: Arc<dyn TokenCredential>,
         tenant_id: &str,
