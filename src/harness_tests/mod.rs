@@ -192,7 +192,7 @@ impl Harness {
     /// forwarder in `load_resources_async` does.
     pub fn stream(&self, event: Event) -> Event {
         Event::LoadStream {
-            generation: self.app.load_generation,
+            generation: self.app.list_load.generation(),
             event: Box::new(event),
         }
     }
