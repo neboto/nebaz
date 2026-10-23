@@ -46,7 +46,22 @@ shows object ids, and nothing else is affected.
 The Graph calls (all `GET`, all under `/v1.0`):
 
 - `directoryObjects/{id}`: one per principal id in an Access section,
-  cached for the session, at most 50 per section.
+  cached for the session, at most 50 per section (and the APIs a service
+  principal's grants point at);
+- `servicePrincipals?$filter=servicePrincipalType eq 'ManagedIdentity'`
+  and `servicePrincipals?$filter=appOwnerOrganizationId eq {tenant}`
+  (an advanced query: `$count=true`, `ConsistencyLevel: eventual`): the
+  Service principals sub-tab;
+- `applications`: the App registrations sub-tab;
+- `{applications|servicePrincipals}/{id}/owners`,
+  `applications/{id}/federatedIdentityCredentials`,
+  `servicePrincipals/{id}/appRoleAssignments`,
+  `servicePrincipals/{id}/oauth2PermissionGrants`: lazy sections;
+- `servicePrincipals(appId='{appId}')`: an app registration's APIs, named.
+
+A credential's value is never shown: Graph returns no `secretText` to a
+`GET`, nebaz never `$select`s (so a certificate's `key` stays null), and
+the `hint` is not displayed.
 
 Never sent: `directoryObjects/getByIds` (a `POST`), `addPassword` /
 `addKey` (the only calls that return a secret value), and any `$select`

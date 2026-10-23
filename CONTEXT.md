@@ -125,6 +125,12 @@ operations on the row (who, what, when, whether it worked), from the
 subscription's activity log. One entry per operation, not per event.
 _Avoid_: audit log, logs (Log Analytics is Monitor's, and data plane)
 
+**Directory row**:
+A row from Microsoft Graph, not ARM: a service principal or an app
+registration (Identity tab). It has no ARM id and keys on a synthetic id,
+`graph:/servicePrincipals/{objectId}`, also answering to its app-id alias.
+_Avoid_: enterprise app (the portal's word for a service principal), AAD
+
 **All resources**:
 The Subscriptions sub-tab listing every resource in the subscription from
 the generic list, whatever its type (`→` marks a type with its own tab). It

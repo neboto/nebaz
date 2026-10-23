@@ -33,7 +33,8 @@ Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
 NSGs; since `v0.1.0` public IPs, load balancers, route tables, NAT
 gateways, private endpoints and private DNS zones), Key Vault (metadata plus secret and key *names*, never values),
 Managed Identity (since `v0.1.0`; federated credentials lazy, and VMs and
-AKS link to the identities they use), App Service (since `v0.1.0`; apps,
+AKS link to the identities they use; service principals and app
+registrations from Microsoft Graph, with credential expiry), App Service (since `v0.1.0`; apps,
 function apps and plans, never app settings), SQL (since `v0.1.0`;
 servers, with databases and firewall rules lazy), AKS
 (+ node pools). Since `v0.1.0`: Container Registry (registry metadata;

@@ -14,6 +14,7 @@ pub mod compute;
 pub mod container_apps;
 pub mod container_registry;
 pub mod cosmos;
+pub mod directory;
 pub mod foundry;
 pub mod identity;
 pub mod keyvault;

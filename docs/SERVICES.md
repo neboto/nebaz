@@ -126,6 +126,21 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     fetched. A new type gets it with the descriptor line
     (`Activity "Activity" => crate::app::App::trigger_activity`) and the
     `rendered_by_app()` arm.
+13. **Directory rows** (Identity · Service principals, App registrations)
+    come from Microsoft Graph (ADR 0004), not ARM. They key on a
+    synthetic id, `graph:/servicePrincipals/{objectId}` or
+    `graph:/applications/{objectId}`, and also match the app-id alias
+    `graph:/{collection}(appId='{appId}')` (`Resource::matches_id`), so a
+    link that only knows an app id can jump. They have no location (`R`
+    never hides them), no resource group, and no Access or Activity (those
+    are ARM scopes). Their portal link is the Entra blade, and their `az`
+    command is `az ad sp show --id {appId}` / `az ad app show --id {appId}`.
+    The list cache keys them per subscription like every other list,
+    because its tenant pseudo-key is shared by all tenants. A 403 (no
+    directory read) is the list's error, or a section's warning. The
+    state is the worst credential's expiry through the ladder:
+    `expired`, `expiring` (within 30 days), `ok`, or stateless with no
+    credentials.
 
 ## The catalog
 
@@ -153,7 +168,9 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Network · PEs | Connection (target, sub-resource, status, description, automatic or manual approval) · DNS (custom DNS configs: FQDN → IPs) | ladder, then connection status (`Approved` → Available, `Pending` → Pending, `Rejected` / `Disconnected` → Unavailable) | **target** (`privateLinkServiceId`: jumps to the vault, account, storage account… it fronts), subnet, NICs | `az network private-endpoint show` |
 | Network · Private DNS | Records ⧗ (name, type, TTL, values; auto-registered flagged) · VNet links ⧗ (each linked VNet jumps; auto-registration, state) | stateless; `location` is `global`, which passes every `R` filter | — (linked VNets are in VNet links) | `az network private-dns zone show` |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
-| Identity · Identities | Federated credentials ⧗ (issuer, subject, audiences) · Can do ⧗ (rule 11: each role the identity holds, its scope a jumpable id) · (Overview: client id, principal id, tenant, isolation scope; both ids searchable) | stateless | — (users list the identity in their own Related) | `az identity show` |
+| Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
+| Identity · App registrations (Graph, rule 13) | Credentials · Federated credentials ⧗ (issuer, subject, audiences) · API permissions (`requiredResourceAccess`, each API's service principal fetched by app id to name it and its permissions) · Redirect URIs (web, SPA, public client) · Owners ⧗ · Exposed API (identifier URIs, scopes, app roles) · Tags; no Access or Activity | worst credential expiry | its service principal (by app id) | `az ad app show --id {appId}` |
+| Identity · Identities | Federated credentials ⧗ (issuer, subject, audiences) · Can do ⧗ (rule 11: each role the identity holds, its scope a jumpable id) · (Overview: client id, principal id, tenant, isolation scope; both ids searchable) | stateless | its service principal (Graph); users list the identity in their own Related | `az identity show` |
 | AKS · Clusters | Network · API access · Node pools (embedded) · Add-ons (the monitoring add-on's workspace under `omsagent`) | ladder, then `powerState` | node resource group, user-assigned identities, kubelet identity, Log Analytics workspace | `az aks show -n {name} -g {rg} --subscription {sub}` |
 | AKS · Node pools | — (Overview: mode, count, size, OS, versions, node image, autoscale, max pods, zones, priority, power, taints, labels) | ladder on the pool's fields | Cluster | `az aks nodepool show --cluster-name {cluster} -g {rg} -n {pool} --subscription {sub}` |
 | Container Registry · Registries | Security (admin user and anonymous pull flagged, public access, network default action, trusted-services bypass, IP rules, encryption service- or customer-managed, zone redundancy, identity, private endpoints) · Replications ⧗ (Premium only, no call otherwise: location with the home region marked, status, zone redundancy, regional endpoint) · Webhooks ⧗ (status, actions, scope; never the service URI) · (Overview: SKU, login server, created, retention, data endpoint, role assignment mode) | ladder only | private endpoints, user-assigned identities (the CMK key is a URL, shown in Security) | `az acr show -n {name} -g {rg} --subscription {sub}` |
@@ -208,6 +225,10 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
 | Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |
+| Service principals | 2 (merged): managed identities by a default filter, then this tenant's apps by an advanced query | Graph `/v1.0/servicePrincipals?$filter=servicePrincipalType eq 'ManagedIdentity'` · `?$filter=appOwnerOrganizationId eq {tenant}&$count=true` with `ConsistencyLevel: eventual`; `$top=999` |
+| App registrations | 1 | Graph `/v1.0/applications?$top=999` |
+| Owners, Federated credentials (apps), App role assignments, OAuth2 grants | 1 per row, on demand | Graph `/v1.0/{applications|servicePrincipals}/{id}/{owners|federatedIdentityCredentials|appRoleAssignments|oauth2PermissionGrants}` |
+| API permission names | 1 per API, on demand, at most 30 | Graph `/v1.0/servicePrincipals(appId='{appId}')` |
 | Secrets, Keys | 1 each per vault, on demand | `{vault}/secrets` · `{vault}/keys` · `2026-05-15` |
 | Clusters, Node pools | 1 each (same list) | `/providers/Microsoft.ContainerService/managedClusters` · `2026-06-01` |
 | Registries | 1 | `/providers/Microsoft.ContainerRegistry/registries` · `2025-11-01` |

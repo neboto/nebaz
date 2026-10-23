@@ -200,6 +200,15 @@ pub fn access_rows(
             lines.push((String::new(), String::new()));
             lines.push((role, String::new()));
             lines.push(("  Principal".into(), principal(a, principals)));
+            // A service principal (an app's, or a managed identity's) is a
+            // directory row: Enter jumps to it in Identity.
+            let pid = json::text(a, "/properties/principalId");
+            if json::str_at(a, "/properties/principalType").as_deref() == Some("ServicePrincipal") && graph::is_object_id(&pid) {
+                lines.push((
+                    "  Service principal".into(),
+                    graph::row_id(graph::DirectoryKind::ServicePrincipal, &pid.to_lowercase()),
+                ));
+            }
             match inherited_from(&scope, id) {
                 None => lines.push(("  Scope".into(), "assigned here".into())),
                 // An ARM id value, so Enter jumps to where it was made.
@@ -380,6 +389,11 @@ mod tests {
         assert!(principals.contains(&format!("Group · {}", g).as_str()), "loading: the id alone");
         assert!(principals.iter().any(|p| p.contains("not in the directory")), "{:?}", principals);
         assert!(lines.iter().any(|(_, v)| v.contains("principal names are loading")));
+        assert!(
+            lines.iter().any(|(k, v)| k == "  Service principal" && v == &format!("graph:/servicePrincipals/{}", s.to_lowercase())),
+            "a service principal jumps to its directory row"
+        );
+        assert_eq!(lines.iter().filter(|(k, _)| k == "  Service principal").count(), 1, "users and groups do not");
 
         let mut denied: LazyMap<Value> = LazyMap::default();
         for id in principal_ids(&items) {

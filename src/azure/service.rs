@@ -22,7 +22,8 @@ pub enum ServiceType {
     Network,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
-    /// User-assigned managed identities; federated credentials lazy.
+    /// User-assigned managed identities (ARM); service principals and app
+    /// registrations (Microsoft Graph, ADR 0004).
     Identity,
     /// AKS managed clusters + node pools.
     Aks,
@@ -83,6 +84,12 @@ pub enum JumpView {
     KeyVaults,
     // Identity
     Identities,
+    /// Microsoft Graph: this tenant's own apps' service principals and
+    /// every managed identity's. Rows key on `graph:/servicePrincipals/{id}`.
+    ServicePrincipals,
+    /// Microsoft Graph: the tenant's app registrations
+    /// (`graph:/applications/{id}`).
+    AppRegistrations,
     // AKS
     Clusters,
     /// Embedded in the cluster list (the API says agent pool).
@@ -124,7 +131,7 @@ impl JumpView {
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
             | NatGateways | PrivateEndpoints | PrivateDnsZones => ServiceType::Network,
             KeyVaults => ServiceType::KeyVault,
-            Identities => ServiceType::Identity,
+            Identities | ServicePrincipals | AppRegistrations => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
             Registries => ServiceType::ContainerRegistry,
             WebApps | FunctionApps | AppServicePlans => ServiceType::AppService,
@@ -159,6 +166,8 @@ impl JumpView {
             PrivateDnsZones => "private-dns-zones",
             KeyVaults => "vaults",
             Identities => "identities",
+            ServicePrincipals => "service-principals",
+            AppRegistrations => "app-registrations",
             Clusters => "clusters",
             NodePools => "node-pools",
             Registries => "registries",
@@ -199,6 +208,8 @@ impl JumpView {
             PrivateDnsZones => "Private DNS",
             KeyVaults => "Vaults",
             Identities => "Identities",
+            ServicePrincipals => "Service principals",
+            AppRegistrations => "App registrations",
             Clusters => "Clusters",
             NodePools => "Node pools",
             Registries => "Registries",
@@ -265,12 +276,27 @@ impl JumpView {
         })
     }
 
+    /// The sub-tab a synthetic directory id (`graph:/servicePrincipals/…`,
+    /// or its `(appId='…')` alias) is listed in. Directory rows have no
+    /// ARM id, so `for_arm_id` never sees them.
+    pub fn for_graph_id(id: &str) -> Option<JumpView> {
+        use crate::azure::graph::{kind_of_id, DirectoryKind};
+        kind_of_id(id).map(|k| match k {
+            DirectoryKind::ServicePrincipal => JumpView::ServicePrincipals,
+            DirectoryKind::Application => JumpView::AppRegistrations,
+        })
+    }
+
     /// Where a jump to an ARM id lands: its typed sub-tab, else All
     /// resources for a top-level resource in a group (the generic list has
     /// every one). A child of an unbrowsed type (a vault's secret) is in
-    /// no list: `None`, and the jump copies the id instead.
+    /// no list: `None`, and the jump copies the id instead. A synthetic
+    /// directory id lands on its Graph sub-tab.
     pub fn landing_for_arm_id(id: &str) -> Option<JumpView> {
         use crate::azure::resource::{arm_type_chain, resource_group_of};
+        if let Some(view) = JumpView::for_graph_id(id) {
+            return Some(view);
+        }
         JumpView::for_arm_id(id).or_else(|| match arm_type_chain(id) {
             Some((_, chain)) if chain.len() == 1 && resource_group_of(id).is_some() => Some(JumpView::AllResources),
             _ => None,
@@ -378,7 +404,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage Accounts & Containers",
             ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
-            ServiceType::Identity => "Managed identities",
+            ServiceType::Identity => "Managed identities, service principals & app registrations",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
             ServiceType::ContainerRegistry => "Container registries",
             ServiceType::AppService => "Web & function apps, plans",
@@ -411,7 +437,7 @@ impl ServiceType {
                 PrivateDnsZones,
             ],
             ServiceType::KeyVault => &[KeyVaults],
-            ServiceType::Identity => &[Identities],
+            ServiceType::Identity => &[Identities, ServicePrincipals, AppRegistrations],
             ServiceType::Aks => &[Clusters, NodePools],
             ServiceType::ContainerRegistry => &[Registries],
             ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans],
@@ -480,6 +506,13 @@ impl ServiceType {
             }
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
+            // `@app` is App Service's; app registrations are `@appreg`.
+            "sp" | "sps" | "serviceprincipal" | "serviceprincipals" | "enterpriseapp" | "enterpriseapps" => {
+                (ServiceType::Identity, Some(JumpView::ServicePrincipals))
+            }
+            "appreg" | "appregs" | "appregistration" | "appregistrations" | "application" | "applications" => {
+                (ServiceType::Identity, Some(JumpView::AppRegistrations))
+            }
             "aks" | "k8s" | "kubernetes" | "cluster" | "clusters" => (ServiceType::Aks, None),
             "pool" | "pools" | "nodepool" | "nodepools" => (ServiceType::Aks, Some(JumpView::NodePools)),
             "acr" | "acrs" | "cr" | "registry" | "registries" | "containerregistry" | "containerregistries" => {
@@ -549,7 +582,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -750,5 +783,21 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/containerApps/api/revisions/api--v1")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.App/managedEnvironments/cae/certificates/c")), None);
         assert_eq!(JumpView::for_arm_id("garbage"), None);
+    }
+
+    #[test]
+    fn directory_ids_land_on_their_graph_sub_tabs() {
+        let sp = "graph:/servicePrincipals/00af5dfb-85da-4b41-a677-0c6b86dd34f8";
+        assert_eq!(JumpView::for_arm_id(sp), None, "not an ARM id");
+        assert_eq!(JumpView::landing_for_arm_id(sp), Some(JumpView::ServicePrincipals));
+        assert_eq!(
+            JumpView::landing_for_arm_id("graph:/applications(appId='11111111-2222-3333-4444-555555555555')"),
+            Some(JumpView::AppRegistrations)
+        );
+        assert_eq!(JumpView::landing_for_arm_id("graph:/users/x"), None);
+        assert_eq!(ServiceType::from_prefix("@sp"), Some((ServiceType::Identity, Some(JumpView::ServicePrincipals))));
+        assert_eq!(ServiceType::from_prefix("@appreg"), Some((ServiceType::Identity, Some(JumpView::AppRegistrations))));
+        assert_eq!(ServiceType::from_prefix("@app"), Some((ServiceType::AppService, None)), "@app stays App Service");
+        assert!(!JumpView::ServicePrincipals.is_tenant_scoped(), "cached per subscription: the tenant pseudo-key is not per tenant");
     }
 }

@@ -62,7 +62,15 @@ async fn split_pane_sections_follow_the_descriptor() {
         let n = labels.len();
         assert!(n >= 5, "{label}: no descriptor, or a short one: {labels:?}");
         assert_eq!(labels[0], "Overview", "{label}: Overview first");
-        assert_eq!(&labels[n - 4..], ["Access", "Activity", "Related", "Tags"], "{label}: shared tail");
+        // A directory row (Graph, no ARM id) has no ARM scope for Access or
+        // Activity (SERVICES.md rule 13): its tail is Related, Tags.
+        let directory = h.app.get_selected_resource().is_some_and(|r| crate::azure::graph::is_row_id(r.id()));
+        if directory {
+            assert_eq!(&labels[n - 2..], ["Related", "Tags"], "{label}: shared tail");
+            assert!(!labels.contains(&"Access") && !labels.contains(&"Activity"), "{label}: no ARM scope");
+        } else {
+            assert_eq!(&labels[n - 4..], ["Access", "Activity", "Related", "Tags"], "{label}: shared tail");
+        }
 
         let snapshot: Vec<String> = h.app.detail_sections_snapshot().into_iter().map(|(name, _)| name).collect();
         assert_eq!(snapshot, labels, "{label}: snapshot order");

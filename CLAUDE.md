@@ -31,7 +31,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / storage / vnet / kv / id / aks / acr / app / sql / cosmos / foundry / law / appi / aca
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / storage / vnet / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 cargo test --test readonly_guard    # just the guard
 cargo clippy --all-targets          # CI runs this; keep it clean
@@ -170,7 +170,8 @@ verbatim where the concept is unchanged.
   the same client flavoured for Graph; every Graph path and host lives in
   `src/azure/graph.rs` (the guard allows the host nowhere else). A 403 is
   a section warning; never `getByIds` (POST), never a Graph `$select`
-  (it would return a certificate's `key`).
+  (it would return a certificate's `key`). Directory rows key on a
+  synthetic `graph:/…` id, not an ARM id (`SERVICES.md` rule 13).
 - **State**: never a per-type state table. `state_ladder(provisioning,
   runtime)` and the native word lowercased as the label
   (`native_state_label`).

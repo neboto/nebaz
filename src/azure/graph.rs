@@ -51,6 +51,125 @@ pub fn directory_object_path(object_id: &str) -> Option<String> {
     is_object_id(object_id).then(|| format!("/v1.0/directoryObjects/{}", object_id))
 }
 
+// ── Service principals and app registrations (issue #78) ──────────────
+
+/// The page size for the two directory lists (Graph's maximum).
+const PAGE_SIZE: &str = "999";
+
+/// `GET /v1.0/applications`: every app registration in the tenant.
+pub const APPLICATIONS_PATH: &str = "/v1.0/applications";
+
+/// `GET /v1.0/servicePrincipals`, always filtered (see the two queries).
+pub const SERVICE_PRINCIPALS_PATH: &str = "/v1.0/servicePrincipals";
+
+pub fn applications_query() -> Vec<(String, String)> {
+    vec![("$top".into(), PAGE_SIZE.into())]
+}
+
+/// Managed identities' service principals: `servicePrincipalType eq` is a
+/// default filter, no advanced query needed.
+pub fn managed_identity_sps_query() -> Vec<(String, String)> {
+    vec![
+        ("$filter".into(), "servicePrincipalType eq 'ManagedIdentity'".into()),
+        ("$top".into(), PAGE_SIZE.into()),
+    ]
+}
+
+/// Service principals of apps registered in this tenant.
+/// `appOwnerOrganizationId` filters only as an advanced query: it needs
+/// `$count=true` and the [`advanced_query_headers`]. `None` for a tenant
+/// id that is not GUID-shaped.
+pub fn tenant_owned_sps_query(tenant_id: &str) -> Option<Vec<(String, String)>> {
+    is_object_id(tenant_id).then(|| {
+        vec![
+            ("$filter".into(), format!("appOwnerOrganizationId eq {}", tenant_id)),
+            ("$count".into(), "true".into()),
+            ("$top".into(), PAGE_SIZE.into()),
+        ]
+    })
+}
+
+/// `ConsistencyLevel: eventual`, which an advanced query requires.
+pub fn advanced_query_headers() -> Vec<crate::azure::arm::Header> {
+    vec![("consistencylevel", "eventual".to_string())]
+}
+
+/// `/v1.0/applications/{id}` or `/v1.0/servicePrincipals/{id}`, and their
+/// children (`owners`, `federatedIdentityCredentials`, `appRoleAssignments`,
+/// `oauth2PermissionGrants`), from a row's synthetic id.
+pub fn object_path(row_id: &str, child: Option<&str>) -> Option<String> {
+    let (kind, oid) = parse_row_id(row_id)?;
+    let base = format!("/v1.0/{}/{}", kind.collection(), oid);
+    Some(match child {
+        Some(c) => format!("{}/{}", base, c),
+        None => base,
+    })
+}
+
+/// `GET /v1.0/servicePrincipals(appId='{appId}')`: an API's service
+/// principal by its app id (an app registration's API permissions name
+/// the resource only by app id).
+pub fn service_principal_by_app_id_path(app_id: &str) -> Option<String> {
+    is_object_id(app_id).then(|| format!("/v1.0/servicePrincipals(appId='{}')", app_id))
+}
+
+// ── Synthetic row ids ─────────────────────────────────────────────────
+
+/// Directory rows have no ARM id. They key on `graph:/{collection}/{id}`
+/// (the object's Graph path), which no ARM id can start with; an alias
+/// `graph:/{collection}(appId='{appId}')` names the same row by app id, so
+/// a link that only knows the app id (an SP to its app registration) can
+/// jump.
+pub const ROW_ID_PREFIX: &str = "graph:/";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DirectoryKind {
+    ServicePrincipal,
+    Application,
+}
+
+impl DirectoryKind {
+    pub fn collection(self) -> &'static str {
+        match self {
+            DirectoryKind::ServicePrincipal => "servicePrincipals",
+            DirectoryKind::Application => "applications",
+        }
+    }
+}
+
+/// `graph:/servicePrincipals/{oid}` / `graph:/applications/{oid}`.
+pub fn row_id(kind: DirectoryKind, object_id: &str) -> String {
+    format!("{}{}/{}", ROW_ID_PREFIX, kind.collection(), object_id)
+}
+
+/// `graph:/servicePrincipals(appId='{appId}')`: the app-id alias.
+pub fn row_alias(kind: DirectoryKind, app_id: &str) -> String {
+    format!("{}{}(appId='{}')", ROW_ID_PREFIX, kind.collection(), app_id)
+}
+
+/// The kind and object id of a synthetic row id (not of an alias).
+pub fn parse_row_id(id: &str) -> Option<(DirectoryKind, &str)> {
+    let rest = id.strip_prefix(ROW_ID_PREFIX)?;
+    let (collection, oid) = rest.split_once('/')?;
+    let kind = [DirectoryKind::ServicePrincipal, DirectoryKind::Application]
+        .into_iter()
+        .find(|k| k.collection() == collection)?;
+    is_object_id(oid).then_some((kind, oid))
+}
+
+/// The kind a synthetic id or alias names, for the jump router.
+pub fn kind_of_id(id: &str) -> Option<DirectoryKind> {
+    let rest = id.strip_prefix(ROW_ID_PREFIX)?;
+    [DirectoryKind::ServicePrincipal, DirectoryKind::Application]
+        .into_iter()
+        .find(|k| rest.starts_with(&format!("{}/", k.collection())) || rest.starts_with(&format!("{}(", k.collection())))
+}
+
+/// Whether a detail value is a synthetic directory id or alias.
+pub fn is_row_id(value: &str) -> bool {
+    kind_of_id(value).is_some()
+}
+
 /// Whether a Graph fetch error is a denied directory read (403).
 pub fn is_denied(err: &str) -> bool {
     err.contains("403") || err.contains("Authorization_RequestDenied")
@@ -137,6 +256,38 @@ mod tests {
         let bare = serde_json::json!({"@odata.type": "#microsoft.graph.group", "id": "g"});
         assert_eq!(object_kind(&bare), "group");
         assert_eq!(object_display(&bare), "g");
+    }
+
+    #[test]
+    fn row_ids_round_trip_and_aliases_route() {
+        let oid = "00af5dfb-85da-4b41-a677-0c6b86dd34f8";
+        let id = row_id(DirectoryKind::ServicePrincipal, oid);
+        assert_eq!(id, "graph:/servicePrincipals/00af5dfb-85da-4b41-a677-0c6b86dd34f8");
+        assert_eq!(parse_row_id(&id), Some((DirectoryKind::ServicePrincipal, oid)));
+        assert_eq!(object_path(&id, Some("owners")).as_deref(), Some("/v1.0/servicePrincipals/00af5dfb-85da-4b41-a677-0c6b86dd34f8/owners"));
+        let app = row_id(DirectoryKind::Application, oid);
+        assert_eq!(object_path(&app, None).as_deref(), Some("/v1.0/applications/00af5dfb-85da-4b41-a677-0c6b86dd34f8"));
+        let alias = row_alias(DirectoryKind::Application, "11111111-2222-3333-4444-555555555555");
+        assert_eq!(alias, "graph:/applications(appId='11111111-2222-3333-4444-555555555555')");
+        assert_eq!(parse_row_id(&alias), None, "an alias is not fetchable by object id");
+        assert_eq!(kind_of_id(&alias), Some(DirectoryKind::Application));
+        assert!(is_row_id(&id) && !is_row_id("/subscriptions/0"));
+        assert_eq!(parse_row_id("graph:/servicePrincipals/../me"), None);
+        assert_eq!(parse_row_id("graph:/users/abc"), None);
+    }
+
+    #[test]
+    fn list_queries_need_an_advanced_query_only_for_the_owner_filter() {
+        assert_eq!(managed_identity_sps_query()[0].1, "servicePrincipalType eq 'ManagedIdentity'");
+        let q = tenant_owned_sps_query("65415bb1-9267-4313-bbf5-ae259732ee12").unwrap();
+        assert_eq!(q[0].1, "appOwnerOrganizationId eq 65415bb1-9267-4313-bbf5-ae259732ee12");
+        assert!(q.iter().any(|(k, v)| k == "$count" && v == "true"));
+        assert_eq!(advanced_query_headers()[0], ("consistencylevel", "eventual".to_string()));
+        assert_eq!(tenant_owned_sps_query("x' or 1 eq 1"), None);
+        assert_eq!(
+            service_principal_by_app_id_path("00000003-0000-0000-c000-000000000000").as_deref(),
+            Some("/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')")
+        );
     }
 
     #[test]

@@ -281,7 +281,7 @@ impl AzureClients {
             ServiceType::Storage => Arc::new(StorageService::new(scope)),
             ServiceType::Network => Arc::new(NetworkService::new(scope)),
             ServiceType::KeyVault => Arc::new(KeyVaultService::new(scope)),
-            ServiceType::Identity => Arc::new(IdentityService::new(scope)),
+            ServiceType::Identity => Arc::new(IdentityService::new(scope).with_graph(self.current_graph())),
             ServiceType::Aks => Arc::new(AksService::new(scope)),
             ServiceType::ContainerRegistry => Arc::new(ContainerRegistryService::new(scope)),
             ServiceType::AppService => Arc::new(AppServiceService::new(scope)),
@@ -383,15 +383,57 @@ impl AzureClients {
     /// The Graph pipeline for a tenant, built once; an error when the
     /// cloud has no known Graph endpoint.
     pub fn graph_for_tenant(&self, tenant_id: &str) -> Result<Arc<ArmClient>> {
-        let graph = crate::azure::graph::graph_endpoint_for(&self.endpoint)
-            .ok_or_else(|| Error::Azure(crate::azure::graph::no_graph_for(&self.endpoint)))?;
         let mut map = self.graph_pipelines.lock().expect("graph pipeline map poisoned");
         if let Some(c) = map.get(tenant_id) {
             return Ok(c.clone());
         }
+        let graph = crate::azure::graph::graph_endpoint_for(&self.endpoint)
+            .ok_or_else(|| Error::Azure(crate::azure::graph::no_graph_for(&self.endpoint)))?;
         let client = Arc::new(ArmClient::new_graph(self.source, tenant_id, graph)?);
         map.insert(tenant_id.to_string(), client.clone());
         Ok(client)
+    }
+
+    /// The current subscription's tenant's Graph pipeline, or why not.
+    pub fn current_graph(&self) -> std::result::Result<Arc<ArmClient>, String> {
+        match self.current_entry() {
+            Some(entry) => self.graph_for_tenant(&entry.tenant_id).map_err(|e| e.to_string()),
+            None => Err(self.auth_error.clone().unwrap_or(AuthError::NotLoggedIn).status_line()),
+        }
+    }
+
+    /// `GET {graph path}` in the current tenant, as a future the lazy
+    /// store can own (an API's service principal by app id).
+    pub fn graph_get_fetch(
+        &self,
+        path: Option<String>,
+    ) -> impl Future<Output = std::result::Result<serde_json::Value, String>> + Send + 'static {
+        let graph = self.current_graph();
+        async move {
+            let path = path.ok_or_else(|| "not a directory path".to_string())?;
+            graph?.graph_get(&path, &[]).await.map_err(|e| e.to_string())
+        }
+    }
+
+    /// `GET {graph path}` as a whole collection in the current tenant (a
+    /// directory row's owners, grants, federated credentials).
+    pub fn graph_list_fetch(
+        &self,
+        path: Option<String>,
+    ) -> impl Future<Output = std::result::Result<Vec<serde_json::Value>, String>> + Send + 'static {
+        let graph = self.current_graph();
+        async move {
+            let path = path.ok_or_else(|| "not a directory path".to_string())?;
+            let mut all = Vec::new();
+            graph?
+                .graph_list_pages_while(&path, &[], &[], |page| {
+                    all.extend(page);
+                    true
+                })
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok(all)
+        }
     }
 
     /// The Graph pipeline for the tenant an ARM id's subscription belongs
@@ -500,6 +542,7 @@ mod tests {
         ) -> Self {
             const DEAD_ENDPOINT: &str = "https://127.0.0.1:9";
             let mut pipelines = HashMap::new();
+            let mut graph_pipelines = HashMap::new();
             for s in &subscriptions {
                 pipelines.entry(s.tenant_id.clone()).or_insert_with(|| {
                     Arc::new(
@@ -507,10 +550,20 @@ mod tests {
                             .expect("offline pipeline"),
                     )
                 });
+                // Graph too (ADR 0004): prebuilt over the same credential, so
+                // a directory list stays in flight like an ARM one instead
+                // of failing on the dead endpoint's unknown cloud.
+                graph_pipelines.entry(s.tenant_id.clone()).or_insert_with(|| {
+                    Arc::new(
+                        ArmClient::graph_with_credential(credential.clone(), &s.tenant_id, DEAD_ENDPOINT)
+                            .expect("offline Graph pipeline"),
+                    )
+                });
             }
             let mut c = clients(subscriptions);
             c.endpoint = DEAD_ENDPOINT.to_string();
             c.pipelines = Mutex::new(pipelines);
+            c.graph_pipelines = Mutex::new(graph_pipelines);
             c.current = c.default_index();
             c
         }
