@@ -6,7 +6,6 @@
 
 use super::mocks::arm_id;
 use super::*;
-use crate::azure::services::container_apps::EnvironmentRow;
 use crate::azure::services::network::{NsgRow, VnetRow};
 use serde_json::json;
 
@@ -15,15 +14,15 @@ fn nsg_id() -> String {
 }
 
 fn subnet_id() -> String {
-    arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/aca-infra")
+    arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/snet-aca")
 }
 
-/// `vnet-1` with one subnet, `aca-infra`, guarded by `aca-nsg`.
+/// `vnet-1` with one subnet, `snet-aca` (the shared ACA environment mock's infrastructure subnet), guarded by `aca-nsg`.
 fn vnet() -> VnetRow {
     VnetRow::from_json(
         &json!({"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1"), "name": "vnet-1", "location": "westeurope",
             "properties": {"addressSpace": {"addressPrefixes": ["10.0.0.0/16"]}, "subnets": [
-                {"id": subnet_id(), "name": "aca-infra", "properties": {
+                {"id": subnet_id(), "name": "snet-aca", "properties": {
                     "addressPrefix": "10.0.0.0/23", "networkSecurityGroup": {"id": nsg_id()}}}
             ]}}),
         Some(TENANT),
@@ -103,22 +102,18 @@ async fn n_on_a_subnet_shows_its_nsg_with_the_default_rules_and_jumps_to_the_nsg
 #[tokio::test]
 async fn n_on_a_container_apps_environment_reaches_its_infrastructure_subnet() {
     let mut h = Harness::new().await;
-    let env = EnvironmentRow::from_json(
-        &json!({"id": arm_id("Microsoft.App/managedEnvironments/aca-env"), "name": "aca-env", "location": "westeurope",
-            "properties": {"provisioningState": "Succeeded",
-                "vnetConfiguration": {"internal": true, "infrastructureSubnetId": subnet_id()}}}),
-        Some(TENANT),
-    )
-    .unwrap();
-    h.install(mocks::Mock { view: JumpView::ContainerAppEnvironments, label: "EnvironmentRow", resource: Box::new(env) })
-        .await;
+    let env = mocks::all_mocks()
+        .into_iter()
+        .find(|m| m.view == JumpView::ContainerAppEnvironments)
+        .expect("the shared environment mock");
+    h.install(env).await;
     warm(&mut h, true);
 
     h.press(KeyCode::Char('N')).await;
     let st = h.app.network_lens.as_ref().expect("N opens the lens");
     assert_eq!(st.seed.subnets, vec![subnet_id()], "the seed is the infrastructure subnet");
     let texts = lens_texts(&h);
-    assert!(texts.iter().any(|t| t == "Subnet vnet-1/aca-infra (rules for anything placed in it)"), "{texts:#?}");
+    assert!(texts.iter().any(|t| t == "Subnet vnet-1/snet-aca (rules for anything placed in it)"), "{texts:#?}");
     assert!(texts.iter().any(|t| t.contains("allow-pp-https")), "{texts:#?}");
     assert!(!texts.iter().any(|t| t.starts_with('!')), "nothing unread: {texts:#?}");
 
