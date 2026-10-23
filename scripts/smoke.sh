@@ -62,9 +62,12 @@ run flat-and-select ok sub '[2.0, "\r", 0.3, "\\", 0.5, "V", "J", "J", "y", 1.0]
   "━━ Overview" "━━ Access" \
   "3 lines"
 
-# Ctrl-N moves down in a picker (it used to type `n` into the filter):
-# Subscriptions → Virtual Machines → Storage, then Enter.
-run picker-ctrl-n ok sub '[2.0, "S", 0.3, "\u000e", "\u000e", 0.3, "\r", 3.0]' \
+# Ctrl-N moves down in a picker (it used to type `n` into the filter).
+# The picker lists services by category (`ServiceType::CATEGORIES`), then
+# in `ServiceType::all()` order: Subscriptions → Power Platform (both
+# Management) → Virtual Machines → Storage, then Enter. A new service in
+# Management or Compute needs one more press here.
+run picker-ctrl-n ok sub '[2.0, "S", 0.3, "\u000e", "\u000e", "\u000e", 0.3, "\r", 3.0]' \
   "Loading Storage…"
 
 # A seventh tab still fits, and the Foundry list goes to ARM like the rest.
