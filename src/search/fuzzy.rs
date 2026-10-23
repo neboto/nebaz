@@ -46,19 +46,12 @@ impl FuzzyMatcher {
         matches
     }
 
-    /// Filter plain strings (picker modals) with the same fuzzy scoring and
-    /// threshold as `filter_resources`. Returns sorted (index, score) pairs;
-    /// ties keep input order. An exact match ignores case, so typing `vm` or
-    /// `PROD` floats that row first. (Every nebaz picker filters several
-    /// fields today; this stays so the file keeps neboto's shape.)
-    #[allow(dead_code)]
-    pub fn filter_strings<S: AsRef<str>>(&self, query: &str, items: &[S]) -> Vec<(usize, i64)> {
-        self.filter_fields(query, items, |item| vec![item.as_ref()])
-    }
-
-    /// `filter_strings` over several fields per item (a location's name *and*
-    /// display name): an item scores its best field, and an exact
-    /// (case-insensitive) match on any field ranks first.
+    /// Filter picker items over several fields each (a location's name *and*
+    /// display name) with the same fuzzy scoring and threshold as
+    /// `filter_resources`. Returns sorted (index, score) pairs; ties keep
+    /// input order. An item scores its best field, and an exact match on any
+    /// field ignores case and ranks first, so typing `vm` or `PROD` floats
+    /// that row.
     pub fn filter_fields<'a, T, F>(&self, query: &str, items: &'a [T], fields: F) -> Vec<(usize, i64)>
     where
         F: Fn(&'a T) -> Vec<&'a str>,
@@ -222,8 +215,13 @@ mod tests {
         assert_eq!(matches_without[0].0, matches_with[0].0);
     }
 
+    /// The single-field case (neboto's `filter_strings`).
+    fn one<S: AsRef<str>>(s: &S) -> Vec<&str> {
+        vec![s.as_ref()]
+    }
+
     #[test]
-    fn filter_strings_ranks_fuzzy_matches_and_floats_exact_first() {
+    fn one_field_ranks_fuzzy_matches_and_floats_exact_first() {
         let matcher = FuzzyMatcher::new();
         let items = vec![
             "prod-admin".to_string(),
@@ -232,25 +230,25 @@ mod tests {
             "dev-sandbox".to_string(),
         ];
 
-        let all = matcher.filter_strings("", &items);
+        let all = matcher.filter_fields("", &items, one);
         assert_eq!(all.iter().map(|m| m.0).collect::<Vec<_>>(), vec![0, 1, 2, 3]);
 
         // Exact name beats the longer fuzzy hit.
-        let exact = matcher.filter_strings("PROD", &items);
+        let exact = matcher.filter_fields("PROD", &items, one);
         assert_eq!(exact.first().map(|m| m.0), Some(2), "{exact:?}");
 
         // Non-contiguous characters match (a plain substring filter would not).
-        let fuzzy = matcher.filter_strings("pdadm", &items);
+        let fuzzy = matcher.filter_fields("pdadm", &items, one);
         assert_eq!(fuzzy.iter().map(|m| m.0).collect::<Vec<_>>(), vec![0]);
 
-        assert!(matcher.filter_strings("zzz", &items).is_empty());
+        assert!(matcher.filter_fields("zzz", &items, one).is_empty());
     }
 
     #[test]
     fn a_trailing_space_keeps_the_fuzzy_matches() {
         let matcher = FuzzyMatcher::new();
         let items = vec!["prod-admin".to_string(), "prod".to_string()];
-        let spaced = matcher.filter_strings("prod ", &items);
+        let spaced = matcher.filter_fields("prod ", &items, one);
         assert_eq!(spaced.iter().map(|m| m.0).collect::<Vec<_>>(), vec![1, 0]);
     }
 
@@ -260,7 +258,7 @@ mod tests {
         // query for 40 points, and this match scores 26.
         let matcher = FuzzyMatcher::new();
         let items = vec!["tōkyō-prod".to_string()];
-        assert_eq!(matcher.filter_strings("ōō", &items).len(), 1);
+        assert_eq!(matcher.filter_fields("ōō", &items, one).len(), 1);
     }
 
     #[test]
