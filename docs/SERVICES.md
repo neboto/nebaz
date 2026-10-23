@@ -103,8 +103,11 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     inherited line jumps to the resource group or subscription it came
     from). Role names come from the subscription's `roleDefinitions`, one
     list per subscription per session; GUIDs show until it lands.
-    Principals are a type and an object id: names need Microsoft Graph,
-    another host and permission, which the guard forbids. Identity rows add
+    Principals resolve to names through Microsoft Graph (ADR 0004): one
+    `GET directoryObjects/{id}` per principal once the list lands, the
+    first 50 per section, cached by object id; a 403 (guests, restricted
+    tenants) is a footer warning and the line stays type and object id.
+    Identity rows add
     **Can do**, the identity principal's own assignments across its
     subscription (direct only; group memberships are not followed). A
     new type gets Access by adding the one descriptor line
@@ -199,6 +202,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Private DNS | 1 | `/providers/Microsoft.Network/privateDnsZones` · `2024-06-01` (its own spec) |
 | Records, VNet links | 1 each per zone, on demand | `{zone}/ALL` · `{zone}/virtualNetworkLinks` · `2024-06-01` |
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
+| Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |

@@ -45,8 +45,9 @@ keys), Monitor (Log Analytics workspaces and App Insights components,
 metadata only; AKS links to its workspace), and Container Apps
 (apps, environments and jobs; revisions and auth settings lazy, secret and
 env var names only, never values). Every row has an **Access**
-section (the role assignments that apply to it, inherited ones jumping to
-where they were made; an identity also shows what it can do), an
+section (the role assignments that apply to it, principals named through
+Microsoft Graph, inherited ones jumping to where they were made; an
+identity also shows what it can do), an
 **Activity** section (the last week of operations on it: who, what, when,
 whether it worked) and a
 **Related** section listing the ARM ids it points at; Enter on one jumps

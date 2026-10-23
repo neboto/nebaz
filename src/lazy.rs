@@ -147,6 +147,10 @@ pub struct LazyStore {
     pub role_definitions: LazyMap<Vec<serde_json::Value>>,
     /// An identity's own assignments (`principalId eq`), keyed by identity id.
     pub identity_role_assignments: LazyMap<Vec<serde_json::Value>>,
+    /// Microsoft Graph `GET directoryObjects/{id}` (ADR 0004): a role
+    /// assignment's principal, keyed by lowercase object id. Resets with
+    /// the store, so a tenant switch never shows another directory's names.
+    pub principals: LazyMap<serde_json::Value>,
 
     // ── Activity (every type) ────────────────────────────────────────────
     /// The last week of the activity log filtered to the row, keyed by ARM
