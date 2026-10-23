@@ -40,6 +40,7 @@ use std::sync::Arc;
 mod all_search_test;
 mod directory_test;
 mod list_ux_test;
+mod export_test;
 mod load_stream_test;
 pub(crate) mod mocks;
 mod detail_pane_test;
@@ -143,6 +144,7 @@ impl Harness {
             }
             self.app.macro_tick(&self.tx);
             self.app.flat_tick(&self.tx);
+            self.app.export_tick(&self.tx);
             self.draw();
             self.app.process_pending_search();
             self.app.record_message_history();
