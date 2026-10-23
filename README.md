@@ -77,7 +77,10 @@ in the detail pane: a curated set per type (VM, AKS, Container Apps, App
 Service, SQL database, storage, Key Vault, Cosmos, load balancer, public
 IP, …) with sparklines and last / min / max / avg, a chart of the
 selected one, 1h / 6h / 24h / 7d windows (`[`/`]`), and `a` for every
-metric the resource publishes. Verified against a live tenant:
+metric the resource publishes. `W` opens the **change timeline**: the
+Activity Log's changes, Resource Health transitions, fired alerts and
+the deployments that touched the row, merged newest first over 7d / 30d
+/ 90d (`[`/`]`), `f` for one source. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in

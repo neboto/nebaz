@@ -8,5 +8,6 @@ pub mod location;
 pub mod metrics;
 pub mod nsg_eval;
 pub mod resource;
+pub mod timeline;
 pub mod service;
 pub mod services;

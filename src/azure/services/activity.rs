@@ -43,7 +43,15 @@ pub fn activity_path(id: &str) -> Option<String> {
 
 /// The row's filter from `now` (Unix seconds): the window, then the scope.
 pub fn activity_query(id: &str, now: i64) -> Vec<(String, String)> {
-    let since = iso(now - ACTIVITY_DAYS * 86_400);
+    activity_query_since(id, now - ACTIVITY_DAYS * 86_400)
+}
+
+/// The row's filter from `since` (Unix seconds) on: the one query the
+/// Activity section, the timeline (`W`) and `@changes` share. The log's
+/// `$filter` takes the window plus one scope term and nothing else, so
+/// operation and status filters are applied to the answer.
+pub fn activity_query_since(id: &str, since: i64) -> Vec<(String, String)> {
+    let since = iso(since);
     let mut filter = format!("eventTimestamp ge '{}'", since);
     match scope_of(id) {
         Scope::Subscription => {}
@@ -70,7 +78,7 @@ fn scope_of(id: &str) -> Scope<'_> {
 }
 
 /// Unix seconds → `YYYY-MM-DDTHH:MM:00Z`.
-fn iso(secs: i64) -> String {
+pub fn iso(secs: i64) -> String {
     format!("{}:00Z", json::unix_to_ymdhm(secs).replacen(' ', "T", 1))
 }
 
@@ -85,17 +93,7 @@ fn minute(ts: Option<String>) -> String {
 /// newest first.
 pub fn activity_rows(id: &str, events: Option<&Lazy<Vec<Value>>>) -> Vec<(String, String)> {
     lazy_list_rows(events, "Activity", |items| {
-        let mut ops: Vec<&Value> = Vec::new();
-        let mut seen: Vec<(String, String)> = Vec::new();
-        let mut newest_first: Vec<&Value> = items.iter().collect();
-        newest_first.sort_by_key(|e| std::cmp::Reverse(json::text(e, "/eventTimestamp")));
-        for e in newest_first {
-            let key = (json::text(e, "/correlationId"), json::text(e, "/operationName/value").to_lowercase());
-            if key.0.is_empty() || !seen.contains(&key) {
-                seen.push(key);
-                ops.push(e);
-            }
-        }
+        let ops = collapse_operations(items);
         let mut lines = Vec::new();
         if ops.is_empty() {
             lines.push((String::new(), format!("No operations in the last {} days", ACTIVITY_DAYS)));
@@ -142,6 +140,23 @@ pub fn activity_rows(id: &str, events: Option<&Lazy<Vec<Value>>>) -> Vec<(String
         }
         lines
     })
+}
+
+/// Events → operations: one per correlation id and operation name (the
+/// newest event, so the final status wins), newest first. An event without
+/// a correlation id stands alone. Shared with the timeline and `@changes`.
+pub fn collapse_operations(items: &[Value]) -> Vec<&Value> {
+    let mut ops: Vec<&Value> = Vec::new();
+    let mut seen: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+    let mut newest_first: Vec<&Value> = items.iter().collect();
+    newest_first.sort_by_key(|e| std::cmp::Reverse(json::text(e, "/eventTimestamp")));
+    for e in newest_first {
+        let key = (json::text(e, "/correlationId"), json::text(e, "/operationName/value").to_lowercase());
+        if key.0.is_empty() || seen.insert(key) {
+            ops.push(e);
+        }
+    }
+    ops
 }
 
 fn read_command(id: &str) -> Option<String> {

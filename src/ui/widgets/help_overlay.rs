@@ -73,6 +73,7 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("e", "open in $EDITOR"),
             ("N", "network access (NSG rules)"),
             ("m", "metrics (Azure Monitor)"),
+            ("W", "change timeline (f · [ / ])"),
             ("X / ^X", "export detail / list"),
             ("M", "message history"),
             (",", "macros (⏎ run · n record)"),

@@ -375,6 +375,14 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
                 ("e", "editor"),
                 ("Esc", "close"),
             ])
+        } else if app.timeline.is_some() {
+            theme::hint_line(&[
+                ("j/k", "select"),
+                ("⏎", "open"),
+                ("f", "sources"),
+                ("[/]", "window"),
+                ("Esc", "close"),
+            ])
         } else if app.metrics.is_some() {
             theme::hint_line(&[
                 ("j/k", "select"),
@@ -417,6 +425,9 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
             }
             if app.supports_metrics() {
                 hints.push(("m", "metrics"));
+            }
+            if app.supports_timeline() {
+                hints.push(("W", "changes"));
             }
             if app.noise_in_view {
                 hints.push(("a", if app.hide_noise { "show all" } else { "hide noise" }));

@@ -272,6 +272,30 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     subnet. A list visual selection (#39) merged into one `--ids a b c` command
     (neboto's batch mode) is not built yet: `C` acts on the cursor row.
 
+21. **Change timeline** (`W`, #52, `src/azure/timeline.rs`, drawn by
+    `src/ui/widgets/timeline_lens.rs`): "what changed around this row?",
+    owning the detail pane until `Esc` (`Z` full width). Four sources,
+    each one task under one generation (a reopen, `[` / `]` or `r`
+    supersedes them; off the `LazyStore`, every open refetches), merged
+    newest first with a badge: **ACT**, the Activity Log through rule
+    12's query over the window, collapsed to operations and kept to the
+    changes (a `/write`, `/delete` or `/action` that ended `Succeeded` or
+    `Failed`; `a` shows every operation), at most 1,000 events;
+    **HLTH**, the resource's Resource Health history (resources only; a
+    group or subscription says so); **ALRT**, alerts fired on the row (its
+    resource, or its group), a row when one fired and one when it
+    resolved; **DEP**, the deployments in the row's group that deployed
+    it (`outputResources`; a group's timeline takes all of them),
+    at most 200 items each. The Activity Log failing is the header's
+    error; any other source failing is a dim note, never an error. Windows
+    7d / 30d / 90d (`[` / `]`; 90 days is the log's retention, and alerts
+    keep 30, which the 90d window notes). Rows keep named fields only:
+    `⏎` / `v` open the row's in `$EDITOR`, `e` the whole timeline, `y`
+    copies the row, `l` goes to what the row is about, `f` cycles one
+    source. Never a deployment's parameters or outputs, an event's
+    `properties` or the caller's claims. Any ARM row has one (a directory
+    row does not).
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -361,6 +385,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
+| Change timeline (`W`, rule 21) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
