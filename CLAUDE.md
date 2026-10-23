@@ -19,7 +19,7 @@ Azure sibling of neboto (`neboto/neboto-tui`, the AWS one) and was built by
 | What a service actually renders today | the service file itself; it is the reference |
 | The ARM actions per service, the one role to assign | [`PERMISSIONS.md`](PERMISSIONS.md) |
 | The project's own vocabulary (subscription, location, ARM id, Lazy, LazyStore, epoch, state ladder, Related section, guard…) | [`CONTEXT.md`](CONTEXT.md) |
-| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands, 0006 `@changes` fetches |
+| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands, 0006 `@changes` fetches, 0007 audit checks are pure |
 | What `v0.1.0` is and is not | [`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md) |
 | What is not built yet, and what is parked | [GitHub issues](https://github.com/neboto/nebaz/issues) (`gh issue list`); the parity roadmap is #55 |
 | What came from neboto and what changed | [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md) |
@@ -134,6 +134,12 @@ rules computed client-side from GETs (never the POST effective calls),
 `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics,
 owning the detail pane the same way; the default set is keyed by ARM
 type (`curated_metrics`, which also gates the hint), `SERVICES.md` rule 19.
+
+**`@audit`** (`src/audit.rs`, `src/audit/checks.rs`, `src/app/audit.rs`;
+ADR 0007, `SERVICES.md` rule 25): a virtual service (`is_virtual()`, never
+cached) whose rows are findings computed by pure checks over the warm
+lists and lazy store; a check can never fetch. `r` there loads the
+missing sources into their own cache slots.
 
 **Jumps**: the Related section is the jump mechanism (the lens's `⏎` aside). `Enter` on an
 ARM-id line → `jump_to_arm_id` → `NavLocation` (service, view,
@@ -265,6 +271,7 @@ verbatim where the concept is unchanged.
 | `src/azure/cli_actions.rs` | the `C` catalogue: every copyable `az` command per type, tiers; the one file the guard lets spell a Connect / Change verb |
 | `src/azure/nsg_eval.rs` | the network lens's evaluation: rule order, shadowing, layers, resolution |
 | `src/azure/metrics.rs` | the metrics view's default sets, request builder, parsers and fetch |
+| `src/audit.rs`, `src/audit/checks.rs` | `@audit`: the finding row, `run`, and every check (pure, fixture-tested) |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |
 | `src/clipboard.rs` | OSC 52 + arboard |

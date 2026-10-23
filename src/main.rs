@@ -2,6 +2,7 @@
 // per-service sub-tab routing and lens overlays are not carried over)
 mod clipboard;
 mod app;
+mod audit;
 mod azure;
 mod bookmarks;
 mod cli;

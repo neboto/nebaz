@@ -349,6 +349,7 @@ impl AzureClients {
             ServiceType::Messaging => Arc::new(MessagingService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Changes => Arc::new(ChangesService::new(scope, graph, ChangesWindow::default())),
+            ServiceType::Audit => Arc::new(crate::audit::AuditService),
         }
     }
 

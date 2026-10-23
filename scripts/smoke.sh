@@ -161,6 +161,14 @@ run activity-section ok sub '[{"wait": "Partner Dev"}, "\r", "5"]' \
   "Activity" \
   "cannot reach 127.0.0.1"
 
+# @audit opens with coverage notes and no call; `r` loads its sources in
+# the background, and against the dead endpoint they fail as one status
+# error while the checks stay "not checked".
+run audit ok audit '[{"wait": "not checked"}, "r"]' \
+  "Security findings from what's loaded" \
+  "not checked" \
+  "Audit: some checks couldn't run"
+
 run not-logged-in nologin sub '[]' \
   "az login"
 

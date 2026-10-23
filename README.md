@@ -96,7 +96,14 @@ the deployments that touched the row, merged newest first over 7d / 30d
 across the subscription in the last 15m … 7d (`[`/`]`): Activity Log
 changes, deployments and health transitions, with managed identities' and
 Azure's own changes as noise (`a`); `nebaz changes --since 6h` prints it.
-Verified against a live tenant:
+**`@audit`** lists security findings
+(world-open NSG rules, public storage and vaults, SQL firewalls open to the
+internet, AKS API servers without IP ranges, plain-HTTP apps, open
+Container Apps ingress, unhealthy Power Platform policies, expiring app
+credentials, guest or service-principal Owners, and more) computed from
+what is already loaded, with zero API calls; a check whose data is not
+loaded says "not checked", and `r` there loads it in the background
+([ADR 0007](docs/adr/0007-audit-checks-are-pure.md)). Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in
@@ -176,6 +183,7 @@ cargo run -- -s pp     # Power Platform enterprise policies; a delegated subnet'
 cargo run -- -s redis  # Redis caches (3 Network: VNet, private endpoints, firewall); -s amr for Managed Redis (4 Databases)
 cargo run -- -s aca    # container apps (2 Ingress); -s acaenv for environments (2 Network), -s acajob for jobs
 cargo run -- -s sb     # Service Bus namespaces (2 Network: firewall, private endpoints, private DNS; 4 Queues); -s eh for Event Hubs
+cargo run -- -s audit  # security findings from what is loaded; r loads the missing sources, Enter opens the resource
 cargo test             # all tests, including the read-only guard
 cargo test --test readonly_guard   # just the guard (see "Why read-only")
 cargo clippy --all-targets -- -D warnings   # lint; CI fails on any warning

@@ -127,6 +127,7 @@ mod all_search;
 /// The metrics view (`m`): open, fetch, keys.
 mod metrics;
 mod command_picker;
+mod audit;
 mod network_lens;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
 mod refs_lens;
@@ -603,6 +604,9 @@ pub struct App {
     /// `@changes`'s window (#61): `[` / `]` on its list.
     pub changes_window: crate::azure::services::changes::ChangesWindow,
 
+    /// `@audit` (#60): what `r` has in flight (`app/audit.rs`).
+    pub audit: audit::AuditState,
+
     // Mouse hit-testing, recorded by the read-only widgets each frame.
     click_regions: RefCell<Vec<ClickRegion>>,
     list_area: Cell<Rect>,
@@ -765,6 +769,7 @@ impl App {
             timeline_window: Default::default(),
             timeline_include_all: false,
             changes_window: Default::default(),
+            audit: audit::AuditState::default(),
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             mouse: MouseState::default(),
@@ -869,6 +874,16 @@ impl App {
         self.supersede_loads();
         // `@*` owns `resources`: re-search the (new subscription's) caches.
         if self.all_search_mode {
+            self.update_search();
+            return;
+        }
+        // `@audit` has no list: its rows are computed here, from the other
+        // lists' caches, every time it is opened (ADR 0007). Never cached.
+        if service.is_virtual() {
+            self.resources = self.run_audit();
+            self.loading = false;
+            self.loading_started = true;
+            self.loading_complete = true;
             self.update_search();
             return;
         }
@@ -977,6 +992,7 @@ impl App {
         self.apply_subscription_identity();
         self.spawn_subscription_info_fetch(event_tx);
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
+        self.audit = audit::AuditState::default();
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
@@ -1488,6 +1504,7 @@ impl App {
         self.apply_subscription_identity();
         // Everything subscription-scoped resets by construction.
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
+        self.audit = audit::AuditState::default();
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
@@ -3276,6 +3293,7 @@ impl App {
                     // principals (idempotent per object id).
                     self.trigger_principal_names(event_tx);
                     self.trigger_directory_followups(event_tx);
+                    self.audit_after_lazy(event_tx);
                     // The locations list may have landed while `R` is open.
                     if self.location_selector.visible {
                         let rows = self.location_rows();
@@ -3655,6 +3673,10 @@ impl App {
                         _ => LayoutMode::DetailsOnly,
                     }
                 }
+                // A finding is computed, not fetched: `r` re-audits.
+                KeyCode::Char('r') if self.current_service == Some(ServiceType::Audit) && !self.all_search_mode => {
+                    self.load_audit_sources(event_tx)
+                }
                 KeyCode::Char('r') => self.refresh_selected(event_tx),
                 _ => self.handle_global_key(key, event_tx),
             }
@@ -3706,6 +3728,13 @@ impl App {
                     self.jump_to_arm_id(&id, event_tx);
                 }
             }
+            // An @audit finding: Enter opens the resource it is about;
+            // l / → read the finding.
+            KeyCode::Enter if self.current_service == Some(ServiceType::Audit) && self.selected_audit_target().is_some() => {
+                if let Some(id) = self.selected_audit_target() {
+                    self.jump_to_arm_id(&id, event_tx);
+                }
+            }
             KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
                 if self.selected_index.is_some() {
                     self.details_focused = true;
@@ -3731,6 +3760,9 @@ impl App {
             KeyCode::Char('a') => {
                 self.hide_noise = !self.hide_noise;
                 self.update_search();
+            }
+            KeyCode::Char('r') | KeyCode::F(5) if self.current_service == Some(ServiceType::Audit) => {
+                self.load_audit_sources(event_tx)
             }
             KeyCode::Char('r') | KeyCode::F(5) => {
                 if let Some(service) = self.current_service {

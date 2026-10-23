@@ -64,6 +64,10 @@ pub enum ServiceType {
     /// Activity Log's changes, deployments and health transitions over a
     /// `[` / `]` window. A service that fetches, not a view over caches.
     Changes,
+    /// Virtual (`@audit`, #60): security findings computed from the other
+    /// services' warm caches (`src/audit.rs`, ADR 0007). No ARM list of
+    /// its own, never cached (`is_virtual`).
+    Audit,
 }
 
 /// One sub-tab: the rows of one resource type within a service. A flat
@@ -153,6 +157,9 @@ pub enum JumpView {
     ChangesActivity,
     ChangesDeployments,
     ChangesHealth,
+    // Audit
+    /// The `@audit` findings: computed, never fetched or cached.
+    Audit,
 }
 
 impl JumpView {
@@ -180,6 +187,7 @@ impl JumpView {
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
+            Audit => ServiceType::Audit,
         }
     }
 
@@ -234,6 +242,7 @@ impl JumpView {
             ChangesActivity => "changes-activity",
             ChangesDeployments => "changes-deployments",
             ChangesHealth => "changes-health",
+            Audit => "audit",
         }
     }
 
@@ -288,6 +297,7 @@ impl JumpView {
             ChangesActivity => "Activity",
             ChangesDeployments => "Deployments",
             ChangesHealth => "Health",
+            Audit => "Findings",
         }
     }
 
@@ -419,7 +429,15 @@ impl ServiceType {
             ServiceType::Redis,
             ServiceType::Messaging,
             ServiceType::Changes,
+            ServiceType::Audit,
         ]
+    }
+
+    /// A service with no ARM list of its own: its rows are computed in the
+    /// app from other services' caches (`App::load_service_resources`
+    /// short-circuits it), so it is never cached and never streamed.
+    pub fn is_virtual(&self) -> bool {
+        matches!(self, ServiceType::Audit)
     }
 
     /// Ordered picker categories. Every `category()` value must appear here.
@@ -447,6 +465,7 @@ impl ServiceType {
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
             ServiceType::Changes => "Monitoring",
+            ServiceType::Audit => "Security",
         }
     }
 
@@ -471,6 +490,7 @@ impl ServiceType {
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
             ServiceType::Changes => "Changes",
+            ServiceType::Audit => "Audit",
         }
     }
 
@@ -496,6 +516,7 @@ impl ServiceType {
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
             ServiceType::Changes => "Changes",
+            ServiceType::Audit => "Audit",
         }
     }
 
@@ -520,6 +541,7 @@ impl ServiceType {
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
             ServiceType::Changes => "What changed recently, subscription-wide",
+            ServiceType::Audit => "Security findings from what's loaded (no API calls)",
         }
     }
 
@@ -556,6 +578,7 @@ impl ServiceType {
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
+            ServiceType::Audit => &[Audit],
         }
     }
 
@@ -675,6 +698,7 @@ impl ServiceType {
             "amr" | "managedredis" | "redisenterprise" => (ServiceType::Redis, Some(JumpView::ManagedRedis)),
             "sb" | "servicebus" | "messaging" | "msg" => (ServiceType::Messaging, None),
             "eh" | "eventhub" | "eventhubs" | "kafka" => (ServiceType::Messaging, Some(JumpView::EventHubNamespaces)),
+            "audit" | "findings" | "security" => (ServiceType::Audit, None),
             _ => return None,
         };
         Some((service, view))
@@ -708,6 +732,7 @@ impl ServiceType {
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
             ServiceType::Changes => "@changes",
+            ServiceType::Audit => "@audit",
         }
     }
 
@@ -719,7 +744,7 @@ impl ServiceType {
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }

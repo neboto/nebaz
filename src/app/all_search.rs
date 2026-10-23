@@ -92,7 +92,7 @@ impl App {
         let mut coverage = AllSearchCoverage::default();
         let mut generic: Option<&[Box<dyn crate::azure::resource::Resource>]> = None;
         // `@changes` rows are events, not resources (ADR 0006): never searched.
-        for service in ServiceType::all().into_iter().filter(|s| *s != ServiceType::Changes) {
+        for service in ServiceType::all().into_iter().filter(|s| *s != ServiceType::Changes && !s.is_virtual()) {
             let mut any_warm = false;
             for view in service.views() {
                 coverage.total += 1;

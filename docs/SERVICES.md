@@ -381,6 +381,31 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     --since 6h [--source activity|deployments|health]`. Never Resource
     Graph `resourcechanges` (a POST).
 
+25. **`@audit`** (#60, ADR 0007; `src/audit.rs`, `src/audit/checks.rs`,
+    `src/app/audit.rs`) is a virtual tab: its own entry in the service
+    strip and picker (Security), not a sub-tab of Subscriptions like All
+    resources, because its rows are no ARM list (`is_virtual()`: never
+    cached, never streamed) and span every service. One sub-tab,
+    *Findings*. Rows are findings computed by pure checks over the current
+    subscription's **warm** lists (any sub-tab cached under the
+    subscription) and lazy store; opening it makes no call. Severity is the
+    state through the ladder (critical → Unavailable, high → Stopped,
+    medium → Pending, low → Creating, info stateless; the word is the
+    label), so `F` filters and `z` sorts critical first. A check whose list
+    is not cached is a dim "not checked — load @x" row; a check whose lazy
+    data is missing for some resources says how many, never passes them.
+    `Enter` on a finding jumps to its resource (`jump_to_arm_id`; a
+    directory row's `graph:/…` id included); `l` reads it: evidence, why it
+    matters, remediation as **text** (no command is run or offered). `r`
+    loads every uncached source list in the background with the tab's own
+    streaming load, cached under the tab's key, then fetches the lazy reads
+    the checks use through the sections' own maps (the subscription's role
+    assignments, its Owner / User Access Administrator users' directory
+    objects, each SQL server's firewall rules, each site's `config/web`;
+    at most 50 each), re-auditing as each lands; a failed source is one
+    status error. A subscription switch drops what is in flight (the lazy
+    epoch). The checks are listed below the catalog.
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -436,8 +461,48 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
+
+## The audit checks
+
+Rule 25. Each reads the lists named (all of them must be cached) and, for
+⧗, warm lazy data; `src/audit/checks.rs` is the reference and every check
+has a fixture test there.
+
+| Check id | Reads | Fires on | Severity |
+|---|---|---|---|
+| `nsg-open-internet` | NSGs | a custom inbound Allow rule from `*` / `Internet` / `0.0.0.0/0` / `::/0` | critical: all ports, 22, 3389 · high: database, cache, SMB and control-plane ports · medium: others · low: 80 or 443 alone, ICMP |
+| `subnet-pp-no-nsg` | VNets or Subnets | a subnet delegated to `Microsoft.PowerPlatform/enterprisePolicies` with no NSG | medium |
+| `storage-blob-public-access` | Storage | `allowBlobPublicAccess` true | high |
+| `storage-shared-key` | Storage | `allowSharedKeyAccess` true or unset | medium |
+| `storage-min-tls` | Storage | `minimumTlsVersion` below 1.2 | high |
+| `storage-https-only` | Storage | `supportsHttpsTrafficOnly` false | high |
+| `storage-public-network` | Storage | public network access enabled, `networkAcls.defaultAction` Allow | medium |
+| `kv-purge-protection` | Vaults | purge protection off or unset | medium |
+| `kv-soft-delete` | Vaults | `enableSoftDelete` false | high |
+| `kv-public-network` | Vaults | public network access enabled, default action Allow | medium |
+| `sql-public-network` | SQL servers | public network access not Disabled | medium |
+| `sql-firewall-open` | SQL servers + Firewall ⧗ | a rule 0.0.0.0–255.255.255.255 · 0.0.0.0–0.0.0.0 (Allow Azure services) | critical · low |
+| `sql-min-tls` | SQL servers | `minimalTlsVersion` below 1.2 or `None` | medium |
+| `cosmos-public-network` | Cosmos | public network access enabled: no IP or VNet rules · with rules | medium · low |
+| `cosmos-local-auth` | Cosmos | `disableLocalAuth` not true | medium |
+| `aks-public-api` | Clusters | not private and no `authorizedIPRanges` | high |
+| `aks-local-accounts` | Clusters | `disableLocalAccounts` not true (raw JSON) | medium |
+| `aks-rbac-disabled` | Clusters | `enableRBAC` false | high |
+| `acr-admin-user` | Registries | `adminUserEnabled` | medium |
+| `acr-anonymous-pull` | Registries | `anonymousPullEnabled` | high |
+| `app-https-only` | Apps | `httpsOnly` false | high |
+| `app-min-tls` | Apps + Configuration ⧗ | `minTlsVersion` below 1.2 | medium |
+| `app-ftps` | Apps + Configuration ⧗ | `ftpsState` AllAllowed | medium |
+| `aca-ingress-open` | Container apps (+ environments when cached) | external ingress, no `ipSecurityRestrictions` | medium · low when the environment is internal (VNet-wide, not internet) |
+| `aca-allow-insecure` | Container apps | ingress `allowInsecure` | medium |
+| `aca-env-external-pp-vnet` | ACA environments + Enterprise policies | an environment not internal whose infrastructure subnet is in a VNet a Power Platform policy injects into | info |
+| `aca-secrets-not-kv` | Container apps (+ jobs when cached) | a secret with no `keyVaultUrl` | low |
+| `pp-policy-unhealthy` | Enterprise policies | `healthStatus` not Healthy | medium |
+| `appreg-credential-expiry` | App registrations | a secret or certificate expired · expiring within 30 days | medium · low |
+| `sp-credential-expiry` | Service principals (managed identities skipped) | the same | medium · low |
+| `sub-privileged-guest-or-sp` | the subscription's Access ⧗ (+ principals ⧗) | Owner or User Access Administrator at or above the subscription held by a guest user (`userType` Guest or `#EXT#`) · a service principal | critical · high |
 
 ## API calls per view
 
@@ -477,6 +542,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Change timeline (`W`, rule 23) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
 | `@changes` (rule 24) | per window, on load and `r`: the Activity Log (≤10 pages), Resource Health (≤20 pages), then 1 per group with a deployment in the window (≤20); Graph: ≤50 caller lookups (2 when an id is an app id) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{window start}'` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` (or `/subscriptions/{sub}/providers/Microsoft.Resources/deployments`) · `2025-04-01`; Graph `/v1.0/directoryObjects/{id}`, `/v1.0/servicePrincipals(appId='{id}')` |
+| `@audit` (rule 25) | 0 on open (the warm caches only). `r`: each uncached source list once (the rows above), then at most 50 each of SQL Firewall, App Configuration and Access principal names, plus the subscription's Access list | the paths of the rows above |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
 | Ownership ribbon (rule 22) | 0 for tags and `managedBy`; with the pane focused, 1 per resource group per subscription visit, plus 1 per not-succeeded deployment among the newest 3 | `{group}/providers/Microsoft.Resources/deployments?$top=100` · `{group}/providers/Microsoft.Resources/deployments/{name}/operations` · `2025-04-01` |
