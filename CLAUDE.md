@@ -32,7 +32,9 @@ Prefer a grep the reader can run over a count they have to trust.
 ```bash
 cargo build                         # debug
 cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca
+cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to stdout, exit codes in src/headless/contract.json
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
+NEBAZ_BLESS=1 cargo test contract   # record an addition to the headless output contract
 cargo test --test readonly_guard    # just the guard
 cargo clippy --all-targets          # CI runs this; keep it clean
 scripts/smoke.sh                    # offline pty run with a fake az (manual, not a CI gate)
@@ -243,6 +245,7 @@ verbatim where the concept is unchanged.
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
 | `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps}.rs` | one file per service |
+| `src/headless.rs`, `src/app/headless.rs` | `nebaz services / ls / get`: a terminal-less `App`, the output contract, `skills/nebaz/SKILL.md` |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/nsg_eval.rs` | the network lens's evaluation: rule order, shadowing, layers, resolution |
 | `src/azure/metrics.rs` | the metrics view's default sets, request builder, parsers and fetch |

@@ -161,7 +161,7 @@ fn md_cell(s: &str) -> String {
 /// True when a section's lines are nothing but a lazy-load placeholder — i.e.
 /// the same "Loading…" text the UI shows before the section has been fetched.
 /// Such sections are exported as a "not loaded" note rather than the spinner.
-fn is_unloaded(lines: &[(String, String)]) -> bool {
+pub(crate) fn is_unloaded(lines: &[(String, String)]) -> bool {
     let mut saw_content = false;
     for (k, v) in lines {
         if k.trim().is_empty() && v.trim().is_empty() {
@@ -564,7 +564,10 @@ pub(crate) fn detail_value(
 fn has_loading_row(lines: &[(String, String)]) -> bool {
     lines.iter().any(|(k, v)| {
         let text = if v.is_empty() { k.trim() } else { v.trim() };
-        (text.starts_with("Loading") && text.ends_with('…')) || text.contains(" are loading")
+        (text.starts_with("Loading") && text.ends_with('…'))
+            || text.contains(" are loading")
+            // A topology note: `· linked VNets: loading…`.
+            || (text.starts_with("· ") && text.ends_with("loading…"))
     })
 }
 
@@ -590,7 +593,7 @@ fn any_section_unloaded(sections: &[(String, Vec<(String, String)>)]) -> bool {
 /// `get_detail_lines`). `level` is the title's heading depth (1 for a
 /// standalone document; 2 inside a multi-resource export, where sections
 /// then nest at 3).
-fn detail_markdown_at(
+pub(crate) fn detail_markdown_at(
     resource: &dyn Resource,
     sections: &[(String, Vec<(String, String)>)],
     level: usize,

@@ -10,6 +10,7 @@ mod editor;
 mod error;
 mod event;
 mod export;
+mod headless;
 mod lazy;
 mod macros;
 mod search;
@@ -37,11 +38,17 @@ use ui::widgets::{
 fn main() -> Result<()> {
     // Parse CLI args before the runtime so `--help`/`--version` exit immediately.
     let cli = <cli::Cli as clap::Parser>::parse();
-    tokio::runtime::Builder::new_multi_thread()
+    let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
-        .expect("failed to build tokio runtime")
-        .block_on(run(cli))
+        .expect("failed to build tokio runtime");
+    // A subcommand (`nebaz ls vm …`) runs once and prints: no terminal
+    // setup, no raw mode (#44).
+    if cli.command.is_some() {
+        let code = runtime.block_on(headless::run(cli));
+        std::process::exit(code);
+    }
+    runtime.block_on(run(cli))
 }
 
 async fn run(cli: cli::Cli) -> Result<()> {

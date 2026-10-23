@@ -150,5 +150,36 @@ run activity-section ok sub '[2.0, "\r", 0.3, "5", 10.0]' \
 run not-logged-in nologin sub '[2.0]' \
   "az login"
 
+# Headless (#44): no pty. Each run checks the exit code and greps stdout
+# plus stderr.
+headless() { # name fake-az-dir want-exit expected... -- args...
+  name="$1"; fake="$2"; want="$3"; shift 3
+  expects=""
+  while [ "$1" != "--" ]; do expects="$expects
+$1"; shift; done
+  shift
+  set +e
+  out="$(PATH="$here/fake-az/$fake:$PATH" NEBAZ_CONFIG=/dev/null HOME="$PWD/target/smoke-home" \
+    "$bin" --endpoint-url "$dead" "$@" 2>&1)"
+  code=$?
+  set -e
+  [ "$verbose" = 1 ] && { echo "=== $name (exit $code) ==="; echo "$out"; }
+  if [ "$code" = "$want" ]; then echo "ok   $name: exit $code"; else
+    echo "FAIL $name: exit $code, expected $want" >&2; echo "$out" >&2; fail=1; fi
+  echo "$expects" | while IFS= read -r e; do
+    [ -z "$e" ] && continue
+    if echo "$out" | grep -qF -- "$e"; then echo "ok   $name: $e"; else
+      echo "FAIL $name: expected \"$e\"" >&2; echo "$out" >&2; exit 1; fi
+  done || fail=1
+}
+
+headless headless-services ok 0 '"schema": "nebaz/v1"' '"prefix": "vm"' -- services
+headless headless-ls-subs ok 0 '"subtab": "subscriptions"' 'Partner Dev' -- ls sub
+headless headless-ls-md ok 0 '# Subscriptions · Subscriptions' -- ls sub -o md
+headless headless-ls-arm ok 1 'cannot reach 127.0.0.1' -- ls rg
+headless headless-usage ok 2 'pass --in PREFIX' -- get vm-1
+headless headless-unknown ok 2 'unknown service' -- ls nope
+headless headless-auth nologin 4 'az login' -- ls vm
+
 [ "$fail" = 0 ] && echo "smoke: all scenarios passed"
 exit "$fail"
