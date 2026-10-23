@@ -28,8 +28,8 @@ const LEFT_SECTIONS: &[Section] = &[
             ("gg / G", "top / bottom"),
             ("^d / ^u", "half page"),
             ("l / → / ⏎", "open details"),
-            ("h / ← / ⌫", "back"),
-            ("Ctrl-O", "history back"),
+            ("h / ←", "back to the list"),
+            ("⌫ / Ctrl-O", "history back"),
             ("`", "jump list (history)"),
             ("B / '", "bookmark / bookmarks"),
             ("Tab · 1–9", "sub-tabs"),
@@ -81,6 +81,7 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("rg:name", "resource group filter"),
             ("tag:k=v", "exact tag filter"),
             ("Tab", "complete @prefix"),
+            ("↑ / ↓", "earlier searches"),
         ],
     },
     Section {

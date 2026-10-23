@@ -122,6 +122,10 @@ impl VnetRow {
 
 impl Resource for VnetRow {
     arm_row!("Virtual Network");
+    /// The address space.
+    fn list_summary(&self) -> Option<String> {
+        (!self.address_prefixes.is_empty()).then(|| self.address_prefixes.join(", "))
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }
@@ -321,6 +325,10 @@ fn parent_of(id: &str, child_type: &str) -> Option<(String, String)> {
 }
 
 impl Resource for SubnetRow {
+    /// The address prefix(es).
+    fn list_summary(&self) -> Option<String> {
+        (!self.prefixes.is_empty()).then(|| self.prefixes.join(", "))
+    }
     fn id(&self) -> &str {
         &self.id
     }
@@ -586,6 +594,14 @@ impl NsgRow {
 
 impl Resource for NsgRow {
     arm_row!("Network Security Group");
+    /// How many rules the group adds to Azure's defaults.
+    fn list_summary(&self) -> Option<String> {
+        let n = self.rules.iter().filter(|r| !r.is_default).count();
+        Some(match n {
+            1 => "1 rule".to_string(),
+            n => format!("{n} rules"),
+        })
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }
@@ -852,6 +868,8 @@ mod tests {
         assert_eq!(s.tenant_id(), Some("t-1"));
         assert_eq!(s.resource_group(), Some("rg-net"));
         assert_eq!(s.prefixes, vec!["10.0.0.0/24".to_string()]);
+        assert_eq!(s.list_summary().as_deref(), Some("10.0.0.0/24"));
+        assert_eq!(row.list_summary().as_deref(), Some("10.0.0.0/16"));
         assert_eq!(s.ip_configuration_count, 2);
         assert_eq!(s.delegations, vec!["Microsoft.Web/serverFarms".to_string()]);
         assert!(s.related().iter().any(|(l, _)| l == "Virtual network vnet-prod"));

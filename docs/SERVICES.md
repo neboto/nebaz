@@ -190,6 +190,19 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     it (those Related sections carry the trigger as their on-enter hook).
     It is read once per session: `r` on a row does not refresh it, a
     subscription switch does.
+17. **The list's second column** is `Resource::list_summary` when the
+    type has one, else the ARM id (`list_cell` draws either). A summary
+    is one fact the row already carries, never a new call: VM size; AKS
+    `k8s {version}`; node pool `{size} × {count}`; plan SKU · tier; web
+    app `kind` (`Function app · Linux`; the runtime is in `config/web`,
+    not the list body); storage kind · SKU; Cosmos API (+ `serverless`);
+    Key Vault and registry SKU; public IP address (or `{allocation} ·
+    unassigned`); NSG custom rule count; VNet address space; subnet
+    prefix; Container App `{min}–{max} replicas`; environment
+    `internal` / `external`; job trigger type; DNS zone record-set
+    count (+ `private` for a legacy private zone); private DNS zone
+    record sets · VNet links; DNS resolver `vnet {name}`; All resources `→`/`·` and
+    the ARM type. Everything else shows the id.
 
 ## The catalog
 

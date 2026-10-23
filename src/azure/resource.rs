@@ -58,6 +58,22 @@ pub fn native_state_label(native: &str, fallback: impl FnOnce() -> ResourceState
     }
 }
 
+/// Join the present parts of a list summary with ` · `; `None` when none
+/// is present, so the column falls back to the id.
+pub fn summary_of<I, S>(parts: I) -> Option<String>
+where
+    I: IntoIterator<Item = Option<S>>,
+    S: AsRef<str>,
+{
+    let parts: Vec<String> = parts
+        .into_iter()
+        .flatten()
+        .map(|p| p.as_ref().trim().to_string())
+        .filter(|p| !p.is_empty())
+        .collect();
+    (!parts.is_empty()).then(|| parts.join(" · "))
+}
+
 /// One row in any list pane. `id()` is the full ARM resource id
 /// (`/subscriptions/…/providers/…`) for every ARM-backed type — it is the
 /// universal jump key, the portal deep-link source, and the cache/lazy key.
@@ -150,14 +166,25 @@ pub trait Resource: Send + Sync + Debug {
         )
     }
 
-    /// The list's dim second column: the id when it adds to the name,
-    /// blank otherwise. A row whose type is the useful part (All
-    /// resources) shows that instead.
+    /// One useful fact for the list's dim second column, when this type
+    /// has something better to show there than its ARM id: a VM's size, a
+    /// cluster's Kubernetes version, a storage account's kind and
+    /// replication, what an All resources row is. Read from fields the row
+    /// already carries, never a new call. Display only: exports and search
+    /// do not read it. `None` (the default) shows the id. Keep it short;
+    /// the column is capped at a third of the list.
+    fn list_summary(&self) -> Option<String> {
+        None
+    }
+
+    /// The list's dim second column as drawn: `list_summary` when the type
+    /// has one, else the id when it adds to the name, blank otherwise.
+    /// Override `list_summary`, not this.
     fn list_cell(&self) -> String {
-        if self.id() != self.name() {
-            self.id().to_string()
-        } else {
-            String::new()
+        match self.list_summary() {
+            Some(summary) => summary,
+            None if self.id() != self.name() => self.id().to_string(),
+            None => String::new(),
         }
     }
 
@@ -361,6 +388,13 @@ pub fn shell_quote(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn summary_of_joins_the_present_parts_and_is_none_without_any() {
+        assert_eq!(summary_of([Some("StorageV2"), None, Some("Standard_LRS")]).as_deref(), Some("StorageV2 · Standard_LRS"));
+        assert_eq!(summary_of([Some(" "), None::<&str>]), None);
+        assert_eq!(summary_of(Vec::<Option<String>>::new()), None);
+    }
 
     #[test]
     fn the_ladder_prefers_transitions_then_runtime_then_stateless() {

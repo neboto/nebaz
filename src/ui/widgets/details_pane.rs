@@ -34,6 +34,25 @@ const KEY_COL_MAX: usize = 40;
 /// Appended to a line Enter jumps from (neboto's marker).
 const JUMP_MARKER: &str = "  →";
 
+/// The footer's hints, dropping the optional ones (least useful first)
+/// until the line fits `width`: a block truncates an over-wide title,
+/// which cut the `h list` and `⌫ back to …` hints first. Any other key
+/// always stays.
+fn fit_hints(mut hints: Vec<(&str, &str)>, width: usize) -> Line<'static> {
+    const DROP_ORDER: [&str; 5] = ["j/k", "\\", "V", "y", "⏎"];
+    let mut droppable = DROP_ORDER.iter();
+    loop {
+        let line = theme::hint_line(&hints);
+        if line.width() <= width {
+            return line;
+        }
+        match droppable.next() {
+            Some(key) => hints.retain(|(k, _)| k != key),
+            None => return line,
+        }
+    }
+}
+
 pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     // The network access lens (`N`) owns the pane while open.
     if app.network_lens.is_some() {
@@ -65,15 +84,23 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     let title = format!("{} · {}", resource.resource_type(), resource.name());
     let flat_hint = if app.detail_flat_mode { "tabs" } else { "flat" };
     let footer = if focused {
-        theme::hint_line(&[
+        // `h` returns to the list; `⌫` walks history, and says where to
+        // when there is somewhere (first, so a narrow pane keeps it).
+        let back = app.nav_back_hint().map(|to| format!("back to {to}"));
+        let mut hints: Vec<(&str, &str)> = Vec::new();
+        if let Some(back) = back.as_deref() {
+            hints.push(("⌫", back));
+        }
+        hints.extend([
             ("Tab", if app.flat_active() { "header" } else { "section" }),
             ("j/k", "line"),
             ("V", "select"),
             ("⏎", "jump to id"),
             ("y", "copy"),
             ("\\", flat_hint),
-            ("Esc", "back"),
-        ])
+            ("h", "list"),
+        ]);
+        fit_hints(hints, area.width.saturating_sub(2) as usize)
     } else {
         theme::hint_line(&[("⏎", "focus"), ("e", "editor"), ("O", "portal"), ("\\", flat_hint)])
     };

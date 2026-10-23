@@ -134,9 +134,11 @@ impl Resource for GenericResourceRow {
             json::opt(self.kind.clone()),
         )
     }
-    fn list_cell(&self) -> String {
+    /// The type is the useful part of an All resources row; `→` marks the
+    /// ones Enter opens in their typed tab.
+    fn list_summary(&self) -> Option<String> {
         let mark = if self.view.is_some() { "→" } else { "·" };
-        format!("{} {}", mark, self.arm_type)
+        Some(format!("{} {}", mark, self.arm_type))
     }
     fn details(&self) -> Vec<(String, String)> {
         vec![

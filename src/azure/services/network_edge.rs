@@ -177,6 +177,12 @@ impl PublicIpRow {
 
 impl Resource for PublicIpRow {
     arm_row!("Public IP");
+    /// The address, or how it is allocated while it has none.
+    fn list_summary(&self) -> Option<String> {
+        self.address
+            .clone()
+            .or_else(|| self.allocation.as_ref().map(|a| format!("{a} · unassigned")))
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }

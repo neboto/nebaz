@@ -554,6 +554,16 @@ impl ContainerAppRow {
 
 impl Resource for ContainerAppRow {
     arm_row!("Container app");
+    /// `1–5 replicas`, from `template.scale` (the running status is the
+    /// state column already). Azure's defaults fill a missing bound.
+    fn list_summary(&self) -> Option<String> {
+        let min = self.scale.pointer("/minReplicas").and_then(|v| v.as_i64());
+        let max = self.scale.pointer("/maxReplicas").and_then(|v| v.as_i64());
+        if min.is_none() && max.is_none() {
+            return None;
+        }
+        Some(format!("{}–{} replicas", min.unwrap_or(0), max.unwrap_or(10)))
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }
@@ -1058,6 +1068,10 @@ impl EnvironmentRow {
 
 impl Resource for EnvironmentRow {
     arm_row!("Container Apps environment");
+    /// Internal (VNet-only ingress) or external.
+    fn list_summary(&self) -> Option<String> {
+        self.internal.map(|i| if i { "internal" } else { "external" }.to_string())
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }
@@ -1279,6 +1293,10 @@ impl JobRow {
 
 impl Resource for JobRow {
     arm_row!("Container Apps job");
+    /// The trigger: `Manual`, `Schedule` or `Event`.
+    fn list_summary(&self) -> Option<String> {
+        self.trigger_type.clone()
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }
@@ -1457,6 +1475,16 @@ mod tests {
     use super::*;
 
     const RG: &str = "/subscriptions/0000/resourceGroups/rg-aca";
+
+    #[test]
+    fn list_summaries_show_replicas_exposure_and_trigger() {
+        let app = ContainerAppRow::from_json(&app_json(), None).unwrap();
+        assert_eq!(app.list_summary().as_deref(), Some("1–5 replicas"));
+        let env = EnvironmentRow::from_json(&env_json(), None).unwrap();
+        assert_eq!(env.list_summary().as_deref(), Some("internal"));
+        let job = JobRow::from_json(&job_json(), None).unwrap();
+        assert_eq!(job.list_summary().as_deref(), Some("Schedule"));
+    }
 
     fn app_json() -> Value {
         serde_json::json!({

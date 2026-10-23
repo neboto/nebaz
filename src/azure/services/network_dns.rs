@@ -508,8 +508,27 @@ impl DnsZoneRow {
     }
 }
 
+/// `1 record set` / `12 record sets`, shared with private DNS zones.
+pub(crate) fn record_sets_label(n: i64) -> String {
+    if n == 1 {
+        "1 record set".to_string()
+    } else {
+        format!("{n} record sets")
+    }
+}
+
 impl Resource for DnsZoneRow {
     arm_row!("DNS Zone");
+    /// How many record sets, and `private` for a legacy private zone.
+    fn list_summary(&self) -> Option<String> {
+        crate::azure::resource::summary_of([
+            self.record_sets.map(record_sets_label),
+            self.zone_type
+                .as_deref()
+                .filter(|t| t.eq_ignore_ascii_case("private"))
+                .map(|_| "private".to_string()),
+        ])
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }
@@ -725,6 +744,12 @@ impl DnsResolverRow {
 
 impl Resource for DnsResolverRow {
     arm_row!("DNS Resolver");
+    /// The VNet it serves (its state is the state column already).
+    fn list_summary(&self) -> Option<String> {
+        self.vnet_id
+            .as_deref()
+            .map(|id| format!("vnet {}", crate::azure::resource::name_of_id(id)))
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }
@@ -1316,6 +1341,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(zone.location(), Some("global"));
+        assert_eq!(zone.list_summary().as_deref(), Some("4 record sets"));
         assert_eq!(zone.state(), ResourceState::stateless());
         assert!(zone.details().iter().any(|(k, v)| k == "Record sets" && v == "4 of 10000"));
         assert!(zone.cli_command().unwrap().starts_with("az network dns zone show --ids "));
@@ -1363,6 +1389,7 @@ mod tests {
         .unwrap();
         assert_eq!(row.state(), ResourceState::Available);
         assert_eq!(row.state_label(), "connected");
+        assert_eq!(row.list_summary().as_deref(), Some("vnet vnet-hub"));
         assert!(row.search_text().contains("vnet-hub"));
         assert_eq!(row.cli_command().unwrap(), format!("az dns-resolver show --ids {}", row.base.id));
         let topo = Lazy::Loaded(topology());

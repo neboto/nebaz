@@ -209,6 +209,10 @@ impl VmRow {
 
 impl Resource for VmRow {
     arm_row!("Virtual Machine");
+    /// The VM size: what the row costs and can do.
+    fn list_summary(&self) -> Option<String> {
+        self.vm_size.clone()
+    }
     fn state(&self) -> ResourceState {
         self.ladder().0
     }
@@ -890,6 +894,18 @@ mod tests {
                 ]}
             }
         })
+    }
+
+    #[test]
+    fn a_vm_lists_its_size_and_falls_back_to_the_id_without_one() {
+        let row = VmRow::from_json(&vm_json(), None).unwrap();
+        assert_eq!(row.list_summary().as_deref(), Some("Standard_D2s_v5"));
+        assert_eq!(row.list_cell(), "Standard_D2s_v5");
+        let mut bare = vm_json();
+        bare["properties"]["hardwareProfile"] = serde_json::json!({});
+        let row = VmRow::from_json(&bare, None).unwrap();
+        assert_eq!(row.list_summary(), None);
+        assert_eq!(row.list_cell(), row.id(), "no summary: the id column as before");
     }
 
     #[test]

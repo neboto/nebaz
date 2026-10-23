@@ -126,6 +126,10 @@ impl VaultRow {
 
 impl Resource for VaultRow {
     arm_row!("Key Vault");
+    /// The SKU (`standard` / `premium`: premium has HSM-backed keys).
+    fn list_summary(&self) -> Option<String> {
+        self.sku.clone()
+    }
     fn state(&self) -> ResourceState {
         state_ladder(self.base.provisioning_state.as_deref(), None).0
     }
