@@ -1,4 +1,4 @@
-// ported from neboto-tui src/search/fuzzy.rs @ d483900
+// ported from neboto-tui src/search/fuzzy.rs @ d483900 (+ df76264, fd548fe)
 use crate::azure::resource::Resource;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher as FuzzyMatcherTrait;
@@ -25,12 +25,8 @@ impl FuzzyMatcher {
             return (0..resources.len()).map(|i| (i, 0)).collect();
         }
 
-        // Sanitize query: remove trailing backslashes that break fuzzy matching
-        let sanitized_query = query.trim_end_matches('\\');
-
-        // Minimum score scales with query length to cut off scattered character
-        // coincidences (e.g. "1a" matching "us-east-1b ... available" via CIDR + state).
-        let min_score = sanitized_query.len() as i64 * 10;
+        let sanitized_query = Self::sanitize(query);
+        let min_score = Self::min_score(sanitized_query);
 
         let mut matches: Vec<(usize, i64)> = resources
             .iter()
@@ -48,6 +44,65 @@ impl FuzzyMatcher {
         matches.sort_by_key(|m| std::cmp::Reverse(m.1));
 
         matches
+    }
+
+    /// Filter plain strings (picker modals) with the same fuzzy scoring and
+    /// threshold as `filter_resources`. Returns sorted (index, score) pairs;
+    /// ties keep input order. An exact match ignores case, so typing `vm` or
+    /// `PROD` floats that row first. (Every nebaz picker filters several
+    /// fields today; this stays so the file keeps neboto's shape.)
+    #[allow(dead_code)]
+    pub fn filter_strings<S: AsRef<str>>(&self, query: &str, items: &[S]) -> Vec<(usize, i64)> {
+        self.filter_fields(query, items, |item| vec![item.as_ref()])
+    }
+
+    /// `filter_strings` over several fields per item (a location's name *and*
+    /// display name): an item scores its best field, and an exact
+    /// (case-insensitive) match on any field ranks first.
+    pub fn filter_fields<'a, T, F>(&self, query: &str, items: &'a [T], fields: F) -> Vec<(usize, i64)>
+    where
+        F: Fn(&'a T) -> Vec<&'a str>,
+    {
+        let q = Self::sanitize(query);
+        if q.is_empty() {
+            return (0..items.len()).map(|i| (i, 0)).collect();
+        }
+        let min_score = Self::min_score(q);
+
+        let mut matches: Vec<(usize, i64)> = items
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, item)| {
+                let fields = fields(item);
+                if fields.iter().any(|f| f.eq_ignore_ascii_case(q)) {
+                    return Some((idx, i64::MAX));
+                }
+                fields
+                    .iter()
+                    .filter_map(|f| self.matcher.fuzzy_match(f, q))
+                    .max()
+                    .filter(|&score| score >= min_score)
+                    .map(|score| (idx, score))
+            })
+            .collect();
+
+        matches.sort_by_key(|m| std::cmp::Reverse(m.1));
+        matches
+    }
+
+    /// Remove trailing backslashes that break fuzzy matching, and surrounding
+    /// whitespace (a trailing space would otherwise have to match a literal
+    /// space in the candidate).
+    fn sanitize(query: &str) -> &str {
+        query.trim().trim_end_matches('\\').trim_end()
+    }
+
+    /// Minimum score scales with query length (in characters, not bytes, so a
+    /// non-ASCII query isn't held to a higher bar) to cut off scattered
+    /// character coincidences (e.g. "1a" matching "us-east-1b ... available"
+    /// via CIDR + state).
+    fn min_score(sanitized_query: &str) -> i64 {
+        sanitized_query.chars().count() as i64 * 10
     }
 }
 
@@ -165,5 +220,60 @@ mod tests {
         assert_eq!(matches_without.len(), matches_with.len());
         assert_eq!(matches_without.len(), 1);
         assert_eq!(matches_without[0].0, matches_with[0].0);
+    }
+
+    #[test]
+    fn filter_strings_ranks_fuzzy_matches_and_floats_exact_first() {
+        let matcher = FuzzyMatcher::new();
+        let items = vec![
+            "prod-admin".to_string(),
+            "staging".to_string(),
+            "prod".to_string(),
+            "dev-sandbox".to_string(),
+        ];
+
+        let all = matcher.filter_strings("", &items);
+        assert_eq!(all.iter().map(|m| m.0).collect::<Vec<_>>(), vec![0, 1, 2, 3]);
+
+        // Exact name beats the longer fuzzy hit.
+        let exact = matcher.filter_strings("PROD", &items);
+        assert_eq!(exact.first().map(|m| m.0), Some(2), "{exact:?}");
+
+        // Non-contiguous characters match (a plain substring filter would not).
+        let fuzzy = matcher.filter_strings("pdadm", &items);
+        assert_eq!(fuzzy.iter().map(|m| m.0).collect::<Vec<_>>(), vec![0]);
+
+        assert!(matcher.filter_strings("zzz", &items).is_empty());
+    }
+
+    #[test]
+    fn a_trailing_space_keeps_the_fuzzy_matches() {
+        let matcher = FuzzyMatcher::new();
+        let items = vec!["prod-admin".to_string(), "prod".to_string()];
+        let spaced = matcher.filter_strings("prod ", &items);
+        assert_eq!(spaced.iter().map(|m| m.0).collect::<Vec<_>>(), vec![1, 0]);
+    }
+
+    #[test]
+    fn the_threshold_counts_characters_not_bytes() {
+        // "ō" is two bytes: a byte-length threshold asked a two-character
+        // query for 40 points, and this match scores 26.
+        let matcher = FuzzyMatcher::new();
+        let items = vec!["tōkyō-prod".to_string()];
+        assert_eq!(matcher.filter_strings("ōō", &items).len(), 1);
+    }
+
+    #[test]
+    fn filter_fields_scores_the_best_field_and_exact_on_any() {
+        let matcher = FuzzyMatcher::new();
+        let items = vec![("eastus", "East US"), ("westeurope", "West Europe")];
+        let fields = |r: &(&'static str, &'static str)| vec![r.0, r.1];
+
+        let by_display = matcher.filter_fields("w eur", &items, fields);
+        assert_eq!(by_display.iter().map(|m| m.0).collect::<Vec<_>>(), vec![1]);
+        let by_name = matcher.filter_fields("wsteu", &items, fields);
+        assert_eq!(by_name.first().map(|m| m.0), Some(1), "{by_name:?}");
+        let exact = matcher.filter_fields("EAST US", &items, fields);
+        assert_eq!(exact.first(), Some(&(0, i64::MAX)));
     }
 }
