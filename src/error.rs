@@ -75,7 +75,14 @@ impl From<azure_core::Error> for Error {
                         .to_string(),
                 )
             }
-            ErrorKind::HttpResponse { status, error_code, .. } => {
+            ErrorKind::HttpResponse { status, error_code, raw_response } => {
+                // The service's own words first: ARM and Graph both send
+                // `{"error": {"code", "message"}}`, a few older resource
+                // providers a bare `{"code", "message"}`, which the SDK
+                // leaves as the raw body text.
+                if let Some((code, message)) = raw_response.as_deref().and_then(|r| service_error(r.body())) {
+                    return Error::Azure(format!("{} {}: {}", status, code, message));
+                }
                 let code = error_code.as_deref().unwrap_or("");
                 let msg = e.to_string();
                 if code.is_empty() || msg.contains(code) {
@@ -88,6 +95,17 @@ impl From<azure_core::Error> for Error {
             _ => Error::Azure(cause_chain(&e)),
         }
     }
+}
+
+/// The `code` and `message` of an ARM or Graph error body, under `error`
+/// or at the top level; `None` when the body says neither (an HTML proxy
+/// page, an empty 404), so the caller falls back to the SDK's text.
+fn service_error(body: &[u8]) -> Option<(String, String)> {
+    let v: serde_json::Value = serde_json::from_slice(body).ok()?;
+    let detail = v.get("error").filter(|e| e.is_object()).unwrap_or(&v);
+    let text = |k: &str| detail.get(k).and_then(|x| x.as_str()).map(str::trim).filter(|s| !s.is_empty());
+    let message = text("message")?;
+    Some((text("code").unwrap_or("Error").to_string(), message.to_string()))
 }
 
 /// An error and every cause beneath it, outermost first: the retry policy
@@ -153,5 +171,64 @@ mod tests {
         let e: Error = throttled.into();
         assert!(e.to_string().contains("throttling"), "{}", e);
         assert!(e.auth_error().is_none());
+    }
+
+    /// What the pipeline hands back for a non-2xx response with `body`:
+    /// the SDK's own `check_success`, as `ArmClient::send_json` meets it.
+    async fn http_error(status: azure_core::http::StatusCode, body: &'static str) -> Error {
+        let response = azure_core::http::AsyncRawResponse::from_bytes(
+            status,
+            azure_core::http::headers::Headers::new(),
+            azure_core::Bytes::from_static(body.as_bytes()),
+        );
+        azure_core::http::check_success(response, None).await.unwrap_err().into()
+    }
+
+    #[tokio::test]
+    async fn a_4xx_carries_the_services_code_and_message() {
+        use azure_core::http::StatusCode;
+        // ARM: a list the identity may not read.
+        let arm = http_error(
+            StatusCode::Forbidden,
+            r#"{"error":{"code":"AuthorizationFailed","message":"The client 'u@example.test' with object id '1' does not have authorization to perform action 'Microsoft.KeyVault/vaults/read' over scope '/subscriptions/0000'."}}"#,
+        )
+        .await;
+        assert_eq!(
+            arm.to_string(),
+            "Azure error: 403 AuthorizationFailed: The client 'u@example.test' with object id '1' does not have authorization to perform action 'Microsoft.KeyVault/vaults/read' over scope '/subscriptions/0000'."
+        );
+        // Graph: same envelope, plus innerError the line leaves out.
+        let graph = http_error(
+            StatusCode::Forbidden,
+            r#"{"error":{"code":"Authorization_RequestDenied","message":"Insufficient privileges to complete the operation.","innerError":{"date":"2026-10-23T00:00:00","request-id":"r"}}}"#,
+        )
+        .await;
+        assert_eq!(
+            graph.to_string(),
+            "Azure error: 403 Authorization_RequestDenied: Insufficient privileges to complete the operation."
+        );
+        // An older resource provider's bare envelope (Microsoft.Insights).
+        let bare = http_error(
+            StatusCode::BadRequest,
+            r#"{"code":"BadRequest","message":"Failed to find metric configuration for provider: Microsoft.Web"}"#,
+        )
+        .await;
+        assert_eq!(
+            bare.to_string(),
+            "Azure error: 400 BadRequest: Failed to find metric configuration for provider: Microsoft.Web"
+        );
+        // A not-found child resource.
+        let missing = http_error(
+            StatusCode::NotFound,
+            r#"{"error":{"code":"ResourceNotFound","message":"The Resource 'Microsoft.Sql/servers/sql-1' under resource group 'rg' was not found."}}"#,
+        )
+        .await;
+        assert!(missing.to_string().starts_with("Azure error: 404 ResourceNotFound: The Resource"), "{}", missing);
+        // No JSON at all (a proxy's HTML page): still the status and text.
+        let html = http_error(StatusCode::Forbidden, "<html>blocked by proxy</html>").await;
+        assert!(html.to_string().contains("403") && html.to_string().contains("blocked by proxy"), "{}", html);
+        for e in [arm, graph, bare, missing, html] {
+            assert!(e.auth_error().is_none(), "a 4xx is the service's answer, not a login problem: {}", e);
+        }
     }
 }
