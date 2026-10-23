@@ -606,13 +606,13 @@ fn api_permission_rows(r: &AppRegistrationRow, by_app_id: &LazyMap<Value>) -> Ve
         return vec![(String::new(), "No API permissions requested".into())];
     }
     let mut lines = Vec::new();
-    for res in required {
-        let app_id = json::text(&res, "/resourceAppId");
+    for res in &required {
+        let app_id = json::text(res, "/resourceAppId");
         let api = loaded(by_app_id, &app_id);
         let name = api.and_then(|a| json::str_at(a, "/displayName")).unwrap_or_else(|| app_id.clone());
         lines.push((String::new(), String::new()));
         lines.push((name, graph::row_alias(DirectoryKind::ServicePrincipal, &app_id)));
-        for access in json::arr(&res, "/resourceAccess") {
+        for access in json::arr(res, "/resourceAccess") {
             let id = json::text(&access, "/id");
             let (kind, ptr) = match json::str_at(&access, "/type").as_deref() {
                 Some("Role") => ("application", "/appRoles"),
@@ -622,6 +622,16 @@ fn api_permission_rows(r: &AppRegistrationRow, by_app_id: &LazyMap<Value>) -> Ve
         }
     }
     lines.push((String::new(), String::new()));
+    // An API with no service principal here (404) is normal: its ids stay
+    // ids. Any other failure means the names exist but could not be read.
+    let failed = required.iter().find_map(|res| match by_app_id.get(&json::text(res, "/resourceAppId").to_lowercase()) {
+        Some(Lazy::Error(e)) if !graph::is_not_found(e) => Some(e.clone()),
+        _ => None,
+    });
+    if let Some(e) = failed {
+        let e = if graph::is_denied(&e) { graph::DIRECTORY_READ_DENIED.to_string() } else { e };
+        lines.push((String::new(), format!("· ⚠ permission names unavailable, ids shown: {}", e)));
+    }
     lines.push((String::new(), "· requested, not necessarily consented: grants are on the service principal".into()));
     lines
 }
@@ -1087,6 +1097,15 @@ mod tests {
         assert_eq!(app.resource_app_ids(), ["00000003-0000-0000-c000-000000000000"]);
         let lines = app_registration_section_lines(&app, AppRegistrationDetailSection::ApiPermissions, &empty_lazy(&children, &objects, &by_app_id), NOW);
         assert!(lines.iter().any(|(k, v)| k == "  delegated" && v == "e1fe6dd8-ba31-4d61-89e7-88639da4683d"), "ids until the API loads");
+        assert!(!lines.iter().any(|(_, v)| v.contains("⚠")), "loading is not a failure");
+        let mut failed: LazyMap<Value> = LazyMap::default();
+        failed.apply("00000003-0000-0000-c000-000000000000".into(), Err("Azure error: 500 InternalServerError: boom".into()));
+        let lines = app_registration_section_lines(&app, AppRegistrationDetailSection::ApiPermissions, &empty_lazy(&children, &objects, &failed), NOW);
+        assert!(lines.iter().any(|(_, v)| v == "· ⚠ permission names unavailable, ids shown: Azure error: 500 InternalServerError: boom"), "{lines:?}");
+        let mut absent: LazyMap<Value> = LazyMap::default();
+        absent.apply("00000003-0000-0000-c000-000000000000".into(), Err("Azure error: 404 Request_ResourceNotFound: gone".into()));
+        let lines = app_registration_section_lines(&app, AppRegistrationDetailSection::ApiPermissions, &empty_lazy(&children, &objects, &absent), NOW);
+        assert!(!lines.iter().any(|(_, v)| v.contains("⚠")), "an API with no service principal here is not a failure: {lines:?}");
         by_app_id.apply(
             "00000003-0000-0000-c000-000000000000".into(),
             Ok(serde_json::json!({

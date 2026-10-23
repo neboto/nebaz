@@ -152,7 +152,7 @@ cargo run -- -s pp     # Power Platform enterprise policies; a delegated subnet'
 cargo run -- -s aca    # container apps (2 Ingress); -s acaenv for environments (2 Network), -s acajob for jobs
 cargo test             # all tests, including the read-only guard
 cargo test --test readonly_guard   # just the guard (see "Why read-only")
-cargo clippy           # lint
+cargo clippy --all-targets -- -D warnings   # lint; CI fails on any warning
 scripts/smoke.sh       # offline pty run with a fake az (needs python3)
 ```
 
@@ -228,6 +228,13 @@ The promise is held at three layers, not by convention
 Key Vault is the case people ask about: nebaz lists secret and key
 **names** through ARM's control-plane actions, which never return a value,
 and no vault data-plane call exists in the codebase (the guard checks).
+
+**Check it yourself.** Every request nebaz makes, to ARM and to Microsoft
+Graph, carries `nebaz azsdk-rust-nebaz/<version>` at the front of its
+`User-Agent`. With Microsoft Graph activity logs sent to a Log Analytics
+workspace, `MicrosoftGraphActivityLogs | where UserAgent startswith "nebaz "`
+lists its directory reads, every one a `GET`. ARM's Activity Log records
+writes only, so nebaz should never appear in it at all.
 
 Where a change is what you want, **`C`** copies the `az … show` command for
 the selected resource; edit the verb and run it yourself.

@@ -216,7 +216,7 @@ pub fn access_rows(
             }
             lines.extend(condition_line(a));
         }
-        footer(&mut lines, &names);
+        footer(&mut lines, &names, roles);
         lines.extend(names_footer(items, principals).into_iter().map(|l| (String::new(), l)));
         lines.push((
             "Read command".into(),
@@ -254,7 +254,7 @@ pub fn can_do_rows(
         }
         lines.push((String::new(), String::new()));
         lines.push((String::new(), "· direct assignments only; group memberships are not followed".into()));
-        footer(&mut lines, &names);
+        footer(&mut lines, &names, roles);
         if let Some(sub) = subscription_of(identity_id) {
             lines.push((
                 "Read command".into(),
@@ -269,10 +269,14 @@ pub fn can_do_rows(
     })
 }
 
-fn footer(lines: &mut Vec<(String, String)>, names: &Option<HashMap<String, String>>) {
+/// The role-names footer: loading, or why the roles are GUIDs for good (a
+/// failed definitions list must not read as "still loading").
+fn footer(lines: &mut Vec<(String, String)>, names: &Option<HashMap<String, String>>, roles: Option<&Lazy<Vec<Value>>>) {
     lines.push((String::new(), String::new()));
-    if names.is_none() {
-        lines.push((String::new(), "· role names are loading; GUIDs until then".into()));
+    match roles {
+        Some(Lazy::Error(e)) => lines.push((String::new(), format!("· ⚠ role names unavailable, GUIDs shown: {}", e))),
+        _ if names.is_none() => lines.push((String::new(), "· role names are loading; GUIDs until then".into())),
+        _ => {}
     }
 }
 
@@ -339,6 +343,24 @@ mod tests {
         let lines = access_rows(SUB, Some(&Lazy::Loaded(items)), Some(&Lazy::Loading), &LazyMap::default());
         assert!(lines.iter().any(|(k, _)| k == READER));
         assert!(lines.iter().any(|(_, v)| v.contains("role names are loading")));
+    }
+
+    #[test]
+    fn a_failed_definitions_list_says_so_instead_of_loading_forever() {
+        let denied: Lazy<Vec<Value>> = Lazy::Error("Azure error: 403 AuthorizationFailed: no roleDefinitions/read".into());
+        let items = vec![assignment(SUB, READER, "User", "usr-1")];
+        for lines in [
+            access_rows(SUB, Some(&Lazy::Loaded(items.clone())), Some(&denied), &LazyMap::default()),
+            can_do_rows(Some("usr-1"), SUB, Some(&Lazy::Loaded(items)), Some(&denied)),
+        ] {
+            assert!(lines.iter().any(|(k, _)| k.starts_with(READER)), "GUIDs still shown: {:?}", lines);
+            assert!(
+                lines.iter().any(|(_, v)| v.contains("⚠ role names unavailable") && v.contains("AuthorizationFailed")),
+                "{:?}",
+                lines
+            );
+            assert!(!lines.iter().any(|(_, v)| v.contains("role names are loading")), "{:?}", lines);
+        }
     }
 
     #[test]

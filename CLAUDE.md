@@ -36,7 +36,7 @@ cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to std
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 NEBAZ_BLESS=1 cargo test contract   # record an addition to the headless output contract
 cargo test --test readonly_guard    # just the guard
-cargo clippy --all-targets          # CI runs this; keep it clean
+cargo clippy --all-targets -- -D warnings   # CI fails on any warning
 scripts/smoke.sh                    # offline pty run with a fake az (manual, not a CI gate)
 ```
 
@@ -204,9 +204,13 @@ verbatim where the concept is unchanged.
 - **Partial failures**: a second-phase or lazy failure sends
   `ResourceLoadWarning` and keeps streaming; `ResourceLoadError` (fatal)
   only when nothing can stream. Sending the error mid-stream clears
-  `loading` and drops every later page.
+  `loading` and drops every later page. A failed lazy or secondary fetch
+  renders as a `⚠` line with the error (`error_rows`, or a footer when the
+  failure only costs names), never as "No …" or a "loading" that never ends.
 - **Errors** (`src/error.rs`): `From<azure_core::Error>` keeps the whole
-  cause chain (`cause_chain`, `root_cause`); `AuthError::classify` only
+  cause chain (`cause_chain`, `root_cause`); a 4xx reads
+  `{status} {code}: {message}` from the ARM / Graph error body
+  (`service_error`); `AuthError::classify` only
   calls something an auth condition when the text says so (a transport
   "retry policy expired" is not a token expiry).
 - **Colors** (`src/ui/theme.rs`): the palette is runtime-selected and

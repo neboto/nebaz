@@ -113,6 +113,17 @@ forgotten bump fails in the first job rather than shipping mislabelled
 binaries. A tag with a pre-release suffix (`v0.2.0-rc.1`) is published as a
 GitHub *pre-release* and never becomes *latest*.
 
+**Release notes come from PR labels.** `--generate-notes` groups merged PRs
+by the categories in `.github/release.yml`, first match wins, so give every
+PR one label when you open it (`gh pr create --label …`): `bug`,
+`area:security`, `area:new-service`, `area:service-depth`, `area:ux`,
+`area:platform`, `documentation`, or `area:release` / `area:testing` /
+`dependencies` / `github_actions` for build work. The release PR itself and
+pure chores get `skip-changelog`. Dependabot PRs are dropped by author. An
+unlabelled PR lands under "Other changes". The workflow publishes on its
+own, so check `gh release view vX.Y.Z` once it has, and put a short
+highlights paragraph on top with `gh release edit --notes-file`.
+
 **Something failed mid-way?** The draft stays a draft with whichever assets
 made it. Fix the problem on `main`, then delete the draft and the tag and
 re-tag:
@@ -197,5 +208,5 @@ check makes every PR pass CI on top of the latest `main` before it merges.
 ## Not done yet
 
 Tracked as issues labelled `area:release`: Homebrew tap (#71), crates.io
-(#72), macOS signing (#73), musl builds (#74), CHANGELOG / release notes
-by label (#75), Windows (#68).
+(#72), macOS signing (#73), musl builds (#74), a hand-kept CHANGELOG
+(#75; the label-grouped notes above are its first half), Windows (#68).

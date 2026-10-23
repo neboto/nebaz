@@ -16,6 +16,15 @@
 //! constructor then puts no `api-version` on the URL (Graph versions in
 //! the path) and paging follows `@odata.nextLink`. The Graph paths and
 //! hosts themselves live in `src/azure/graph.rs`.
+//!
+//! **Named in the user agent.** Every request on either flavour carries
+//! `User-Agent: nebaz azsdk-rust-nebaz/<version> (…)` ([`APPLICATION_ID`]
+//! and the crate's name and version, through `azure_core`'s
+//! `UserAgentPolicy`), so its directory reads are named in the tenant's
+//! Microsoft Graph activity logs and its ARM calls in anything that
+//! records the caller's user agent (Microsoft support's request traces,
+//! a proxy). ARM's own Activity Log records writes only, so nebaz should
+//! appear there not at all.
 
 use crate::auth_scope;
 use crate::azure::auth::{CliCredential, CredentialSource};
@@ -24,7 +33,7 @@ use azure_core::credentials::TokenCredential;
 use azure_core::http::policies::auth::BearerTokenAuthorizationPolicy;
 use azure_core::http::policies::{Policy, PolicyResult};
 use azure_core::http::{
-    ClientOptions, Context, ExponentialRetryOptions, Method, Pipeline, Request, RetryOptions, Url,
+    ClientOptions, Context, ExponentialRetryOptions, Method, Pipeline, Request, RetryOptions, Url, UserAgentOptions,
 };
 use azure_core::time::Duration;
 use serde_json::Value;
@@ -161,26 +170,7 @@ impl ArmClient {
         api: Api,
     ) -> Result<ArmClient> {
         let bearer = BearerTokenAuthorizationPolicy::new(credential, [scope]);
-        // The SDK default is 8 exponential retries up to 30 s apart — over a
-        // minute before a dead endpoint shows in the status bar. A TUI wants
-        // a few short ones; ARM's 429 `Retry-After` is still honoured.
-        let options = ClientOptions {
-            retry: RetryOptions::exponential(ExponentialRetryOptions {
-                initial_delay: Duration::milliseconds(500),
-                max_retries: 3,
-                max_total_elapsed: Duration::seconds(20),
-                max_delay: Duration::seconds(4),
-            }),
-            ..Default::default()
-        };
-        let pipeline = Pipeline::new(
-            Some("nebaz"),
-            Some(env!("CARGO_PKG_VERSION")),
-            options,
-            vec![Arc::new(ReadOnlyPolicy), Arc::new(bearer)],
-            Vec::new(),
-            None,
-        );
+        let pipeline = build_pipeline(client_options(), vec![Arc::new(ReadOnlyPolicy), Arc::new(bearer)]);
         Ok(ArmClient {
             pipeline,
             endpoint,
@@ -373,6 +363,48 @@ impl ArmClient {
     }
 }
 
+/// The application id nebaz puts first in every request's `User-Agent`
+/// (ARM and Graph alike), ahead of the SDK's
+/// `azsdk-rust-nebaz/<version> (<rustc>; <os>; <arch>)` token: a tenant
+/// admin finds nebaz's calls in the Activity Log and sign-in diagnostics
+/// by it. An RFC 9110 token of at most 24 characters (the SDK panics
+/// otherwise), so no `/`: the version is in the SDK token.
+pub const APPLICATION_ID: &str = "nebaz";
+
+/// The options every pipeline shares: the user agent's application id and
+/// a TUI-sized retry policy. The SDK default is 8 exponential retries up
+/// to 30 s apart — over a minute before a dead endpoint shows in the
+/// status bar. A TUI wants a few short ones; ARM's 429 `Retry-After` is
+/// still honoured.
+fn client_options() -> ClientOptions {
+    ClientOptions {
+        retry: RetryOptions::exponential(ExponentialRetryOptions {
+            initial_delay: Duration::milliseconds(500),
+            max_retries: 3,
+            max_total_elapsed: Duration::seconds(20),
+            max_delay: Duration::seconds(4),
+        }),
+        user_agent: UserAgentOptions {
+            application_id: Some(APPLICATION_ID.to_string()),
+        },
+        ..Default::default()
+    }
+}
+
+/// The pipeline over `options`, with the crate's name and version for the
+/// SDK's `User-Agent` token and `per_call` policies (read-only, bearer)
+/// ahead of the SDK's own.
+fn build_pipeline(options: ClientOptions, per_call: Vec<Arc<dyn Policy>>) -> Pipeline {
+    Pipeline::new(
+        Some(env!("CARGO_PKG_NAME")),
+        Some(env!("CARGO_PKG_VERSION")),
+        options,
+        per_call,
+        Vec::new(),
+        None,
+    )
+}
+
 /// Split an ARM list body into its `value` array and `nextLink`.
 #[cfg(test)]
 fn split_page(body: Value) -> (Vec<Value>, Option<String>) {
@@ -534,6 +566,83 @@ mod tests {
             assert!(msg.contains("read-only") && msg.contains("refused"), "{}", msg);
             assert!(!msg.contains("reached transport"), "{}", msg);
         }
+    }
+
+    /// A canned transport: answers every request with `status` and `body`
+    /// and keeps each request's `User-Agent`.
+    #[derive(Debug)]
+    struct Canned {
+        status: azure_core::http::StatusCode,
+        body: &'static str,
+        user_agents: std::sync::Mutex<Vec<String>>,
+    }
+
+    #[async_trait::async_trait]
+    impl azure_core::http::HttpClient for Canned {
+        async fn execute_request(&self, request: &Request) -> azure_core::Result<azure_core::http::AsyncRawResponse> {
+            let ua = request.headers().get_optional_str(&azure_core::http::headers::USER_AGENT).unwrap_or("").to_string();
+            self.user_agents.lock().unwrap().push(ua);
+            Ok(azure_core::http::AsyncRawResponse::from_bytes(
+                self.status,
+                azure_core::http::headers::Headers::new(),
+                azure_core::Bytes::from_static(self.body.as_bytes()),
+            ))
+        }
+    }
+
+    /// An `api` client whose pipeline is the production one (`client_options`,
+    /// `build_pipeline`, `ReadOnlyPolicy`) over `transport`; no bearer
+    /// policy, since nothing here may mint a token.
+    fn canned_client(api: Api, endpoint: &str, transport: Arc<Canned>) -> ArmClient {
+        let mut options = client_options();
+        options.transport = Some(azure_core::http::Transport::new(transport));
+        ArmClient {
+            pipeline: build_pipeline(options, vec![Arc::new(ReadOnlyPolicy)]),
+            endpoint: parse_endpoint(endpoint).unwrap(),
+            tenant_id: "t-1".into(),
+            api,
+        }
+    }
+
+    fn canned(status: azure_core::http::StatusCode, body: &'static str) -> Arc<Canned> {
+        Arc::new(Canned { status, body, user_agents: std::sync::Mutex::new(Vec::new()) })
+    }
+
+    #[tokio::test]
+    async fn every_request_names_nebaz_in_its_user_agent() {
+        let expected = format!("nebaz azsdk-rust-nebaz/{} (", env!("CARGO_PKG_VERSION"));
+        let ok = canned(azure_core::http::StatusCode::Ok, r#"{"value": []}"#);
+        let arm = canned_client(Api::Arm, DEFAULT_ENDPOINT, ok.clone());
+        arm.get("/subscriptions/0", "2022-12-01").await.unwrap();
+        arm.list("/subscriptions/0/resourcegroups", "2021-04-01").await.unwrap();
+        let graph = canned_client(Api::Graph, "https://graph.example.test", ok.clone());
+        graph.graph_get("/v1.0/directoryObjects/abc", &[]).await.unwrap();
+        let seen = ok.user_agents.lock().unwrap().clone();
+        assert_eq!(seen.len(), 3);
+        for ua in seen {
+            assert!(ua.starts_with(&expected), "{:?} does not start with {:?}", ua, expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_denied_list_or_get_fails_with_the_services_words() {
+        let body = r#"{"error":{"code":"AuthorizationFailed","message":"The client 'u' does not have authorization to perform action 'Microsoft.Web/sites/config/read'."}}"#;
+        let denied = canned(azure_core::http::StatusCode::Forbidden, body);
+        let arm = canned_client(Api::Arm, DEFAULT_ENDPOINT, denied.clone());
+        let want = "Azure error: 403 AuthorizationFailed: The client 'u' does not have authorization to perform action 'Microsoft.Web/sites/config/read'.";
+        // A list load (the streaming pages) and a lazy section's GET.
+        let err = arm.list_pages("/subscriptions/0/providers/Microsoft.Web/sites", "2023-12-01", &[], |_| {}).await.unwrap_err();
+        assert_eq!(err.to_string(), want);
+        let err = arm.get("/subscriptions/0/x/config/web", "2023-12-01").await.unwrap_err();
+        assert_eq!(err.to_string(), want);
+        assert_eq!(denied.user_agents.lock().unwrap().len(), 2, "a 403 is not retried");
+        let graph_body = r#"{"error":{"code":"Authorization_RequestDenied","message":"Insufficient privileges to complete the operation."}}"#;
+        let graph = canned_client(Api::Graph, "https://graph.example.test", canned(azure_core::http::StatusCode::Forbidden, graph_body));
+        let err = graph.graph_list_pages_while("/v1.0/applications", &[], &[], |_| true).await.unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Azure error: 403 Authorization_RequestDenied: Insufficient privileges to complete the operation."
+        );
     }
 
     #[test]

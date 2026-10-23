@@ -47,5 +47,5 @@ jobs:
       - name: Build and run tests (unit tests + read-only guard)
         run: cargo test --locked
 
-      - name: Clippy
-        run: cargo clippy --locked --all-targets
+      - name: Clippy (warnings fail the build)
+        run: cargo clippy --locked --all-targets -- -D warnings

@@ -1,0 +1,49 @@
+# Code scanning (CodeQL), advanced setup — replaces GitHub's default setup so
+# the triggers and languages are in the repo. Ported from neboto-tui's
+# codeql.yml, with one difference: neboto runs Rust weekly only because its
+# extractor walks a ~470-crate SDK tree (20+ min); nebaz has no SDK crates,
+# so Rust runs on every pull request too, alongside the workflow files
+# (`actions`). The push to main is the baseline a PR run diffs against; the
+# weekly run catches new queries against unchanged code.
+#
+# Same supply-chain rules as ci.yml / release.yml: every `uses:` pinned to a
+# full commit SHA, version in the trailing comment, Dependabot bumps them.
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * 1" # Mondays 06:23 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, rust]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: /language:${{ matrix.language }}
