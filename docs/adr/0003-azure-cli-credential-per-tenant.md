@@ -53,3 +53,7 @@ return a token; the documented one is used.
   exits listing the known ones.
 - The first release depends on the Azure CLI being installed; the install
   docs say so.
+- Amended by ADR 0004: the same credential also mints Microsoft Graph
+  tokens (scope derived from `endpoint_url`), through a second per-tenant
+  pipeline with the same `ReadOnlyPolicy`. ARM remains the only host for
+  resources; Graph is read for directory objects only.

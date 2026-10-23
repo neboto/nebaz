@@ -19,7 +19,7 @@ Azure sibling of neboto (`neboto/neboto-tui`, the AWS one) and was built by
 | What a service actually renders today | the service file itself; it is the reference |
 | The ARM actions per service, the one role to assign | [`PERMISSIONS.md`](PERMISSIONS.md) |
 | The project's own vocabulary (subscription, location, ARM id, Lazy, LazyStore, epoch, state ladder, Related section, guard…) | [`CONTEXT.md`](CONTEXT.md) |
-| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth |
+| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph |
 | What `v0.1.0` is and is not | [`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md) |
 | What is not built yet, and what is parked | [GitHub issues](https://github.com/neboto/nebaz/issues) (`gh issue list`); the parity roadmap is #55 |
 | What came from neboto and what changed | [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md) |
@@ -164,6 +164,10 @@ verbatim where the concept is unchanged.
   A data-plane endpoint the ARM body returns (a SQL FQDN, a registry's
   login server, a Cosmos document endpoint) is shown as text and never
   requested; the guard forbids the host only as a literal in `src/`.
+- **Microsoft Graph** (ADR 0004): directory reads only, GET only, through
+  the same client flavoured for Graph; every Graph path and host lives in
+  `src/azure/graph.rs` (the guard allows the host nowhere else). A 403 is
+  a section warning; never `getByIds` (POST), never `$select=key`.
 - **State**: never a per-type state table. `state_ladder(provisioning,
   runtime)` and the native word lowercased as the label
   (`native_state_label`).

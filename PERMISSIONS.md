@@ -1,15 +1,17 @@
 # Azure permissions
 
 nebaz is **read-only**: every request it sends is an HTTP `GET` to Azure
-Resource Manager (ARM), nothing else. Three layers hold that promise:
+Resource Manager (ARM), or to Microsoft Graph for directory objects
+(ADR 0004), nothing else. Three layers hold that promise:
 
 1. **Runtime** — the one request constructor in `src/azure/arm.rs` only
    builds `GET`s, and the pipeline's `ReadOnlyPolicy` refuses any other
    method before it leaves the process.
 2. **Guard test** — `tests/readonly_guard.rs` fails `cargo test` (and so
    CI) if the source gains another request builder, an HTTP client crate,
-   a data-plane host, a mutating `az` command, or a non-read action in this
-   file.
+   a data-plane host, a Graph host outside `src/azure/graph.rs`, Graph's
+   `getByIds` (a `POST`) or a `key` field selection, a mutating `az`
+   command, or a non-read action in this file.
 3. **RBAC** — the role below is a pure `*/read` footprint, so the
    subscription itself cannot be changed through nebaz even if the first
    two layers failed.
@@ -29,6 +31,26 @@ list comes from `az account list`); their lists fail with an authorisation
 error and nothing else.
 
 To build a narrower custom role, grant exactly the actions below.
+
+## Directory read (Microsoft Graph)
+
+Principal names in Access (and, with issue #78, service principals and app
+registrations) come from Microsoft Graph `GET`s made as the same `az login`
+identity. They need **directory read** in the subscription's tenant, which
+every member user has by default; no Graph permission is granted to
+anything and no admin consent is involved (the Azure CLI's own token is
+used). Guests, and tenants that restrict members' directory access, get a
+`403`: the section says "directory read not allowed for this account" and
+shows object ids, and nothing else is affected.
+
+The Graph calls (all `GET`, all under `/v1.0`):
+
+- `directoryObjects/{id}`: one per principal id in an Access section,
+  cached for the session, at most 50 per section.
+
+Never sent: `directoryObjects/getByIds` (a `POST`), `addPassword` /
+`addKey` (the only calls that return a secret value), and any `$select`
+naming a certificate's `key`.
 
 ## Per-service actions
 
@@ -68,9 +90,9 @@ each one backs are in the catalog table
   they return names and attributes only. Certificates are not listed.
 - **Access** (every type, and an identity's Can do):
   `Microsoft.Authorization/roleAssignments/read`,
-  `Microsoft.Authorization/roleDefinitions/read`. Principal names are not
-  resolved: that would take Microsoft Graph, a separate permission, and
-  `graph.microsoft.com` is on the guard's list.
+  `Microsoft.Authorization/roleDefinitions/read`. Principal names come
+  from Microsoft Graph (directory read, above); without it a principal is
+  its type and object id.
 - **Activity** (every type): `Microsoft.Insights/eventtypes/values/read`.
   Only named fields are selected; the caller's token claims and request
   bodies are never fetched.
@@ -142,7 +164,8 @@ nebaz runs two `az` commands itself, both reads of the CLI's own state:
 - `az account list` — the subscription picker (all tenants the CLI is
   logged in to);
 - `az account get-access-token --scope … --tenant …` — run by
-  `azure_identity` to mint the ARM token for the current tenant.
+  `azure_identity` to mint the ARM token (and, for directory reads, the
+  Graph token) for the current tenant.
 
 `C` copies an `az … show` / `az … list` command to the clipboard for you to
 run; nebaz never executes it. `az keyvault secret show` and `key show` are
