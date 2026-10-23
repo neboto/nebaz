@@ -71,6 +71,14 @@ pub trait Resource: Send + Sync + Debug {
     /// Unique identifier — the ARM resource id wherever one exists.
     fn id(&self) -> &str;
 
+    /// Whether a jump or selection target names this row: its id, case
+    /// insensitively (ARM ids vary in case between endpoints). A directory
+    /// row (no ARM id) also answers to its app-id alias, so a link that
+    /// only knows the app id can land on it.
+    fn matches_id(&self, id: &str) -> bool {
+        self.id().eq_ignore_ascii_case(id)
+    }
+
     /// Display name
     fn name(&self) -> &str;
 

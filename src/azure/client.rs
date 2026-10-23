@@ -281,7 +281,7 @@ impl AzureClients {
             ServiceType::Storage => Arc::new(StorageService::new(scope)),
             ServiceType::Network => Arc::new(NetworkService::new(scope)),
             ServiceType::KeyVault => Arc::new(KeyVaultService::new(scope)),
-            ServiceType::Identity => Arc::new(IdentityService::new(scope)),
+            ServiceType::Identity => Arc::new(IdentityService::new(scope).with_graph(self.current_graph())),
             ServiceType::Aks => Arc::new(AksService::new(scope)),
             ServiceType::ContainerRegistry => Arc::new(ContainerRegistryService::new(scope)),
             ServiceType::AppService => Arc::new(AppServiceService::new(scope)),
@@ -392,6 +392,48 @@ impl AzureClients {
         let client = Arc::new(ArmClient::new_graph(self.source, tenant_id, graph)?);
         map.insert(tenant_id.to_string(), client.clone());
         Ok(client)
+    }
+
+    /// The current subscription's tenant's Graph pipeline, or why not.
+    pub fn current_graph(&self) -> std::result::Result<Arc<ArmClient>, String> {
+        match self.current_entry() {
+            Some(entry) => self.graph_for_tenant(&entry.tenant_id).map_err(|e| e.to_string()),
+            None => Err(self.auth_error.clone().unwrap_or(AuthError::NotLoggedIn).status_line()),
+        }
+    }
+
+    /// `GET {graph path}` in the current tenant, as a future the lazy
+    /// store can own (an API's service principal by app id).
+    pub fn graph_get_fetch(
+        &self,
+        path: Option<String>,
+    ) -> impl Future<Output = std::result::Result<serde_json::Value, String>> + Send + 'static {
+        let graph = self.current_graph();
+        async move {
+            let path = path.ok_or_else(|| "not a directory path".to_string())?;
+            graph?.graph_get(&path, &[]).await.map_err(|e| e.to_string())
+        }
+    }
+
+    /// `GET {graph path}` as a whole collection in the current tenant (a
+    /// directory row's owners, grants, federated credentials).
+    pub fn graph_list_fetch(
+        &self,
+        path: Option<String>,
+    ) -> impl Future<Output = std::result::Result<Vec<serde_json::Value>, String>> + Send + 'static {
+        let graph = self.current_graph();
+        async move {
+            let path = path.ok_or_else(|| "not a directory path".to_string())?;
+            let mut all = Vec::new();
+            graph?
+                .graph_list_pages_while(&path, &[], &[], |page| {
+                    all.extend(page);
+                    true
+                })
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok(all)
+        }
     }
 
     /// The Graph pipeline for the tenant an ARM id's subscription belongs

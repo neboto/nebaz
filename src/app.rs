@@ -37,6 +37,10 @@ use crate::azure::services::access::{
     access_rows, at_scope_filter, principal_filter, principal_ids, role_assignments_path, role_definitions_path,
     role_definitions_scope, ACCESS_API_VERSION, ACCESS_LABEL,
 };
+use crate::azure::services::directory::{
+    app_registration_section_lines, child_key, followup_object_ids, service_principal_section_lines,
+    AppRegistrationDetailSection, AppRegistrationRow, DirectoryLazy, ServicePrincipalDetailSection, ServicePrincipalRow,
+};
 use crate::azure::services::identity::{
     federated_credentials_path, identity_section_lines, IdentityDetailSection, IdentityRow, IDENTITY_API_VERSION,
 };
@@ -918,7 +922,7 @@ impl App {
         match self
             .filtered_resources
             .iter()
-            .position(|&i| self.resources[i].id().eq_ignore_ascii_case(id))
+            .position(|&i| self.resources[i].matches_id(id))
         {
             Some(pos) => {
                 self.select(Some(pos));
@@ -930,7 +934,7 @@ impl App {
 
     /// Whether any loaded row (visible or filtered out) has this id.
     fn has_resource_id(&self, id: &str) -> bool {
-        self.resources.iter().any(|r| r.id().eq_ignore_ascii_case(id))
+        self.resources.iter().any(|r| r.matches_id(id))
     }
 
     // ── Jumps ───────────────────────────────────────────────────────────
@@ -994,7 +998,7 @@ impl App {
             self.toast("Location filter cleared to reach the row");
             self.restore_selection_by_id(&id);
         }
-        if self.selected_index.is_some() && self.get_selected_resource_id().is_some_and(|s| s.eq_ignore_ascii_case(&id)) {
+        if self.selected_index.is_some() && self.get_selected_resource().is_some_and(|r| r.matches_id(&id)) {
             self.pending_jump = None;
             if focus {
                 self.details_focused = true;
@@ -1523,6 +1527,97 @@ impl App {
         };
         let fut = self.azure_clients.list_fetch(&role_definitions_path(&key), ACCESS_API_VERSION);
         self.trigger_lazy(|s| &mut s.role_definitions, key, event_tx, move || fut);
+    }
+
+    // ── Directory rows (Microsoft Graph, ADR 0004) ──────────────────────
+
+    /// One child list of the selected directory row
+    /// (`/v1.0/{collection}/{id}/{child}`), keyed by `{row id}/{child}`.
+    /// Graph fetches never touch the app-wide auth line.
+    fn trigger_directory_child(&mut self, child: &'static str, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(id) = self.get_selected_resource_id().filter(|id| crate::azure::graph::is_row_id(id)) else {
+            return;
+        };
+        let key = child_key(&id, child);
+        let fut = self.azure_clients.graph_list_fetch(crate::azure::graph::object_path(&id, Some(child)));
+        self.trigger_lazy_with(|s| &mut s.directory_children, key, event_tx, move || fut, false);
+    }
+
+    pub fn trigger_directory_owners(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_directory_child("owners", event_tx);
+    }
+
+    pub fn trigger_app_federated_credentials(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_directory_child("federatedIdentityCredentials", event_tx);
+    }
+
+    pub fn trigger_sp_app_role_assignments(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_directory_child("appRoleAssignments", event_tx);
+        app.trigger_directory_followups(event_tx);
+    }
+
+    pub fn trigger_sp_oauth2_grants(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_directory_child("oauth2PermissionGrants", event_tx);
+        app.trigger_directory_followups(event_tx);
+    }
+
+    /// An app registration's API permissions: each API's service principal
+    /// by app id, so the permission ids read as names.
+    pub fn trigger_app_api_permissions(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(app_ids) = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<AppRegistrationRow>())
+            .map(|r| r.resource_app_ids())
+        else {
+            return;
+        };
+        for app_id in app_ids {
+            let fut = app
+                .azure_clients
+                .graph_get_fetch(crate::azure::graph::service_principal_by_app_id_path(&app_id));
+            app.trigger_lazy_with(|s| &mut s.sp_by_app_id, app_id, event_tx, move || fut, false);
+        }
+    }
+
+    /// A service principal's Azure roles: its assignments across the
+    /// current subscription (the Can do lens), and the role names.
+    pub fn trigger_sp_azure_roles(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some((id, oid)) = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<ServicePrincipalRow>())
+            .map(|r| (r.base.id.clone(), r.base.object_id.clone()))
+        else {
+            return;
+        };
+        let sub = app.subscription_key();
+        if sub.is_empty() {
+            return;
+        }
+        let scope = format!("/subscriptions/{}", sub);
+        let fut = app
+            .azure_clients
+            .list_fetch_query(&role_assignments_path(&scope), ACCESS_API_VERSION, principal_filter(&oid));
+        app.trigger_lazy(|s| &mut s.identity_role_assignments, id, event_tx, move || fut);
+        let fut = app.azure_clients.list_fetch(&role_definitions_path(&scope), ACCESS_API_VERSION);
+        app.trigger_lazy(|s| &mut s.role_definitions, scope, event_tx, move || fut);
+    }
+
+    /// Name what a selected service principal's loaded sections point at
+    /// (an API's service principal, a consenting user): one Graph GET per
+    /// object id into the shared principals map, bounded.
+    fn trigger_directory_followups(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(id) = self.get_selected_resource_id().filter(|id| crate::azure::graph::is_row_id(id)) else {
+            return;
+        };
+        for oid in followup_object_ids(&id, &self.lazy.directory_children) {
+            if self.lazy.principals.contains(&oid) {
+                continue;
+            }
+            let fut = self
+                .azure_clients
+                .graph_get_fetch(crate::azure::graph::directory_object_path(&oid));
+            self.trigger_lazy_with(|s| &mut s.principals, oid, event_tx, move || fut, false);
+        }
     }
 
     /// On-enter hook for an identity's Federated credentials: one ARM list
@@ -2076,6 +2171,24 @@ impl App {
                 self.lazy.dns_vnet_links.get(r.id()),
             ));
         }
+        if any.is::<ServicePrincipalRow>() || any.is::<AppRegistrationRow>() {
+            let sub_scope = self.subscription_id.as_ref().map(|s| format!("/subscriptions/{}", s));
+            let lazy = DirectoryLazy {
+                children: &self.lazy.directory_children,
+                objects: &self.lazy.principals,
+                by_app_id: &self.lazy.sp_by_app_id,
+                azure_roles: self.lazy.identity_role_assignments.get(resource.id()),
+                role_definitions: sub_scope.as_ref().and_then(|k| self.lazy.role_definitions.get(k)),
+                subscription_scope: sub_scope.as_deref(),
+            };
+            let now = crate::azure::services::directory::now_unix();
+            if let Some(r) = any.downcast_ref::<ServicePrincipalRow>() {
+                return Some(service_principal_section_lines(r, ServicePrincipalDetailSection::from_index(idx), &lazy, now));
+            }
+            if let Some(r) = any.downcast_ref::<AppRegistrationRow>() {
+                return Some(app_registration_section_lines(r, AppRegistrationDetailSection::from_index(idx), &lazy, now));
+            }
+        }
         if let Some(r) = any.downcast_ref::<IdentityRow>() {
             return Some(identity_section_lines(
                 r,
@@ -2437,6 +2550,7 @@ impl App {
                     // The Access list may just have landed: name its
                     // principals (idempotent per object id).
                     self.trigger_principal_names(event_tx);
+                    self.trigger_directory_followups(event_tx);
                     // The locations list may have landed while `R` is open.
                     if self.location_selector.visible {
                         let rows = self.location_rows();
@@ -3222,10 +3336,11 @@ fn flat_section_header(name: &str) -> (String, String) {
     (format!("{}{}", base, "━".repeat(fill)), String::new())
 }
 
-/// Whether a detail value is an ARM id Enter acts on (a jump, or a copy
-/// when nebaz does not browse the type).
+/// Whether a detail value is an id Enter acts on (a jump, or a copy when
+/// nebaz does not browse the type): an ARM id, or a directory row's
+/// synthetic `graph:/…` id (ADR 0004).
 fn is_arm_id(value: &str) -> bool {
-    value.starts_with("/subscriptions/")
+    value.starts_with("/subscriptions/") || crate::azure::graph::is_row_id(value)
 }
 
 /// The view Enter on this detail value jumps to: `Some` exactly when the

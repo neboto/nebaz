@@ -6,7 +6,10 @@
 //! `for_arm_id` makes those lines jump here.
 //!
 //! Identities carry no `provisioningState`, so every row is stateless.
-//! What they can *do* (role assignments) is a lens for later, not a list.
+//!
+//! The tab's other two sub-tabs, Service principals and App registrations,
+//! come from Microsoft Graph (`directory.rs`, ADR 0004); this provider
+//! routes them there with the tenant's Graph pipeline.
 
 use crate::azure::resource::{resource_group_of, scope_related, shell_quote, state_ladder, subscription_of, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
@@ -97,7 +100,15 @@ impl Resource for IdentityRow {
         ]
     }
     fn related(&self) -> Vec<(String, String)> {
-        scope_related(&self.base.id)
+        let mut v = scope_related(&self.base.id);
+        // The identity's service principal in the directory (Graph).
+        if let Some(p) = self.principal_id.as_deref().filter(|p| crate::azure::graph::is_object_id(p)) {
+            v.push((
+                "Service principal".into(),
+                crate::azure::graph::row_id(crate::azure::graph::DirectoryKind::ServicePrincipal, p),
+            ));
+        }
+        v
     }
     fn cli_command(&self) -> Option<String> {
         Some(format!("az identity show --ids {}", shell_quote(&self.base.id)))
@@ -172,11 +183,25 @@ pub fn federated_credentials_path(identity_id: &str) -> String {
 
 pub struct IdentityService {
     scope: Scope,
+    /// The current tenant's Graph pipeline, for the directory sub-tabs.
+    graph: std::result::Result<std::sync::Arc<crate::azure::arm::ArmClient>, String>,
 }
 
 impl IdentityService {
     pub fn new(scope: Scope) -> Self {
-        Self { scope }
+        Self {
+            scope,
+            graph: Err("Microsoft Graph is not configured".into()),
+        }
+    }
+
+    /// Give the provider the tenant's Graph pipeline (or why there is none).
+    pub fn with_graph(
+        mut self,
+        graph: std::result::Result<std::sync::Arc<crate::azure::arm::ArmClient>, String>,
+    ) -> Self {
+        self.graph = graph;
+        self
     }
 }
 
@@ -190,7 +215,10 @@ impl AzureService for IdentityService {
         "Managed Identity"
     }
 
-    async fn list_resources(&self, _view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+    async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+        if matches!(view, JumpView::ServicePrincipals | JumpView::AppRegistrations) {
+            return Err(Error::Azure("directory lists stream only".into()));
+        }
         let tenant = self.scope.tenant();
         Ok(self
             .scope
@@ -204,10 +232,21 @@ impl AzureService for IdentityService {
 
     async fn list_resources_streaming(
         &self,
-        _view: JumpView,
+        view: JumpView,
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
+        use crate::azure::services::directory;
+        let directory_tenant = self.scope.tenant().map(str::to_string);
+        match view {
+            JumpView::ServicePrincipals => {
+                return directory::stream_service_principals(self.graph.clone(), directory_tenant, service_type, event_tx).await
+            }
+            JumpView::AppRegistrations => {
+                return directory::stream_app_registrations(self.graph.clone(), directory_tenant, service_type, event_tx).await
+            }
+            _ => {}
+        }
         let tenant = self.scope.tenant().map(str::to_string);
         let r = self
             .scope
@@ -222,6 +261,9 @@ impl AzureService for IdentityService {
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
+        if crate::azure::graph::is_row_id(id) {
+            return crate::azure::services::directory::get_directory_row(self.graph.clone(), self.scope.tenant(), id).await;
+        }
         let v = self.scope.get(id, IDENTITY_API_VERSION).await?;
         IdentityRow::from_json(&v, self.scope.tenant())
             .map(|r| Box::new(r) as Box<dyn Resource>)
@@ -264,6 +306,10 @@ mod tests {
         assert_eq!(
             row.cli_command().as_deref(),
             Some("az identity show --ids /subscriptions/0000/resourceGroups/rg-id/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-app")
+        );
+        assert_eq!(
+            row.related().last().unwrap(),
+            &("Service principal".to_string(), "graph:/servicePrincipals/22222222-2222-2222-2222-222222222222".to_string())
         );
     }
 

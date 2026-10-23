@@ -152,6 +152,15 @@ pub struct LazyStore {
     /// the store, so a tenant switch never shows another directory's names.
     pub principals: LazyMap<serde_json::Value>,
 
+    // ── Directory (Graph: service principals, app registrations) ─────────
+    /// A directory row's child lists (`owners`, `federatedIdentityCredentials`,
+    /// `appRoleAssignments`, `oauth2PermissionGrants`), keyed by
+    /// `{row id}/{child}` (`directory::child_key`).
+    pub directory_children: LazyMap<Vec<serde_json::Value>>,
+    /// `GET servicePrincipals(appId='…')`: an API an app registration asks
+    /// permissions of, keyed by lowercase app id.
+    pub sp_by_app_id: LazyMap<serde_json::Value>,
+
     // ── Activity (every type) ────────────────────────────────────────────
     /// The last week of the activity log filtered to the row, keyed by ARM
     /// id; capped at `ACTIVITY_MAX_EVENTS`.
