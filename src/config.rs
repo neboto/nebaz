@@ -54,6 +54,9 @@ pub struct Config {
     /// into one scroll (section chips become jump anchors) instead of the
     /// tabbed section-at-a-time view. `\` toggles it at runtime either way.
     pub detail_flat: Option<bool>,
+    /// Start with long detail values wrapped onto continuation rows instead
+    /// of clipped at the pane edge. `Ctrl-W` toggles it at runtime.
+    pub detail_wrap: Option<bool>,
     /// Base resource-cache freshness window in seconds (default 300). A list
     /// reload within this window serves cached data instead of refetching.
     pub cache_ttl: Option<u64>,

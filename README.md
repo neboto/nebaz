@@ -54,8 +54,10 @@ whether it worked) and a
 **Related** section listing the ARM ids it points at; Enter on one jumps
 there; a link to a type nebaz does not browse yet lands in **All
 resources**, which lists every resource in the subscription. The detail pane has a line cursor,
-vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`) and a flat
-view (`\`) that puts every section in one scroll. `N` on a VM, NIC,
+vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`), a flat
+view (`\`) that puts every section in one scroll, a body filter (`/`,
+`n`/`N` while it is on), group jumps (`[[`/`]]`) and `Ctrl-W` to wrap long
+values such as ARM ids; `H`/`L` step sub-tabs from either pane. `N` on a VM, NIC,
 subnet or NSG opens the **network access lens**: the NSG rules that apply,
 subnet then NIC, in priority order, defaults included, shadowed rules and
 rules the other layer blocks marked (computed from the rules with GETs

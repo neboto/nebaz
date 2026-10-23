@@ -41,6 +41,7 @@ mod directory_test;
 mod list_ux_test;
 mod load_stream_test;
 pub(crate) mod mocks;
+mod detail_pane_test;
 mod navigation_test;
 mod network_lens_test;
 mod wiring_test;
@@ -290,7 +291,7 @@ impl Harness {
     /// Move the detail cursor onto the first body line whose value is
     /// `value`, with `j` presses from the top of the section.
     pub async fn cursor_to_value(&mut self, value: &str) {
-        let lines = self.app.get_detail_lines();
+        let lines = self.app.detail_body();
         let target = lines
             .iter()
             .position(|(_, v)| v.trim() == value)
