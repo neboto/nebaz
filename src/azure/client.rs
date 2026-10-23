@@ -15,6 +15,7 @@ use crate::azure::location::LocationInfo;
 use crate::azure::service::{AzureService, ServiceType};
 use crate::azure::resource::subscription_of;
 use crate::azure::services::aks::AksService;
+use crate::azure::services::changes::{ChangesService, ChangesWindow};
 use crate::azure::services::compute::ComputeService;
 use crate::azure::services::container_apps::ContainerAppsService;
 use crate::azure::services::app_service::AppServiceService;
@@ -293,7 +294,14 @@ impl AzureClients {
             ServiceType::PowerPlatform => Arc::new(PowerPlatformService::new(scope)),
             ServiceType::ContainerApps => Arc::new(ContainerAppsService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
+            ServiceType::Changes => self.changes_service(ChangesWindow::default()),
         }
+    }
+
+    /// `@changes` over `window` (the list is one per window, so the
+    /// window is the provider's, not the sub-tab's).
+    pub fn changes_service(&self, window: ChangesWindow) -> Arc<dyn AzureService> {
+        Arc::new(ChangesService::new(self.scope(), self.current_graph(), window))
     }
 
     /// The pipeline for the tenant an ARM path belongs to, resolved

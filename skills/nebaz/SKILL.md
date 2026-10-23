@@ -26,6 +26,7 @@ nebaz ls kv -f 'tag:env=prod' --limit 20 -o json
 nebaz get /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-app/providers/Microsoft.Compute/virtualMachines/vm-1 -o json
 nebaz get vm-1 --in vm --section networking --section access -o json
 nebaz get graph:/servicePrincipals/00000000-0000-0000-0000-000000000000 -o md
+nebaz changes --since 6h --hide-noise -o json
 ```
 
 ## `services` — the catalogue
@@ -42,11 +43,23 @@ has its own prefix (`vm`, `disk`, `nic`; `vnet`, `subnet`, `nsg`, `pip`,
 | `-f QUERY` | The TUI's search: fuzzy text plus exact `rg:NAME` and `tag:key=value` terms: `-f 'web rg:prod tag:env=prod'` |
 | `-r LOCATION` | Only this location (`westeurope`); `global` rows always pass. An unknown location fails |
 | `--state STATE` | Only this state, as the row shows it (`running`, `succeeded`, …), any case |
-| `--hide-noise` | Drop noise rows (subscriptions that are not Enabled) |
+| `--hide-noise` | Drop noise rows (subscriptions that are not Enabled; changes made by managed identities and Azure itself) |
 | `--limit N` | At most N rows |
 
 Every list is the whole subscription; location is a filter over it, and
 a resource group is the `rg:` term.
+
+## `changes` — what changed recently
+
+`changes --since WINDOW` lists the subscription's recent changes, newest
+first: Activity Log writes, deletes and actions that finished, ARM
+deployments, and Resource Health transitions. It is `ls changes` over a
+window: `15m`, `1h` (the default), `6h`, `24h` or `7d`. `--source
+activity|deployments|health` keeps one source; `-f`, `--hide-noise`
+(managed identities and Azure itself) and `--limit` work as in `ls`. Each
+row's `id` is `change:…`, not an ARM id; the resource it happened to is in
+its Related. A source that cannot be read, or the Activity Log stopping
+after 10 pages (it says how far back it got), is a warning on stderr.
 
 ## `get` — full detail
 

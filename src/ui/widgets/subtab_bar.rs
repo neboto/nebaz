@@ -39,7 +39,19 @@ fn chip_width(label: &str) -> u16 {
 /// Render a responsive sub-tab strip. `tabs` is `(key, label, is_active)` in
 /// display order; exactly one is expected to be active.
 pub fn render_subtab_bar(app: &App, area: Rect, frame: &mut Frame, tabs: &[(char, &str, bool)]) {
-    let spans = subtab_bar_spans(app, area, tabs);
+    let mut spans = subtab_bar_spans(app, area, tabs);
+    // `@changes`: its window, which `[` / `]` step (#61).
+    if !spans.is_empty() && app.current_service == Some(crate::azure::service::ServiceType::Changes) {
+        spans.push(Span::styled("   [ ] window ", Style::default().fg(theme::text_dim())));
+        for w in crate::azure::services::changes::ChangesWindow::ALL {
+            let style = if w == app.changes_window {
+                Style::default().fg(theme::accent()).add_modifier(Modifier::BOLD | Modifier::REVERSED)
+            } else {
+                Style::default().fg(theme::text_dim())
+            };
+            spans.push(Span::styled(format!(" {} ", w.label()), style));
+        }
+    }
     if !spans.is_empty() {
         frame.render_widget(Paragraph::new(Line::from(spans)), area);
     }

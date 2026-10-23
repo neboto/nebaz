@@ -91,7 +91,8 @@ impl App {
         let mut sources: Vec<JumpView> = Vec::new();
         let mut coverage = AllSearchCoverage::default();
         let mut generic: Option<&[Box<dyn crate::azure::resource::Resource>]> = None;
-        for service in ServiceType::all() {
+        // `@changes` rows are events, not resources (ADR 0006): never searched.
+        for service in ServiceType::all().into_iter().filter(|s| *s != ServiceType::Changes) {
             let mut any_warm = false;
             for view in service.views() {
                 coverage.total += 1;

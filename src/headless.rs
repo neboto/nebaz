@@ -15,7 +15,7 @@ use crate::azure::client::AzureClients;
 use crate::azure::location::{Location, GLOBAL};
 use crate::azure::resource::{subscription_of, Resource};
 use crate::azure::service::{JumpView, ServiceType};
-use crate::cli::{Cli, Command, GetArgs, LsArgs, OutputFormat};
+use crate::cli::{ChangesArgs, Cli, Command, GetArgs, LsArgs, OutputFormat};
 use crate::config::Config;
 use crate::error::Error;
 use crate::event::Event;
@@ -73,6 +73,7 @@ pub async fn run(cli: Cli) -> i32 {
         Some(Command::Services) => Ok(services(format)),
         Some(Command::Ls(args)) => ls(&cli, args, format).await,
         Some(Command::Get(args)) => get(&cli, args, format).await,
+        Some(Command::Changes(args)) => changes(&cli, args, format).await,
         None => Ok(String::new()),
     };
     match result {
@@ -326,12 +327,53 @@ async fn load_view(
 
 async fn ls(cli: &Cli, args: &LsArgs, format: OutputFormat) -> Result<String, Failure> {
     let view = resolve_list(&args.target)?;
+    list_view(cli, view, args, format, None).await
+}
+
+/// `nebaz changes --since 6h`: `ls changes` over a window (#61).
+async fn changes(cli: &Cli, args: &ChangesArgs, format: OutputFormat) -> Result<String, Failure> {
+    use crate::azure::services::changes::ChangesWindow;
+    let window = ChangesWindow::parse(&args.since).ok_or_else(|| {
+        let known: Vec<&str> = ChangesWindow::ALL.iter().map(|w| w.label()).collect();
+        Failure::Usage(format!("--since {:?}: one of {}", args.since, known.join(", ")))
+    })?;
+    let view = match args.source.as_deref().map(|s| s.trim().to_lowercase()) {
+        None => JumpView::ChangesAll,
+        Some(s) => match s.as_str() {
+            "all" => JumpView::ChangesAll,
+            "activity" => JumpView::ChangesActivity,
+            "deployments" | "deploys" => JumpView::ChangesDeployments,
+            "health" => JumpView::ChangesHealth,
+            _ => return Err(Failure::Usage(format!("--source {s:?}: one of activity, deployments, health"))),
+        },
+    };
+    let ls = LsArgs {
+        target: String::new(),
+        filter: args.filter.clone(),
+        state: None,
+        hide_noise: args.hide_noise,
+        limit: args.limit,
+    };
+    list_view(cli, view, &ls, format, Some(window)).await
+}
+
+/// One sub-tab, listed and shaped (`ls`, `changes`).
+async fn list_view(
+    cli: &Cli,
+    view: JumpView,
+    args: &LsArgs,
+    format: OutputFormat,
+    window: Option<crate::azure::services::changes::ChangesWindow>,
+) -> Result<String, Failure> {
     let location = cli.location.as_deref().map(Location::parse).unwrap_or_default();
     let (config, clients) = setup(cli, None).await?;
     validate_location(&clients, &location).await?;
     let subscription = clients.current_subscription().unwrap_or_default().to_string();
 
     let mut app = App::new_headless(config, clients);
+    if let Some(w) = window {
+        app.set_changes_window(w);
+    }
     let (tx, mut rx) = mpsc::unbounded_channel();
     load_view(&mut app, &tx, &mut rx, view).await?;
 

@@ -40,6 +40,7 @@ use std::sync::Arc;
 
 mod all_search_test;
 mod command_picker_test;
+mod changes_test;
 mod directory_test;
 mod list_ux_test;
 mod export_test;
@@ -259,7 +260,7 @@ impl Harness {
         self.app.switch_view(view);
         // A fresh load even when the view was open or cached.
         let sub = self.app.subscription_key();
-        self.app.cache.invalidate(&view.service(), &sub, Some(view.as_str()));
+        self.app.cache.invalidate(&view.service(), &sub, Some(self.app.cache_variant()));
         self.app.load_service_resources();
         self.settle().await;
         self.land(vec![resource]).await;
