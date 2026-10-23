@@ -37,6 +37,7 @@ use ratatui::backend::TestBackend;
 use ratatui::Terminal;
 use std::sync::Arc;
 
+mod all_search_test;
 mod directory_test;
 mod list_ux_test;
 mod load_stream_test;

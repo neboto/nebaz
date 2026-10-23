@@ -153,6 +153,8 @@ scripts/smoke.sh       # offline pty run with a fake az (needs python3)
   is the default; the picker is fed from the subscription's locations list
 - resource group — the `rg:<name>` search token on every list
 - sub-tabs — digits / Tab, or a routing prefix (`@rg`, `@disk`, `@nsg`, …)
+- `@* <text>` — one search over every list already loaded this session
+  (warm caches only, never a fetch); `⏎` opens a row in its tab
 
 ## Auth
 

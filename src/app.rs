@@ -115,6 +115,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
 /// The network access lens (`N`): open, fetch, keys.
+mod all_search;
 mod network_lens;
 
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
@@ -427,8 +428,12 @@ pub struct App {
     /// the newest entry.
     pub search_history_draft: String,
     fuzzy: FuzzyMatcher,
+    /// `@*` cross-cache search (#38, `app/all_search.rs`): while true,
+    /// `resources` is every warm list of the subscription, flattened.
     pub all_search_mode: bool,
-    pub all_search_sources: Vec<ServiceType>,
+    /// The sub-tab each `resources` row came from, in `@*` mode.
+    pub all_search_sources: Vec<JumpView>,
+    pub all_search_coverage: all_search::AllSearchCoverage,
     pub list_sort: ListSort,
     pub list_state_filter: Option<String>,
     pub hide_noise: bool,
@@ -612,6 +617,7 @@ impl App {
             fuzzy: FuzzyMatcher::new(),
             all_search_mode: false,
             all_search_sources: Vec::new(),
+            all_search_coverage: Default::default(),
             list_sort: ListSort::Default,
             list_state_filter: None,
             hide_noise: true,
@@ -748,6 +754,11 @@ impl App {
         // Before the cache check: a cache hit must retire the old stream
         // too, or its late `ResourcesLoaded` lands on the cached view.
         self.supersede_loads();
+        // `@*` owns `resources`: re-search the (new subscription's) caches.
+        if self.all_search_mode {
+            self.update_search();
+            return;
+        }
         let sub = self.subscription_key();
         if let Some(cached) = self.cache.get(&service, &sub, Some(self.cache_variant())) {
             self.resources = cached;
@@ -883,7 +894,7 @@ impl App {
     /// The sub-tab chips for the current service: `(digit, label, active)`.
     /// Empty for a single-sub-tab service (the bar is hidden).
     pub fn sub_tab_chips(&self) -> Vec<(char, &'static str, bool)> {
-        let Some(service) = self.current_service else {
+        let Some(service) = self.current_service.filter(|_| !self.all_search_mode) else {
             return Vec::new();
         };
         let views = service.views();
@@ -1111,8 +1122,12 @@ impl App {
     /// the state filter, the noise toggle and the sort.
     pub fn update_search(&mut self) {
         let keep_id = self.get_selected_resource_id();
-        let parsed = parse_query(&self.search_query);
-        let (tag_filters, text) = split_tag_filters(&parsed.search_text);
+        let search_text = match self.sync_all_search() {
+            all_search::AllSearchStep::Left => return,
+            all_search::AllSearchStep::On(text) => text,
+            all_search::AllSearchStep::Off => parse_query(&self.search_query).search_text,
+        };
+        let (tag_filters, text) = split_tag_filters(&search_text);
         let (rg_filters, text) = split_rg_filters(&text);
 
         // Location filter first — it decides the "of N" denominator.
@@ -1238,6 +1253,10 @@ impl App {
     /// Apply a search query: a `@service` prefix switches service first.
     fn apply_query(&mut self, query: String) {
         self.search_query = query;
+        if crate::search::query_parser::parse_all_query(&self.search_query).is_some() {
+            self.pending_search = true;
+            return;
+        }
         let parsed = parse_query(&self.search_query);
         if parsed.is_service_switch {
             match parsed.service {
@@ -1318,6 +1337,9 @@ impl App {
     /// What a service or sub-tab switch resets: the pane focus, the
     /// section cursor, sort, state filter and query.
     fn reset_list_shaping(&mut self) {
+        if self.all_search_mode {
+            self.leave_all_search();
+        }
         self.leave_detail_pane();
         self.pending_detail_focus = false;
         self.detail_section_idx = 0;
@@ -2246,6 +2268,10 @@ impl App {
         if self.current_service.is_none_or(|s| s.views().len() < 2) {
             return;
         }
+        if self.all_search_mode {
+            self.toast("@* rows come from the cache: ⏎ opens one in its tab");
+            return;
+        }
         let from_details = self.details_focused;
         if from_details {
             self.leave_detail_pane();
@@ -2607,7 +2633,9 @@ impl App {
     fn current_nav_location(&self) -> Option<NavLocation> {
         let service = self.current_service?;
         let selected = self.get_selected_resource();
-        let place = if service.views().len() > 1 {
+        let place = if self.all_search_mode {
+            crate::search::query_parser::ALL_SEARCH_PREFIX.to_string()
+        } else if service.views().len() > 1 {
             format!("{} {}", service.short_name(), self.current_view.label())
         } else {
             service.short_name().to_string()
@@ -2639,7 +2667,9 @@ impl App {
     /// switch query showed `@aks` as the old list's filter.
     fn location_query(&self, service: ServiceType) -> String {
         let parsed = parse_query(&self.search_query);
-        if !parsed.is_service_switch {
+        // `@* …` is not a switch: it is the cross-cache results, kept whole
+        // so back returns to them.
+        if !parsed.is_service_switch || crate::search::query_parser::parse_all_query(&self.search_query).is_some() {
             return self.search_query.clone();
         }
         let same_list = parsed.service == Some(service)
@@ -2988,6 +3018,11 @@ impl App {
     }
 
     fn handle_stream_event(&mut self, event: Event, event_tx: &mpsc::UnboundedSender<Event>) {
+        // Entering `@*` superseded the load; an untagged straggler must not
+        // land on (or be cached from) the cross-cache rows either.
+        if self.all_search_mode {
+            return;
+        }
         match event {
             Event::ResourcesLoaded { service, resources } => {
                 if Some(service) != self.current_service {
@@ -3396,6 +3431,19 @@ impl App {
             }
             KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.redraw_requested = true
+            }
+            KeyCode::Enter if self.all_search_mode => self.open_all_search_result(event_tx),
+            KeyCode::Esc if self.all_search_mode => {
+                self.search_query.clear();
+                self.update_search();
+            }
+            // `@*` rows span services: no sub-tabs to switch, no one list to
+            // reload (neither may replace the cross-cache rows).
+            KeyCode::Tab | KeyCode::BackTab | KeyCode::Char('r') | KeyCode::F(5) if self.all_search_mode => {
+                self.toast("@* rows come from the cache: ⏎ opens one in its tab");
+            }
+            KeyCode::Char(c) if self.all_search_mode && crate::sections::index_for_key(c).is_some() => {
+                self.toast("@* rows come from the cache: ⏎ opens one in its tab");
             }
             KeyCode::Enter if self.current_view == JumpView::AllResources && self.selected_routes_to_typed_tab() => {
                 if let Some(id) = self.get_selected_resource_id() {

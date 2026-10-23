@@ -100,7 +100,7 @@ impl ResourceCache {
     }
 
     /// Borrow the live (within-TTL) entry for this key without cloning — the
-    /// `@all` cross-service search scans every cached list on each keystroke
+    /// `@*` cross-cache search scans every cached list on each keystroke
     /// and only clones what it keeps.
     pub fn get_ref(
         &self,

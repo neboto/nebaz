@@ -103,6 +103,12 @@ lands on the Disks sub-tab of Virtual Machines). A plain service prefix
 (`@vm`) lands on the service's first sub-tab.
 _Avoid_: alias (for the sub-tab-selecting form)
 
+**Cross-cache search**:
+`@* <text>`: one search over every list of the subscription with a warm
+cache entry, never a fetch. Not a routing prefix, and not All resources
+(`@all`, one ARM list of the whole subscription).
+_Avoid_: @all (neboto's spelling; here it is the All resources prefix)
+
 **State ladder**:
 The one rule that maps a row's Azure status onto the coarse colour bucket:
 a provisioning state in transition or failed wins, else the type's runtime
