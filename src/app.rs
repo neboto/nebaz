@@ -238,6 +238,38 @@ pub struct MessageEntry {
 /// Cap on the message history length (oldest entries drop off the back).
 const MESSAGE_HISTORY_MAX: usize = 100;
 
+/// The current list load: the generation its stream events carry and the
+/// tasks running it (the provider fetch and its tagging forwarder).
+/// `supersede` is the one way to retire a load: the generation bump stops
+/// its queued events from landing, the abort stops it paging ARM for a
+/// list nobody will see (#57).
+#[derive(Debug, Default)]
+pub struct ListLoad {
+    generation: u64,
+    tasks: Vec<tokio::task::AbortHandle>,
+}
+
+impl ListLoad {
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// Bump the generation and abort every tracked task. Returns the new
+    /// generation, which the next load tags its events with.
+    pub fn supersede(&mut self) -> u64 {
+        self.generation += 1;
+        for task in self.tasks.drain(..) {
+            task.abort();
+        }
+        self.generation
+    }
+
+    /// Track a task of the current load so the next `supersede` aborts it.
+    pub fn track(&mut self, task: tokio::task::AbortHandle) {
+        self.tasks.push(task);
+    }
+}
+
 /// Watch-mode (auto-refresh) state. Kept even though watch mode is fog for
 /// the first release: the status bar and the `w` toggle key on it, and the
 /// ARM-throttling question is about the *interval floor*, not the shape.
@@ -333,9 +365,10 @@ pub struct App {
     pub resource_list_state: RefCell<ListState>,
     pub cache: ResourceCache,
     pub lazy: LazyStore,
-    /// Bumped on every list load and every context switch; stream events
+    /// The in-flight list load. Superseded (generation bumped, tasks
+    /// aborted) on every list load and every context switch; stream events
     /// carrying an older generation are dropped.
-    pub load_generation: u64,
+    list_load: ListLoad,
 
     // Loading state.
     pub loading: bool,
@@ -494,7 +527,7 @@ impl App {
             resource_list_state: RefCell::new(ListState::default()),
             cache,
             lazy: LazyStore::new(0),
-            load_generation: 0,
+            list_load: ListLoad::default(),
             loading: false,
             loading_started: false,
             loading_complete: false,
@@ -623,6 +656,9 @@ impl App {
         let Some(service) = self.current_service else {
             return;
         };
+        // Before the cache check: a cache hit must retire the old stream
+        // too, or its late `ResourcesLoaded` lands on the cached view.
+        self.supersede_loads();
         let sub = self.subscription_key();
         if let Some(cached) = self.cache.get(&service, &sub, Some(self.cache_variant())) {
             self.resources = cached;
@@ -654,8 +690,7 @@ impl App {
         self.loading_started = true;
         self.loading_progress = None;
         self.load_warnings.clear();
-        self.load_generation += 1;
-        let generation = self.load_generation;
+        let generation = self.supersede_loads();
         let view = self.current_view;
         let provider = self.azure_clients.service(service);
         let outer = event_tx.clone();
@@ -663,7 +698,7 @@ impl App {
         // Forwarder: tag each stream event with this load's generation.
         let (inner_tx, mut inner_rx) = mpsc::unbounded_channel::<Event>();
         let fwd = outer.clone();
-        tokio::spawn(async move {
+        let forwarder = tokio::spawn(async move {
             while let Some(ev) = inner_rx.recv().await {
                 if fwd
                     .send(Event::LoadStream {
@@ -676,9 +711,19 @@ impl App {
                 }
             }
         });
-        tokio::spawn(async move {
+        let fetch = tokio::spawn(async move {
             let _ = provider.list_resources_streaming(view, inner_tx, service).await;
         });
+        self.list_load.track(fetch.abort_handle());
+        self.list_load.track(forwarder.abort_handle());
+    }
+
+    /// Retire every in-flight list load (see [`ListLoad`]). Every
+    /// generation bump goes through here. Only superseded tasks are
+    /// aborted: the caller either serves the cache or starts the next load,
+    /// so `loading` is never left waiting on an aborted stream.
+    fn supersede_loads(&mut self) -> u64 {
+        self.list_load.supersede()
     }
 
     /// Identity for the service-tab badge. Filled from the `az account
@@ -714,7 +759,7 @@ impl App {
         self.spawn_subscription_info_fetch(event_tx);
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
         self.flat_triggered_for = None;
-        self.load_generation += 1;
+        self.supersede_loads();
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
             self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
@@ -1167,7 +1212,7 @@ impl App {
         // Everything subscription-scoped resets by construction.
         self.lazy = LazyStore::new(self.lazy.epoch() + 1);
         self.flat_triggered_for = None;
-        self.load_generation += 1;
+        self.supersede_loads();
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
         Ok(())
@@ -2291,7 +2336,7 @@ impl App {
             Event::Tick => self.tick_count = self.tick_count.wrapping_add(1),
 
             Event::LoadStream { generation, event } => {
-                if generation != self.load_generation {
+                if generation != self.list_load.generation() {
                     return Ok(()); // superseded stream
                 }
                 self.handle_stream_event(*event, event_tx);
@@ -3208,6 +3253,30 @@ mod tests {
 
     fn s(k: &str, v: &str) -> (String, String) {
         (k.to_string(), v.to_string())
+    }
+
+    #[tokio::test]
+    async fn superseding_a_list_load_aborts_its_tasks() {
+        let mut load = ListLoad::default();
+        let first = load.supersede();
+        let fetch = tokio::spawn(std::future::pending::<()>());
+        let forwarder = tokio::spawn(std::future::pending::<()>());
+        load.track(fetch.abort_handle());
+        load.track(forwarder.abort_handle());
+
+        let second = load.supersede();
+        assert!(second > first, "the generation moves on");
+        assert_eq!(load.generation(), second);
+        assert!(fetch.await.unwrap_err().is_cancelled());
+        assert!(forwarder.await.unwrap_err().is_cancelled());
+
+        // The next load's task is untouched until it, too, is superseded.
+        let next = tokio::spawn(std::future::pending::<()>());
+        load.track(next.abort_handle());
+        tokio::task::yield_now().await;
+        assert!(!next.is_finished());
+        load.supersede();
+        assert!(next.await.unwrap_err().is_cancelled());
     }
 
     #[test]

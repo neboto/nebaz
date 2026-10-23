@@ -156,7 +156,7 @@ async fn the_location_filter_hides_and_shows_rows() {
     let mut h = Harness::new().await;
     h.open(JumpView::VirtualMachines).await;
     h.land(vec![vm("we-1", "westeurope"), vm("eu-1", "eastus"), vm("we-2", "westeurope")]).await;
-    let generation = h.app.load_generation;
+    let generation = h.app.list_load.generation();
 
     h.press(KeyCode::Char('R')).await;
     assert!(h.app.location_selector.visible);
@@ -166,7 +166,7 @@ async fn the_location_filter_hides_and_shows_rows() {
     assert_eq!(h.app.current_location, Location::Named("eastus".into()));
     assert_eq!(h.visible_names(), ["eu-1"]);
     assert_eq!(h.app.location_hidden_count, 2);
-    assert_eq!(h.app.load_generation, generation, "a location change never loads");
+    assert_eq!(h.app.list_load.generation(), generation, "a location change never loads");
     let screen = h.render();
     assert!(screen.contains("eu-1") && !screen.contains("we-1"), "{screen}");
 
