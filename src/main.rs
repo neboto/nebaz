@@ -357,6 +357,14 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
                 ("e", "editor"),
                 ("Esc", "close"),
             ])
+        } else if app.metrics.is_some() {
+            theme::hint_line(&[
+                ("j/k", "select"),
+                ("[/]", "range"),
+                ("a", "all metrics"),
+                ("e", "editor"),
+                ("Esc", "close"),
+            ])
         } else if app.details_focused {
             theme::hint_line(&[
                 ("j/k", "scroll"),
@@ -388,6 +396,9 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
             ];
             if app.supports_network_lens() {
                 hints.push(("N", "access"));
+            }
+            if app.supports_metrics() {
+                hints.push(("m", "metrics"));
             }
             if app.noise_in_view {
                 hints.push(("a", if app.hide_noise { "show all" } else { "hide noise" }));

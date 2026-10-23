@@ -129,6 +129,10 @@ each one backs are in the catalog table
 - **Activity** (every type): `Microsoft.Insights/eventtypes/values/read`.
   Only named fields are selected; the caller's token claims and request
   bodies are never fetched.
+- **Metrics** (`m`, any ARM resource): `Microsoft.Insights/metrics/read`
+  and, for the all-metrics picker, `Microsoft.Insights/metricDefinitions/read`.
+  Both are control-plane `GET`s on the resource's own id (platform
+  metrics only; no log query); a 403 is a line in the view, never fatal.
 - **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
   Environments and their policy links are in the Power Platform admin
   API, not ARM: nebaz never calls it, and its hosts are on the guard's
