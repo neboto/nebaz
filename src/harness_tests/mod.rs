@@ -41,6 +41,7 @@ mod directory_test;
 mod load_stream_test;
 pub(crate) mod mocks;
 mod navigation_test;
+mod network_lens_test;
 mod wiring_test;
 
 /// The CLI's default subscription in the fixture account list.

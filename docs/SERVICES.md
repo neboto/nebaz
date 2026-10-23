@@ -148,7 +148,7 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     subnets and NICs it guards), a NIC, a subnet (what applies to anything
     placed in it, plus the NICs in it that carry their own NSG, from the
     warm lists), or any row whose Related lists NICs (a VM, a private
-    endpoint) or else subnets (a node pool, an app's VNet integration, a
+    endpoint) or else subnets (a Container Apps environment's infrastructure subnet, a node pool, an app's VNet integration, a
     Power Platform policy). Inbound runs the subnet's NSG, then the
     NIC's; outbound the reverse; both must allow, and a layer with no NSG
     allows everything. Within an NSG: priority order, first match wins,
