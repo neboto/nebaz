@@ -14,7 +14,7 @@ fn read(path: &std::path::Path) -> String {
 }
 
 /// The written file with extension `ext`.
-fn written(h: &Harness, ext: &str) -> String {
+pub(super) fn written(h: &Harness, ext: &str) -> String {
     let path = h
         .app
         .last_export_paths
@@ -29,7 +29,7 @@ fn all_written(h: &Harness) -> String {
 }
 
 /// Push the armed export past its wait limit, then run one pass.
-async fn expire_wait(h: &mut Harness) {
+pub(super) async fn expire_wait(h: &mut Harness) {
     let pending = h.app.pending_export.as_mut().expect("an export is armed");
     pending.started = Instant::now() - crate::app::export::EXPORT_WAIT_LIMIT - Duration::from_secs(1);
     h.settle().await;
@@ -37,7 +37,7 @@ async fn expire_wait(h: &mut Harness) {
 
 /// Land what the VM's lazy sections would fetch: an instance view, a
 /// denied Access list, no role names, an empty activity log.
-fn land_vm_sections(h: &mut Harness, id: &str) {
+pub(super) fn land_vm_sections(h: &mut Harness, id: &str) {
     let lazy = &mut h.app.lazy;
     lazy.vm_instance_views.apply(
         id.to_string(),

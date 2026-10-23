@@ -897,6 +897,48 @@ const NOT_LOADED: &str = "(not loaded)";
 /// produced by `detail_sections_snapshot`.
 pub type DetailSections = Vec<(String, Vec<(String, String)>)>;
 
+/// Deep-export several resources to one combined
+/// `nebaz-<slug>-deep-<ts>` trio (`-deep-` keeps a same-second `Ctrl-X`
+/// shallow export from colliding):
+/// - `.json`: an array of the objects `detail_json` serializes (identity +
+///   per-section maps + tags — the full split-pane fidelity)
+/// - `.md`: one document — `# <label> (N)`, then a `##` chapter per resource
+///   mirroring its detail pane (sections nest at `###`)
+/// - `.csv`: long format (`ID, Section, Key, Value`) — deep nested data
+///   doesn't fit a wide table, but long format filters in a spreadsheet
+pub fn export_detail_multi(
+    items: &[(&dyn Resource, DetailSections)],
+    label: &str,
+    opts: &ExportOptions,
+) -> Result<Vec<PathBuf>> {
+    let ts = timestamp();
+    let base = opts.dir()?.join(format!("nebaz-{}-deep-{}", slug(label), ts));
+    write_formats(
+        &base,
+        opts.formats,
+        || {
+            let arr: Vec<Value> = items
+                .iter()
+                .map(|(r, sections)| detail_value(*r, sections))
+                .collect();
+            Ok(serde_json::to_string_pretty(&Value::Array(arr))?)
+        },
+        || multi_detail_csv(items),
+        || detail_markdown_multi(items, label),
+    )
+}
+
+/// Several resources as one Markdown document: `# <label> (N)`, then a `##`
+/// chapter per resource mirroring its detail pane (sections nest at `###`).
+pub(crate) fn detail_markdown_multi(items: &[(&dyn Resource, DetailSections)], label: &str) -> String {
+    let mut md = format!("# {} ({})\n\n", label, items.len());
+    for (r, sections) in items {
+        md.push_str(&detail_markdown_at(*r, sections, 2));
+        md.push('\n');
+    }
+    md
+}
+
 /// The detail exports' CSV: long format (`ID, Section, Key, Value`) — one
 /// row per detail line, filterable in a spreadsheet. Plain content lines
 /// (leading-space key, empty value) carry their text in the Value column so
@@ -1261,6 +1303,33 @@ mod tests {
         let sections = vec![("Details".to_string(), vec![("K".to_string(), "v".to_string())])];
         let paths = export_detail(&r, &sections, "FmtDetail", &only(false, true, true)).unwrap();
         assert_eq!(exts(&paths), ["csv", "md"]);
+
+        let items: Vec<(&dyn Resource, DetailSections)> = vec![(&r, sections)];
+        let paths = export_detail_multi(&items, "FmtMulti", &only(false, false, true)).unwrap();
+        assert_eq!(exts(&paths), ["md"]);
+    }
+
+    /// A deep export's three files carry the same resources and sections:
+    /// one JSON object, one Markdown chapter and the CSV rows per resource.
+    #[test]
+    fn deep_export_formats_carry_the_same_resources() {
+        let a = rich();
+        let b = MockResource { tags: Default::default() };
+        let items: Vec<(&dyn Resource, DetailSections)> = vec![
+            (&a, vec![("Overview".to_string(), vec![("Size".to_string(), "Standard_B2s".to_string())])]),
+            (&b, vec![("Overview".to_string(), vec![("Name".to_string(), "mock".to_string())])]),
+        ];
+        let md = detail_markdown_multi(&items, "Mixed");
+        let csv = multi_detail_csv(&items);
+        let json: Vec<Value> = items.iter().map(|(r, s)| detail_value(*r, s)).collect();
+        assert!(md.starts_with("# Mixed (2)"));
+        for ((r, _), v) in items.iter().zip(&json) {
+            assert_eq!(v["resource"]["id"], r.id());
+            assert!(md.contains(&format!("## {}: {}", r.resource_type(), r.name())));
+            assert!(csv.contains(&format!("{},Overview,", r.id())));
+        }
+        assert_eq!(json[0]["sections"]["Overview"]["Size"], "Standard_B2s");
+        assert!(md.contains("| Size | Standard_B2s |") && csv.contains("Size,Standard_B2s"));
     }
 
     #[test]

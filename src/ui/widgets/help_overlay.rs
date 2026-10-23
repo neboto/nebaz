@@ -35,6 +35,8 @@ const LEFT_SECTIONS: &[Section] = &[
             ("Tab · 1–9", "sub-tabs"),
             ("H / L", "prev / next sub-tab"),
             ("y · X · ^X", "copy · export"),
+            ("V · J / K · ^A", "select rows · extend · all"),
+            ("  y·c / X / ^X", "md table / deep / list export"),
             ("a", "hide noisy rows"),
             ("z", "cycle sort"),
             ("F", "cycle state filter"),

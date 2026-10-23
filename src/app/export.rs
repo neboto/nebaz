@@ -2,7 +2,7 @@
 // export_current, run_pending_deep_export, write_single_export,
 // export_list_all, format_export_paths; neboto bcfb8d1): the walk fires
 // nebaz's section descriptors instead of neboto's reset+cycle sweep
-//! `X` and `Ctrl-X` on `App` (#40). `X` exports one resource's every
+//! `X` and `Ctrl-X` on `App` (#40, #39). `X` exports one resource's every
 //! detail section, lazy ones loaded: it **arms** a wait rather than writing
 //! at once. Each pass (`export_tick`, once per main-loop iteration) fires
 //! every section's on-enter hook for the armed rows (LazyMap-idempotent, so
@@ -13,6 +13,10 @@
 //! service switch cancels too. Sections behind a key with no on-enter hook
 //! stay unfired. Progress goes in `deep_export_progress` (its own status
 //! slot), not a toast, which would flood the `M` history.
+//!
+//! `X` over a list visual selection (`app/list_visual.rs`) arms the same
+//! wait for every selected row and writes one combined
+//! `nebaz-<label>-deep-<ts>` trio (`export::export_detail_multi`).
 //!
 //! The rows are held by ARM id (or `graph:/` id), not position: the wait
 //! spans main-loop passes and a streamed page can reorder the list.
@@ -36,6 +40,9 @@ pub struct PendingExport {
     pub ids: Vec<String>,
     /// When `X` was pressed: the wait-limit clock.
     pub started: Instant,
+    /// One resource's `X` (single-resource files and toast) rather than a
+    /// selection's deep export (the combined `-deep-` trio).
+    pub single: bool,
     /// The lazy store's epoch at arm time: a subscription switch replaces
     /// the store, and the export with it.
     epoch: u64,
@@ -65,13 +72,14 @@ impl App {
             self.error_message = Some("Nothing to export".to_string());
             return;
         };
-        self.arm_export(vec![id], event_tx);
+        self.arm_export(vec![id], true, event_tx);
     }
 
-    fn arm_export(&mut self, ids: Vec<String>, event_tx: &mpsc::UnboundedSender<Event>) {
+    pub(crate) fn arm_export(&mut self, ids: Vec<String>, single: bool, event_tx: &mpsc::UnboundedSender<Event>) {
         self.pending_export = Some(PendingExport {
             ids,
             started: Instant::now(),
+            single,
             epoch: self.lazy.epoch(),
             service: self.current_service,
         });
@@ -133,7 +141,9 @@ impl App {
             return self.abandon_export("the view changed");
         }
         let started = pending.started;
+        let single = pending.single;
         let ids = pending.ids.clone();
+        let total = ids.len();
 
         let positions: Vec<usize> = ids.iter().filter_map(|id| self.position_of(id)).collect();
         if positions.is_empty() {
@@ -141,7 +151,11 @@ impl App {
             if self.loading || self.filtered_resources.is_empty() {
                 return;
             }
-            return self.abandon_export("the resource is no longer listed");
+            return self.abandon_export(if single {
+                "the resource is no longer listed"
+            } else {
+                "the selected rows are no longer listed"
+            });
         }
 
         let saved = self.selected_index;
@@ -153,16 +167,39 @@ impl App {
             .iter()
             .flat_map(|(_, s)| crate::export::unloaded_sections(s))
             .collect();
+        let rows_waiting = snapshots
+            .iter()
+            .filter(|(_, s)| !crate::export::unloaded_sections(s).is_empty())
+            .count();
         if !waiting.is_empty() && started.elapsed() < EXPORT_WAIT_LIMIT {
-            self.deep_export_progress = Some(format!(
-                "Export: waiting on {} (Esc to cancel)",
-                waiting.join(", ")
-            ));
+            self.deep_export_progress = Some(if single {
+                format!("Export: waiting on {} (Esc to cancel)", waiting.join(", "))
+            } else {
+                format!(
+                    "Deep export: {}/{} ready — waiting on details (Esc to cancel)",
+                    total - rows_waiting,
+                    total
+                )
+            });
             return;
         }
 
         self.pending_export = None;
         self.deep_export_progress = None;
+        if !single {
+            self.write_deep_export(&snapshots);
+            if rows_waiting > 0 {
+                if let Some(msg) = self.success_message.take() {
+                    self.success_message = Some(format!(
+                        "{} ({} still loading after {}s — those sections are incomplete)",
+                        msg,
+                        rows_waiting,
+                        EXPORT_WAIT_LIMIT.as_secs()
+                    ));
+                }
+            }
+            return;
+        }
         if let Some((pos, sections)) = snapshots.first() {
             self.write_single_export(*pos, sections);
         }
@@ -176,6 +213,25 @@ impl App {
                 ));
             }
         }
+    }
+
+    /// Write a selection's combined deep export and report it.
+    fn write_deep_export(&mut self, snapshots: &[(usize, DetailSections)]) {
+        let items: Vec<(&dyn Resource, DetailSections)> = snapshots
+            .iter()
+            .filter_map(|(pos, sections)| {
+                self.filtered_resources
+                    .get(*pos)
+                    .and_then(|&i| self.resources.get(i))
+                    .map(|r| (r.as_ref(), sections.clone()))
+            })
+            .collect();
+        let count = items.len();
+        let label = self.export_label(items.iter().map(|(r, _)| r.resource_type()));
+        let result = crate::export::export_detail_multi(&items, &label, &self.export_options);
+        drop(items);
+        self.clear_list_visual();
+        self.report_list_export(count, &label, result);
     }
 
     /// Write one resource's files and report them.
@@ -221,7 +277,7 @@ impl App {
         self.report_list_export(count, &label, result);
     }
 
-    fn report_list_export(&mut self, count: usize, label: &str, result: crate::error::Result<Vec<PathBuf>>) {
+    pub(crate) fn report_list_export(&mut self, count: usize, label: &str, result: crate::error::Result<Vec<PathBuf>>) {
         match result {
             Ok(paths) => {
                 self.toast(format!("Exported {} {} → {}", count, label, format_export_paths(&paths)));

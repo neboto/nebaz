@@ -254,7 +254,9 @@ _Avoid_: marks, marked set, highlight
 
 **Selection-aware verb**:
 A copy/export key that operates on the visual selection when one is active
-and falls back to its single-target or whole-list meaning when none is.
+and falls back to its single-target or whole-list meaning when none is
+(list pane: `y`/`c` copy a Markdown table, `X` deep-exports, `Ctrl-X`
+shallow-exports the selected rows).
 _Avoid_: multi-select action
 
 **Deep export**:

@@ -145,7 +145,9 @@ plus one long-lived arboard handle; `y` copies the id, `C` the `az`
 command. **Export** (`src/export.rs`, `src/app/export.rs`): `X` arms a
 wait that fires every section's hook and writes once nothing reads
 `Loading…` (2-minute limit, `Esc` cancels); every format comes from the
-same captured sections. Search (`src/search/`), macros (`src/macros.rs`), bookmarks,
+same captured sections. The list pane's visual selection
+(`src/app/list_visual.rs`, `list_visual_anchor`) is positional and
+cleared by `update_search`; `X` over it arms the same wait per row. Search (`src/search/`), macros (`src/macros.rs`), bookmarks,
 export (`src/export.rs`), themes and `$EDITOR` are neboto's, ported
 verbatim where the concept is unchanged.
 
