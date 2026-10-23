@@ -89,13 +89,19 @@ Known leftovers and why they're accepted:
 ## Cutting a release
 
 ```bash
-# 1. bump the version (Cargo.toml + Cargo.lock)
+# 1. bump the version (Cargo.toml + Cargo.lock) on a branch; main is
+#    protected (protect-main), so the bump goes through a PR and CI
+git switch -c release-v0.2.0 origin/main
 cargo set-version 0.2.0        # from cargo-edit; or edit Cargo.toml and run `cargo check`
 git commit -am "Release v0.2.0"
+git push -u origin release-v0.2.0
+gh pr create --fill --label skip-changelog
+gh pr merge --squash --auto    # merges once CI passes on top of main
 
-# 2. tag + push — the tag push is the trigger
+# 2. tag the merged commit + push the tag — the tag push is the trigger
+git switch main && git pull --ff-only
 git tag v0.2.0
-git push origin main v0.2.0
+git push origin v0.2.0
 
 # 3. watch it
 gh run watch
@@ -172,7 +178,9 @@ is one line; paste them one at a time.
    `gh api -X PUT repos/neboto/nebaz/actions/permissions -F enabled=true -f allowed_actions=all -F sha_pinning_required=true`
 
 Applied and read back 2026-09-24: steps 2 to 9 are all on. Step 1 (the
-branch ruleset) is deliberately not, until after `v0.1.0`.
+branch ruleset) applied 2026-10-23, after `v0.2.0`: two PRs that were each
+green on their own broke main when merged together, and the strict status
+check makes every PR pass CI on top of the latest `main` before it merges.
 
 ## How users install
 
