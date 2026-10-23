@@ -14,6 +14,7 @@
 
 use crate::app::{App, ClickAction};
 use crate::ui::theme;
+use crossterm::event::KeyCode;
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -56,17 +57,20 @@ pub fn subtab_bar_spans(
     area: Rect,
     tabs: &[(char, &str, bool)],
 ) -> Vec<Span<'static>> {
-    chip_spans(app, area, tabs, ClickAction::Key)
+    // A chip is its key; `‹` / `›` step one sub-tab (`H` / `L`).
+    chip_spans(app, area, tabs, ClickAction::List, (KeyCode::Char('H'), KeyCode::Char('L')))
 }
 
 /// The chip strip itself, with the click action a chip records: a sub-tab
 /// key, or a detail-pane section (`details_pane::descriptor_tabs`), so both
-/// bars scroll around their active chip the same way.
+/// bars scroll around their active chip the same way. A chip presses its
+/// key; the `‹` / `›` overflow markers press `markers.0` / `markers.1`.
 pub fn chip_spans(
     app: &App,
     area: Rect,
     tabs: &[(char, &str, bool)],
-    click: fn(char) -> ClickAction,
+    click: impl Fn(KeyCode) -> ClickAction,
+    markers: (KeyCode, KeyCode),
 ) -> Vec<Span<'static>> {
     if tabs.is_empty() || area.width == 0 {
         return Vec::new();
@@ -94,6 +98,7 @@ pub fn chip_spans(
 
     if left_marker {
         spans.push(Span::styled("‹ ", Style::default().fg(theme::text_dim())));
+        app.push_click_region(Rect { x, y: area.y, width: MARKER_W, height: 1 }, click(markers.0));
         x += MARKER_W;
     }
 
@@ -108,7 +113,7 @@ pub fn chip_spans(
         let w = chip_width(label);
         app.push_click_region(
             Rect { x, y: area.y, width: w, height: 1 },
-            click(key),
+            click(KeyCode::Char(key)),
         );
         x += w;
 
@@ -132,6 +137,10 @@ pub fn chip_spans(
 
     if right_marker {
         spans.push(Span::styled(" ›", Style::default().fg(theme::text_dim())));
+        let right = (area.x + area.width).min(x + MARKER_W);
+        if right > x {
+            app.push_click_region(Rect { x, y: area.y, width: right - x, height: 1 }, click(markers.1));
+        }
     }
 
     spans

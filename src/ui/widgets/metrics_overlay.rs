@@ -172,24 +172,38 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
         Span::styled(" Range ", Style::default().fg(theme::text_dim())),
         Span::styled("[ ", Style::default().fg(theme::warning())),
     ];
+    // Each window chip presses its digit.
+    let mut x = chunks[1].x + Line::from(range.clone()).width() as u16;
     for (i, w) in MetricWindow::ALL.iter().enumerate() {
+        let chip = format!(" {} {} ", i + 1, w.label());
+        let width = Line::raw(chip.as_str()).width() as u16;
+        let right = (chunks[1].x + chunks[1].width).min(x + width);
+        if right > x {
+            app.push_click_region(
+                Rect { x, y: chunks[1].y, width: right - x, height: 1 },
+                crate::app::ClickAction::Press(crossterm::event::KeyCode::Char(char::from(b'1' + i as u8))),
+            );
+        }
+        x += width;
         let style = if *w == st.window {
             Style::default().fg(theme::text_primary()).add_modifier(Modifier::BOLD | Modifier::REVERSED)
         } else {
             Style::default().fg(theme::text_dim())
         };
-        range.push(Span::styled(format!(" {} {} ", i + 1, w.label()), style));
+        range.push(Span::styled(chip, style));
     }
     range.push(Span::styled(" ]", Style::default().fg(theme::warning())));
     range.push(Span::styled(format!("   grain {}", st.window.interval()), Style::default().fg(theme::text_dim())));
     frame.render_widget(Paragraph::new(Line::from(range)), chunks[1]);
 
     // ── Body ──
+    let mut rows = app.mouse.pane_rows.borrow_mut();
     if let Some(p) = &st.picker {
-        render_picker(p, chunks[2], frame);
+        render_picker(p, chunks[2], &mut rows, frame);
     } else {
-        render_series(st, chunks[2], frame);
+        render_series(st, chunks[2], &mut rows, frame);
     }
+    drop(rows);
 
     // ── Footer ──
     let hints: &[(&str, &str)] = if st.picker.is_some() {
@@ -208,10 +222,12 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
     };
     let mut footer = theme::hint_line(hints);
     footer.spans.insert(0, Span::raw(" "));
-    frame.render_widget(Paragraph::new(footer), chunks[3]);
+    let c = chunks[3];
+    crate::app::record_hint_regions(app, &footer, 1, c.x, c.y, c.x + c.width);
+    frame.render_widget(Paragraph::new(footer), c);
 }
 
-fn render_picker(p: &MetricPicker, area: Rect, frame: &mut Frame) {
+fn render_picker(p: &MetricPicker, area: Rect, hits: &mut crate::app::PopupHits, frame: &mut Frame) {
     let viewport = area.height as usize;
     let mut lines: Vec<Line> = Vec::new();
     if let Some(e) = &p.error {
@@ -222,6 +238,8 @@ fn render_picker(p: &MetricPicker, area: Rect, frame: &mut Frame) {
     }
     let room = viewport.saturating_sub(lines.len());
     let top = if room > 0 && p.selected >= room { p.selected + 1 - room } else { 0 };
+    let skip = lines.len() as u16;
+    hits.record_rows(Rect { y: area.y + skip, height: area.height.saturating_sub(skip), ..area }, top, p.defs.len());
     for (i, d) in p.defs.iter().enumerate().skip(top).take(room) {
         let sel = i == p.selected;
         let bold = |s: Style| if sel { s.add_modifier(Modifier::BOLD) } else { s };
@@ -249,7 +267,7 @@ fn series_color(i: usize) -> Color {
     [theme::accent(), theme::success(), theme::warning(), theme::heading(), theme::brand(), theme::border_focused()][i % 6]
 }
 
-fn render_series(st: &MetricsState, area: Rect, frame: &mut Frame) {
+fn render_series(st: &MetricsState, area: Rect, hits: &mut crate::app::PopupHits, frame: &mut Frame) {
     if st.series.is_empty() {
         let msg = if st.loading {
             "  Reading…"
@@ -314,6 +332,7 @@ fn render_series(st: &MetricsState, area: Rect, frame: &mut Frame) {
         lines.push(Line::from(spans));
     }
     frame.render_widget(Paragraph::new(lines), list_area);
+    hits.record_rows(list_area, 0, st.series.len());
 
     if let (Some(chart_area), Some(s)) = (chart_area, st.selected_series()) {
         render_value_chart(s, st, series_color(st.selected), chart_area, frame);

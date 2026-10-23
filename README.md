@@ -64,7 +64,11 @@ the same data (`export_formats` / `export_dir` in the config). The list
 pane has its own visual selection (`V`, `J`/`K`, `Ctrl-A`, or a mouse
 drag): `y` copies the rows as a Markdown table, `Ctrl-X` exports just
 those rows and `X` deep-exports them (every section of up to 50 rows, in
-one file per format). `N` on a VM, NIC,
+one file per format). The mouse does what the keys do: a click selects a
+row or a detail line (under wrap and the filter too) or presses the chip,
+marker, badge or hint under it, a double-click is `⏎`, a right-click is
+`⌫` (back), a drag selects, the wheel scrolls the pane under it, and the
+pickers and popups take clicks without letting them through. `N` on a VM, NIC,
 subnet or NSG opens the **network access lens**: the NSG rules that apply,
 subnet then NIC, in priority order, defaults included, shadowed rules and
 rules the other layer blocks marked (computed from the rules with GETs

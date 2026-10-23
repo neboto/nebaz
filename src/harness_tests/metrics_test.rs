@@ -11,7 +11,7 @@ use crate::lazy::LazyApply;
 use serde_json::json;
 
 /// Deliver what the series task would, for the view's current queries.
-async fn land_series(h: &mut Harness, body: serde_json::Value) {
+pub(super) async fn land_series(h: &mut Harness, body: serde_json::Value) {
     let epoch = h.app.lazy.epoch();
     let apply: Box<dyn FnOnce(&mut App) + Send> = Box::new(move |app: &mut App| {
         let st = app.metrics.as_mut().expect("the view is open");

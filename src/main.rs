@@ -187,6 +187,9 @@ fn spawn_input_tasks(event_tx: &tokio::sync::mpsc::UnboundedSender<event::Event>
 /// Render one full frame — everything the main loop draws, factored out of
 /// the draw closure so harness tests can render to a `TestBackend`.
 fn render_app(app: &App, frame: &mut ratatui::Frame) {
+    // Each widget records its own mouse targets as it draws; start every
+    // frame empty so a closed popup's rows can never take a click.
+    app.mouse.begin_frame();
     // A service with more than one sub-tab gets the sub-tab row.
     let sub_tabs = app.sub_tab_chips();
     let show_sub_tabs = !sub_tabs.is_empty();
@@ -229,6 +232,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
         location_selector::render_location_selector(
             &app.location_selector,
             &app.current_location,
+            &app.mouse.popup,
             frame,
         );
     }
@@ -236,6 +240,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
         subscription_selector::render_subscription_selector(
             &app.subscription_selector,
             app.azure_clients.current_subscription(),
+            &app.mouse.popup,
             frame,
         );
     }
@@ -243,6 +248,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
         service_selector::render_service_selector(
             &app.service_selector,
             app.current_service,
+            &app.mouse.popup,
             frame,
         );
     }
@@ -462,10 +468,10 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
         };
         right_spans.push(Span::styled(label, Style::default().fg(theme::text_dim())));
     }
-    right_spans.push(Span::styled(
-        app.location_label(),
-        Style::default().fg(theme::brand()),
-    ));
+    let location_offset = Line::from(right_spans.clone()).width() as u16;
+    let location_label = app.location_label();
+    let location_width = Line::raw(location_label.as_str()).width() as u16;
+    right_spans.push(Span::styled(location_label, Style::default().fg(theme::brand())));
     right_spans.push(Span::styled(
         format!(
             "  {}/{} ",
@@ -487,6 +493,20 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
     } else {
         left
     };
+    // Each hint presses its key (after the one leading pad span); the
+    // location chip opens the location filter, as `R` does. The right
+    // segment is right-aligned, so the chip starts where its width ends.
+    if left_is_hints {
+        app::record_hint_regions(app, &left, 1, chunks[0].x, area.y, chunks[0].x + chunks[0].width);
+    }
+    let right_x = chunks[1].x + chunks[1].width.saturating_sub(right_width);
+    let location_x = right_x + location_offset;
+    if app.current_service.is_some() && location_x + location_width <= chunks[1].x + chunks[1].width {
+        app.push_click_region(
+            ratatui::layout::Rect { x: location_x, y: area.y, width: location_width, height: 1 },
+            app::ClickAction::Press(crossterm::event::KeyCode::Char('R')),
+        );
+    }
     frame.render_widget(Paragraph::new(left), chunks[0]);
     frame.render_widget(Paragraph::new(right).alignment(Alignment::Right), chunks[1]);
 }

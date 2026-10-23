@@ -18,6 +18,7 @@ use ratatui::{
 pub fn render_macro_picker(app: &App, frame: &mut Frame) {
     let area = centered_rect(72, 60, frame.size());
     frame.render_widget(Clear, area);
+    app.mouse.popup.borrow_mut().record_area(area);
 
     // Naming a fresh recording takes over the whole popup — there is nothing
     // to pick until it has a name.
@@ -66,6 +67,7 @@ pub fn render_macro_picker(app: &App, frame: &mut Frame) {
     let height = chunks[0].height as usize;
     let selected = app.macro_picker_selected.min(total - 1);
     let offset = selected.saturating_sub(height.saturating_sub(1));
+    app.mouse.popup.borrow_mut().record_list(area, chunks[0], offset, total);
 
     let rows: Vec<Line> = app
         .macros

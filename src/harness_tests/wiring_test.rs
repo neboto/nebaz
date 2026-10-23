@@ -230,5 +230,14 @@ async fn keymap_and_mouse_smash_never_panics() {
             h.send(mouse(MouseEventKind::ScrollUp, at)).await;
             h.press(KeyCode::Esc).await;
         }
+        // The gestures (#42) over the list and the detail body: a
+        // double-click, a drag, a right-click, each from wherever the
+        // previous one left the app.
+        for at in [(10, 10), (60, 12), (100, 20), (100, 30)] {
+            h.double_click(at).await;
+            h.drag(at, (at.0, at.1 + 3)).await;
+            h.right_click(at).await;
+            h.press(KeyCode::Esc).await;
+        }
     }
 }

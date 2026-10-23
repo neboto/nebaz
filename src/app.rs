@@ -105,7 +105,7 @@ use crate::search::query_parser::{parse_query, rg_filter_admits, split_rg_filter
 use crate::ui::widgets::location_selector::{EndpointState, LocationSelectorState};
 use crate::ui::widgets::service_selector::ServiceSelectorState;
 use crate::ui::widgets::subscription_selector::SubscriptionSelectorState;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::Rect;
 use ratatui::widgets::ListState;
 use std::cell::{Cell, RefCell};
@@ -121,6 +121,9 @@ mod metrics;
 mod network_lens;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
+/// The mouse: click targets, double-click, drag, right-click back.
+mod mouse;
+pub use mouse::{record_hint_regions, ClickAction, ClickRegion, MouseState, PopupHits};
 /// The list pane's visual selection (`V`, `Ctrl-A`, drag) and its verbs.
 mod list_visual;
 
@@ -136,26 +139,6 @@ fn point_in(area: Rect, col: u16, row: u16) -> bool {
         && col < area.x.saturating_add(area.width)
         && row >= area.y
         && row < area.y.saturating_add(area.height)
-}
-
-/// What a click on a recorded tab-bar region should do. `Service` switches the
-/// active service; `Key` replays a keypress through `handle_key` so a sub-tab
-/// click reuses the exact per-service view/toggle logic the keyboard uses.
-#[derive(Debug, Clone, Copy)]
-pub enum ClickAction {
-    Service(ServiceType),
-    Key(char),
-    /// A detail-pane section tab: focus the detail pane (if needed) and replay
-    /// the section's number key, so the click reuses the keyboard section logic.
-    DetailSection(char),
-}
-
-/// A clickable region in the service/sub-tab bars, recorded each frame by the
-/// (read-only) tab widgets so `handle_mouse` can map a click to an action.
-#[derive(Debug, Clone, Copy)]
-pub struct ClickRegion {
-    pub rect: Rect,
-    pub action: ClickAction,
 }
 
 /// Controls how the main content area is split between list and details.
@@ -573,6 +556,8 @@ pub struct App {
     // Mouse hit-testing, recorded by the read-only widgets each frame.
     click_regions: RefCell<Vec<ClickRegion>>,
     list_area: Cell<Rect>,
+    /// The rest of the mouse's hit targets and gesture state (`app/mouse.rs`).
+    pub mouse: MouseState,
 }
 
 impl App {
@@ -716,6 +701,7 @@ impl App {
             metrics_window: Default::default(),
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
+            mouse: MouseState::default(),
             config,
         };
         if let Some(w) = app.config.load_warning.take() {
@@ -3138,65 +3124,6 @@ impl App {
         self.update_search();
         self.resolve_pending_jump(event_tx);
         self.resolve_pending_detail_focus(event_tx);
-    }
-
-    fn handle_mouse(&mut self, mouse: MouseEvent, event_tx: &mpsc::UnboundedSender<Event>) {
-        // A click or scroll leaves the network lens first: it belongs to
-        // the row it was opened on.
-        if self.network_lens.is_some() && !matches!(mouse.kind, MouseEventKind::Moved) {
-            self.network_lens = None;
-        }
-        if self.metrics.is_some() && !matches!(mouse.kind, MouseEventKind::Moved) {
-            self.metrics = None;
-        }
-        match mouse.kind {
-            MouseEventKind::Down(_) => {
-                let hit = self
-                    .click_regions
-                    .borrow()
-                    .iter()
-                    .find(|r| point_in(r.rect, mouse.column, mouse.row))
-                    .map(|r| r.action);
-                match hit {
-                    Some(ClickAction::Service(s)) => self.switch_service(s),
-                    Some(ClickAction::Key(c)) => {
-                        self.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE), event_tx)
-                    }
-                    Some(ClickAction::DetailSection(c)) => {
-                        if self.selected_index.is_some() {
-                            self.details_focused = true;
-                            if let Some(idx) = crate::sections::index_for_key(c) {
-                                self.set_detail_section(idx, event_tx);
-                            }
-                        }
-                    }
-                    None => {
-                        let list = self.list_area.get();
-                        if point_in(list, mouse.column, mouse.row) {
-                            let offset = self.resource_list_state.borrow().offset();
-                            let row = (mouse.row - list.y).saturating_sub(1) as usize + offset;
-                            if row < self.filtered_resources.len() {
-                                self.list_visual_anchor = None;
-                                self.select(Some(row));
-                                self.leave_detail_pane();
-                            }
-                        }
-                    }
-                }
-            }
-            // A left-drag over the list rows selects them (from the row
-            // the press landed on).
-            MouseEventKind::Drag(crossterm::event::MouseButton::Left) => {
-                let list = self.list_area.get();
-                if !self.details_focused && point_in(list, mouse.column, mouse.row) && mouse.row > list.y {
-                    let offset = self.resource_list_state.borrow().offset();
-                    self.list_drag_to((mouse.row - list.y - 1) as usize + offset);
-                }
-            }
-            MouseEventKind::ScrollDown => self.move_selection(1),
-            MouseEventKind::ScrollUp => self.move_selection(-1),
-            _ => {}
-        }
     }
 
     fn move_selection(&mut self, delta: isize) {
