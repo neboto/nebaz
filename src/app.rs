@@ -766,7 +766,7 @@ impl App {
     pub fn location_rows(&self) -> Vec<LocationRow> {
         let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
         for r in &self.resources {
-            if let Some(l) = r.location() {
+            if let Some(l) = r.filter_location() {
                 *counts.entry(l.to_lowercase()).or_default() += 1;
             }
         }
@@ -970,7 +970,7 @@ impl App {
 
         // Location filter first — it decides the "of N" denominator.
         let admitted: Vec<usize> = (0..self.resources.len())
-            .filter(|&i| self.current_location.admits(self.resources[i].location()))
+            .filter(|&i| self.current_location.admits(self.resources[i].filter_location()))
             .collect();
         self.location_hidden_count = self.resources.len() - admitted.len();
 

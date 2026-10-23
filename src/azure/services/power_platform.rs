@@ -18,7 +18,9 @@
 //! its own.
 //!
 //! The RP publishes only a preview api-version, and its policies carry no
-//! `provisioningState`; `healthStatus` is the runtime rung.
+//! `provisioningState`; `healthStatus` is the runtime rung. A policy's
+//! location is a Power Platform geography, not an Azure region, so the row
+//! passes every `R` filter (`filter_location`).
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
@@ -162,6 +164,12 @@ impl Resource for EnterprisePolicyRow {
     }
     fn detail_sections(&self) -> Option<&'static crate::sections::SectionDescriptor> {
         Some(&ENTERPRISE_POLICY_SECTIONS)
+    }
+    /// A policy's location is a Power Platform geography (`unitedstates`,
+    /// `europe`), never an Azure region: the row passes every `R` filter
+    /// and stays out of its picker, while `location()` still shows it.
+    fn filter_location(&self) -> Option<&str> {
+        None
     }
     /// The kind, the system id (what an environment's settings show) and
     /// the identity's principal id are searchable.
@@ -457,6 +465,9 @@ mod tests {
         assert_eq!(row.state_label(), "healthy");
         assert!(row.search_text().contains("/regions/unitedstates/"), "system id searchable");
         assert_eq!(row.networks.len(), 2);
+        assert_eq!(row.location(), Some("unitedstates"), "the geography still shows");
+        let eastus = crate::azure::location::Location::Named("eastus".into());
+        assert!(eastus.admits(row.filter_location()), "a geography passes every R filter");
         assert_eq!(
             row.networks[0].subnet_id().unwrap(),
             format!("{}/subnets/snet-pp", vnet("vnet-eastus"))

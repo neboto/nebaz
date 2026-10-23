@@ -111,6 +111,14 @@ pub trait Resource: Send + Sync + Debug {
         None
     }
 
+    /// The location the `R` filter and its picker key on: `location()`,
+    /// unless the type's location is not an Azure region (a Power Platform
+    /// geography), when it is `None` and the row passes every filter, as a
+    /// `global` row does.
+    fn filter_location(&self) -> Option<&str> {
+        self.location()
+    }
+
     /// The resource group this resource lives in, parsed from the ARM id.
     /// `None` for subscription-level rows. Drives the resource-group filter
     /// chip on every list.
