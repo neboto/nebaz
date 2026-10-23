@@ -58,6 +58,9 @@ use crate::azure::services::monitor::{
     component_section_lines, workspace_section_lines, ComponentDetailSection, ComponentRow, WorkspaceDetailSection,
     WorkspaceRow,
 };
+use crate::azure::services::power_platform::{
+    enterprise_policy_section_lines, subnet_policy_lines, EnterprisePolicyDetailSection, EnterprisePolicyRow,
+};
 use crate::azure::services::sql::{
     server_child_path, sql_server_section_lines, SqlServerDetailSection, SqlServerRow, SQL_API_VERSION,
 };
@@ -763,7 +766,7 @@ impl App {
     pub fn location_rows(&self) -> Vec<LocationRow> {
         let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
         for r in &self.resources {
-            if let Some(l) = r.location() {
+            if let Some(l) = r.filter_location() {
                 *counts.entry(l.to_lowercase()).or_default() += 1;
             }
         }
@@ -967,7 +970,7 @@ impl App {
 
         // Location filter first — it decides the "of N" denominator.
         let admitted: Vec<usize> = (0..self.resources.len())
-            .filter(|&i| self.current_location.admits(self.resources[i].location()))
+            .filter(|&i| self.current_location.admits(self.resources[i].filter_location()))
             .collect();
         self.location_hidden_count = self.resources.len() - admitted.len();
 
@@ -1846,7 +1849,17 @@ impl App {
             return Some(vnet_section_lines(r, VnetDetailSection::from_index(idx)));
         }
         if let Some(r) = any.downcast_ref::<SubnetRow>() {
-            return Some(subnet_section_lines(r, SubnetDetailSection::from_index(idx)));
+            // The reverse link to a Power Platform policy: the warm
+            // policies list of the subnet's subscription, never a call.
+            let policies = subscription_of(r.id()).and_then(|sub| {
+                self.cache
+                    .get_ref(&ServiceType::PowerPlatform, sub, Some(JumpView::EnterprisePolicies.as_str()))
+            });
+            return Some(subnet_section_lines(
+                r,
+                SubnetDetailSection::from_index(idx),
+                subnet_policy_lines(r, policies),
+            ));
         }
         if let Some(r) = any.downcast_ref::<NsgRow>() {
             return Some(nsg_section_lines(r, NsgDetailSection::from_index(idx)));
@@ -1935,6 +1948,9 @@ impl App {
                 self.lazy.identity_role_assignments.get(r.id()),
                 role_definitions_scope(r.id()).and_then(|k| self.lazy.role_definitions.get(&k)),
             ));
+        }
+        if let Some(r) = any.downcast_ref::<EnterprisePolicyRow>() {
+            return Some(enterprise_policy_section_lines(r, EnterprisePolicyDetailSection::from_index(idx)));
         }
         if let Some(r) = any.downcast_ref::<FoundryRow>() {
             return Some(foundry_section_lines(

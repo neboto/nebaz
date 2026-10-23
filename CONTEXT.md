@@ -21,7 +21,10 @@ An Azure region name as ARM spells it (`westeurope`). In nebaz a location is
 a **filter** over rows already fetched for the subscription, never a scope a
 call is made in; "all locations" is the ordinary state, not a special one.
 A row whose location is `global` (private DNS zones and other non-regional
-types) passes every location filter: it is in every location, not none.
+types) passes every location filter: it is in every location, not none. So
+does a row whose location is not an Azure region at all (a Power Platform
+enterprise policy's geography, `unitedstates`): `Resource::filter_location`
+is `None` for it, while the geography still shows on the row.
 _Avoid_: region (even though the picker key stays `R`)
 
 **Resource group**:

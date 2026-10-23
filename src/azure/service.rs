@@ -42,6 +42,9 @@ pub enum ServiceType {
     /// Log Analytics workspaces and Application Insights components,
     /// metadata only; never a query, a key or a connection string.
     Monitor,
+    /// Power Platform enterprise policies (network injection, encryption,
+    /// identity). Never the environments: they are not in ARM.
+    PowerPlatform,
 }
 
 /// One sub-tab: the rows of one resource type within a service. A flat
@@ -99,6 +102,8 @@ pub enum JumpView {
     // Monitor
     LogWorkspaces,
     AppInsights,
+    // Power Platform
+    EnterprisePolicies,
 }
 
 impl JumpView {
@@ -120,6 +125,7 @@ impl JumpView {
             CosmosAccounts => ServiceType::Cosmos,
             AiAccounts => ServiceType::Foundry,
             LogWorkspaces | AppInsights => ServiceType::Monitor,
+            EnterprisePolicies => ServiceType::PowerPlatform,
         }
     }
 
@@ -156,6 +162,7 @@ impl JumpView {
             AiAccounts => "ai-accounts",
             LogWorkspaces => "log-workspaces",
             AppInsights => "app-insights",
+            EnterprisePolicies => "enterprise-policies",
         }
     }
 
@@ -192,6 +199,7 @@ impl JumpView {
             AiAccounts => "Resources",
             LogWorkspaces => "Workspaces",
             AppInsights => "App Insights",
+            EnterprisePolicies => "Enterprise policies",
         }
     }
 
@@ -235,6 +243,7 @@ impl JumpView {
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
             ("microsoft.operationalinsights", ["workspaces"]) => JumpView::LogWorkspaces,
             ("microsoft.insights", ["components"]) => JumpView::AppInsights,
+            ("microsoft.powerplatform", ["enterprisepolicies"]) => JumpView::EnterprisePolicies,
             _ => return None,
         })
     }
@@ -275,6 +284,7 @@ impl ServiceType {
             ServiceType::Cosmos,
             ServiceType::Foundry,
             ServiceType::Monitor,
+            ServiceType::PowerPlatform,
         ]
     }
 
@@ -297,6 +307,7 @@ impl ServiceType {
             ServiceType::Cosmos => "Databases",
             ServiceType::Foundry => "AI",
             ServiceType::Monitor => "Monitoring",
+            ServiceType::PowerPlatform => "Management",
         }
     }
 
@@ -315,6 +326,7 @@ impl ServiceType {
             ServiceType::Cosmos => "Cosmos DB",
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
+            ServiceType::PowerPlatform => "Power Platform",
         }
     }
 
@@ -334,6 +346,7 @@ impl ServiceType {
             ServiceType::Cosmos => "Cosmos",
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
+            ServiceType::PowerPlatform => "Power Plat",
         }
     }
 
@@ -352,6 +365,7 @@ impl ServiceType {
             ServiceType::Cosmos => "Cosmos DB accounts",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
             ServiceType::Monitor => "Log Analytics & App Insights",
+            ServiceType::PowerPlatform => "Power Platform enterprise policies",
         }
     }
 
@@ -383,6 +397,7 @@ impl ServiceType {
             ServiceType::Cosmos => &[CosmosAccounts],
             ServiceType::Foundry => &[AiAccounts],
             ServiceType::Monitor => &[LogWorkspaces, AppInsights],
+            ServiceType::PowerPlatform => &[EnterprisePolicies],
         }
     }
 
@@ -466,6 +481,9 @@ impl ServiceType {
             "appi" | "insights" | "appinsights" | "applicationinsights" | "component" | "components" => {
                 (ServiceType::Monitor, Some(JumpView::AppInsights))
             }
+            "pp" | "powerplatform" | "enterprisepolicy" | "enterprisepolicies" => {
+                (ServiceType::PowerPlatform, None)
+            }
             _ => return None,
         };
         Some((service, view))
@@ -493,6 +511,7 @@ impl ServiceType {
             ServiceType::Cosmos => "@cosmos",
             ServiceType::Foundry => "@foundry",
             ServiceType::Monitor => "@monitor",
+            ServiceType::PowerPlatform => "@pp",
         }
     }
 
@@ -504,7 +523,7 @@ impl ServiceType {
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -653,6 +672,10 @@ mod tests {
             Some(JumpView::LogWorkspaces)
         );
         assert_eq!(JumpView::for_arm_id(&p("microsoft.insights/components/appi-shop")), Some(JumpView::AppInsights));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.PowerPlatform/enterprisePolicies/ep-vnet")),
+            Some(JumpView::EnterprisePolicies)
+        );
         assert_eq!(ServiceType::from_prefix("@ai"), None, "@ai is ambiguous (Foundry or App Insights)");
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.DocumentDB/databaseAccounts/cosmos-prod")),

@@ -124,6 +124,7 @@ cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
 cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe / pdns)
 cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments
 cargo run -- -s law    # Log Analytics workspaces (-s appi for App Insights)
+cargo run -- -s pp     # Power Platform enterprise policies; a delegated subnet's Related links back
 cargo test             # all tests, including the read-only guard
 cargo test --test readonly_guard   # just the guard (see "Why read-only")
 cargo clippy           # lint
