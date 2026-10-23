@@ -79,6 +79,12 @@ Re-porting these means re-doing the cut; diff against the origin commit.
 | `scripts/smoke.sh`, `scripts/smoke/` | — | no neboto equivalent (neboto has an in-crate harness and an emulator); a pty run with a fake `az` |
 | `src/azure/services/aks.rs` | ~680 | `src/aws/services/eks.rs` — clusters, embedded node pools |
 
+## neboto fixes ported later
+
+| nebaz change | neboto commits | what |
+|---|---|---|
+| `src/search/fuzzy.rs`; `subscription_selector.rs`, `service_selector.rs`, `location_selector.rs` (#59) | `df76264`, `fd548fe` | `filter_fields` (best field scores, an exact any-case match on any field floats), the threshold counts characters, the query is trimmed; the `P`, `S` and `R` pickers fuzzy-filter through it, `P` and `R` cache `filtered()` per query. Not taken: `filter_strings`, since no nebaz picker filters a single field (its tests call `filter_fields` with one), and `filter_resources`' exact id/name float (`dde77e1`, an `@audit` change) |
+
 ## Not ported (deliberately)
 
 - `src/aws/pagination.rs` — AWS `next_token` stop rules; ARM paging is `nextLink` through `azure_core::http::Pager`.

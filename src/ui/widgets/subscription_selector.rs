@@ -1,10 +1,11 @@
-// ported from neboto-tui src/ui/widgets/profile_selector.rs @ d483900
+// ported from neboto-tui src/ui/widgets/profile_selector.rs @ d483900 (+ df76264, fd548fe)
 //! The `P` picker: every subscription `az account list` knows, all tenants,
 //! with a tenant column instead of a tenant picker (ADR 0003). Disabled
 //! subscriptions are listed but dimmed; the current one is marked. When
 //! there is nothing to list the popup shows the auth line and its fix.
 
 use crate::azure::auth::SubscriptionEntry;
+use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
 use crate::ui::widgets::location_selector::render_search_line;
 use ratatui::{
@@ -28,17 +29,12 @@ pub struct SubscriptionSelectorState {
     /// List-area height recorded at render time (`Cell`: render only sees
     /// `&self`), so `Ctrl-d`/`Ctrl-u` page jumps scale with the actual popup.
     viewport: std::cell::Cell<u16>,
-}
-
-fn matches(entry: &SubscriptionEntry, query: &str) -> bool {
-    if query.is_empty() {
-        return true;
-    }
-    let q = query.to_lowercase();
-    entry.name.to_lowercase().contains(&q)
-        || entry.id.to_lowercase().contains(&q)
-        || entry.tenant_id.to_lowercase().contains(&q)
-        || entry.state.to_lowercase().contains(&q)
+    /// `filtered()`'s indices for the query they were computed for: it is
+    /// called several times per key and frame, and each call would re-score
+    /// every subscription. Keyed by the query (not cleared in `push_char`)
+    /// because `query` is public; `show` clears it, since that replaces
+    /// `subscriptions`.
+    filtered_cache: std::cell::RefCell<Option<(String, Vec<usize>)>>,
 }
 
 impl SubscriptionSelectorState {
@@ -50,6 +46,7 @@ impl SubscriptionSelectorState {
             subscriptions: Vec::new(),
             auth_message: None,
             viewport: std::cell::Cell::new(0),
+            filtered_cache: std::cell::RefCell::new(None),
         }
     }
 
@@ -62,6 +59,7 @@ impl SubscriptionSelectorState {
         auth_message: Option<String>,
     ) {
         self.subscriptions = subscriptions;
+        self.filtered_cache.take();
         self.auth_message = auth_message;
         self.visible = true;
         self.query.clear();
@@ -74,12 +72,29 @@ impl SubscriptionSelectorState {
         self.visible = false;
     }
 
-    /// Entries matching the current search query.
+    /// Entries matching the current search query: fuzzy over the name, the
+    /// id and the tenant id, best match first, and an exact (any case) name
+    /// or id on top. Not the state: `en` would fuzzy-hit every `Enabled`
+    /// row, and disabled rows are dimmed already.
     pub fn filtered(&self) -> Vec<&SubscriptionEntry> {
-        self.subscriptions
-            .iter()
-            .filter(|e| matches(e, &self.query))
-            .collect()
+        if self.query.is_empty() {
+            return self.subscriptions.iter().collect();
+        }
+        if let Some((q, idx)) = self.filtered_cache.borrow().as_ref() {
+            if *q == self.query {
+                return idx.iter().map(|&i| &self.subscriptions[i]).collect();
+            }
+        }
+        let idx: Vec<usize> = FuzzyMatcher::new()
+            .filter_fields(&self.query, &self.subscriptions, |e| {
+                vec![e.name.as_str(), e.id.as_str(), e.tenant_id.as_str()]
+            })
+            .into_iter()
+            .map(|(i, _)| i)
+            .collect();
+        let rows = idx.iter().map(|&i| &self.subscriptions[i]).collect();
+        *self.filtered_cache.borrow_mut() = Some((self.query.clone(), idx));
+        rows
     }
 
     pub fn next(&mut self) {
@@ -180,7 +195,7 @@ pub fn render_subscription_selector(
     let block = theme::popup_block("Switch Subscription")
         .title(
             Title::from(theme::hint_line(&[
-                ("type", "filter"),
+                ("type", "fuzzy filter"),
                 ("↑/↓", "move"),
                 ("^d/^u", "page"),
                 ("⏎", "select"),
@@ -304,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn show_marks_the_current_and_filters_on_name_id_tenant_or_state() {
+    fn show_marks_the_current_and_filters_on_name_id_or_tenant() {
         let mut s = SubscriptionSelectorState::new();
         s.show(
             vec![
@@ -318,10 +333,33 @@ mod tests {
         assert_eq!(s.selected_index, 1);
         s.query = "t-b".into();
         assert_eq!(s.filtered().len(), 2);
-        s.query = "disabled".into();
+        s.query = "33".into();
         s.selected_index = 0;
         assert_eq!(s.selected_subscription().as_deref(), Some("3333"));
-        s.query = "33".into();
-        assert_eq!(s.selected_subscription().as_deref(), Some("3333"));
+    }
+
+    #[test]
+    fn filter_is_fuzzy_and_an_exact_name_floats() {
+        let mut s = SubscriptionSelectorState::new();
+        s.show(
+            vec![
+                entry("aaaa", "acme-prod-admin", "t-a", "Enabled"),
+                entry("bbbb", "acme-staging", "t-a", "Enabled"),
+                entry("cccc", "prod-legacy", "t-b", "Enabled"),
+                entry("dddd", "prod", "t-b", "Enabled"),
+            ],
+            None,
+            None,
+        );
+        s.query = "apadm".into();
+        let hits: Vec<&str> = s.filtered().iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(hits, vec!["acme-prod-admin"]);
+        s.query = "prod ".into();
+        assert_eq!(s.selected_subscription().as_deref(), Some("dddd"), "exact name floats");
+        assert_eq!(s.filtered().len(), 3, "a trailing space keeps the fuzzy hits");
+        s.query = "PROD".into();
+        assert_eq!(s.selected_subscription().as_deref(), Some("dddd"), "exact match ignores case");
+        s.query = "zzz".into();
+        assert_eq!(s.selected_subscription(), None);
     }
 }

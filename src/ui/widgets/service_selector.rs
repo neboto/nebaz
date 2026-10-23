@@ -1,5 +1,6 @@
-// ported from neboto-tui src/ui/widgets/service_selector.rs @ d483900
+// ported from neboto-tui src/ui/widgets/service_selector.rs @ d483900 (+ fd548fe)
 use crate::azure::service::ServiceType;
+use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -96,22 +97,29 @@ impl ServiceSelectorState {
                     .extend(members.into_iter().map(SelectorRow::Service));
             }
         } else {
-            let q = self.search.to_lowercase();
-            self.rows = self
-                .all
-                .iter()
-                .filter(|s| {
-                    let name = s.name().to_lowercase();
-                    let short = s.short_name().to_lowercase();
-                    let desc = s.description().to_lowercase();
-                    let cat = s.category().to_lowercase();
-                    name.contains(&q)
-                        || short.contains(&q)
-                        || desc.contains(&q)
-                        || cat.contains(&q)
+            // Fuzzy over every field, best match first; the exact check
+            // covers the routing prefix too, so `vm` / `kv` / `aks` still
+            // put their service on top.
+            let mut hits: Vec<ServiceType> = FuzzyMatcher::new()
+                .filter_fields(&self.search, &self.all, |s| {
+                    vec![
+                        s.name(),
+                        s.short_name(),
+                        s.prefix().trim_start_matches('@'),
+                        s.description(),
+                        s.category(),
+                    ]
                 })
-                .map(|s| SelectorRow::Service(*s))
+                .into_iter()
+                .map(|(idx, _)| self.all[idx])
                 .collect();
+            // Any alias `@` routing accepts (`k8s`, `openai`, `law`, `rg`)
+            // lands on its service too, ahead of the fuzzy hits.
+            if let Some(routed) = ServiceType::from_prefix_service(&self.search) {
+                hits.retain(|s| *s != routed);
+                hits.insert(0, routed);
+            }
+            self.rows = hits.into_iter().map(SelectorRow::Service).collect();
         }
         self.selected_index = self.first_service_row();
     }
@@ -335,7 +343,7 @@ pub fn render_service_selector(
         .border_style(Style::default().fg(theme::border_dim()))
         .title(
             Title::from(theme::hint_line(&[
-                ("type", "filter"),
+                ("type", "fuzzy filter"),
                 ("↑/↓", "move"),
                 ("^d/^u", "page"),
                 ("←/→", "category"),
@@ -465,6 +473,41 @@ mod tests {
             state.pop_char();
         }
         assert!(matches!(state.rows[0], SelectorRow::Header(_)));
+    }
+
+    fn typed(query: &str) -> ServiceSelectorState {
+        let mut state = ServiceSelectorState::new();
+        state.show(None);
+        for c in query.chars() {
+            state.push_char(c);
+        }
+        state
+    }
+
+    #[test]
+    fn routing_prefixes_and_aliases_rank_their_service_first() {
+        for (query, want) in [
+            ("vm", ServiceType::VirtualMachines),
+            ("kv", ServiceType::KeyVault),
+            ("aks", ServiceType::Aks),
+            ("acr", ServiceType::ContainerRegistry),
+            ("id", ServiceType::Identity),
+            ("sql", ServiceType::Sql),
+            ("KV", ServiceType::KeyVault),
+            ("aks ", ServiceType::Aks),
+            ("k8s", ServiceType::Aks),
+            ("law", ServiceType::Monitor),
+            ("rg", ServiceType::Subscriptions),
+        ] {
+            assert_eq!(typed(query).selected_service(), Some(want), "{query:?}");
+        }
+    }
+
+    #[test]
+    fn filtering_is_fuzzy() {
+        assert_eq!(typed("kyvlt").selected_service(), Some(ServiceType::KeyVault));
+        assert_eq!(typed("cntreg").selected_service(), Some(ServiceType::ContainerRegistry));
+        assert_eq!(typed("zzz").selected_service(), None);
     }
 
     #[test]

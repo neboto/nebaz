@@ -1,4 +1,4 @@
-// ported from neboto-tui src/ui/widgets/region_selector.rs @ d483900
+// ported from neboto-tui src/ui/widgets/region_selector.rs @ d483900 (+ fd548fe)
 //! The `R` picker. Unlike neboto's region picker it has no compiled table:
 //! `App::location_rows` feeds it the subscription's locations endpoint
 //! (once it has landed) merged with the distinct locations of the current
@@ -7,6 +7,7 @@
 //! spelling) still shows.
 
 use crate::azure::location::{Location, LocationRow};
+use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -30,6 +31,11 @@ pub struct LocationSelectorState {
     /// List-area height recorded at render time (`Cell`: render only sees
     /// `&self`), so `Ctrl-d`/`Ctrl-u` page jumps scale with the actual popup.
     viewport: std::cell::Cell<u16>,
+    /// `filtered()`'s indices for the query they were computed for: it is
+    /// called several times per key and frame. Keyed by the query because
+    /// `query` is public; `show` and `refresh_rows` clear it, since they
+    /// replace `rows`.
+    filtered_cache: std::cell::RefCell<Option<(String, Vec<usize>)>>,
 }
 
 /// The state of the subscription's locations endpoint list, as the
@@ -41,14 +47,6 @@ pub enum EndpointState {
     Failed(String),
 }
 
-fn matches(row: &LocationRow, query: &str) -> bool {
-    if query.is_empty() {
-        return true;
-    }
-    let q = query.to_lowercase();
-    row.location.as_str().contains(&q) || row.display_name.to_lowercase().contains(&q)
-}
-
 impl LocationSelectorState {
     pub fn new() -> Self {
         Self {
@@ -58,12 +56,14 @@ impl LocationSelectorState {
             rows: Vec::new(),
             endpoint: EndpointState::Loading,
             viewport: std::cell::Cell::new(0),
+            filtered_cache: std::cell::RefCell::new(None),
         }
     }
 
     /// Show the modal over a fresh row set, selecting the current location.
     pub fn show(&mut self, current_location: &Location, rows: Vec<LocationRow>, endpoint: EndpointState) {
         self.rows = rows;
+        self.filtered_cache.take();
         self.endpoint = endpoint;
         self.visible = true;
         self.query.clear();
@@ -78,6 +78,7 @@ impl LocationSelectorState {
     pub fn refresh_rows(&mut self, rows: Vec<LocationRow>, endpoint: EndpointState) {
         let keep = self.selected_location();
         self.rows = rows;
+        self.filtered_cache.take();
         self.endpoint = endpoint;
         if let Some(loc) = keep {
             if let Some(pos) = self.filtered().iter().position(|r| r.location == loc) {
@@ -90,9 +91,28 @@ impl LocationSelectorState {
         self.visible = false;
     }
 
-    /// Rows matching the current search query.
+    /// Rows matching the current search query: fuzzy over the location name
+    /// and the display name, best match first (the given order otherwise),
+    /// an exact (any case) name or display name on top.
     pub fn filtered(&self) -> Vec<&LocationRow> {
-        self.rows.iter().filter(|r| matches(r, &self.query)).collect()
+        if self.query.is_empty() {
+            return self.rows.iter().collect();
+        }
+        if let Some((q, idx)) = self.filtered_cache.borrow().as_ref() {
+            if *q == self.query {
+                return idx.iter().map(|&i| &self.rows[i]).collect();
+            }
+        }
+        let idx: Vec<usize> = FuzzyMatcher::new()
+            .filter_fields(&self.query, &self.rows, |r| {
+                vec![r.location.as_str(), r.display_name.as_str()]
+            })
+            .into_iter()
+            .map(|(i, _)| i)
+            .collect();
+        let rows = idx.iter().map(|&i| &self.rows[i]).collect();
+        *self.filtered_cache.borrow_mut() = Some((self.query.clone(), idx));
+        rows
     }
 
     pub fn next(&mut self) {
@@ -171,7 +191,7 @@ pub fn render_location_selector(
 
     let (pos, total) = state.position();
     let mut hints: Vec<(&str, &str)> = vec![
-        ("type", "filter"),
+        ("type", "fuzzy filter"),
         ("↑/↓", "move"),
         ("^d/^u", "page"),
         ("⏎", "select"),
@@ -348,6 +368,27 @@ mod tests {
         assert_eq!(s.selected_location(), Some(Location::parse("eastus")));
         s.query = "west europe".into();
         assert_eq!(s.selected_location(), Some(Location::parse("westeurope")));
+    }
+
+    #[test]
+    fn filter_is_fuzzy_and_an_exact_name_floats() {
+        let mut s = LocationSelectorState::new();
+        let mut more = rows();
+        more.push(LocationRow {
+            location: Location::parse("eastus2"),
+            display_name: "East US 2".into(),
+            count: 1,
+        });
+        s.show(&Location::All, more, EndpointState::Loaded);
+        s.query = "wsteu".into();
+        assert_eq!(s.selected_location(), Some(Location::parse("westeurope")));
+        s.query = "eastus2".into();
+        assert_eq!(s.selected_location(), Some(Location::parse("eastus2")));
+        s.query = "EASTUS ".into();
+        assert_eq!(s.selected_location(), Some(Location::parse("eastus")), "exact, any case, trimmed");
+        s.query = "east us".into();
+        assert_eq!(s.selected_location(), Some(Location::parse("eastus")), "exact display name");
+        assert_eq!(s.filtered().len(), 2, "East US 2 still listed under it");
     }
 
     #[test]
