@@ -28,6 +28,11 @@ pub enum Sink {
 pub struct Clipboard {
     system: Option<arboard::Clipboard>,
     system_error: Option<String>,
+    /// The last text copied. Under `cfg(test)` it is the only sink, so a
+    /// test run never touches the developer's clipboard; the wiring harness
+    /// reads it back.
+    #[cfg_attr(not(test), allow(dead_code))]
+    last: Option<String>,
 }
 
 impl Default for Clipboard {
@@ -41,12 +46,17 @@ impl Clipboard {
         Self {
             system: None,
             system_error: None,
+            last: None,
         }
     }
 
     /// Copy `text` to every sink available. `Err` only when neither is:
     /// OSC 52 needs stdout to be a terminal.
     pub fn copy(&mut self, text: &str) -> Result<Sink, String> {
+        self.last = Some(text.to_string());
+        if cfg!(test) {
+            return Ok(Sink::System);
+        }
         let terminal = write_osc52(text).is_ok();
         if self.system.is_none() && self.system_error.is_none() {
             match arboard::Clipboard::new() {
@@ -103,6 +113,13 @@ fn write_osc52(text: &str) -> std::io::Result<()> {
 mod tests {
     use super::*;
 
+    impl Clipboard {
+        /// What the last copy put on the clipboard (the wiring harness).
+        pub(crate) fn last(&self) -> Option<&str> {
+            self.last.as_deref()
+        }
+    }
+
     #[test]
     fn osc52_encodes_base64_and_wraps_for_tmux() {
         assert_eq!(osc52("hi", false), b"\x1b]52;c;aGk=\x07".to_vec());
@@ -110,5 +127,13 @@ mod tests {
             osc52("hi", true),
             b"\x1bPtmux;\x1b\x1b]52;c;aGk=\x07\x1b\\".to_vec()
         );
+    }
+
+    #[test]
+    fn a_test_build_copies_to_no_real_sink() {
+        let mut c = Clipboard::new();
+        assert_eq!(c.copy("id"), Ok(Sink::System));
+        assert_eq!(c.last(), Some("id"));
+        assert!(c.system.is_none(), "arboard is never opened under test");
     }
 }

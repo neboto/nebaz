@@ -440,7 +440,13 @@ impl App {
     pub async fn new(cli: crate::cli::Cli) -> Result<Self> {
         let mut config = Config::load();
         cli.apply_to(&mut config);
+        let azure_clients = AzureClients::new(&config).await?;
+        Ok(Self::from_parts(config, azure_clients, cli.macro_name.clone()))
+    }
 
+    /// The rest of `new` once the config and the clients exist; the wiring
+    /// harness's `new_for_test` (default config, offline clients) shares it.
+    fn from_parts(config: Config, azure_clients: AzureClients, startup_macro: Option<String>) -> Self {
         // Theme first: everything drawn after this reads the palette.
         let (palette, theme_warnings) = crate::ui::theme::Palette::from_config(
             config.theme.as_deref(),
@@ -448,7 +454,6 @@ impl App {
         );
         crate::ui::theme::init_palette(palette);
 
-        let azure_clients = AzureClients::new(&config).await?;
         let subscription_id = azure_clients.current_subscription().map(str::to_string);
         let subscription_name = azure_clients.current_subscription_name().map(str::to_string);
         let tenant_id = azure_clients.current_tenant().map(str::to_string);
@@ -540,7 +545,7 @@ impl App {
             macro_picker_visible: false,
             macro_picker_selected: 0,
             macro_name_input: None,
-            startup_macro: cli.macro_name.clone(),
+            startup_macro,
             watch: WatchState::new(config.watch.unwrap_or(false), config.watch_interval),
             watch_staging: None,
             deep_export_progress: None,
@@ -562,7 +567,7 @@ impl App {
         if app.subscription_id.is_none() {
             app.open_subscription_picker();
         }
-        Ok(app)
+        app
     }
 
     /// `P`: the picker over every subscription the CLI knows, or the auth
@@ -3222,3 +3227,8 @@ mod tests {
         assert_eq!(selection_text(&lines, 2, 2), "env: prod");
     }
 }
+
+/// Layer-2 wiring tests: the real `App`, offline (`src/harness_tests`).
+#[cfg(test)]
+#[path = "harness_tests/mod.rs"]
+mod harness_tests;
