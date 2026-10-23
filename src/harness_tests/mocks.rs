@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, compute, container_registry, cosmos, foundry, identity, keyvault, monitor,
-    network, network_edge, network_private, sql, storage, subscriptions,
+    network, network_edge, network_private, power_platform, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -260,9 +260,33 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             "ComponentRow",
             parse("ComponentRow", monitor::ComponentRow::from_json(&simple("Microsoft.Insights/components/appi-1"), t)),
         ),
+        m(
+            JumpView::EnterprisePolicies,
+            "EnterprisePolicyRow",
+            parse(
+                "EnterprisePolicyRow",
+                power_platform::EnterprisePolicyRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.PowerPlatform/enterprisePolicies/ep-vnet"),
+                        "name": "ep-vnet",
+                        "type": "Microsoft.PowerPlatform/enterprisePolicies",
+                        "kind": "NetworkInjection",
+                        "location": "unitedstates",
+                        "properties": {
+                            "healthStatus": "Healthy",
+                            "networkInjection": {"virtualNetworks": [
+                                {"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1"), "subnet": {"name": "snet-pp"}}
+                            ]}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
     ];
-    // Lost coverage fails loudly: raise the floor when a split pane is
-    // added, never lower it.
-    assert!(out.len() >= 28, "mock registry shrank to {} rows", out.len());
+    // Lost coverage fails loudly. One row per sub-tab, except Function apps
+    // (the sites list, SiteRow); `every_sub_tab_has_a_mock` names a gap.
+    let sub_tabs: usize = crate::azure::service::ServiceType::all().iter().map(|s| s.views().len()).sum();
+    assert!(out.len() >= sub_tabs - 1, "{} mock rows for {} sub-tabs", out.len(), sub_tabs);
     out
 }

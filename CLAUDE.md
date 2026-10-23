@@ -143,8 +143,8 @@ verbatim where the concept is unchanged.
 5. `src/app.rs`: the `section_lines_for` downcast arm; a lazy section also
    needs a `LazyMap` in `src/lazy.rs`, a `trigger_*` fn and the on-enter
    hook.
-6. `src/harness_tests/mocks.rs`: a mock row for the new type (and raise
-   the floor), or the harness's section and renderer checks skip it.
+6. `src/harness_tests/mocks.rs`: a mock row for the new sub-tab's type
+   (`every_sub_tab_has_a_mock` fails until there is one).
 7. Docs: the row in `docs/SERVICES.md` (catalog **and** call table), the
    action in `PERMISSIONS.md`, the build line in `README.md`. The
    read-only guard will tell you if the `az` verb or the path is wrong.
