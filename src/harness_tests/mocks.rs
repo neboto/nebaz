@@ -7,8 +7,8 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, compute, container_apps, container_registry, cosmos, foundry, identity, keyvault, monitor,
-    network, network_edge, network_private, power_platform, sql, storage, subscriptions,
+    aks, all_resources, app_service, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
+    keyvault, monitor, network, network_edge, network_private, power_platform, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -198,6 +198,37 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             parse(
                 "IdentityRow",
                 identity::IdentityRow::from_json(&simple("Microsoft.ManagedIdentity/userAssignedIdentities/id-1"), t),
+            ),
+        ),
+        // Directory rows (Graph, ADR 0004): no ARM id, a synthetic one.
+        m(
+            JumpView::ServicePrincipals,
+            "ServicePrincipalRow",
+            parse(
+                "ServicePrincipalRow",
+                directory::ServicePrincipalRow::from_json(
+                    &json!({"id": "00af5dfb-85da-4b41-a677-0c6b86dd34f8", "appId": "11111111-2222-3333-4444-555555555555",
+                            "displayName": "sp-1", "servicePrincipalType": "Application", "appOwnerOrganizationId": TENANT,
+                            "passwordCredentials": [{"displayName": "ci", "keyId": "aaaaaaaa-0000-0000-0000-000000000001",
+                                "startDateTime": "2025-01-01T00:00:00Z", "endDateTime": "2099-01-01T00:00:00Z"}],
+                            "keyCredentials": []}),
+                    t,
+                    directory::now_unix(),
+                ),
+            ),
+        ),
+        m(
+            JumpView::AppRegistrations,
+            "AppRegistrationRow",
+            parse(
+                "AppRegistrationRow",
+                directory::AppRegistrationRow::from_json(
+                    &json!({"id": "44444444-0000-0000-0000-000000000000", "appId": "11111111-2222-3333-4444-555555555555",
+                            "displayName": "app-1", "web": {"redirectUris": ["https://app.example/signin"]},
+                            "requiredResourceAccess": [], "passwordCredentials": [], "keyCredentials": []}),
+                    t,
+                    directory::now_unix(),
+                ),
             ),
         ),
         m(
