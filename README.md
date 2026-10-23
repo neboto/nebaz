@@ -156,6 +156,35 @@ cargo clippy           # lint
 scripts/smoke.sh       # offline pty run with a fake az (needs python3)
 ```
 
+## Headless: `services`, `ls`, `get`
+
+With a subcommand nebaz runs once and prints instead of opening the TUI:
+the same read-only calls, for scripts and agents. Output is JSON (the
+default, carrying `"schema": "nebaz/v1"`) or Markdown (`-o md`); stdout
+carries only the result, warnings go to stderr.
+
+```bash
+nebaz services                              # every service, its sub-tabs and their prefixes
+nebaz ls vm                                 # one subscription-wide list
+nebaz ls vnet/subnets -r westeurope -f 'rg:prod tag:env=prod' --limit 20
+nebaz ls nsg -p "Prod" -o md                # another subscription, as a Markdown table
+nebaz get /subscriptions/…/virtualMachines/vm-1          # every section, lazy ones fetched
+nebaz get vm-1 --in vm --section access --section related
+nebaz get graph:/servicePrincipals/<object id>
+```
+
+`get` shows what the detail pane shows: it drives the same `App` without a
+terminal, selects the row the way a jump does and enters every section
+(`--section` limits both the output and the calls; `--wait SECS`, default
+60, bounds the lazy fetches, and a section still loading prints as
+`null`). Exit codes: `0` ok (an empty list included), `1` an Azure error,
+`2` a wrong request (unknown prefix, section, subscription or location, a
+resource that isn't there or is ambiguous), `4` not signed in (`az
+login`); `3` is reserved for `audit`. A wrong `-p` or `-r` fails rather
+than falling back. The stable keys, flags and exit codes are pinned in
+[`src/headless/contract.json`](src/headless/contract.json); an agent skill
+describing all of it is in [`skills/nebaz/SKILL.md`](skills/nebaz/SKILL.md).
+
 ## Scoping model
 
 - `P` — **subscription** (the profile slot in neboto); `-p` takes an id or

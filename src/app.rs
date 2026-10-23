@@ -124,6 +124,10 @@ mod export;
 /// The list pane's visual selection (`V`, `Ctrl-A`, drag) and its verbs.
 mod list_visual;
 
+/// The terminal-less `App` behind `nebaz ls` / `nebaz get` (#44).
+mod headless;
+pub(crate) use headless::ListShaping;
+
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
 
 /// Whether a screen cell (`col`, `row`) falls inside `area`.
@@ -4284,4 +4288,4 @@ mod tests {
 /// Layer-2 wiring tests: the real `App`, offline (`src/harness_tests`).
 #[cfg(test)]
 #[path = "harness_tests/mod.rs"]
-mod harness_tests;
+pub(crate) mod harness_tests;

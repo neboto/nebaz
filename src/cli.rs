@@ -1,33 +1,44 @@
-// ported from neboto-tui src/cli.rs @ d483900
+// ported from neboto-tui src/cli.rs @ d483900 (the subcommands from
+// neboto-tui src/cli.rs @ 08fcd0c)
 //! Command-line argument parsing. Every switch is optional and **overrides the
 //! config file** (`~/.config/nebaz/config.toml` etc.) for this run only — so you
 //! can jump straight to a service/location/subscription without editing config.
 
 use crate::config::Config;
-use clap::Parser;
+use clap::{Parser, Subcommand, ValueEnum};
 
 /// nebaz — a read-only Azure resource browser TUI.
 ///
 /// With no arguments it honours your config file (or shows the welcome splash).
 /// Flags below override the config for this run, e.g. `nebaz -s vm -r westeurope`.
+/// With a subcommand it runs once and prints instead of opening the TUI:
+/// the same read-only calls, for scripts and agents.
 #[derive(Debug, Parser)]
 #[command(name = "nebaz", version, about, long_about = None)]
 pub struct Cli {
+    /// Run once and print instead of opening the TUI.
+    #[command(subcommand)]
+    pub command: Option<Command>,
+
+    /// Output format for subcommands (default json).
+    #[arg(short = 'o', long, value_enum, global = true, value_name = "FORMAT")]
+    pub output: Option<OutputFormat>,
+
     /// Service to open on startup (prefix/alias, e.g. vm, storage, aks, @kv).
     #[arg(short = 's', long, value_name = "SERVICE")]
     pub service: Option<String>,
 
     /// Location filter to start with (e.g. westeurope, eastus; default all).
-    #[arg(short = 'r', long, value_name = "LOCATION")]
+    #[arg(short = 'r', long, global = true, value_name = "LOCATION")]
     pub location: Option<String>,
 
     /// Subscription to browse, by id or display name (default: the Azure
     /// CLI's current account).
-    #[arg(short = 'p', long, value_name = "SUBSCRIPTION")]
+    #[arg(short = 'p', long, global = true, value_name = "SUBSCRIPTION")]
     pub subscription: Option<String>,
 
     /// ARM base URL for a sovereign cloud (default https://management.azure.com).
-    #[arg(long, value_name = "URL")]
+    #[arg(long, global = true, value_name = "URL")]
     pub endpoint_url: Option<String>,
 
     /// Show the ASCII banner on startup.
@@ -52,6 +63,81 @@ pub struct Cli {
     /// catppuccin-mocha, catppuccin-latte.
     #[arg(long, value_name = "THEME")]
     pub theme: Option<String>,
+}
+
+/// The one-shot subcommands. Each makes the same read-only calls the TUI
+/// makes and prints the result; nothing here can change a subscription.
+/// Later headless forms (`audit`, #60; `changes`, #61) are new variants
+/// here and new arms in `headless::run`.
+#[derive(Debug, Subcommand)]
+pub enum Command {
+    /// List every service: its prefix, name, and sub-tabs with their
+    /// routing prefixes.
+    Services,
+    /// List one sub-tab, subscription-wide, filtered like the TUI's search.
+    #[command(visible_alias = "list")]
+    Ls(LsArgs),
+    /// Show resources' full detail: every detail-pane section, lazy ones
+    /// fetched.
+    Get(GetArgs),
+}
+
+#[derive(Debug, clap::Args)]
+pub struct LsArgs {
+    /// What to list: a prefix (vm, @nsg, rg, …; `nebaz services` lists
+    /// them) or service/sub-tab (vnet/subnets, aca/jobs).
+    #[arg(value_name = "PREFIX")]
+    pub target: String,
+
+    /// Filter like the TUI search: fuzzy text plus exact `rg:NAME` and
+    /// `tag:key[=value]` terms, e.g. 'web rg:prod tag:env=prod'.
+    #[arg(short = 'f', long, value_name = "QUERY")]
+    pub filter: Option<String>,
+
+    /// Only rows in this state, as the state column shows it (any case),
+    /// e.g. running.
+    #[arg(long, value_name = "STATE")]
+    pub state: Option<String>,
+
+    /// Drop noise rows (today: subscriptions that are not Enabled), the
+    /// TUI's `a`.
+    #[arg(long)]
+    pub hide_noise: bool,
+
+    /// Print at most N rows.
+    #[arg(long, value_name = "N")]
+    pub limit: Option<usize>,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct GetArgs {
+    /// ARM ids (`/subscriptions/…`), directory ids (`graph:/…`), or exact
+    /// names with --in. Up to 50.
+    #[arg(value_name = "ID", required = true, num_args = 1..)]
+    pub ids: Vec<String>,
+
+    /// Where to look names up: a prefix or service/sub-tab, as `ls` takes.
+    /// Ids route themselves and ignore it.
+    #[arg(long = "in", value_name = "PREFIX")]
+    pub within: Option<String>,
+
+    /// Only this detail section (repeatable, any case), e.g. --section
+    /// access. Only its data is fetched.
+    #[arg(long = "section", value_name = "NAME")]
+    pub sections: Vec<String>,
+
+    /// Seconds to wait for lazily-loaded sections; a section still loading
+    /// after that prints as not loaded (null).
+    #[arg(long, value_name = "SECS", default_value_t = 60)]
+    pub wait: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum OutputFormat {
+    /// One JSON document carrying `"schema": "nebaz/v1"`.
+    Json,
+    /// Markdown: a table for lists, a document for `get`.
+    Md,
 }
 
 impl Cli {
@@ -103,6 +189,8 @@ mod tests {
 
     fn empty() -> Cli {
         Cli {
+            command: None,
+            output: None,
             service: None,
             location: None,
             subscription: None,

@@ -1,0 +1,528 @@
+{
+  "schema": "nebaz/v1",
+  "flags": {
+    "": [
+      "--banner",
+      "--endpoint-url",
+      "--location",
+      "--macro",
+      "--no-banner",
+      "--output",
+      "--service",
+      "--subscription",
+      "--theme",
+      "--watch"
+    ],
+    "services": [],
+    "ls": [
+      "--filter",
+      "--hide-noise",
+      "--limit",
+      "--state"
+    ],
+    "get": [
+      "--in",
+      "--section",
+      "--wait"
+    ]
+  },
+  "exit_codes": {
+    "ok": 0,
+    "error": 1,
+    "usage": 2,
+    "findings": 3,
+    "auth": 4
+  },
+  "services": {
+    "envelope": [
+      "schema",
+      "count",
+      "services"
+    ],
+    "service": [
+      "prefix",
+      "name",
+      "category",
+      "subtabs"
+    ],
+    "subtab": [
+      "subtab",
+      "label",
+      "prefix"
+    ]
+  },
+  "ls": {
+    "envelope": [
+      "schema",
+      "service",
+      "subtab",
+      "subscription",
+      "location",
+      "count",
+      "resources"
+    ],
+    "resource": [
+      "type",
+      "id",
+      "name",
+      "state",
+      "location",
+      "resource_group",
+      "tags"
+    ]
+  },
+  "get": {
+    "one": [
+      "schema",
+      "subscription",
+      "service",
+      "subtab",
+      "resource",
+      "sections",
+      "tags"
+    ],
+    "several": [
+      "schema",
+      "subscription",
+      "count",
+      "resources"
+    ],
+    "item": [
+      "service",
+      "subtab",
+      "resource",
+      "sections",
+      "tags"
+    ],
+    "resource": [
+      "type",
+      "id",
+      "name",
+      "state",
+      "location",
+      "resource_group"
+    ]
+  },
+  "prefixes": {
+    "aca": [
+      "container-apps (aca)",
+      "container-app-environments (acaenv)",
+      "container-app-jobs (acajob)"
+    ],
+    "acr": [
+      "registries (acr)"
+    ],
+    "aks": [
+      "clusters (aks)",
+      "node-pools (pool)"
+    ],
+    "app": [
+      "apps (app)",
+      "function-apps (func)",
+      "plans (plan)"
+    ],
+    "cosmos": [
+      "cosmos-accounts (cosmos)"
+    ],
+    "dns": [
+      "private-dns-zones (dns)",
+      "dns-zones (dnsz)",
+      "dns-resolvers (dnsr)",
+      "dns-forwarding-rulesets (dnsfr)",
+      "dns-resolver-policies (dnsp)"
+    ],
+    "foundry": [
+      "ai-accounts (foundry)"
+    ],
+    "id": [
+      "identities (id)",
+      "service-principals (sp)",
+      "app-registrations (appreg)"
+    ],
+    "kv": [
+      "vaults (kv)"
+    ],
+    "monitor": [
+      "log-workspaces (monitor)",
+      "app-insights (appi)"
+    ],
+    "pp": [
+      "enterprise-policies (pp)"
+    ],
+    "sql": [
+      "sql-servers (sql)"
+    ],
+    "storage": [
+      "accounts (storage)"
+    ],
+    "sub": [
+      "subscriptions (sub)",
+      "resource-groups (rg)",
+      "all-resources (all)"
+    ],
+    "vm": [
+      "vms (vm)",
+      "disks (disk)",
+      "nics (nic)"
+    ],
+    "vnet": [
+      "vnets (vnet)",
+      "subnets (subnet)",
+      "nsgs (nsg)",
+      "public-ips (pip)",
+      "load-balancers (lb)",
+      "route-tables (rt)",
+      "nat-gateways (nat)",
+      "private-endpoints (pe)"
+    ]
+  },
+  "sections": {
+    "AI account": [
+      "Overview",
+      "Deployments",
+      "Projects",
+      "Network",
+      "Security",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "App Registration": [
+      "Overview",
+      "Credentials",
+      "Federated credentials",
+      "API permissions",
+      "Redirect URIs",
+      "Owners",
+      "Exposed API",
+      "Related",
+      "Tags"
+    ],
+    "App Service app": [
+      "Overview",
+      "Configuration",
+      "Hostnames",
+      "Networking",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "App Service plan": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Application Insights": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Container Apps environment": [
+      "Overview",
+      "Network",
+      "Workload profiles",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Container Apps job": [
+      "Overview",
+      "Trigger",
+      "Containers",
+      "Identity",
+      "Secrets",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Container Registry": [
+      "Overview",
+      "Security",
+      "Replications",
+      "Webhooks",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Container app": [
+      "Overview",
+      "Ingress",
+      "Scale",
+      "Containers",
+      "Revisions",
+      "Auth",
+      "Identity",
+      "Secrets",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Cosmos DB Account": [
+      "Overview",
+      "Replication",
+      "Security",
+      "Backup",
+      "Databases",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "DNS Forwarding Ruleset": [
+      "Overview",
+      "Rules",
+      "VNet links",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "DNS Resolver": [
+      "Overview",
+      "Endpoints",
+      "Rulesets",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "DNS Security Policy": [
+      "Overview",
+      "Rules",
+      "VNet links",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "DNS Zone": [
+      "Overview",
+      "Records",
+      "Delegation",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Disk": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Enterprise Policy": [
+      "Overview",
+      "Network injection",
+      "Encryption",
+      "Identity",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Key Vault": [
+      "Overview",
+      "Access model",
+      "Network",
+      "Secrets",
+      "Keys",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Load Balancer": [
+      "Overview",
+      "Frontends",
+      "Backend pools",
+      "Rules",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Log Analytics Workspace": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Managed Cluster": [
+      "Overview",
+      "Network",
+      "API access",
+      "Node pools",
+      "Add-ons",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Managed Identity": [
+      "Overview",
+      "Federated credentials",
+      "Can do",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Microsoft.Network/publicIPPrefixes": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "NAT Gateway": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Network Interface": [
+      "Overview",
+      "IP configurations",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Network Security Group": [
+      "Overview",
+      "Inbound",
+      "Outbound",
+      "Used by",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Node Pool": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Private DNS Zone": [
+      "Overview",
+      "Records",
+      "VNet links",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Private Endpoint": [
+      "Overview",
+      "Connection",
+      "DNS",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Public IP": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Resource Group": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Route Table": [
+      "Overview",
+      "Routes",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "SQL Server": [
+      "Overview",
+      "Security",
+      "Databases",
+      "Firewall",
+      "Networking",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Service Principal": [
+      "Overview",
+      "Credentials",
+      "App role assignments",
+      "OAuth2 grants",
+      "Owners",
+      "Azure roles",
+      "Related",
+      "Tags"
+    ],
+    "Storage Account": [
+      "Overview",
+      "Endpoints",
+      "Security",
+      "Containers",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Subnet": [
+      "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Subscription": [
+      "Overview",
+      "Details",
+      "Locations",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Virtual Machine": [
+      "Overview",
+      "Instance view",
+      "Networking",
+      "Storage",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Virtual Network": [
+      "Overview",
+      "Subnets",
+      "Peerings",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ]
+  }
+}
