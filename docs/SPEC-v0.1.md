@@ -56,7 +56,8 @@ subscription scope; nothing else, no vault access policy.
 
 ## What v0.1.0 is not
 
-Everything in [`BACKLOG.md`](BACKLOG.md): `@all` cross-service search and
+Everything that was in `BACKLOG.md` at the time, now tracked in
+[GitHub issues](https://github.com/neboto/nebaz/issues): `@all` cross-service search and
 list visual selection (copied from neboto, not wired, code removed), the
 ownership ribbon analog, a Storage watch floor, sovereign-cloud
 auto-detect, an emulator mode, Windows, every Tier 2 rich view and Tier 3
