@@ -64,7 +64,12 @@ the same data (`export_formats` / `export_dir` in the config). `N` on a VM, NIC,
 subnet or NSG opens the **network access lens**: the NSG rules that apply,
 subnet then NIC, in priority order, defaults included, shadowed rules and
 rules the other layer blocks marked (computed from the rules with GETs
-only, not Azure's effective view). Verified against a live tenant:
+only, not Azure's effective view). `m` opens **Azure Monitor metrics**
+in the detail pane: a curated set per type (VM, AKS, Container Apps, App
+Service, SQL database, storage, Key Vault, Cosmos, load balancer, public
+IP, …) with sparklines and last / min / max / avg, a chart of the
+selected one, 1h / 6h / 24h / 7d windows (`[`/`]`), and `a` for every
+metric the resource publishes. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in

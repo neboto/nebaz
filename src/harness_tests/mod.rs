@@ -45,6 +45,7 @@ mod load_stream_test;
 pub(crate) mod mocks;
 mod detail_pane_test;
 mod navigation_test;
+mod metrics_test;
 mod network_lens_test;
 mod wiring_test;
 

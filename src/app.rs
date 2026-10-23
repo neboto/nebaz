@@ -116,6 +116,8 @@ use tokio::sync::mpsc;
 
 /// The network access lens (`N`): open, fetch, keys.
 mod all_search;
+/// The metrics view (`m`): open, fetch, keys.
+mod metrics;
 mod network_lens;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
@@ -551,6 +553,12 @@ pub struct App {
     pub network_lens: Option<crate::ui::widgets::network_lens::NetworkLensState>,
     /// Bumped per lens fetch; a result for an older one is dropped.
     network_lens_generation: u64,
+    /// Azure Monitor metrics view (`m`, #51): owns the detail pane while open.
+    pub metrics: Option<crate::ui::widgets::metrics_overlay::MetricsState>,
+    /// Bumped per metrics fetch; a result for an older one is dropped.
+    metrics_generation: u64,
+    /// The last window the view used: sticky across opens.
+    metrics_window: crate::azure::metrics::MetricWindow,
 
     // Mouse hit-testing, recorded by the read-only widgets each frame.
     click_regions: RefCell<Vec<ClickRegion>>,
@@ -692,6 +700,9 @@ impl App {
             editor_requested: false,
             network_lens: None,
             network_lens_generation: 0,
+            metrics: None,
+            metrics_generation: 0,
+            metrics_window: Default::default(),
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             config,
@@ -882,6 +893,7 @@ impl App {
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
+        self.metrics = None;
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
             self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
@@ -1388,6 +1400,7 @@ impl App {
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
+        self.metrics = None;
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
         Ok(())
@@ -2377,6 +2390,9 @@ impl App {
         if let Some(st) = &self.network_lens {
             return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
         }
+        if let Some(st) = &self.metrics {
+            return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
+        }
         let Some(resource) = self.get_selected_resource() else {
             return Ok(());
         };
@@ -3122,6 +3138,9 @@ impl App {
         if self.network_lens.is_some() && !matches!(mouse.kind, MouseEventKind::Moved) {
             self.network_lens = None;
         }
+        if self.metrics.is_some() && !matches!(mouse.kind, MouseEventKind::Moved) {
+            self.metrics = None;
+        }
         match mouse.kind {
             MouseEventKind::Down(_) => {
                 let hit = self
@@ -3305,6 +3324,11 @@ impl App {
         // The network access lens owns the keyboard while open.
         if self.network_lens.is_some() {
             self.handle_network_lens_key(key, event_tx);
+            return;
+        }
+        // So does the metrics view.
+        if self.metrics.is_some() {
+            self.handle_metrics_key(key, event_tx);
             return;
         }
 
@@ -3574,6 +3598,7 @@ impl App {
             }
             KeyCode::Char('P') => self.open_subscription_picker(),
             KeyCode::Char('N') => self.open_network_lens(_event_tx),
+            KeyCode::Char('m') => self.open_metrics(_event_tx),
             KeyCode::Char('b') => self.banner_visible = !self.banner_visible,
             KeyCode::Char('e') => {
                 if self.selected_index.is_some() {

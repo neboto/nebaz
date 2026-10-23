@@ -125,6 +125,11 @@ untouched by a location change.
 rules computed client-side from GETs (never the POST effective calls),
 `SERVICES.md` rule 14.
 
+**Metrics** (`m`; `src/azure/metrics.rs`, `src/app/metrics.rs`,
+`src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics,
+owning the detail pane the same way; the default set is keyed by ARM
+type (`curated_metrics`, which also gates the hint), `SERVICES.md` rule 19.
+
 **Jumps**: the Related section is the jump mechanism (the lens's `⏎` aside). `Enter` on an
 ARM-id line → `jump_to_arm_id` → `NavLocation` (service, view,
 subscription, selected id) → `restore_nav_location`, with `pending_jump`
@@ -238,6 +243,7 @@ verbatim where the concept is unchanged.
 | `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps}.rs` | one file per service |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/nsg_eval.rs` | the network lens's evaluation: rule order, shadowing, layers, resolution |
+| `src/azure/metrics.rs` | the metrics view's default sets, request builder, parsers and fetch |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |
 | `src/clipboard.rs` | OSC 52 + arboard |

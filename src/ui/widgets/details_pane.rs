@@ -63,6 +63,11 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
         crate::ui::widgets::network_lens::render_network_lens(app, area, frame);
         return;
     }
+    // So does the metrics view (`m`).
+    if app.metrics.is_some() {
+        crate::ui::widgets::metrics_overlay::render_metrics_overlay(app, area, frame);
+        return;
+    }
     let focused = app.details_focused;
     let Some(resource) = app.get_selected_resource() else {
         let block = theme::pane_block("Details", focused);
