@@ -20,6 +20,7 @@ pub mod identity;
 pub mod keyvault;
 pub mod monitor;
 pub mod network;
+pub mod network_dns;
 pub mod network_edge;
 pub mod network_private;
 pub mod power_platform;
@@ -78,7 +79,12 @@ pub fn overview_rows(r: &dyn Resource) -> Vec<(String, String)> {
 
 /// The Related body: the row's labelled ARM ids, Enter jumps.
 pub fn related_rows(r: &dyn Resource) -> Vec<(String, String)> {
-    let mut lines = r.related();
+    related_lines(r.related())
+}
+
+/// [`related_rows`] from lines already gathered: a type whose Related
+/// adds links from a lazy fetch (the DNS topology) to its own.
+pub fn related_lines(mut lines: Vec<(String, String)>) -> Vec<(String, String)> {
     if lines.is_empty() {
         lines.push((String::new(), "No related resources".into()));
         return lines;

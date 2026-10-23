@@ -85,10 +85,16 @@ run identity-tab ok id '[6.0]' \
   "Managed identities" \
   "cannot reach 127.0.0.1"
 
-# The ninth Network chip: the bar scrolls to keep it visible, and the
-# zone list goes to ARM on the private DNS api-version.
+# Private DNS is the DNS tab's first chip (it moved from Network in #37),
+# and the zone list goes to ARM on the private DNS api-version.
 run private-dns-tab ok pdns '[6.0]' \
-  "9 Private DNS" \
+  "1 Private DNS" \
+  "cannot reach 127.0.0.1"
+
+# The DNS tab's resolver chip has a digit key, and the resolver list goes
+# to ARM on the resolver api-version.
+run dns-resolver-tab ok dnsr '[6.0]' \
+  "3 Resolvers" \
   "cannot reach 127.0.0.1"
 
 # A routing prefix lands on App Service's filtered Functions sub-tab.

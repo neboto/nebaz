@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
-    keyvault, monitor, network, network_edge, network_private, power_platform, sql, storage, subscriptions,
+    keyvault, monitor, network, network_dns, network_edge, network_private, power_platform, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -140,6 +140,40 @@ pub(crate) fn app_federated_credential() -> Value {
            "subject": "repo:contoso/orders:ref:refs/heads/main", "audiences": ["api://AzureADTokenExchange"]})
 }
 
+/// The DNS topology of the fixture subscription: resolver `dnspr-hub` in
+/// `vnet_hub` (an inbound endpoint in its `dns-in` subnet, an outbound one
+/// in `dns-out`), and ruleset `rs-onprem` forwarding through that outbound
+/// endpoint and linked to `vnet_spoke`.
+pub(crate) fn dns_topology(vnet_hub: &str, vnet_spoke: &str) -> network_dns::DnsTopology {
+    let resolver = arm_id("Microsoft.Network/dnsResolvers/dnspr-hub");
+    let hub = arm_id(&format!("Microsoft.Network/virtualNetworks/{vnet_hub}"));
+    let endpoint = |name: &str, inbound: bool, props: Value| {
+        let dir = if inbound { "inboundEndpoints" } else { "outboundEndpoints" };
+        network_dns::DnsEndpoint::from_json(&json!({"id": format!("{resolver}/{dir}/{name}"), "name": name, "properties": props}), inbound)
+            .unwrap_or_else(|| panic!("{name}: from_json rejected the fixture"))
+    };
+    network_dns::DnsTopology {
+        resolvers: vec![network_dns::ResolverNode {
+            id: resolver.clone(),
+            name: "dnspr-hub".into(),
+            vnet_id: Some(hub.clone()),
+            endpoints: vec![
+                endpoint("in", true, json!({"ipConfigurations": [
+                    {"subnet": {"id": format!("{hub}/subnets/dns-in")}, "privateIpAddress": "10.0.0.4"}]})),
+                endpoint("out", false, json!({"subnet": {"id": format!("{hub}/subnets/dns-out")}})),
+            ],
+        }],
+        rulesets: vec![network_dns::LinkedParent {
+            id: arm_id("Microsoft.Network/dnsForwardingRulesets/rs-onprem"),
+            name: "rs-onprem".into(),
+            outbound_endpoint_ids: vec![format!("{resolver}/outboundEndpoints/out")],
+            links: vec![network_dns::VnetLink::from_json(&json!({"name": "spoke", "properties": {
+                "virtualNetwork": {"id": arm_id(&format!("Microsoft.Network/virtualNetworks/{vnet_spoke}"))}}}))],
+        }],
+        ..Default::default()
+    }
+}
+
 /// One row of every split-pane type, each with the sub-tab that lists it.
 pub(crate) fn all_mocks() -> Vec<Mock> {
     let l = "westeurope";
@@ -241,6 +275,65 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                 "PrivateDnsZoneRow",
                 network_private::PrivateDnsZoneRow::from_json(
                     &body(&arm_id("Microsoft.Network/privateDnsZones/privatelink.example.com"), "global", json!({})),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::DnsZones,
+            "DnsZoneRow",
+            parse(
+                "DnsZoneRow",
+                network_dns::DnsZoneRow::from_json(
+                    &body(
+                        &arm_id("Microsoft.Network/dnszones/example.com"),
+                        "global",
+                        json!({"numberOfRecordSets": 2, "maxNumberOfRecordSets": 10000,
+                            "nameServers": ["ns1-01.azure-dns.com."], "zoneType": "Public"}),
+                    ),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::DnsResolvers,
+            "DnsResolverRow",
+            parse(
+                "DnsResolverRow",
+                network_dns::DnsResolverRow::from_json(
+                    &body(
+                        &arm_id("Microsoft.Network/dnsResolvers/dnspr-hub"),
+                        l,
+                        json!({"provisioningState": "Succeeded", "dnsResolverState": "Connected",
+                            "virtualNetwork": {"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1")}}),
+                    ),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::DnsForwardingRulesets,
+            "DnsRulesetRow",
+            parse(
+                "DnsRulesetRow",
+                network_dns::DnsRulesetRow::from_json(
+                    &body(
+                        &arm_id("Microsoft.Network/dnsForwardingRulesets/rs-onprem"),
+                        l,
+                        json!({"provisioningState": "Succeeded", "dnsResolverOutboundEndpoints": [
+                            {"id": arm_id("Microsoft.Network/dnsResolvers/dnspr-hub/outboundEndpoints/out")}]}),
+                    ),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::DnsResolverPolicies,
+            "DnsPolicyRow",
+            parse(
+                "DnsPolicyRow",
+                network_dns::DnsPolicyRow::from_json(
+                    &body(&arm_id("Microsoft.Network/dnsResolverPolicies/pol-1"), l, json!({"provisioningState": "Succeeded"})),
                     t,
                 ),
             ),
