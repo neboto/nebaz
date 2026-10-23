@@ -141,7 +141,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
 | Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet | `az network vnet show` |
-| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway | `az network vnet subnet show` |
+| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so) | `az network vnet subnet show` |
 | Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
 | Network · Public IPs | — (Overview: address, allocation, version, SKU · tier, attached to, DNS label, FQDN, idle timeout, zones, DDoS) | attached / unattached | the owner of its IP configuration (NIC, load balancer, gateway, firewall, bastion), NAT gateway, prefix | `az network public-ip show` |
 | Network · LBs | Frontends (public IP, or private IP + subnet) · Backend pools (NICs, deduplicated from IP configurations; or addresses) · Rules (LB rules, health probes, inbound NAT, outbound) | stateless | frontend public IPs and subnets, backend NICs | `az network lb show` |
@@ -161,10 +161,11 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Cosmos DB · Accounts | Replication (consistency, bounded-staleness limits, multi-region writes, automatic failover, write regions, every region by failover priority with zone redundancy) · Security (public access, network access all / selected / private only, IP and VNet rules, ACL bypass, key auth, metadata writes by key, min TLS, encryption service- or customer-managed, identity, private endpoints) · Backup (periodic interval, retention, redundancy; or the continuous tier; a mode migration in progress) · Databases ⧗ (on the path the API picks; names only, containers not listed) · (Overview: API from `kind` + `capabilities`, endpoint as text, capacity mode, free tier, analytical storage) | ladder only; `location` is a display name (`West US`), stored as `westus` so `R` matches | VNet rule subnets, private endpoints, user-assigned identities (the CMK key is a URL, shown in Security) | `az cosmosdb show` |
 | Monitor · Workspaces | — (Overview: customer id, SKU and commitment tier, retention, daily cap and reset time, ingestion status, public ingestion and query, local auth, access mode, created) | ladder only | dedicated cluster (AKS clusters and App Insights components link here from their own Related) | `az monitor log-analytics workspace show` |
 | Monitor · App Insights | — (Overview: application type, kind, app id, ingestion mode, workspace, retention, sampling, public ingestion and query, local auth, IP masking, created; the instrumentation key, connection string and HockeyApp token are stripped from the JSON before the row keeps it) | ladder only | workspace (`WorkspaceResourceId`; none for a classic component). App Service apps cannot link here: the link is an app setting | `az monitor app-insights component show` (the `application-insights` CLI extension) |
+| Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless) | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @pdns @kv @id @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @pdns @kv @id @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -214,6 +215,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Workspaces | 1 | `/providers/Microsoft.OperationalInsights/workspaces` · `2026-03-01` |
 | App Insights | 1 | `/providers/Microsoft.Insights/components` · `2020-02-02` (the newest stable that has components) |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
+| Enterprise policies | 1 (every kind; `kind` on the row) | `/providers/Microsoft.PowerPlatform/enterprisePolicies` · `2020-10-30-preview` (the only version in the specs; not yet tried live) |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
 
 A full tour of every sub-tab in one subscription is one list call per
@@ -234,3 +236,17 @@ it; that floor is #63.
 - The api-versions above were accepted.
 - Still to check: embedded `agentPoolProfiles` carry autoscale and power
   (rule 8), on a subscription with an AKS cluster (#66).
+
+## Not yet verified live
+
+- Power Platform enterprise policies (#77): built from the documented
+  shape (azure-rest-api-specs `2020-10-30-preview`, the ARM template
+  reference, Microsoft's `PowerPlatform-EnterprisePolicies` module), with
+  no subscription that has one. To check: the preview api-version is
+  accepted for the list (the module deploys with an undocumented
+  `2020-10-30`); `healthStatus` and `systemId` appear on a list body;
+  `encryption.keyVault.id` is an ARM id (the spec says "Uri"; a URL shows
+  as text and does not link); policy `location` is a Power Platform
+  geography (`unitedstates`, `europe`), so a named `R` location hides
+  policies; how the list answers in a subscription where
+  `Microsoft.PowerPlatform` is not registered.

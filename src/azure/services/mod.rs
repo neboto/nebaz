@@ -20,6 +20,7 @@ pub mod monitor;
 pub mod network;
 pub mod network_edge;
 pub mod network_private;
+pub mod power_platform;
 pub mod sql;
 pub mod storage;
 pub mod subscriptions;

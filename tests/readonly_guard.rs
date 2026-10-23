@@ -55,6 +55,14 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // Microsoft Graph: principal names for Access (#24) would need it; a
     // different host and permission, so adding it must be deliberate.
     "graph.microsoft.com",
+    // Power Platform (#77): environments and their policy links live in
+    // the admin APIs (BAP, public and US government; the Power Platform
+    // API), Dataverse data in the environment's own host. Enterprise
+    // policies are ARM; the rest is not.
+    "api.bap.microsoft.com",
+    "api.bap.microsoft.us",
+    "api.powerplatform.com",
+    "crm.dynamics.com",
 ];
 
 /// Crates that could open an HTTP connection behind the pipeline's back.

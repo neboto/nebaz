@@ -400,12 +400,24 @@ impl Resource for SubnetRow {
     }
 }
 
-pub fn subnet_section_lines(r: &SubnetRow, section: SubnetDetailSection) -> Vec<(String, String)> {
+/// `power_platform` is the subnet's Power Platform lines
+/// (`power_platform::subnet_policy_lines`), appended to Related.
+pub fn subnet_section_lines(
+    r: &SubnetRow,
+    section: SubnetDetailSection,
+    power_platform: Vec<(String, String)>,
+) -> Vec<(String, String)> {
     match section {
         SubnetDetailSection::Overview => overview_rows(r),
         SubnetDetailSection::Access => crate::azure::services::rendered_by_app(),
         SubnetDetailSection::Activity => crate::azure::services::rendered_by_app(),
-        SubnetDetailSection::Related => related_rows(r),
+        SubnetDetailSection::Related => {
+            // Before the closing blank line and the ⏎ hint.
+            let mut lines = related_rows(r);
+            let at = lines.len().saturating_sub(2);
+            lines.splice(at..at, power_platform);
+            lines
+        }
         SubnetDetailSection::Tags => vec![(String::new(), "Subnets carry no tags (the VNet's apply)".into())],
     }
 }

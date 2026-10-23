@@ -74,6 +74,10 @@ each one backs are in the catalog table
 - **Activity** (every type): `Microsoft.Insights/eventtypes/values/read`.
   Only named fields are selected; the caller's token claims and request
   bodies are never fetched.
+- **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
+  Environments and their policy links are in the Power Platform admin
+  API, not ARM: nebaz never calls it, and its hosts are on the guard's
+  list.
 - **Managed Identity**: `Microsoft.ManagedIdentity/userAssignedIdentities/read`;
   the lazy Federated credentials section:
   `Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/read`.
