@@ -136,11 +136,14 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
         let y = area.y + area.height - 1;
         crate::app::record_hint_regions(app, &footer, 0, x, y, x + footer_w);
     }
-    let block = theme::pane_block(&title, focused).title(
+    let mut block = theme::pane_block(&title, focused).title(
         Title::from(footer)
             .position(Position::Bottom)
             .alignment(Alignment::Right),
     );
+    if let Some(ribbon) = ownership_ribbon_line(app, &title, area.width) {
+        block = block.title(Title::from(ribbon).position(Position::Top).alignment(Alignment::Right));
+    }
     let inner = block.inner(area);
     frame.render_widget(block, area);
     record_frame_regions(app, area);
@@ -249,6 +252,25 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     if let Some(bar) = bar_area {
         frame.render_widget(Paragraph::new(filter_bar(app)), bar);
     }
+}
+
+/// The ownership ribbon (#48, `App::ownership_ribbon`): one dim line on
+/// the top border, right of the title, cut to what is left of the border
+/// (`None` when under 12 cells are). One central hook: every type gets it.
+fn ownership_ribbon_line(app: &App, title: &str, width: u16) -> Option<Line<'static>> {
+    let ribbon = app.ownership_ribbon()?;
+    // Corners, the title's padding and a gap.
+    let budget = (width as usize).saturating_sub(title.chars().count() + 8);
+    if budget < 12 {
+        return None;
+    }
+    let mut text = ribbon.text();
+    if text.chars().count() > budget {
+        text = text.chars().take(budget - 1).collect();
+        text.push('…');
+    }
+    let color = if ribbon.warning { theme::warning() } else { theme::text_dim() };
+    Some(Line::from(Span::styled(format!(" {} ", text), Style::default().fg(color))))
 }
 
 /// The pane's top border (its title bar) toggles full width, as `Z` does
