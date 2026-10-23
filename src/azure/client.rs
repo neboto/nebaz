@@ -383,12 +383,12 @@ impl AzureClients {
     /// The Graph pipeline for a tenant, built once; an error when the
     /// cloud has no known Graph endpoint.
     pub fn graph_for_tenant(&self, tenant_id: &str) -> Result<Arc<ArmClient>> {
-        let graph = crate::azure::graph::graph_endpoint_for(&self.endpoint)
-            .ok_or_else(|| Error::Azure(crate::azure::graph::no_graph_for(&self.endpoint)))?;
         let mut map = self.graph_pipelines.lock().expect("graph pipeline map poisoned");
         if let Some(c) = map.get(tenant_id) {
             return Ok(c.clone());
         }
+        let graph = crate::azure::graph::graph_endpoint_for(&self.endpoint)
+            .ok_or_else(|| Error::Azure(crate::azure::graph::no_graph_for(&self.endpoint)))?;
         let client = Arc::new(ArmClient::new_graph(self.source, tenant_id, graph)?);
         map.insert(tenant_id.to_string(), client.clone());
         Ok(client)
@@ -542,6 +542,7 @@ mod tests {
         ) -> Self {
             const DEAD_ENDPOINT: &str = "https://127.0.0.1:9";
             let mut pipelines = HashMap::new();
+            let mut graph_pipelines = HashMap::new();
             for s in &subscriptions {
                 pipelines.entry(s.tenant_id.clone()).or_insert_with(|| {
                     Arc::new(
@@ -549,10 +550,20 @@ mod tests {
                             .expect("offline pipeline"),
                     )
                 });
+                // Graph too (ADR 0004): prebuilt over the same credential, so
+                // a directory list stays in flight like an ARM one instead
+                // of failing on the dead endpoint's unknown cloud.
+                graph_pipelines.entry(s.tenant_id.clone()).or_insert_with(|| {
+                    Arc::new(
+                        ArmClient::graph_with_credential(credential.clone(), &s.tenant_id, DEAD_ENDPOINT)
+                            .expect("offline Graph pipeline"),
+                    )
+                });
             }
             let mut c = clients(subscriptions);
             c.endpoint = DEAD_ENDPOINT.to_string();
             c.pipelines = Mutex::new(pipelines);
+            c.graph_pipelines = Mutex::new(graph_pipelines);
             c.current = c.default_index();
             c
         }

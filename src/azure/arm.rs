@@ -138,6 +138,19 @@ impl ArmClient {
         Self::pipeline_over(credential, tenant_id, endpoint, scope, Api::Arm)
     }
 
+    /// [`with_credential`](Self::with_credential) for the Graph flavour:
+    /// the harness's directory lists hang offline like its ARM ones.
+    #[cfg(test)]
+    pub(crate) fn graph_with_credential(
+        credential: Arc<dyn TokenCredential>,
+        tenant_id: &str,
+        endpoint: &str,
+    ) -> Result<ArmClient> {
+        let endpoint = parse_endpoint(endpoint)?;
+        let scope = format!("{}/.default", endpoint.as_str().trim_end_matches('/'));
+        Self::pipeline_over(credential, tenant_id, endpoint, scope, Api::Graph)
+    }
+
     /// The one pipeline both flavours share: `ReadOnlyPolicy` first, then
     /// the bearer policy for `scope`.
     fn pipeline_over(

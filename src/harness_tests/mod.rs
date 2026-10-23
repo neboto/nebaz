@@ -37,6 +37,7 @@ use ratatui::backend::TestBackend;
 use ratatui::Terminal;
 use std::sync::Arc;
 
+mod directory_test;
 mod load_stream_test;
 pub(crate) mod mocks;
 mod navigation_test;

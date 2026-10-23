@@ -82,6 +82,64 @@ pub(crate) fn vnet(name: &str, location: &str) -> Box<dyn Resource> {
     parse("VnetRow", network::VnetRow::from_json(&v, Some(TENANT)))
 }
 
+// ── Directory rows (Microsoft Graph, ADR 0004) ────────────────────────
+
+pub(crate) const APP_ID: &str = "11111111-2222-3333-4444-555555555555";
+pub(crate) const SP_OBJECT_ID: &str = "00af5dfb-85da-4b41-a677-0c6b86dd34f8";
+
+/// An ISO time `days` from now (negative: the past), as Graph writes it.
+pub(crate) fn iso_in_days(days: i64) -> String {
+    let t = directory::now_unix() + days * 86_400;
+    format!("{}:00Z", crate::azure::services::json::unix_to_ymdhm(t).replacen(' ', "T", 1))
+}
+
+/// A tenant-owned application's service principal with a year-long
+/// secret: state `ok`, Related to its app registration by app id.
+pub(crate) fn sp_application() -> Box<dyn Resource> {
+    let v = json!({
+        "id": SP_OBJECT_ID, "appId": APP_ID, "displayName": "sp-orders",
+        "servicePrincipalType": "Application", "appOwnerOrganizationId": TENANT, "accountEnabled": true,
+        "passwordCredentials": [{"displayName": "ci", "keyId": "aaaaaaaa-0000-0000-0000-000000000001",
+            "startDateTime": iso_in_days(-30), "endDateTime": iso_in_days(365)}],
+        "keyCredentials": []
+    });
+    parse("ServicePrincipalRow", directory::ServicePrincipalRow::from_json(&v, Some(TENANT), directory::now_unix()))
+}
+
+/// A user-assigned managed identity's service principal: no credentials
+/// (stateless), Related to the identity's ARM id.
+pub(crate) fn sp_managed_identity() -> Box<dyn Resource> {
+    let v = json!({
+        "id": "22222222-0000-0000-0000-000000000000", "appId": "33333333-0000-0000-0000-000000000000",
+        "displayName": "id-1", "servicePrincipalType": "ManagedIdentity",
+        "alternativeNames": ["isExplicit=True", arm_id("Microsoft.ManagedIdentity/userAssignedIdentities/id-1")],
+        "passwordCredentials": [], "keyCredentials": []
+    });
+    parse("ServicePrincipalRow", directory::ServicePrincipalRow::from_json(&v, Some(TENANT), directory::now_unix()))
+}
+
+/// An app registration whose one secret ends in 10 days (`expiring`). Its
+/// federated credential is a lazy child: [`app_federated_credential`].
+pub(crate) fn app_registration() -> Box<dyn Resource> {
+    let v = json!({
+        "id": "44444444-0000-0000-0000-000000000000", "appId": APP_ID, "displayName": "app-orders",
+        "signInAudience": "AzureADMyOrg",
+        "web": {"redirectUris": ["https://orders.example/signin-oidc"]},
+        "requiredResourceAccess": [],
+        "passwordCredentials": [{"displayName": "deploy", "keyId": "bbbbbbbb-0000-0000-0000-000000000002",
+            "startDateTime": iso_in_days(-80), "endDateTime": iso_in_days(10)}],
+        "keyCredentials": []
+    });
+    parse("AppRegistrationRow", directory::AppRegistrationRow::from_json(&v, Some(TENANT), directory::now_unix()))
+}
+
+/// What `GET /v1.0/applications/{id}/federatedIdentityCredentials` returns
+/// for [`app_registration`]: GitHub Actions OIDC.
+pub(crate) fn app_federated_credential() -> Value {
+    json!({"name": "gh-main", "issuer": "https://token.actions.githubusercontent.com",
+           "subject": "repo:contoso/orders:ref:refs/heads/main", "audiences": ["api://AzureADTokenExchange"]})
+}
+
 /// One row of every split-pane type, each with the sub-tab that lists it.
 pub(crate) fn all_mocks() -> Vec<Mock> {
     let l = "westeurope";
@@ -201,36 +259,9 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             ),
         ),
         // Directory rows (Graph, ADR 0004): no ARM id, a synthetic one.
-        m(
-            JumpView::ServicePrincipals,
-            "ServicePrincipalRow",
-            parse(
-                "ServicePrincipalRow",
-                directory::ServicePrincipalRow::from_json(
-                    &json!({"id": "00af5dfb-85da-4b41-a677-0c6b86dd34f8", "appId": "11111111-2222-3333-4444-555555555555",
-                            "displayName": "sp-1", "servicePrincipalType": "Application", "appOwnerOrganizationId": TENANT,
-                            "passwordCredentials": [{"displayName": "ci", "keyId": "aaaaaaaa-0000-0000-0000-000000000001",
-                                "startDateTime": "2025-01-01T00:00:00Z", "endDateTime": "2099-01-01T00:00:00Z"}],
-                            "keyCredentials": []}),
-                    t,
-                    directory::now_unix(),
-                ),
-            ),
-        ),
-        m(
-            JumpView::AppRegistrations,
-            "AppRegistrationRow",
-            parse(
-                "AppRegistrationRow",
-                directory::AppRegistrationRow::from_json(
-                    &json!({"id": "44444444-0000-0000-0000-000000000000", "appId": "11111111-2222-3333-4444-555555555555",
-                            "displayName": "app-1", "web": {"redirectUris": ["https://app.example/signin"]},
-                            "requiredResourceAccess": [], "passwordCredentials": [], "keyCredentials": []}),
-                    t,
-                    directory::now_unix(),
-                ),
-            ),
-        ),
+        m(JumpView::ServicePrincipals, "ServicePrincipalRow (application)", sp_application()),
+        m(JumpView::ServicePrincipals, "ServicePrincipalRow (managed identity)", sp_managed_identity()),
+        m(JumpView::AppRegistrations, "AppRegistrationRow", app_registration()),
         m(
             JumpView::Clusters,
             "ClusterRow",
