@@ -147,8 +147,15 @@ _Avoid_: inventory, Resource Graph (a POST query nebaz does not use)
 The detail section every type carries listing the ARM ids the row points at
 (its subscription and resource group first, then its own links); Enter on a
 line jumps to that resource. It is the app's only jump mechanism besides
-the network lens.
-_Avoid_: references, referenced-by (the reverse lens, not in the first release)
+the lenses.
+_Avoid_: references, referenced-by (the reverse lens, below)
+
+**Referenced-by lens**:
+The `U` view of the loaded rows whose Related links (or ARM-id tags) point
+at the selected resource: the Related section reversed, over the warm list
+caches only, with the cold lists named rather than fetched (`L` loads the
+likely ones).
+_Avoid_: dependencies (it only knows links some loaded row declares)
 
 **Network lens**:
 The `N` view of the NSG rules that apply to a NIC, a subnet or an NSG (a

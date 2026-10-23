@@ -123,6 +123,9 @@ each one backs are in the catalog table
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:
   they return names and attributes only. Certificates are not listed.
+- **Referenced by** (`U`): no action of its own. It reads the list caches
+  already loaded; its `L` key runs the ordinary list loads of the lists it
+  names, with those lists' actions above.
 - **Access** (every type, and an identity's Can do):
   `Microsoft.Authorization/roleAssignments/read`,
   `Microsoft.Authorization/roleDefinitions/read`. Principal names come

@@ -51,6 +51,7 @@ mod navigation_test;
 mod metrics_test;
 mod mouse_test;
 mod network_lens_test;
+mod refs_lens_test;
 mod wiring_test;
 
 /// The CLI's default subscription in the fixture account list.

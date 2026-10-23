@@ -120,11 +120,14 @@ mod all_search;
 mod metrics;
 mod command_picker;
 mod network_lens;
+/// The "referenced by" lens (`U`): the reverse index, keys, `L`.
+mod refs_lens;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
 /// The mouse: click targets, double-click, drag, right-click back.
 mod mouse;
 pub use mouse::{record_hint_regions, ClickAction, ClickRegion, MouseState, PopupHits};
+pub use all_search::all_search_label;
 /// The list pane's visual selection (`V`, `Ctrl-A`, drag) and its verbs.
 mod list_visual;
 
@@ -549,6 +552,10 @@ pub struct App {
     pub command_picker: Option<crate::ui::widgets::command_picker::CommandPickerState>,
     /// Bumped per lens fetch; a result for an older one is dropped.
     network_lens_generation: u64,
+    /// "Referenced by" lens (`U`, #49): owns the detail pane while open.
+    pub refs_lens: Option<crate::ui::widgets::refs_lens::RefsLensState>,
+    /// The reverse index behind `U`, reused while the caches hold.
+    refs_index: Option<refs_lens::RefsIndex>,
     /// Azure Monitor metrics view (`m`, #51): owns the detail pane while open.
     pub metrics: Option<crate::ui::widgets::metrics_overlay::MetricsState>,
     /// Bumped per metrics fetch; a result for an older one is dropped.
@@ -699,6 +706,8 @@ impl App {
             editor_requested: false,
             network_lens: None,
             network_lens_generation: 0,
+            refs_lens: None,
+            refs_index: None,
             metrics: None,
             metrics_generation: 0,
             metrics_window: Default::default(),
@@ -894,6 +903,7 @@ impl App {
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
+        self.refs_lens = None;
         self.metrics = None;
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
@@ -1398,6 +1408,7 @@ impl App {
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
+        self.refs_lens = None;
         self.metrics = None;
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
@@ -2391,6 +2402,9 @@ impl App {
         if let Some(st) = &self.metrics {
             return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
         }
+        if let Some(st) = &self.refs_lens {
+            return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
+        }
         let Some(resource) = self.get_selected_resource() else {
             return Ok(());
         };
@@ -3280,7 +3294,11 @@ impl App {
             self.handle_network_lens_key(key, event_tx);
             return;
         }
-        // So does the metrics view.
+        // So do the referenced-by lens and the metrics view.
+        if self.refs_lens.is_some() {
+            self.handle_refs_lens_key(key, event_tx);
+            return;
+        }
         if self.metrics.is_some() {
             self.handle_metrics_key(key, event_tx);
             return;
@@ -3555,6 +3573,7 @@ impl App {
             }
             KeyCode::Char('P') => self.open_subscription_picker(),
             KeyCode::Char('N') => self.open_network_lens(_event_tx),
+            KeyCode::Char('U') => self.open_refs_lens(_event_tx),
             KeyCode::Char('m') => self.open_metrics(_event_tx),
             KeyCode::Char('b') => self.banner_visible = !self.banner_visible,
             KeyCode::Char('e') => {

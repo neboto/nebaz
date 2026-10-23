@@ -77,7 +77,11 @@ in the detail pane: a curated set per type (VM, AKS, Container Apps, App
 Service, SQL database, storage, Key Vault, Cosmos, load balancer, public
 IP, …) with sparklines and last / min / max / avg, a chart of the
 selected one, 1h / 6h / 24h / 7d windows (`[`/`]`), and `a` for every
-metric the resource publishes. Verified against a live tenant:
+metric the resource publishes. `U` shows what **references** the selected
+resource: every loaded row whose Related links point at it (the NICs, private
+endpoints and apps in a subnet, what attaches an identity), from the lists
+already loaded, with zero calls; it names the lists it did not check, and `L`
+loads the likely ones in the background. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in
