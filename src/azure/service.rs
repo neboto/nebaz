@@ -45,6 +45,9 @@ pub enum ServiceType {
     /// Power Platform enterprise policies (network injection, encryption,
     /// identity). Never the environments: they are not in ARM.
     PowerPlatform,
+    /// Container apps, their environments and jobs (`Microsoft.App`);
+    /// revisions and auth settings lazy. Never a secret or env var value.
+    ContainerApps,
 }
 
 /// One sub-tab: the rows of one resource type within a service. A flat
@@ -104,6 +107,10 @@ pub enum JumpView {
     AppInsights,
     // Power Platform
     EnterprisePolicies,
+    // Container Apps
+    ContainerApps,
+    ContainerAppEnvironments,
+    ContainerAppJobs,
 }
 
 impl JumpView {
@@ -126,6 +133,7 @@ impl JumpView {
             AiAccounts => ServiceType::Foundry,
             LogWorkspaces | AppInsights => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
+            ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
         }
     }
 
@@ -163,6 +171,9 @@ impl JumpView {
             LogWorkspaces => "log-workspaces",
             AppInsights => "app-insights",
             EnterprisePolicies => "enterprise-policies",
+            ContainerApps => "container-apps",
+            ContainerAppEnvironments => "container-app-environments",
+            ContainerAppJobs => "container-app-jobs",
         }
     }
 
@@ -200,6 +211,9 @@ impl JumpView {
             LogWorkspaces => "Workspaces",
             AppInsights => "App Insights",
             EnterprisePolicies => "Enterprise policies",
+            ContainerApps => "Apps",
+            ContainerAppEnvironments => "Environments",
+            ContainerAppJobs => "Jobs",
         }
     }
 
@@ -244,6 +258,9 @@ impl JumpView {
             ("microsoft.operationalinsights", ["workspaces"]) => JumpView::LogWorkspaces,
             ("microsoft.insights", ["components"]) => JumpView::AppInsights,
             ("microsoft.powerplatform", ["enterprisepolicies"]) => JumpView::EnterprisePolicies,
+            ("microsoft.app", ["containerapps"]) => JumpView::ContainerApps,
+            ("microsoft.app", ["managedenvironments"]) => JumpView::ContainerAppEnvironments,
+            ("microsoft.app", ["jobs"]) => JumpView::ContainerAppJobs,
             _ => return None,
         })
     }
@@ -285,6 +302,7 @@ impl ServiceType {
             ServiceType::Foundry,
             ServiceType::Monitor,
             ServiceType::PowerPlatform,
+            ServiceType::ContainerApps,
         ]
     }
 
@@ -308,6 +326,7 @@ impl ServiceType {
             ServiceType::Foundry => "AI",
             ServiceType::Monitor => "Monitoring",
             ServiceType::PowerPlatform => "Management",
+            ServiceType::ContainerApps => "Containers",
         }
     }
 
@@ -327,6 +346,7 @@ impl ServiceType {
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Platform",
+            ServiceType::ContainerApps => "Container Apps",
         }
     }
 
@@ -347,6 +367,7 @@ impl ServiceType {
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Plat",
+            ServiceType::ContainerApps => "ACA",
         }
     }
 
@@ -366,6 +387,7 @@ impl ServiceType {
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
             ServiceType::Monitor => "Log Analytics & App Insights",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
+            ServiceType::ContainerApps => "Container apps, environments & jobs",
         }
     }
 
@@ -398,6 +420,7 @@ impl ServiceType {
             ServiceType::Foundry => &[AiAccounts],
             ServiceType::Monitor => &[LogWorkspaces, AppInsights],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
+            ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
         }
     }
 
@@ -484,6 +507,13 @@ impl ServiceType {
             "pp" | "powerplatform" | "enterprisepolicy" | "enterprisepolicies" => {
                 (ServiceType::PowerPlatform, None)
             }
+            "aca" | "containerapp" | "containerapps" => (ServiceType::ContainerApps, None),
+            "acaenv" | "acaenvs" | "cae" | "managedenvironment" | "managedenvironments" => {
+                (ServiceType::ContainerApps, Some(JumpView::ContainerAppEnvironments))
+            }
+            "acajob" | "acajobs" | "containerappjob" | "containerappjobs" => {
+                (ServiceType::ContainerApps, Some(JumpView::ContainerAppJobs))
+            }
             _ => return None,
         };
         Some((service, view))
@@ -512,18 +542,19 @@ impl ServiceType {
             ServiceType::Foundry => "@foundry",
             ServiceType::Monitor => "@monitor",
             ServiceType::PowerPlatform => "@pp",
+            ServiceType::ContainerApps => "@aca",
         }
     }
 
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan", "@law", "@appi"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -710,6 +741,14 @@ mod tests {
         );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/privateDnsZones/z/A/www")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s/x/y")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/containerApps/api")), Some(JumpView::ContainerApps));
+        assert_eq!(
+            JumpView::for_arm_id(&p("microsoft.app/MANAGEDENVIRONMENTS/cae")),
+            Some(JumpView::ContainerAppEnvironments)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/jobs/nightly")), Some(JumpView::ContainerAppJobs));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/containerApps/api/revisions/api--v1")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.App/managedEnvironments/cae/certificates/c")), None);
         assert_eq!(JumpView::for_arm_id("garbage"), None);
     }
 }

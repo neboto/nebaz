@@ -48,6 +48,11 @@ use crate::azure::services::app_service::{
     plan_section_lines, site_config_path, site_section_lines, PlanDetailSection, PlanRow, SiteDetailSection, SiteRow,
     WEB_API_VERSION,
 };
+use crate::azure::services::container_apps::{
+    container_app_child_path, container_app_section_lines, environment_section_lines, job_section_lines,
+    ContainerAppDetailSection, ContainerAppRow, EnvironmentDetailSection, EnvironmentRow, JobDetailSection, JobRow,
+    ACA_API_VERSION,
+};
 use crate::azure::services::container_registry::{
     registry_child_path, registry_section_lines, RegistryDetailSection, RegistryRow, ACR_API_VERSION,
 };
@@ -1511,6 +1516,24 @@ impl App {
         );
     }
 
+    /// On-enter hook for a container app's Revisions: one list per app.
+    pub fn trigger_aca_revisions(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.aca_revisions,
+            event_tx,
+            |c, id| c.list_fetch(&container_app_child_path(id, "revisions"), ACA_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a container app's Auth: one list per app.
+    pub fn trigger_aca_auth(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.aca_auth_configs,
+            event_tx,
+            |c, id| c.list_fetch(&container_app_child_path(id, "authConfigs"), ACA_API_VERSION),
+        );
+    }
+
     // ── Detail sections ─────────────────────────────────────────────────
 
     fn selected_descriptor(&self) -> Option<&'static crate::sections::SectionDescriptor> {
@@ -1915,6 +1938,20 @@ impl App {
                 self.lazy.acr_replications.get(r.id()),
                 self.lazy.acr_webhooks.get(r.id()),
             ));
+        }
+        if let Some(r) = any.downcast_ref::<ContainerAppRow>() {
+            return Some(container_app_section_lines(
+                r,
+                ContainerAppDetailSection::from_index(idx),
+                self.lazy.aca_revisions.get(r.id()),
+                self.lazy.aca_auth_configs.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<EnvironmentRow>() {
+            return Some(environment_section_lines(r, EnvironmentDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<JobRow>() {
+            return Some(job_section_lines(r, JobDetailSection::from_index(idx)));
         }
         if let Some(r) = any.downcast_ref::<SqlServerRow>() {
             return Some(sql_server_section_lines(

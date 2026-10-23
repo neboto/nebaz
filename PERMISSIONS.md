@@ -117,6 +117,16 @@ each one backs are in the catalog table
   keys are a `POST` nebaz never sends, and a component's instrumentation
   key and connection string, which its `GET` does return, are stripped
   before the row keeps the JSON.
+- **Container Apps**: `Microsoft.App/containerApps/read`,
+  `Microsoft.App/managedEnvironments/read`, `Microsoft.App/jobs/read`; the
+  lazy Revisions and Auth sections:
+  `Microsoft.App/containerApps/revisions/read`,
+  `Microsoft.App/containerApps/authConfigs/read`. Secret values
+  (`listSecrets`) are a `POST` nebaz never sends; secret and env var values
+  a `GET` body does carry, and an environment's shared keys and connection
+  strings, are stripped before the row keeps the JSON. The apps' own
+  hosts are on the guard's list, and `az containerapp secret` is named
+  forbidden.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

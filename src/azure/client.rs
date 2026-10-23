@@ -16,6 +16,7 @@ use crate::azure::service::{AzureService, ServiceType};
 use crate::azure::resource::subscription_of;
 use crate::azure::services::aks::AksService;
 use crate::azure::services::compute::ComputeService;
+use crate::azure::services::container_apps::ContainerAppsService;
 use crate::azure::services::app_service::AppServiceService;
 use crate::azure::services::foundry::FoundryService;
 use crate::azure::services::container_registry::ContainerRegistryService;
@@ -285,6 +286,7 @@ impl AzureClients {
             ServiceType::Foundry => Arc::new(FoundryService::new(scope)),
             ServiceType::Monitor => Arc::new(MonitorService::new(scope)),
             ServiceType::PowerPlatform => Arc::new(PowerPlatformService::new(scope)),
+            ServiceType::ContainerApps => Arc::new(ContainerAppsService::new(scope)),
         }
     }
 
