@@ -25,8 +25,9 @@ const MENU_W: u16 = 60;
 
 /// Welcome / getting-started dashboard shown in the main content area when no
 /// service is loaded yet. A centered logo over a left-aligned menu block —
-/// loads nothing until the user picks a service (`@prefix` or `S`).
-pub fn render_splash(area: Rect, frame: &mut Frame) {
+/// loads nothing until the user picks a service (`@prefix` or `S`). A newer
+/// release (`update`, from `update_check.rs`) takes the tip's line.
+pub fn render_splash(area: Rect, update: Option<&str>, frame: &mut Frame) {
     let logo_h = BANNER_ART.len() as u16; // 6
     let menu_h = MENU.len() as u16; // 7
     // The menu is the point of the screen; the logo, then the footer tip,
@@ -102,10 +103,18 @@ pub fn render_splash(area: Rect, frame: &mut Frame) {
     if !show_footer {
         return;
     }
+    let footer = match update {
+        Some(v) => format!(
+            "↑ nebaz v{v} is out (you have v{}): {}",
+            crate::update_check::current_version(),
+            crate::update_check::UPGRADE_COMMAND
+        ),
+        None => "Tip: set default_service in ~/.config/nebaz/config.toml to skip this screen".to_string(),
+    };
     render(
         frame,
         Paragraph::new(Line::from(Span::styled(
-            "Tip: set default_service in ~/.config/nebaz/config.toml to skip this screen",
+            footer,
             Style::default()
                 .fg(theme::text_dim())
                 .add_modifier(Modifier::ITALIC),

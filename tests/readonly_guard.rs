@@ -22,6 +22,11 @@
 //!    (which hands a command to the clipboard) uses it. A destructive verb
 //!    or a secret-revealing command or flag is refused there too.
 //! 4. Every ARM action `PERMISSIONS.md` grants ends in `/read`.
+//! 5. The one request that is not to Azure (ADR 0008), the daily update
+//!    check's GET of the latest GitHub release, is named here with its
+//!    reason: its host and its one URL live in `src/update_check.rs` only,
+//!    the ARM client's tokenless `anonymous_get` is called from there only,
+//!    and that function carries `ReadOnlyPolicy` and no bearer policy.
 //!
 //! There is deliberately no API-path allowlist here: the paths are
 //! documentation in `PERMISSIONS.md`, kept in sync by the PR template.
@@ -114,6 +119,25 @@ const GRAPH_FORBIDDEN_FIELDS: &[&str] = &["key"];
 /// certificate's `key` whenever `keyCredentials` is `$select`ed, so nebaz
 /// selects nothing: the default projection leaves `key` null.
 const GRAPH_FORBIDDEN_OPTIONS: &[&str] = &["$select", "select="];
+
+/// The update check (ADR 0008): the one file that may name a non-Azure host
+/// for a request.
+const UPDATE_CHECK_FILE: &str = "src/update_check.rs";
+
+/// Every non-Azure host nebaz may request, the one file that may name it,
+/// and why. Anything not here and not Azure is simply never requested
+/// (no other file reaches `anonymous_get`).
+const NON_AZURE_HOSTS: &[(&str, &str, &str)] = &[(
+    "api.github.com",
+    UPDATE_CHECK_FILE,
+    "the daily update check: an anonymous GET of the latest nebaz release, no token, opt-out (ADR 0008)",
+)];
+
+/// The update check's one URL: a public read of release metadata.
+const UPDATE_CHECK_URL: &str = "https://api.github.com/repos/neboto/nebaz/releases/latest";
+
+/// The ARM client's tokenless GET, the transport of the update check.
+const ANONYMOUS_GET: &str = "anonymous_get";
 
 /// Crates that could open an HTTP connection behind the pipeline's back.
 const HTTP_CLIENT_CRATES: &[&str] = &["reqwest", "hyper", "ureq", "curl", "isahc", "attohttpc", "minreq"];
@@ -660,4 +684,81 @@ fn no_post_only_read_is_requested() {
         }
     }
     assert!(problems.is_empty(), "read-only guard (POST-only reads):\n  {}", problems.join("\n  "));
+}
+
+/// The non-Azure problems in one file's comment-free, non-test text: an
+/// allowed host outside its file, a URL on it other than the update
+/// check's, and `anonymous_get` outside the ARM client and the check.
+fn non_azure_problems(rel_path: &str, file: &str) -> Vec<String> {
+    let stripped = without_line_comments(file);
+    let text = non_test_part(&stripped);
+    let mut problems = Vec::new();
+    for (host, home, _) in NON_AZURE_HOSTS {
+        for (offset, literal) in string_literals(text) {
+            if !literal.contains(host) {
+                continue;
+            }
+            if rel_path != *home {
+                problems.push(format!("{}:{}: `{}` outside {}", rel_path, line_of(text, offset), host, home));
+            } else if literal != UPDATE_CHECK_URL {
+                problems.push(format!("{}:{}: {:?} is not the update check's URL", rel_path, line_of(text, offset), literal));
+            }
+        }
+    }
+    if rel_path != ARM_FILE && rel_path != UPDATE_CHECK_FILE {
+        for (offset, _) in text.match_indices(ANONYMOUS_GET) {
+            problems.push(format!(
+                "{}:{}: `{}` outside {} (the one non-Azure request)",
+                rel_path,
+                line_of(text, offset),
+                ANONYMOUS_GET,
+                UPDATE_CHECK_FILE
+            ));
+        }
+    }
+    problems
+}
+
+#[test]
+fn the_only_non_azure_request_is_the_update_check() {
+    let mut problems = Vec::new();
+    for path in rust_sources() {
+        let file = fs::read_to_string(&path).unwrap();
+        problems.extend(non_azure_problems(&rel(&path), &file));
+    }
+    // The tokenless GET carries the read-only policy and never a token.
+    let arm = without_line_comments(&fs::read_to_string(root().join(ARM_FILE)).unwrap());
+    let start = arm.find(&format!("pub async fn {}", ANONYMOUS_GET)).expect("arm.rs defines anonymous_get");
+    let body = &arm[start..start + arm[start..].find("\n}\n").expect("the function ends")];
+    assert!(body.contains("ReadOnlyPolicy"), "anonymous_get lost the ReadOnlyPolicy");
+    for needle in ["Bearer", "credential", "Credential", "auth_scope"] {
+        if body.contains(needle) {
+            problems.push(format!("{}: anonymous_get names `{}`; no Azure token may reach another host", ARM_FILE, needle));
+        }
+    }
+    let check = without_line_comments(&fs::read_to_string(root().join(UPDATE_CHECK_FILE)).expect("the update check"));
+    assert!(check.contains(UPDATE_CHECK_URL) && check.contains(ANONYMOUS_GET), "{} moved? Update the guard", UPDATE_CHECK_FILE);
+    for (host, _, reason) in NON_AZURE_HOSTS {
+        assert!(!reason.is_empty(), "{} needs a reason", host);
+    }
+    assert!(problems.is_empty(), "read-only guard (non-Azure requests):\n  {}", problems.join("\n  "));
+}
+
+/// The non-Azure rules on synthetic files.
+#[test]
+fn the_non_azure_rules_catch_what_they_should() {
+    let url = format!("const U: &str = \"{}\";\n", UPDATE_CHECK_URL);
+    assert!(non_azure_problems(UPDATE_CHECK_FILE, &url).is_empty(), "the check may name its URL");
+    assert_eq!(non_azure_problems("src/app.rs", &url).len(), 1, "nowhere else");
+    let other = "const U: &str = \"https://api.github.com/repos/neboto/nebaz/issues\";\n";
+    assert_eq!(non_azure_problems(UPDATE_CHECK_FILE, other).len(), 1, "only the latest-release URL");
+    let call = "let v = arm::anonymous_get(U, &[], t).await;\n";
+    assert!(non_azure_problems(UPDATE_CHECK_FILE, call).is_empty());
+    assert!(non_azure_problems(ARM_FILE, call).is_empty());
+    assert_eq!(non_azure_problems("src/azure/services/x.rs", call).len(), 1);
+    assert!(non_azure_problems("src/app.rs", "// prose may say api.github.com and anonymous_get\n").is_empty());
+    assert!(
+        non_azure_problems("src/x.rs", "fn f() {}\n#[cfg(test)]\nmod t { const U: &str = \"https://api.github.com/x\"; }\n").is_empty(),
+        "test code is exempt"
+    );
 }

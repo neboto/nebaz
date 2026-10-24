@@ -19,6 +19,7 @@ mod search;
 mod sections;
 mod tui;
 mod ui;
+mod update_check;
 
 use app::App;
 use error::Result;
@@ -79,6 +80,10 @@ async fn run(cli: cli::Cli) -> Result<()> {
     }
     app.spawn_subscription_info_fetch(&event_tx);
     App::trigger_locations(&mut app, &event_tx);
+    // Once-a-day "newer release" check (ADR 0008): the TUI only, never the
+    // headless subcommands (they return before here); gated on config, env
+    // and CI inside.
+    app.spawn_update_check(&event_tx);
 
     while app.running {
         if app.should_load_resources() {
@@ -222,7 +227,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
             width: (d.x + d.width).saturating_sub(rl.x),
             height: rl.height,
         };
-        splash::render_splash(content, frame);
+        splash::render_splash(content, app.update_available.as_deref(), frame);
     } else {
         resource_list::render_resource_list(app, layout.resource_list_area, frame);
         details_pane::render_details_pane(app, layout.details_area, frame);

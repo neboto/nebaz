@@ -59,6 +59,7 @@ mod subscription_fanout_test;
 mod ownership_test;
 mod small_terminal_test;
 mod timeline_test;
+mod update_check_test;
 mod wiring_test;
 
 /// The CLI's default subscription in the fixture account list.
