@@ -1,0 +1,71 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/sites/app-legacy-portal/config/web",
+  "name": "app-legacy-portal",
+  "type": "Microsoft.Web/sites/config",
+  "location": "West Europe",
+  "properties": {
+    "numberOfWorkers": 1,
+    "defaultDocuments": [
+      "Default.htm",
+      "Default.html",
+      "default.aspx",
+      "index.html"
+    ],
+    "netFrameworkVersion": "v4.0",
+    "phpVersion": "",
+    "pythonVersion": "",
+    "nodeVersion": "",
+    "powerShellVersion": "",
+    "linuxFxVersion": "",
+    "windowsFxVersion": null,
+    "requestTracingEnabled": false,
+    "remoteDebuggingEnabled": false,
+    "httpLoggingEnabled": false,
+    "logsDirectorySizeLimit": 35,
+    "detailedErrorLoggingEnabled": false,
+    "use32BitWorkerProcess": true,
+    "webSocketsEnabled": false,
+    "alwaysOn": false,
+    "managedPipelineMode": "Integrated",
+    "virtualApplications": [
+      {
+        "virtualPath": "/",
+        "physicalPath": "site\\wwwroot",
+        "preloadEnabled": false
+      }
+    ],
+    "loadBalancing": "LeastRequests",
+    "autoHealEnabled": false,
+    "vnetRouteAllEnabled": false,
+    "localMySqlEnabled": false,
+    "ipSecurityRestrictions": [
+      {
+        "ipAddress": "Any",
+        "action": "Allow",
+        "priority": 2147483647,
+        "name": "Allow all",
+        "description": "Allow all access"
+      }
+    ],
+    "scmIpSecurityRestrictions": [
+      {
+        "ipAddress": "Any",
+        "action": "Allow",
+        "priority": 2147483647,
+        "name": "Allow all",
+        "description": "Allow all access"
+      }
+    ],
+    "scmIpSecurityRestrictionsUseMain": false,
+    "http20Enabled": false,
+    "minTlsVersion": "1.0",
+    "scmMinTlsVersion": "1.0",
+    "ftpsState": "AllAllowed",
+    "preWarmedInstanceCount": 0,
+    "functionAppScaleLimit": 0,
+    "healthCheckPath": null,
+    "functionsRuntimeScaleMonitoringEnabled": false,
+    "minimumElasticInstanceCount": 0,
+    "publicNetworkAccess": "Enabled"
+  }
+}

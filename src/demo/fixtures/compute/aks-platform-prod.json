@@ -1,0 +1,218 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod",
+  "location": "westeurope",
+  "name": "aks-platform-prod",
+  "type": "Microsoft.ContainerService/ManagedClusters",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-2100"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "powerState": {
+      "code": "Running"
+    },
+    "kubernetesVersion": "1.28.9",
+    "currentKubernetesVersion": "1.28.9",
+    "dnsPrefix": "aks-platform-prod",
+    "fqdn": "aks-platform-prod-k3x9q2m7.hcp.westeurope.azmk8s.io",
+    "azurePortalFQDN": "aks-platform-prod-k3x9q2m7.portal.hcp.westeurope.azmk8s.io",
+    "agentPoolProfiles": [
+      {
+        "name": "system",
+        "count": 3,
+        "vmSize": "Standard_D4s_v5",
+        "osDiskSizeGB": 128,
+        "osDiskType": "Managed",
+        "kubeletDiskType": "OS",
+        "maxPods": 110,
+        "type": "VirtualMachineScaleSets",
+        "availabilityZones": [
+          "1",
+          "2",
+          "3"
+        ],
+        "enableAutoScaling": false,
+        "scaleDownMode": "Delete",
+        "provisioningState": "Succeeded",
+        "powerState": {
+          "code": "Running"
+        },
+        "orchestratorVersion": "1.28.9",
+        "currentOrchestratorVersion": "1.28.9",
+        "enableNodePublicIP": false,
+        "nodeLabels": {
+          "pool": "system"
+        },
+        "mode": "System",
+        "osType": "Linux",
+        "osSKU": "Ubuntu",
+        "nodeImageVersion": "AKSUbuntu-2204gen2containerd-202407.29.0",
+        "upgradeSettings": {
+          "maxSurge": "10%"
+        },
+        "enableFIPS": false,
+        "securityProfile": {
+          "enableVTPM": false,
+          "enableSecureBoot": false
+        },
+        "nodeTaints": [
+          "CriticalAddonsOnly=true:NoSchedule"
+        ]
+      },
+      {
+        "name": "batch",
+        "count": 0,
+        "vmSize": "Standard_D8s_v5",
+        "osDiskSizeGB": 128,
+        "osDiskType": "Managed",
+        "kubeletDiskType": "OS",
+        "maxPods": 110,
+        "type": "VirtualMachineScaleSets",
+        "availabilityZones": [
+          "1",
+          "2",
+          "3"
+        ],
+        "maxCount": 4,
+        "minCount": 0,
+        "enableAutoScaling": true,
+        "scaleDownMode": "Delete",
+        "provisioningState": "Failed",
+        "powerState": {
+          "code": "Running"
+        },
+        "orchestratorVersion": "1.28.9",
+        "currentOrchestratorVersion": "1.28.9",
+        "enableNodePublicIP": false,
+        "nodeLabels": {
+          "pool": "batch",
+          "workload": "export"
+        },
+        "mode": "User",
+        "osType": "Linux",
+        "osSKU": "Ubuntu",
+        "nodeImageVersion": "AKSUbuntu-2204gen2containerd-202407.29.0",
+        "upgradeSettings": {
+          "maxSurge": "10%"
+        },
+        "enableFIPS": false,
+        "scaleSetPriority": "Regular",
+        "nodeTaints": [
+          "workload=batch:NoSchedule"
+        ]
+      }
+    ],
+    "servicePrincipalProfile": {
+      "clientId": "msi"
+    },
+    "addonProfiles": {
+      "azureKeyvaultSecretsProvider": {
+        "enabled": false,
+        "config": null
+      },
+      "azurepolicy": {
+        "enabled": true,
+        "config": null
+      },
+      "omsagent": {
+        "enabled": true,
+        "config": {
+          "logAnalyticsWorkspaceResourceID": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/law-contoso-prod",
+          "useAADAuth": "true"
+        }
+      }
+    },
+    "nodeResourceGroup": "MC_rg-platform-prod_aks-platform-prod_westeurope",
+    "enableRBAC": true,
+    "supportPlan": "KubernetesOfficial",
+    "networkProfile": {
+      "networkPlugin": "azure",
+      "networkPluginMode": "overlay",
+      "networkPolicy": "calico",
+      "networkDataplane": "azure",
+      "loadBalancerSku": "standard",
+      "loadBalancerProfile": {
+        "managedOutboundIPs": {
+          "count": 1
+        },
+        "effectiveOutboundIPs": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/MC_rg-platform-prod_aks-platform-prod_westeurope/providers/Microsoft.Network/publicIPAddresses/5f1c2b7a-0e3d-4a9b-8c61-2d4f7e9a0b13"
+          }
+        ],
+        "backendPoolType": "nodeIPConfiguration"
+      },
+      "podCidr": "10.244.0.0/16",
+      "serviceCidr": "10.0.0.0/16",
+      "dnsServiceIP": "10.0.0.10",
+      "outboundType": "loadBalancer",
+      "podCidrs": [
+        "10.244.0.0/16"
+      ],
+      "serviceCidrs": [
+        "10.0.0.0/16"
+      ],
+      "ipFamilies": [
+        "IPv4"
+      ]
+    },
+    "aadProfile": {
+      "managed": true,
+      "adminGroupObjectIDs": [
+        "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d"
+      ],
+      "enableAzureRBAC": false,
+      "tenantID": "{{tenant}}"
+    },
+    "maxAgentPools": 100,
+    "apiServerAccessProfile": {
+      "enablePrivateCluster": false
+    },
+    "identityProfile": {
+      "kubeletidentity": {
+        "resourceId": "/subscriptions/{{prod}}/resourcegroups/MC_rg-platform-prod_aks-platform-prod_westeurope/providers/Microsoft.ManagedIdentity/userAssignedIdentities/aks-platform-prod-agentpool",
+        "clientId": "abcad6b0-6864-4d49-9bd6-061456b54bed",
+        "objectId": "37ec34fc-62c5-4180-a17f-0cccd5ed2e95"
+      }
+    },
+    "autoUpgradeProfile": {
+      "upgradeChannel": "none",
+      "nodeOSUpgradeChannel": "NodeImage"
+    },
+    "disableLocalAccounts": false,
+    "securityProfile": {},
+    "storageProfile": {
+      "diskCSIDriver": {
+        "enabled": true
+      },
+      "fileCSIDriver": {
+        "enabled": true
+      },
+      "snapshotController": {
+        "enabled": true
+      }
+    },
+    "oidcIssuerProfile": {
+      "enabled": false
+    },
+    "workloadAutoScalerProfile": {},
+    "resourceUID": "66a1f0c2b9e74d0001a3c5e7",
+    "metricsProfile": {
+      "costAnalysis": {
+        "enabled": false
+      }
+    }
+  },
+  "identity": {
+    "type": "SystemAssigned",
+    "principalId": "9d2b4f6e-8a1c-4e3d-b5f7-0c2e4a6b8d91",
+    "tenantId": "{{tenant}}"
+  },
+  "sku": {
+    "name": "Base",
+    "tier": "Free"
+  }
+}

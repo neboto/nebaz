@@ -1,0 +1,36 @@
+{
+  "name": "vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+  "type": "Microsoft.Compute/disks",
+  "location": "westeurope",
+  "tags": {},
+  "sku": {
+    "name": "Premium_LRS",
+    "tier": "Premium"
+  },
+  "properties": {
+    "creationData": {
+      "createOption": "FromImage",
+      "imageReference": {
+        "id": "/Subscriptions/{{prod}}/Providers/Microsoft.Compute/Locations/westeurope/Publishers/MicrosoftWindowsServer/ArtifactTypes/VMImage/Offers/WindowsServer/Skus/2019-Datacenter/Versions/17763.6532.241101"
+      }
+    },
+    "diskSizeGB": 127,
+    "diskIOPSReadWrite": 500,
+    "diskMBpsReadWrite": 100,
+    "encryption": {
+      "type": "EncryptionAtRestWithPlatformKey"
+    },
+    "networkAccessPolicy": "AllowAll",
+    "publicNetworkAccess": "Enabled",
+    "timeCreated": "{{iso:now-1460d}}",
+    "provisioningState": "Succeeded",
+    "diskState": "Reserved",
+    "diskSizeBytes": 136365211648,
+    "uniqueId": "7c3d9a2e-1f4b-4c8d-a6e0-5b9f2d3c7e81",
+    "tier": "P10",
+    "osType": "Windows",
+    "hyperVGeneration": "V1"
+  },
+  "managedBy": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01"
+}

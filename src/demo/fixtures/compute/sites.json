@@ -1,0 +1,164 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/sites/app-legacy-portal",
+      "name": "app-legacy-portal",
+      "type": "Microsoft.Web/sites",
+      "kind": "app",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-ops@contoso.com"
+      },
+      "identity": null,
+      "properties": {
+        "name": "app-legacy-portal",
+        "state": "Running",
+        "hostNames": [
+          "app-legacy-portal.azurewebsites.net"
+        ],
+        "webSpace": "rg-legacy-prod-WestEuropewebspace",
+        "selfLink": "https://waws-prod-am2-511.api.azurewebsites.windows.net:454/subscriptions/{{prod}}/webspaces/rg-legacy-prod-WestEuropewebspace/sites/app-legacy-portal",
+        "repositorySiteName": "app-legacy-portal",
+        "usageState": "Normal",
+        "enabled": true,
+        "enabledHostNames": [
+          "app-legacy-portal.azurewebsites.net",
+          "app-legacy-portal.scm.azurewebsites.net"
+        ],
+        "availabilityState": "Normal",
+        "hostNameSslStates": [
+          {
+            "name": "app-legacy-portal.azurewebsites.net",
+            "sslState": "Disabled",
+            "hostType": "Standard"
+          },
+          {
+            "name": "app-legacy-portal.scm.azurewebsites.net",
+            "sslState": "Disabled",
+            "hostType": "Repository"
+          }
+        ],
+        "serverFarmId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/serverfarms/asp-legacy",
+        "reserved": false,
+        "isXenon": false,
+        "hyperV": false,
+        "lastModifiedTimeUtc": "{{iso:now-63d}}",
+        "vnetRouteAllEnabled": false,
+        "vnetImagePullEnabled": false,
+        "vnetContentShareEnabled": false,
+        "siteConfig": {
+          "numberOfWorkers": 1,
+          "linuxFxVersion": "",
+          "windowsFxVersion": null,
+          "acrUseManagedIdentityCreds": false,
+          "alwaysOn": false,
+          "http20Enabled": false,
+          "functionAppScaleLimit": 0,
+          "minimumElasticInstanceCount": 0
+        },
+        "scmSiteAlsoStopped": false,
+        "clientAffinityEnabled": true,
+        "clientCertEnabled": false,
+        "clientCertMode": "Required",
+        "hostNamesDisabled": false,
+        "customDomainVerificationId": "4B1E6F0A9C3D7E2B5A8F1C4D6E9B2A7F0C3E5D8B1A4F6C9E2D7B0A3F5C8E1D4B",
+        "outboundIpAddresses": "20.105.224.17,20.105.224.43,20.105.225.112,20.50.2.81",
+        "possibleOutboundIpAddresses": "20.105.224.17,20.105.224.43,20.105.225.112,20.50.2.81,20.105.225.140,20.105.226.9",
+        "containerSize": 0,
+        "dailyMemoryTimeQuota": 0,
+        "resourceGroup": "rg-legacy-prod",
+        "defaultHostName": "app-legacy-portal.azurewebsites.net",
+        "httpsOnly": false,
+        "redundancyMode": "None",
+        "publicNetworkAccess": "Enabled",
+        "storageAccountRequired": false,
+        "keyVaultReferenceIdentity": "SystemAssigned",
+        "endToEndEncryptionEnabled": false,
+        "sku": "Standard",
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/sites/func-legacy-reports",
+      "name": "func-legacy-reports",
+      "type": "Microsoft.Web/sites",
+      "kind": "functionapp",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-ops@contoso.com"
+      },
+      "identity": null,
+      "properties": {
+        "name": "func-legacy-reports",
+        "state": "Running",
+        "hostNames": [
+          "func-legacy-reports.azurewebsites.net"
+        ],
+        "webSpace": "rg-legacy-prod-WestEuropewebspace",
+        "selfLink": "https://waws-prod-am2-511.api.azurewebsites.windows.net:454/subscriptions/{{prod}}/webspaces/rg-legacy-prod-WestEuropewebspace/sites/func-legacy-reports",
+        "repositorySiteName": "func-legacy-reports",
+        "usageState": "Normal",
+        "enabled": true,
+        "enabledHostNames": [
+          "func-legacy-reports.azurewebsites.net",
+          "func-legacy-reports.scm.azurewebsites.net"
+        ],
+        "availabilityState": "Normal",
+        "hostNameSslStates": [
+          {
+            "name": "func-legacy-reports.azurewebsites.net",
+            "sslState": "Disabled",
+            "hostType": "Standard"
+          },
+          {
+            "name": "func-legacy-reports.scm.azurewebsites.net",
+            "sslState": "Disabled",
+            "hostType": "Repository"
+          }
+        ],
+        "serverFarmId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/serverfarms/asp-legacy",
+        "reserved": false,
+        "isXenon": false,
+        "hyperV": false,
+        "lastModifiedTimeUtc": "{{iso:now-18d}}",
+        "vnetRouteAllEnabled": false,
+        "vnetImagePullEnabled": false,
+        "vnetContentShareEnabled": false,
+        "siteConfig": {
+          "numberOfWorkers": 1,
+          "linuxFxVersion": "",
+          "windowsFxVersion": null,
+          "acrUseManagedIdentityCreds": false,
+          "alwaysOn": false,
+          "http20Enabled": false,
+          "functionAppScaleLimit": 0,
+          "minimumElasticInstanceCount": 0
+        },
+        "scmSiteAlsoStopped": false,
+        "clientAffinityEnabled": true,
+        "clientCertEnabled": false,
+        "clientCertMode": "Required",
+        "hostNamesDisabled": false,
+        "customDomainVerificationId": "4B1E6F0A9C3D7E2B5A8F1C4D6E9B2A7F0C3E5D8B1A4F6C9E2D7B0A3F5C8E1D4B",
+        "outboundIpAddresses": "20.105.224.17,20.105.224.43,20.105.225.112,20.50.2.81",
+        "possibleOutboundIpAddresses": "20.105.224.17,20.105.224.43,20.105.225.112,20.50.2.81,20.105.225.140,20.105.226.9",
+        "containerSize": 0,
+        "dailyMemoryTimeQuota": 0,
+        "resourceGroup": "rg-legacy-prod",
+        "defaultHostName": "func-legacy-reports.azurewebsites.net",
+        "httpsOnly": true,
+        "redundancyMode": "None",
+        "publicNetworkAccess": "Enabled",
+        "storageAccountRequired": false,
+        "keyVaultReferenceIdentity": "SystemAssigned",
+        "endToEndEncryptionEnabled": false,
+        "sku": "Standard",
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

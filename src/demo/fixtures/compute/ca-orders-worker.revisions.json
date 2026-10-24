@@ -1,0 +1,53 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-worker/revisions/ca-orders-worker--v119",
+      "name": "ca-orders-worker--v119",
+      "type": "Microsoft.App/containerApps/revisions",
+      "properties": {
+        "createdTime": "{{iso:now-25m}}",
+        "lastActiveTime": "{{iso:now-25m}}",
+        "fqdn": "",
+        "template": null,
+        "active": true,
+        "replicas": 0,
+        "healthState": "Unhealthy",
+        "provisioningState": "Failed",
+        "runningState": "Failed",
+        "provisioningError": "Failed to provision revision for container app 'ca-orders-worker'. Error details: The following field(s) are either invalid or missing. Field 'template.containers.orders-worker.image' is invalid with details: 'Invalid value: \"acrcontosoprod.azurecr.io/orders-worker:1.19.0\": GET https:: MANIFEST_UNKNOWN: manifest tagged by \"1.19.0\" is not found; map[Tag:1.19.0]';.."
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-worker/revisions/ca-orders-worker--v118",
+      "name": "ca-orders-worker--v118",
+      "type": "Microsoft.App/containerApps/revisions",
+      "properties": {
+        "createdTime": "{{iso:now-6d}}",
+        "lastActiveTime": "{{iso:now-1m}}",
+        "fqdn": "",
+        "template": null,
+        "active": true,
+        "replicas": 2,
+        "healthState": "Healthy",
+        "provisioningState": "Provisioned",
+        "runningState": "Running"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-worker/revisions/ca-orders-worker--v117",
+      "name": "ca-orders-worker--v117",
+      "type": "Microsoft.App/containerApps/revisions",
+      "properties": {
+        "createdTime": "{{iso:now-13d}}",
+        "lastActiveTime": "{{iso:now-13d}}",
+        "fqdn": "",
+        "template": null,
+        "active": false,
+        "replicas": 0,
+        "healthState": "None",
+        "provisioningState": "Provisioned",
+        "runningState": "Stopped"
+      }
+    }
+  ]
+}

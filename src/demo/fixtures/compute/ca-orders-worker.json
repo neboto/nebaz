@@ -1,0 +1,106 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-worker",
+  "name": "ca-orders-worker",
+  "type": "Microsoft.App/containerApps",
+  "location": "West Europe",
+  "tags": {
+    "env": "prod",
+    "team": "orders",
+    "owner": "orders-team@contoso.com",
+    "costCenter": "CC-3020"
+  },
+  "systemData": {
+    "createdBy": "alex.kim@contoso.com",
+    "createdByType": "User",
+    "createdAt": "{{iso:now-300d}}",
+    "lastModifiedBy": "edc89266-a363-4046-9c6e-e0629dfedbad",
+    "lastModifiedByType": "Application",
+    "lastModifiedAt": "{{iso:now-25m}}"
+  },
+  "identity": {
+    "type": "SystemAssigned",
+    "principalId": "51b687b3-bdb3-4408-b436-500e659cc8cb",
+    "tenantId": "{{tenant}}"
+  },
+  "properties": {
+    "provisioningState": "Failed",
+    "runningStatus": "Running",
+    "managedEnvironmentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+    "environmentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+    "workloadProfileName": "Consumption",
+    "outboundIpAddresses": [
+      "20.103.45.11"
+    ],
+    "latestRevisionName": "ca-orders-worker--v119",
+    "latestReadyRevisionName": "ca-orders-worker--v118",
+    "latestRevisionFqdn": "",
+    "configuration": {
+      "secrets": [],
+      "activeRevisionsMode": "Single",
+      "ingress": null,
+      "registries": [
+        {
+          "server": "acrcontosoprod.azurecr.io",
+          "username": "",
+          "passwordSecretRef": "",
+          "identity": "system"
+        }
+      ],
+      "identitySettings": [],
+      "dapr": null,
+      "runtime": null,
+      "maxInactiveRevisions": 100,
+      "service": null
+    },
+    "template": {
+      "revisionSuffix": "v119",
+      "terminationGracePeriodSeconds": 60,
+      "containers": [
+        {
+          "image": "acrcontosoprod.azurecr.io/orders-worker:1.19.0",
+          "imageType": "ContainerImage",
+          "name": "orders-worker",
+          "env": [
+            {
+              "name": "SERVICEBUS_NAMESPACE",
+              "value": "sb-orders-prod.servicebus.windows.net"
+            },
+            {
+              "name": "QUEUE_NAME",
+              "value": "orders"
+            }
+          ],
+          "resources": {
+            "cpu": 0.5,
+            "memory": "1Gi"
+          },
+          "probes": []
+        }
+      ],
+      "initContainers": null,
+      "scale": {
+        "minReplicas": 1,
+        "maxReplicas": 8,
+        "cooldownPeriod": 300,
+        "pollingInterval": 30,
+        "rules": [
+          {
+            "name": "orders-queue",
+            "custom": {
+              "type": "azure-servicebus",
+              "metadata": {
+                "namespace": "sb-orders-prod",
+                "queueName": "orders",
+                "messageCount": "100"
+              },
+              "identity": "system"
+            }
+          }
+        ]
+      },
+      "volumes": [],
+      "serviceBinds": null
+    },
+    "delegatedIdentities": []
+  }
+}

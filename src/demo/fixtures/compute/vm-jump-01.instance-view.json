@@ -1,0 +1,46 @@
+{
+  "computerName": "vm-jump-01",
+  "osName": "ubuntu",
+  "osVersion": "22.04",
+  "hyperVGeneration": "V2",
+  "vmAgent": {
+    "vmAgentVersion": "2.11.1.12",
+    "statuses": [
+      {
+        "code": "ProvisioningState/succeeded",
+        "level": "Info",
+        "displayStatus": "Ready",
+        "message": "Guest Agent is running",
+        "time": "{{iso:now-1m}}"
+      }
+    ],
+    "extensionHandlers": []
+  },
+  "disks": [
+    {
+      "name": "vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68",
+      "statuses": [
+        {
+          "code": "ProvisioningState/succeeded",
+          "level": "Info",
+          "displayStatus": "Provisioning succeeded",
+          "time": "{{iso:now-212d}}"
+        }
+      ]
+    }
+  ],
+  "bootDiagnostics": {},
+  "statuses": [
+    {
+      "code": "ProvisioningState/succeeded",
+      "level": "Info",
+      "displayStatus": "Provisioning succeeded",
+      "time": "{{iso:now-19d}}"
+    },
+    {
+      "code": "PowerState/running",
+      "level": "Info",
+      "displayStatus": "VM running"
+    }
+  ]
+}
