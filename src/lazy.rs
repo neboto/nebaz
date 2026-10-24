@@ -207,6 +207,15 @@ pub struct LazyStore {
     /// `GET {app}/authConfigs`, keyed by app id. Secret setting names only.
     pub aca_auth_configs: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Redis ────────────────────────────────────────────────────────────
+    /// `GET {cache}/firewallRules`, keyed by cache id.
+    pub redis_firewall_rules: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {cache}/linkedServers` (geo-replication), keyed by cache id;
+    /// only fetched when the cache names a linked server.
+    pub redis_linked_servers: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {cluster}/databases` (Managed Redis), keyed by cluster id.
+    pub redis_databases: LazyMap<Vec<serde_json::Value>>,
+
     // ── Ownership ribbon (every type) ────────────────────────────────────
     /// `GET {group}/providers/Microsoft.Resources/deployments` (and the
     /// operations of its newest unfinished ones), keyed by the lowercased

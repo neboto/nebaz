@@ -201,7 +201,9 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     prefix; Container App `{min}–{max} replicas`; environment
     `internal` / `external`; job trigger type; DNS zone record-set
     count (+ `private` for a legacy private zone); private DNS zone
-    record sets · VNet links; DNS resolver `vnet {name}`; All resources `→`/`·` and
+    record sets · VNet links; DNS resolver `vnet {name}`; Redis cache SKU
+    (`Premium P1`) + shards + `VNet` when injected; Managed Redis SKU (+
+    `no HA`); All resources `→`/`·` and
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
@@ -223,7 +225,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     Container App, web app (and slot), App Service plan, SQL database,
     storage account, Key Vault, Cosmos account, load balancer, public IP,
     NAT gateway, container registry, Application Insights, Foundry /
-    Cognitive Services account (`curated_metrics` is the list). Any other
+    Cognitive Services account, Redis cache (the `all…` names, every
+    shard), Managed Redis (`curated_metrics` is the list). Any other
     ARM resource opens on the `a` picker (its metric definitions);
     `supports_metrics` drives the status-bar hint, so the hint and the
     default set cannot drift. One call per aggregation (2–3 per open, no
@@ -269,7 +272,9 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     **Subnet** its NSG, its route table. **Service principal / app
     registration** credential metadata, owners, federated credentials
     (never `credential reset`). **Power Platform policy** each injected
-    subnet. A list visual selection (#39) merged into one `--ids a b c` command
+    subnet. **Redis cache** firewall rules, server links, patch schedule,
+    Entra access-policy assignments (name form; never `list-keys`);
+    **Managed Redis** databases (`redisenterprise` extension). A list visual selection (#39) merged into one `--ids a b c` command
     (neboto's batch mode) is not built yet: `C` acts on the cursor row.
 21. **Referenced by** (`U`, #49, `src/azure/references.rs`, keys and the
     cache walk in `src/app/refs_lens.rs`, drawn by
@@ -415,11 +420,13 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Container Apps · Apps | Ingress (external / internal, FQDN as text, transport, ports, insecure HTTP flagged, client certificate mode, sticky sessions, IP restrictions as an allow- or deny-list, CORS, traffic split by revision and label, custom domains with their certificates) · Scale (min / max replicas, rules by kind with metadata and auth as trigger parameter → secret **name**) · Containers (init first; image, CPU / memory, probes, env var **names** with secret refs named, volume mounts) · Revisions ⧗ (active first: active, traffic, replicas, health, running state, created, last active, provisioning error) · Auth ⧗ (`authConfigs`: on / off, unauthenticated action, excluded paths, per provider the client id; Entra ID issuer, client secret setting **name**, audiences, allowed client apps and identities) · Identity (system principal; each user-assigned identity with client and principal id; lifecycle; registry pull identities) · Secrets (names, Key Vault references and the identity reading them; registries) · (Overview: environment, workload profile, running status, ingress, FQDN, revisions mode, latest and latest-ready revision, Dapr, outbound IPs). Secret and env var `value`s are stripped from the JSON before the row keeps it | ladder, then `runningStatus` (`Running`, `Ready` → Available, `Stopped` / `Suspended` → Stopped, `Progressing` → Pending); `location` is a display name, stored as `eastus` | environment, user-assigned identities, registry pull identities, Express outbound subnet | `az containerapp show` |
 | Container Apps · Environments | Network (public access, internal only, static IP, default domain, infrastructure subnet, Docker bridge and platform reserved ranges, reserved DNS IP, the private DNS a VNet caller needs when internal, custom DNS suffix with its certificate subject / thumbprint / expiry / Key Vault source, peer mTLS, peer traffic encryption, the ingress tier, private endpoints) · Workload profiles (name, type, node bounds) · (Overview: mode, default domain, static IP, zone redundancy, logs destination and workspace customer id, Dapr / KEDA versions, deployment errors). The Log Analytics shared key, Dapr App Insights key and connection string, App Insights connection string and certificate blob and password are stripped | ladder only | infrastructure subnet, infrastructure resource group, private endpoints, user-assigned identities. The workspace is a customer id, not an ARM id: no link (search `@law` for it) | `az containerapp env show` |
 | Container Apps · Jobs | Trigger (manual, schedule with cron, or event with KEDA rules; parallelism, completions, replica timeout, retry limit) · Containers · Identity · Secrets (as Apps) · (Overview: environment, workload profile, running state, trigger, outbound IPs) | ladder only | environment, user-assigned identities, registry pull identities | `az containerapp job show` |
+| Redis · Caches | Security (non-SSL port flagged, min TLS (1.0 / 1.1 flagged), Entra auth, access-key auth, `authnotrequired` flagged, public access, identity) · Network ⧗ (public access, VNet injection subnet with static IP (classic Premium), ports, host name as text, private endpoints with their connection status (not Approved flagged), VNet injection together with private endpoints flagged; then the firewall rules ⧗, an empty list flagged when public access is on and nothing else fences it) · Geo-replication ⧗ (linked servers: each linked cache, role, location, state; no call when the list body names none) · (Overview: SKU and family/capacity, shards, replicas per primary, Redis version, zones, host name and ports as text, update channel, max memory policy, persistence) | ladder only (caches report no runtime state); a `Disabled` provisioning state is Unavailable | subnet, private endpoints, user-assigned identities; ⧗ (Related fires Geo-replication's fetch) the linked caches | `az redis show` |
+| Redis · Managed Redis | Security (min TLS, encryption service- or customer-managed with the key identity, public access, identity) · Network (public access, host name as text, private endpoints with status; no firewall or VNet injection exists) · Databases ⧗ (port, client protocol (`Plaintext` flagged), access-key auth, clustering and eviction policy, persistence, modules, Redis version, state, geo-replication group with each linked cluster jumpable) · (Overview: kind, SKU, capacity, high availability, redundancy, zones, Redis version, resource state, host name) | ladder, then `resourceState` (`Running` → Available, `Disabled` / `…Failed` → Unavailable, else Pending) | private endpoints, user-assigned identities, the CMK identity | `az redisenterprise show` (the `redisenterprise` CLI extension) |
 | Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless); `location` is a Power Platform geography, so the row passes every `R` filter like `global` | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @changes @activity @deploys @health` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @changes @activity @deploys @health` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -488,6 +495,10 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Container Apps environments | 1 | `/providers/Microsoft.App/managedEnvironments` · `2026-07-01` |
 | Container Apps jobs | 1 | `/providers/Microsoft.App/jobs` · `2026-07-01` |
 | Revisions, Auth | 1 each per app, on demand (`listSecrets` is a POST and never sent) | `{app}/revisions` · `{app}/authConfigs` · `2026-07-01` |
+| Redis caches | 1 (the access keys and the persistence storage connection strings a body can carry are stripped before the row keeps it; `listKeys` is a POST and never sent) | `/providers/Microsoft.Cache/redis` · `2024-11-01` |
+| Redis Firewall, Geo-replication | 1 each per cache, on demand (linked servers only when the list body names one) | `{cache}/firewallRules` · `{cache}/linkedServers` · `2024-11-01` |
+| Managed Redis | 1 | `/providers/Microsoft.Cache/redisEnterprise` · `2026-09-01` |
+| Managed Redis Databases | 1 per cluster, on demand | `{cluster}/databases` · `2026-09-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
 | Enterprise policies | 1 (every kind; `kind` on the row) | `/providers/Microsoft.PowerPlatform/enterprisePolicies` · `2020-10-30-preview` (the only version in the specs; not yet tried live) |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
@@ -512,6 +523,15 @@ it; that floor is #63.
   (rule 8), on a subscription with an AKS cluster (#66).
 
 ## Not yet verified live
+
+- Redis (#29), built from azure-rest-api-specs (`2024-11-01` for
+  `Microsoft.Cache/redis`, `2026-09-01` for `redisEnterprise`, the newest
+  stable of each on 2026-10-24) without a subscription that has one. To
+  check: both api-versions are accepted; the list body's `location` is a
+  display name (stored without spaces, as for Container Apps);
+  `redisConfiguration.aad-enabled` is a string; `linkedServers` is on the
+  list body; `az redis show` and `az redisenterprise show` take `--ids`
+  (both names carry `id_part='name'` in azure-cli and the extension).
 
 - Power Platform enterprise policies (#77): built from the documented
   shape (azure-rest-api-specs `2020-10-30-preview`, the ARM template
