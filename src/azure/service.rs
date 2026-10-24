@@ -351,6 +351,21 @@ impl JumpView {
     pub fn is_tenant_scoped(&self) -> bool {
         matches!(self, JumpView::Subscriptions)
     }
+
+    /// Whether listing this sub-tab once per subscription means something
+    /// (the `P` counts and `ls --subscriptions`, #62). Not for the tenant's
+    /// lists (subscriptions, and the directory's service principals and app
+    /// registrations: the same rows from every subscription of a tenant),
+    /// nor `@changes` (one list per time window, its sub-tabs filter it,
+    /// and each subscription's Activity Log read is the costliest list).
+    pub fn fans_out(&self) -> bool {
+        use JumpView::*;
+        !self.is_tenant_scoped()
+            && !matches!(
+                self,
+                ServicePrincipals | AppRegistrations | ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth
+            )
+    }
 }
 
 impl ServiceType {

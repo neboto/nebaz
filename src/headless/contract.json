@@ -15,10 +15,12 @@
     ],
     "services": [],
     "ls": [
+      "--all-configured",
       "--filter",
       "--hide-noise",
       "--limit",
-      "--state"
+      "--state",
+      "--subscriptions"
     ],
     "get": [
       "--in",
@@ -76,6 +78,35 @@
       "location",
       "resource_group",
       "tags"
+    ]
+  },
+  "ls_subscriptions": {
+    "envelope": [
+      "schema",
+      "service",
+      "subtab",
+      "subscriptions",
+      "location",
+      "count",
+      "resources"
+    ],
+    "subscription": [
+      "subscription",
+      "name",
+      "status",
+      "count",
+      "message"
+    ],
+    "resource": [
+      "type",
+      "id",
+      "name",
+      "state",
+      "location",
+      "resource_group",
+      "tags",
+      "subscription",
+      "subscription_name"
     ]
   },
   "get": {

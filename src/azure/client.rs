@@ -274,16 +274,66 @@ impl AzureClients {
         )
     }
 
+    /// What a provider is pointed at for another subscription than the
+    /// current one: that subscription's tenant pipeline (built once, shared
+    /// with every other subscription of the tenant) and its entry. `None`
+    /// when `az account list` doesn't know it.
+    pub fn scope_for(&self, subscription_id: &str) -> Option<Scope> {
+        let entry = self
+            .subscriptions
+            .iter()
+            .find(|s| s.id.eq_ignore_ascii_case(subscription_id))?
+            .clone();
+        let arm = self
+            .arm_for_tenant(&entry.tenant_id)
+            .map_err(|e| e.auth_error().unwrap_or_else(|| AuthError::Other(e.to_string())));
+        Some(Scope::new(arm, Some(entry)))
+    }
+
+    /// The provider for one service in another subscription, without
+    /// switching to it: the `P` fan-out and `ls --subscriptions` (#62).
+    pub fn service_in(&self, service: ServiceType, subscription_id: &str) -> Option<Arc<dyn AzureService>> {
+        let scope = self.scope_for(subscription_id)?;
+        let graph = scope
+            .tenant()
+            .ok_or_else(|| "no tenant".to_string())
+            .and_then(|t| self.graph_for_tenant(t).map_err(|e| e.to_string()));
+        Some(self.service_over(service, scope, graph))
+    }
+
+    /// Config `subscriptions` resolved against `az account list`: the ids
+    /// in the order given, each once, and the entries that name nothing.
+    pub fn resolve_configured(&self, wanted: &[String]) -> (Vec<String>, Vec<String>) {
+        let mut ids: Vec<String> = Vec::new();
+        let mut unknown = Vec::new();
+        for w in wanted.iter().map(|w| w.trim()).filter(|w| !w.is_empty()) {
+            match self.resolve_subscription(w) {
+                Some(e) if !ids.contains(&e.id) => ids.push(e.id),
+                Some(_) => {}
+                None => unknown.push(w.to_string()),
+            }
+        }
+        (ids, unknown)
+    }
+
     /// The provider for one service, over the current scope.
     pub fn service(&self, service: ServiceType) -> Arc<dyn AzureService> {
-        let scope = self.scope();
+        self.service_over(service, self.scope(), self.current_graph())
+    }
+
+    fn service_over(
+        &self,
+        service: ServiceType,
+        scope: Scope,
+        graph: std::result::Result<Arc<ArmClient>, String>,
+    ) -> Arc<dyn AzureService> {
         match service {
             ServiceType::Subscriptions => Arc::new(SubscriptionsService::new(scope, self.subscriptions.clone())),
             ServiceType::VirtualMachines => Arc::new(ComputeService::new(scope)),
             ServiceType::Storage => Arc::new(StorageService::new(scope)),
             ServiceType::Network => Arc::new(NetworkService::new(scope)),
             ServiceType::KeyVault => Arc::new(KeyVaultService::new(scope)),
-            ServiceType::Identity => Arc::new(IdentityService::new(scope).with_graph(self.current_graph())),
+            ServiceType::Identity => Arc::new(IdentityService::new(scope).with_graph(graph)),
             ServiceType::Aks => Arc::new(AksService::new(scope)),
             ServiceType::ContainerRegistry => Arc::new(ContainerRegistryService::new(scope)),
             ServiceType::AppService => Arc::new(AppServiceService::new(scope)),
@@ -294,7 +344,7 @@ impl AzureClients {
             ServiceType::PowerPlatform => Arc::new(PowerPlatformService::new(scope)),
             ServiceType::ContainerApps => Arc::new(ContainerAppsService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
-            ServiceType::Changes => self.changes_service(ChangesWindow::default()),
+            ServiceType::Changes => Arc::new(ChangesService::new(scope, graph, ChangesWindow::default())),
         }
     }
 
@@ -629,6 +679,29 @@ mod tests {
         assert!(c.set_subscription("zeta").is_err());
         assert_eq!(c.current_subscription(), Some("c"));
         assert_eq!(c.current_endpoint(), None);
+    }
+
+    #[test]
+    fn configured_subscriptions_resolve_by_id_or_name_and_scope_their_own_tenant() {
+        let mut c = clients(vec![
+            entry("a", "Alpha", "t-1", "Enabled", true),
+            entry("b", "Beta", "t-1", "Enabled", false),
+            entry("c", "Gamma", "t-2", "Enabled", false),
+        ]);
+        c.resolve_startup(None).unwrap();
+        let wanted: Vec<String> = ["gamma", " a ", "ALPHA", "zeta", ""].iter().map(|s| s.to_string()).collect();
+        let (ids, unknown) = c.resolve_configured(&wanted);
+        assert_eq!(ids, ["c", "a"], "config order, each once");
+        assert_eq!(unknown, ["zeta"]);
+
+        // Another tenant's scope without switching: its own pipeline.
+        let scope = c.scope_for("C").unwrap();
+        assert_eq!(scope.tenant(), Some("t-2"));
+        assert_eq!(scope.path("/x").unwrap(), "/subscriptions/c/x");
+        assert!(Arc::ptr_eq(scope.arm().unwrap(), &c.arm_for_tenant("t-2").unwrap()));
+        assert_eq!(c.current_subscription(), Some("a"), "the current one is untouched");
+        assert!(c.scope_for("zeta").is_none());
+        assert!(c.service_in(ServiceType::VirtualMachines, "b").is_some());
     }
 
     #[test]

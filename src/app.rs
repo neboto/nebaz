@@ -139,6 +139,9 @@ mod list_visual;
 mod headless;
 pub(crate) use headless::ListShaping;
 
+/// The `P` fan-out over config `subscriptions` (#62).
+mod subscription_fanout;
+
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
 
 /// Whether a screen cell (`col`, `row`) falls inside `area`.
@@ -502,6 +505,16 @@ pub struct App {
     pub service_selector: ServiceSelectorState,
     pub location_selector: LocationSelectorState,
     pub subscription_selector: SubscriptionSelectorState,
+    /// Config `subscriptions`, resolved to ids in config order (#62): the
+    /// `P` picker lists them first and counts the current sub-tab in each.
+    pub configured_subscriptions: Vec<String>,
+    /// The `P` fan-out's slots that are loading or failed, keyed by
+    /// sub-tab and subscription (see `subscription_fanout`).
+    pub(crate) subscription_fanout: std::collections::HashMap<(JumpView, String), subscription_fanout::FanoutStatus>,
+    /// The fan-out's generation and tasks: superseded (late results
+    /// dropped, tasks aborted) by an auth retry. A subscription switch
+    /// keeps it: the other subscriptions' lists are still theirs.
+    fanout_load: ListLoad,
     pub banner_visible: bool,
 
     // Navigation history and bookmarks.
@@ -701,6 +714,9 @@ impl App {
             service_selector: ServiceSelectorState::new(),
             location_selector: LocationSelectorState::new(),
             subscription_selector: SubscriptionSelectorState::new(),
+            configured_subscriptions: Vec::new(),
+            subscription_fanout: std::collections::HashMap::new(),
+            fanout_load: ListLoad::default(),
             banner_visible: config.show_banner.unwrap_or(true),
             nav_history: Vec::new(),
             nav_cursor: None,
@@ -767,6 +783,13 @@ impl App {
                 None => w,
             });
         }
+        // Config `subscriptions` (#62): unknown entries warn, like pins.
+        if let Some(w) = app.resolve_configured_subscriptions() {
+            app.error_message = Some(match app.error_message.take() {
+                Some(prev) => format!("{prev}; {w}"),
+                None => w,
+            });
+        }
         // No subscription resolved: open the picker with the auth line.
         if app.subscription_id.is_none() {
             app.open_subscription_picker();
@@ -777,7 +800,14 @@ impl App {
     /// `P`: the picker over every subscription the CLI knows, or the auth
     /// line when there are none.
     fn open_subscription_picker(&mut self) {
-        let entries = self.azure_clients.subscriptions().to_vec();
+        let mut entries = self.azure_clients.subscriptions().to_vec();
+        // Config `subscriptions` first, in config order (a stable sort).
+        entries.sort_by_key(|e| {
+            self.configured_subscriptions
+                .iter()
+                .position(|c| *c == e.id)
+                .unwrap_or(usize::MAX)
+        });
         let current = self.azure_clients.current_subscription().map(str::to_string);
         let message = self.auth_error.as_ref().map(|a| a.status_line());
         self.subscription_selector
@@ -927,6 +957,9 @@ impl App {
                 self.auth_error = e.auth_error().or_else(|| Some(AuthError::Other(e.to_string())));
             }
         }
+        // Another login may see the subscriptions differently.
+        self.supersede_fanout();
+        let _ = self.resolve_configured_subscriptions();
         if self.subscription_selector.visible {
             self.open_subscription_picker();
         }
@@ -3087,6 +3120,12 @@ impl App {
                     self.error_message = Some(format!("Subscription switch failed: {}", e));
                 }
             }
+            Event::SubscriptionFanoutLoaded {
+                generation,
+                view,
+                subscription,
+                result,
+            } => self.handle_subscription_fanout_loaded(generation, view, subscription, result),
             Event::SubscriptionInfoLoaded {
                 subscription_id,
                 display_name,
@@ -3629,7 +3668,10 @@ impl App {
                 let state = self.locations_endpoint_state();
                 self.location_selector.show(&self.current_location, rows, state);
             }
-            KeyCode::Char('P') => self.open_subscription_picker(),
+            KeyCode::Char('P') => {
+                self.open_subscription_picker();
+                self.start_subscription_fanout(_event_tx);
+            }
             KeyCode::Char('N') => self.open_network_lens(_event_tx),
             KeyCode::Char('U') => self.open_refs_lens(_event_tx),
             KeyCode::Char('m') => self.open_metrics(_event_tx),
@@ -3726,10 +3768,33 @@ impl App {
     pub(crate) fn nav_back_hint(&self) -> Option<String> {
         let loc = &self.nav_history[self.nav_back_index()?];
         let here = self.get_selected_resource().map(|r| r.id());
-        if Some(loc.service) == self.current_service && loc.selected_id.as_deref() == here {
+        let other = self.other_subscription_name(loc);
+        if other.is_none() && Some(loc.service) == self.current_service && loc.selected_id.as_deref() == here {
             return None;
         }
-        Some(nav_hint_label(loc.service, loc.selected_id.as_deref()))
+        let label = nav_hint_label(loc.service, loc.selected_id.as_deref());
+        // The step switches subscription, so the hint says which.
+        Some(match other {
+            Some(name) => format!("{label} · {name}"),
+            None => label,
+        })
+    }
+
+    /// The subscription `loc` was captured in, by name, when it isn't the
+    /// current one: what the back hint, the jump list and the bookmarks
+    /// name beside a place that restoring switches subscription for. An id
+    /// `az account list` no longer knows shows as its first 8 characters.
+    pub(crate) fn other_subscription_name(&self, loc: &NavLocation) -> Option<String> {
+        let sub = loc.subscription.as_deref()?;
+        if self.subscription_id.as_deref().is_some_and(|c| c.eq_ignore_ascii_case(sub)) {
+            return None;
+        }
+        Some(
+            self.azure_clients
+                .resolve_subscription(sub)
+                .map(|e| e.name)
+                .unwrap_or_else(|| crate::azure::auth::short_guid(sub).to_string()),
+        )
     }
 
     fn cycle_state_filter(&mut self) {
@@ -3836,9 +3901,15 @@ impl App {
             KeyCode::Enter => {
                 if let Some(s) = sel.selected_subscription() {
                     sel.hide();
+                    // A subscription switch is a place you left, like a
+                    // service switch: `⌫` comes back to this row here.
+                    if self.subscription_id.as_deref() != Some(s.as_str()) {
+                        self.push_nav_location();
+                    }
                     let _ = event_tx.send(Event::SubscriptionSwitchRequested { subscription_id: s });
                 }
             }
+
             KeyCode::Down => sel.next(),
             KeyCode::Up => sel.previous(),
             KeyCode::Home => sel.select_first(),

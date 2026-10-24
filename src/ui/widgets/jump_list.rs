@@ -1,4 +1,5 @@
-// ported from neboto-tui src/ui/widgets/jump_list.rs @ d483900
+// ported from neboto-tui src/ui/widgets/jump_list.rs @ d483900 (+ the
+// other-region span from 7fbf5ed, as the other subscription)
 use crate::app::App;
 use crate::ui::theme;
 use ratatui::{
@@ -75,6 +76,7 @@ pub fn render_jump_list(app: &App, frame: &mut Frame) {
                         loc.label.clone(),
                         theme::selection_style(true).add_modifier(Modifier::BOLD),
                     ),
+                    other_subscription_span(app, loc),
                 ])
             } else {
                 Line::from(vec![
@@ -87,6 +89,7 @@ pub fn render_jump_list(app: &App, frame: &mut Frame) {
                         }),
                     ),
                     Span::styled(loc.label.clone(), Style::default().fg(crate::ui::theme::text_primary())),
+                    other_subscription_span(app, loc),
                 ])
             }
         })
@@ -146,17 +149,28 @@ pub fn render_bookmarks(app: &App, frame: &mut Frame) {
                         loc.label.clone(),
                         theme::selection_style(true).add_modifier(Modifier::BOLD),
                     ),
+                    other_subscription_span(app, loc),
                 ])
             } else {
                 Line::from(vec![
                     Span::styled("★ ", Style::default().fg(theme::text_dim())),
                     Span::styled(loc.label.clone(), Style::default().fg(crate::ui::theme::text_primary())),
+                    other_subscription_span(app, loc),
                 ])
             }
         })
         .collect();
 
     frame.render_widget(Paragraph::new(lines), inner);
+}
+
+/// `  ·  Prod` after a place captured in another subscription: picking it
+/// switches subscription (blank for the current one).
+fn other_subscription_span(app: &App, loc: &crate::app::NavLocation) -> Span<'static> {
+    match app.other_subscription_name(loc) {
+        Some(name) => Span::styled(format!("  ·  {name}"), Style::default().fg(theme::text_dim())),
+        None => Span::raw(""),
+    }
 }
 
 /// Centered rectangle for the popup (percentages of the frame).

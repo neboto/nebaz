@@ -188,6 +188,8 @@ nebaz services                              # every service, its sub-tabs and th
 nebaz ls vm                                 # one subscription-wide list
 nebaz ls vnet/subnets -r westeurope -f 'rg:prod tag:env=prod' --limit 20
 nebaz ls nsg -p "Prod" -o md                # another subscription, as a Markdown table
+nebaz ls vm --subscriptions Prod,Dev        # several, every row tagged with its subscription
+nebaz ls kv --all-configured                # every subscription in config `subscriptions`
 nebaz get /subscriptions/…/virtualMachines/vm-1          # every section, lazy ones fetched
 nebaz get vm-1 --in vm --section access --section related
 nebaz get graph:/servicePrincipals/<object id>
@@ -208,7 +210,14 @@ describing all of it is in [`skills/nebaz/SKILL.md`](skills/nebaz/SKILL.md).
 ## Scoping model
 
 - `P` — **subscription** (the profile slot in neboto); `-p` takes an id or
-  a display name
+  a display name. With config `subscriptions = [...]` set, opening `P`
+  lists the current sub-tab in each of them that isn't cached (four at a
+  time, straight into the list cache, so picking one is instant) and shows
+  the row count per subscription, or `denied` / `disabled` / `error`;
+  unset, `P` makes no calls. Picking a subscription is a history step:
+  `⌫`, the jump list and bookmarks switch back, and name the subscription
+  they will switch to
+
 - `R` — **location**, a client-side filter over subscription-wide lists
   (Azure list APIs have no server-side location filter); `All locations`
   is the default; the picker is fed from the subscription's locations list

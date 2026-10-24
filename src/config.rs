@@ -33,6 +33,17 @@ pub struct Config {
     /// value exits listing the known ones). Unset: the CLI's default
     /// account, or its first enabled one.
     pub default_subscription: Option<String>,
+    /// The subscriptions you work across, ids or display names (#62).
+    /// Opening `P` lists the current sub-tab in each one not cached yet and
+    /// shows the row counts; `nebaz ls --all-configured` lists them all.
+    /// Resolved against `az account list` by
+    /// `AzureClients::resolve_configured`; unknown entries warn at startup
+    /// and are skipped. Unset (the default): no fan-out.
+    ///
+    /// ```toml
+    /// subscriptions = ["Production", "Staging"]
+    /// ```
+    pub subscriptions: Option<Vec<String>>,
     /// Credential source: `"cli"` (default; `az login`), `"environment"`
     /// or `"managed-identity"` (both parse and fail with "not supported
     /// yet" until they land). Env `NEBAZ_AUTH` overrides. Never
@@ -254,6 +265,7 @@ default_location = "WestEurope"
         assert_eq!(config.auth.as_deref(), Some("cli"));
         assert_eq!(config.default_service.as_deref(), Some("vm"));
         assert_eq!(config.default_subscription.as_deref(), Some("Production"));
+        assert_eq!(config.subscriptions.as_ref().map(Vec::len), Some(2));
         assert_eq!(config.default_location.as_deref(), Some("westeurope"));
         assert_eq!(config.endpoint_url.as_deref(), Some("https://management.usgovcloudapi.net"));
         assert_eq!(config.theme.as_deref(), Some("gruvbox-dark"));
@@ -276,6 +288,13 @@ default_location = "WestEurope"
         assert_eq!(pinned, vec![ServiceType::VirtualMachines, ServiceType::Aks, ServiceType::KeyVault]);
         assert_eq!(warning.as_deref(), Some("pinned_services: unknown service nosuchservice"));
         assert_eq!(Config::default().pinned_service_types(), (vec![], None));
+    }
+
+    #[test]
+    fn parses_the_subscriptions_key() {
+        let config: Config = toml::from_str(r#"subscriptions = ["Prod", "0000-dev"]"#).unwrap();
+        assert_eq!(config.subscriptions, Some(vec!["Prod".to_string(), "0000-dev".to_string()]));
+        assert_eq!(Config::default().subscriptions, None, "unset: no fan-out");
     }
 
     #[test]

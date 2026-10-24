@@ -130,9 +130,21 @@ pub struct LsArgs {
     #[arg(long)]
     pub hide_noise: bool,
 
-    /// Print at most N rows.
+    /// Print at most N rows (across every subscription with
+    /// --subscriptions).
     #[arg(long, value_name = "N")]
     pub limit: Option<usize>,
+
+    /// List in several subscriptions at once, every row tagged with its
+    /// subscription: ids or display names, comma-separated
+    /// (`--subscriptions Prod,Dev`).
+    #[arg(long, value_name = "LIST", value_delimiter = ',', conflicts_with = "all_configured")]
+    pub subscriptions: Option<Vec<String>>,
+
+    /// List in every subscription of config `subscriptions`, as
+    /// --subscriptions would.
+    #[arg(long)]
+    pub all_configured: bool,
 }
 
 #[derive(Debug, clap::Args)]

@@ -23,6 +23,7 @@ nebaz ls vm -o json
 nebaz ls nsg -f 'rg:prod' -o json
 nebaz ls vnet/subnets -r westeurope -o json
 nebaz ls kv -f 'tag:env=prod' --limit 20 -o json
+nebaz ls vm --subscriptions Prod,Dev -o json
 nebaz get /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-app/providers/Microsoft.Compute/virtualMachines/vm-1 -o json
 nebaz get vm-1 --in vm --section networking --section access -o json
 nebaz get graph:/servicePrincipals/00000000-0000-0000-0000-000000000000 -o md
@@ -44,10 +45,25 @@ has its own prefix (`vm`, `disk`, `nic`; `vnet`, `subnet`, `nsg`, `pip`,
 | `-r LOCATION` | Only this location (`westeurope`); `global` rows always pass. An unknown location fails |
 | `--state STATE` | Only this state, as the row shows it (`running`, `succeeded`, …), any case |
 | `--hide-noise` | Drop noise rows (subscriptions that are not Enabled; changes made by managed identities and Azure itself) |
-| `--limit N` | At most N rows |
+| `--limit N` | At most N rows (across every subscription with `--subscriptions`) |
+| `--subscriptions LIST` | Several subscriptions at once, ids or names, comma-separated (see below) |
+| `--all-configured` | Every subscription in the user's config `subscriptions` |
 
 Every list is the whole subscription; location is a filter over it, and
 a resource group is the `rg:` term.
+
+**Several subscriptions.** `ls vm --subscriptions Prod,Dev` lists the
+sub-tab in each, in the order given, filters applied per subscription;
+`--all-configured` uses the user's config `subscriptions` (a usage error,
+saying how to set it, if they have none). The JSON swaps `"subscription"`
+for `"subscriptions": [{"subscription", "name", "status", "count",
+"message"}]` (`status` is `ok`, `denied` — a 403, the identity can't read
+that subscription — `disabled`, or `error`), and every row carries
+`"subscription"` and `"subscription_name"`; `-o md` adds a leading
+Subscription column. Exit 0 if any subscription listed: check
+`subscriptions[].status` for the rest. Lists that are the tenant's
+(`sub`, `id/service-principals`, `id/app-registrations`) and `changes`
+refuse it. One list call per subscription, four at a time.
 
 ## `changes` — what changed recently
 
@@ -130,6 +146,9 @@ stdout carries only the result; warnings (a partial load) go to stderr.
   and lists the known ones, so an answer is never from a subscription you
   didn't ask for.
 - `get` uses the subscription in the ids; a `-p` that disagrees fails.
+- `ls --subscriptions` names the subscriptions itself; every one must be
+  known to `az account list`, or it fails listing the known ones.
+
 
 ## Rules
 
