@@ -1,0 +1,10 @@
+# nebaz config used by the demo recordings (demo/*.tape). Pointed at via
+# NEBAZ_CONFIG so the machine's real ~/.config/nebaz/config.toml never leaks
+# into a take; `--demo` pins the tenant, subscription and data.
+show_banner = false
+theme = "catppuccin-mocha"
+ownership_ribbon = true
+detail_flat = false
+detail_wrap = false
+# No request to GitHub, so no `↑ vX.Y.Z` chip in a take.
+update_check = false
