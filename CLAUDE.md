@@ -139,7 +139,8 @@ type (`curated_metrics`, which also gates the hint), `SERVICES.md` rule 19.
 ADR 0007, `SERVICES.md` rule 25): a virtual service (`is_virtual()`, never
 cached) whose rows are findings computed by pure checks over the warm
 lists and lazy store; a check can never fetch. `r` there loads the
-missing sources into their own cache slots.
+missing sources into their own cache slots; `nebaz audit` is the same `r`
+on a headless `App` (exit 3 at or above `--fail-on`).
 
 **Jumps**: the Related section is the jump mechanism (the lens's `⏎` aside). `Enter` on an
 ARM-id line → `jump_to_arm_id` → `NavLocation` (service, view,

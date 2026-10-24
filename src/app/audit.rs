@@ -13,6 +13,7 @@ use crate::azure::service::{JumpView, ServiceType};
 use crate::azure::services::access::{at_scope_filter, role_assignments_path, ACCESS_API_VERSION};
 use crate::azure::services::app_service::{site_config_path, WEB_API_VERSION};
 use crate::azure::services::directory::now_unix;
+use crate::azure::services::redis::{redis_child_path, REDIS_API_VERSION};
 use crate::azure::services::sql::{server_child_path, SQL_API_VERSION};
 use crate::event::Event;
 use crate::lazy::{Lazy, LazyApply};
@@ -180,7 +181,7 @@ impl App {
     /// The per-resource reads behind the lazy-fed checks, each through the
     /// same `LazyMap` its detail section uses (present keys never
     /// refetch): the subscription's role assignments and its privileged
-    /// users' directory objects, each cached SQL server's firewall rules,
+    /// users' directory objects, each cached SQL server's and Redis cache's firewall rules,
     /// each cached site's config. Capped at `AUDIT_LAZY_MAX` per kind.
     fn trigger_audit_lazies(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         let sub = self.subscription_key();
@@ -209,10 +210,28 @@ impl App {
             let fut = self.azure_clients.list_fetch(&server_child_path(&id, "firewallRules"), SQL_API_VERSION);
             self.trigger_lazy(|s| &mut s.sql_firewall_rules, id, event_tx, move || fut);
         }
+        for id in self.cached_ids(JumpView::RedisCaches, &sub) {
+            let fut = self.azure_clients.list_fetch(&redis_child_path(&id, "firewallRules"), REDIS_API_VERSION);
+            self.trigger_lazy(|s| &mut s.redis_firewall_rules, id, event_tx, move || fut);
+        }
         for id in self.cached_ids(JumpView::WebApps, &sub) {
             let fut = self.azure_clients.get_fetch(&site_config_path(&id), WEB_API_VERSION);
             self.trigger_lazy(|s| &mut s.site_configs, id, event_tx, move || fut);
         }
+    }
+
+    /// Whether anything `r` started is still in flight: a source list, or
+    /// one of the lazy reads the checks use (the headless audit waits on
+    /// this before it prints).
+    pub(crate) fn audit_in_flight(&self) -> bool {
+        let l = &self.lazy;
+        !self.audit.loading.is_empty()
+            || l.role_assignments.loading_count()
+                + l.principals.loading_count()
+                + l.sql_firewall_rules.loading_count()
+                + l.redis_firewall_rules.loading_count()
+                + l.site_configs.loading_count()
+                > 0
     }
 
     /// The first `AUDIT_LAZY_MAX` ids of a cached list.

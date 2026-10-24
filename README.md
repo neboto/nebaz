@@ -99,10 +99,11 @@ Azure's own changes as noise (`a`); `nebaz changes --since 6h` prints it.
 **`@audit`** lists security findings
 (world-open NSG rules, public storage and vaults, SQL firewalls open to the
 internet, AKS API servers without IP ranges, plain-HTTP apps, open
-Container Apps ingress, unhealthy Power Platform policies, expiring app
-credentials, guest or service-principal Owners, and more) computed from
-what is already loaded, with zero API calls; a check whose data is not
-loaded says "not checked", and `r` there loads it in the background
+Container Apps ingress, plain-text or open Redis caches, unhealthy Power
+Platform policies, expiring app credentials, guest or service-principal
+Owners, and more) computed from what is already loaded, with zero API
+calls; a check whose data is not loaded says "not checked", and `r` there
+loads it in the background; `nebaz audit --fail-on high` runs it headless
 ([ADR 0007](docs/adr/0007-audit-checks-are-pure.md)). Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
@@ -190,7 +191,7 @@ cargo clippy --all-targets -- -D warnings   # lint; CI fails on any warning
 scripts/smoke.sh       # offline pty run with a fake az (needs python3)
 ```
 
-## Headless: `services`, `ls`, `get`
+## Headless: `services`, `ls`, `get`, `changes`, `audit`
 
 With a subcommand nebaz runs once and prints instead of opening the TUI:
 the same read-only calls, for scripts and agents. Output is JSON (the
@@ -207,6 +208,7 @@ nebaz ls kv --all-configured                # every subscription in config `subs
 nebaz get /subscriptions/…/virtualMachines/vm-1          # every section, lazy ones fetched
 nebaz get vm-1 --in vm --section access --section related
 nebaz get graph:/servicePrincipals/<object id>
+nebaz audit --fail-on high                  # @audit with r pressed: findings, then what wasn't checked
 ```
 
 `get` shows what the detail pane shows: it drives the same `App` without a
@@ -216,7 +218,11 @@ terminal, selects the row the way a jump does and enters every section
 `null`). Exit codes: `0` ok (an empty list included), `1` an Azure error,
 `2` a wrong request (unknown prefix, section, subscription or location, a
 resource that isn't there or is ambiguous), `4` not signed in (`az
-login`); `3` is reserved for `audit`. A wrong `-p` or `-r` fails rather
+login`), and `3` for `audit` when it found something at or above
+`--fail-on` (default `low`; `never` turns it off). `audit` loads the
+lists its checks read and the capped lazy reads they use, exactly as `r`
+in `@audit` does; a source it couldn't load is a stderr warning and its
+checks come back under `not_checked`, never as a pass. A wrong `-p` or `-r` fails rather
 than falling back. The stable keys, flags and exit codes are pinned in
 [`src/headless/contract.json`](src/headless/contract.json); an agent skill
 describing all of it is in [`skills/nebaz/SKILL.md`](skills/nebaz/SKILL.md).

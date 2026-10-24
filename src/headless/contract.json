@@ -33,6 +33,9 @@
       "--limit",
       "--since",
       "--source"
+    ],
+    "audit": [
+      "--fail-on"
     ]
   },
   "exit_codes": {
@@ -141,6 +144,40 @@
       "resource_group"
     ]
   },
+  "audit": {
+    "envelope": [
+      "schema",
+      "subscription",
+      "location",
+      "count",
+      "findings",
+      "not_checked"
+    ],
+    "finding": [
+      "severity",
+      "check",
+      "title",
+      "resource_id",
+      "resource_name",
+      "location",
+      "reason",
+      "evidence",
+      "remediation"
+    ],
+    "not_checked": [
+      "check",
+      "title",
+      "status",
+      "reason"
+    ],
+    "severities": [
+      "critical",
+      "high",
+      "medium",
+      "low",
+      "info"
+    ]
+  },
   "prefixes": {
     "aca": [
       "container-apps (aca)",
@@ -158,6 +195,9 @@
       "apps (app)",
       "function-apps (func)",
       "plans (plan)"
+    ],
+    "audit": [
+      "audit (audit)"
     ],
     "changes": [
       "changes (changes)",

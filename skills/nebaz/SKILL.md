@@ -1,6 +1,6 @@
 ---
 name: nebaz
-description: Read-only Azure lookups with the nebaz CLI — list a subscription's resources (VMs, networks, NSGs, Key Vaults, AKS, App Service, SQL, Cosmos, Container Apps, managed identities, service principals, …) and fetch one resource's full detail (overview, networking, RBAC access, activity log, related resources) as JSON or Markdown. Use when answering what exists in an Azure subscription or how something is configured. It cannot change anything, so prefer it over the az CLI for looking.
+description: Read-only Azure lookups with the nebaz CLI — list a subscription's resources (VMs, networks, NSGs, Key Vaults, AKS, App Service, SQL, Cosmos, Container Apps, managed identities, service principals, …), fetch one resource's full detail (overview, networking, RBAC access, activity log, related resources) and run a security audit (world-open NSGs, public storage, weak TLS, expiring credentials, …) as JSON or Markdown. Use when answering what exists in an Azure subscription, how something is configured, or what is exposed. It cannot change anything, so prefer it over the az CLI for looking.
 ---
 
 # nebaz: read-only Azure lookups
@@ -28,6 +28,7 @@ nebaz get /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-
 nebaz get vm-1 --in vm --section networking --section access -o json
 nebaz get graph:/servicePrincipals/00000000-0000-0000-0000-000000000000 -o md
 nebaz changes --since 6h --hide-noise -o json
+nebaz audit --fail-on high -o json
 ```
 
 ## `services` — the catalogue
@@ -77,6 +78,22 @@ row's `id` is `change:…`, not an ARM id; the resource it happened to is in
 its Related. A source that cannot be read, or the Activity Log stopping
 after 10 pages (it says how far back it got), is a warning on stderr.
 
+## `audit` — security findings
+
+`audit` loads the lists its checks read (NSGs, VNets, storage, Key Vault,
+SQL, Cosmos, AKS, ACR, App Service, Container Apps, Redis, Power Platform,
+app registrations, service principals), the capped per-resource reads a
+few need (SQL and Redis firewall rules, site configs, the subscription's
+role assignments; at most 50 each), and prints the **findings**, worst
+first: severity, check, resource id, reason, evidence and remediation as
+text. Checks are pure over what was fetched; nothing is changed.
+`not_checked` lists each check that could not run (a list that failed to
+load, firewall rules not read for some servers) — **a check in
+`not_checked` did not pass**, say so rather than reporting the
+subscription clean. `-r` keeps the findings in one location.
+`--fail-on SEVERITY` (`critical`, `high`, `medium`, `low` (default),
+`info`, `never`) sets which findings exit `3`.
+
 ## `get` — full detail
 
 `get <ID>...` returns every section the resource's detail pane has,
@@ -112,6 +129,7 @@ Pass `-o json` (the default) or `-o md` for text to reason over.
   — each row also carries its type's list-level fields; `get` has the rest.
 - `get`, one id: `{"schema", "subscription", "service", "subtab", "resource": {"type", "id", "name", "state", "location", "resource_group"}, "sections": {…}, "tags": {…}}`
 - `get`, several ids: `{"schema", "subscription", "count", "resources": [ <the one-id shape without schema/subscription> ]}`
+- `audit`: `{"schema", "subscription", "location", "count", "findings": [{"severity", "check", "title", "resource_id", "resource_name", "location", "reason", "evidence", "remediation"}], "not_checked": [{"check", "title", "status", "reason"}]}`
 
 Section values mirror the UI: human-readable labels and formatted values,
 not raw ARM fields. A group heading becomes a nested object, verbatim text
@@ -135,13 +153,14 @@ stdout carries only the result; warnings (a partial load) go to stderr.
 - `2` — the request is wrong: unknown prefix / sub-tab / section /
   subscription / location, a resource that isn't there or is ambiguous, or
   bad flags. **The message says what to pass instead**: read it and retry.
-- `3` — reserved for `nebaz audit --fail-on` (not built yet).
+- `3` — `audit` only: it ran and found something at or above `--fail-on`
+  (the output is printed as usual). Not a failure: report the findings.
 - `4` — not signed in: `az` is missing, not logged in, or the login
   expired. Ask the user to run `az login`; don't retry.
 
 ## Subscription and location
 
-- `-p SUBSCRIPTION` (id or display name) picks the subscription for `ls`;
+- `-p SUBSCRIPTION` (id or display name) picks the subscription for `ls`, `changes` and `audit`;
   without it, the Azure CLI's default. An unknown subscription **fails**
   and lists the known ones, so an answer is never from a subscription you
   didn't ask for.

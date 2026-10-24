@@ -10,7 +10,7 @@ Mirrors neboto's ADR 0006 (copied, not shared: ADR 0001).
 `@audit` (#60) is a virtual service whose rows are security findings. Every
 check is a pure function: it takes what nebaz has **already fetched** (the
 list cache's rows, as typed rows or their raw ARM JSON, and warm lazy
-sections such as SQL firewall rules, a site's `config/web` and the
+sections such as SQL and Redis firewall rules, a site's `config/web` and the
 subscription's role assignments) plus a clock value passed in, and returns
 findings. A check never calls ARM or Graph. The code is `src/audit.rs`
 (the machinery and the finding row), `src/audit/checks.rs` (the checks,
@@ -24,7 +24,8 @@ the background: the same streaming list load visiting the tab does, run
 to completion off-screen and cached under the tab's own key, so visiting
 the tab afterwards is a cache hit with identical rows. It then fetches the
 per-resource lazy reads the checks use through the same `LazyMap`s the
-detail sections use (each SQL server's firewall rules, each site's config,
+detail sections use (each SQL server's and Redis cache's firewall rules,
+each site's config,
 the subscription's role assignments, and its Owner / User Access
 Administrator users' directory objects), capped at `AUDIT_LAZY_MAX` per
 kind. Each result re-audits as it lands, through the apply-closure event,
@@ -71,6 +72,9 @@ so the lazy epoch drops anything from before a subscription switch.
 - **Remediation is text.** Each check carries why it matters and what to
   change, as prose: never a command nebaz runs, and never an `az` write
   verb (the guard forbids one in `src/`).
-- **The headless form** (`nebaz audit --fail-on`, #44) calls the same three
-  pieces: `audit::sources()` for what to load, `audit::load_source` to load
-  each, `audit::run` over an `AuditInput`.
+- **The headless form** (`nebaz audit --fail-on`) is `@audit` with `r`
+  pressed on a terminal-less `App`: the same source loads and capped lazy
+  reads, pumped until nothing is in flight, then `audit::run` over the
+  caches. Exit 3 means it ran and found something at or above
+  `--fail-on`; a check that couldn't run is `not_checked`, never a pass
+  and never a finding.

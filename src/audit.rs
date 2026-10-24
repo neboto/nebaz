@@ -70,8 +70,7 @@ impl Severity {
         }
     }
 
-    /// Parse a `--fail-on` value (the headless form, #44).
-    #[allow(dead_code)]
+    /// Parse a `--fail-on` value (`nebaz audit`).
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
             "critical" | "crit" => Some(Severity::Critical),
@@ -392,7 +391,7 @@ impl AuditFinding {
     }
 
     /// The list's second column: the finding, or a note's short status.
-    fn list_note(&self) -> String {
+    pub(crate) fn list_note(&self) -> String {
         match self.kind {
             RowKind::Finding => self.reason.clone(),
             RowKind::NotChecked => self.evidence.first().cloned().unwrap_or_default(),

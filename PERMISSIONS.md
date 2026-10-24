@@ -247,10 +247,11 @@ each one backs are in the catalog table
   already loaded (ADR 0007); `r` there runs the same list loads and lazy
   reads listed above for Network, Storage, Key Vault, SQL (servers and
   firewall rules), Cosmos DB, AKS, Container Registry, App Service (sites
-  and `config/web`), Container Apps, Power Platform, the subscription's
+  and `config/web`), Container Apps, Redis (caches, Managed Redis and cache
+  firewall rules), Power Platform, the subscription's
   Access list, and the Graph directory reads (app registrations, service
   principals, principal names). A denied one leaves its checks "not
-  checked".
+  checked". `nebaz audit` makes the same calls.
 
 ## Local commands
 

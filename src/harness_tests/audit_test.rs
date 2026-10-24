@@ -108,6 +108,28 @@ async fn warm_lists_become_findings_worst_first_and_enter_opens_the_resource() {
 }
 
 #[tokio::test]
+async fn a_finding_row_is_clickable_like_any_list_row() {
+    let mut h = Harness::new().await;
+    warm(&mut h, JumpView::NetworkSecurityGroups, vec![open_nsg()]);
+    warm(&mut h, JumpView::StorageAccounts, vec![http_account()]);
+    h.open(JumpView::Audit).await;
+    assert_eq!(findings(&h)[0].check_id, "nsg-open-internet", "the NSG finding sorts first");
+
+    // A click selects the storage finding (second row).
+    let at = h.find("sthttp");
+    h.click(at).await;
+    let selected = h.app.get_selected_resource().and_then(|r| r.as_any().downcast_ref::<AuditFinding>());
+    assert_eq!(selected.map(|f| f.resource_name.as_str()), Some("sthttp"));
+    assert_eq!(h.app.current_service, Some(ServiceType::Audit), "a single click stays in @audit");
+
+    // A double-click is Enter: it opens the finding's resource.
+    let at = h.find("nsg-ssh");
+    h.double_click(at).await;
+    assert_eq!(h.app.current_view, JumpView::NetworkSecurityGroups);
+    assert_eq!(h.selected_id().as_deref(), Some(nsg_id().as_str()));
+}
+
+#[tokio::test]
 async fn f_filters_by_severity() {
     let mut h = Harness::new().await;
     warm(&mut h, JumpView::NetworkSecurityGroups, vec![open_nsg()]);

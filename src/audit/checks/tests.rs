@@ -5,8 +5,8 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, container_apps, container_registry, cosmos, directory, keyvault, network, power_platform, sql,
-    storage,
+    aks, app_service, container_apps, container_registry, cosmos, directory, keyvault, network, power_platform, redis,
+    sql, storage,
 };
 use crate::lazy::LazyStore;
 use serde_json::json;
@@ -329,6 +329,64 @@ fn app_service_checks_read_the_site_and_its_warm_config() {
     assert_eq!(findings(&tls), vec![("app-plain".into(), Severity::Medium)]);
     assert_eq!(notes(&tls), vec!["1 loading…".to_string()]);
     assert_eq!(findings(&audit("app-ftps", &lists, Some(&lazy))), vec![("app-plain".into(), Severity::Medium)]);
+}
+
+// ── Redis ──
+
+fn redis_cache(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(redis::RedisCacheRow::from_json(&body(&format!("Microsoft.Cache/Redis/{name}"), props), None))
+}
+
+fn managed_redis(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(redis::ManagedRedisRow::from_json(&body(&format!("Microsoft.Cache/redisEnterprise/{name}"), props), None))
+}
+
+#[test]
+fn redis_port_and_tls_checks_read_the_cache_properties() {
+    let lists = vec![(
+        V::RedisCaches,
+        vec![
+            redis_cache("redis-plain", json!({"enableNonSslPort": true, "port": 6379, "minimumTlsVersion": "1.0"})),
+            redis_cache("redis-tls", json!({"enableNonSslPort": false, "minimumTlsVersion": "1.2"})),
+        ],
+    )];
+    assert_eq!(findings(&audit("redis-non-ssl-port", &lists, None)), vec![("redis-plain".into(), Severity::High)]);
+    assert_eq!(findings(&audit("redis-min-tls", &lists, None)), vec![("redis-plain".into(), Severity::Medium)]);
+    let amr = vec![(
+        V::ManagedRedis,
+        vec![
+            managed_redis("amr-old", json!({"minimumTlsVersion": "1.1"})),
+            managed_redis("amr-ok", json!({"minimumTlsVersion": "1.2"})),
+        ],
+    )];
+    assert_eq!(findings(&audit("amr-min-tls", &amr, None)), vec![("amr-old".into(), Severity::Medium)]);
+    assert_eq!(notes(&audit("amr-min-tls", &lists, None)), vec!["not checked — load @redis Managed Redis".to_string()]);
+}
+
+#[test]
+fn a_public_redis_cache_with_no_firewall_rules_reads_the_warm_network_section() {
+    let subnet = id("Microsoft.Network/virtualNetworks/vnet/subnets/snet-redis");
+    let lists = vec![(
+        V::RedisCaches,
+        vec![
+            redis_cache("redis-open", json!({"publicNetworkAccess": "Enabled"})),
+            redis_cache("redis-fenced", json!({"publicNetworkAccess": "Enabled"})),
+            redis_cache("redis-private", json!({"publicNetworkAccess": "Disabled"})),
+            redis_cache("redis-injected", json!({"subnetId": subnet})),
+            redis_cache("redis-unvisited", json!({})),
+        ],
+    )];
+    let mut lazy = LazyStore::new(0);
+    lazy.redis_firewall_rules.apply(id("Microsoft.Cache/Redis/redis-open"), Ok(vec![]));
+    lazy.redis_firewall_rules.apply(
+        id("Microsoft.Cache/Redis/redis-fenced"),
+        Ok(vec![json!({"name": "office", "properties": {"startIP": "203.0.113.1", "endIP": "203.0.113.9"}})]),
+    );
+    let rows = audit("redis-public-no-firewall", &lists, Some(&lazy));
+    assert_eq!(findings(&rows), vec![("redis-open".into(), Severity::Medium)]);
+    // Private and VNet-injected caches need no rules; the unvisited one is
+    // counted, never passed.
+    assert_eq!(notes(&rows), vec!["1 of 3 not checked — r fetches firewall rules".to_string()]);
 }
 
 // ── Container Apps and Power Platform ──

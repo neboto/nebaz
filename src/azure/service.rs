@@ -396,10 +396,12 @@ impl JumpView {
     /// lists (subscriptions, and the directory's service principals and app
     /// registrations: the same rows from every subscription of a tenant),
     /// nor `@changes` (one list per time window, its sub-tabs filter it,
-    /// and each subscription's Activity Log read is the costliest list).
+    /// and each subscription's Activity Log read is the costliest list),
+    /// nor a virtual service's (`@audit`: computed, never listed).
     pub fn fans_out(&self) -> bool {
         use JumpView::*;
         !self.is_tenant_scoped()
+            && !self.service().is_virtual()
             && !matches!(
                 self,
                 ServicePrincipals | AppRegistrations | ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth
@@ -861,6 +863,12 @@ mod tests {
         assert!(ServiceType::Subscriptions.is_tenant_scoped(Some("subscriptions")));
         assert!(!ServiceType::Subscriptions.is_tenant_scoped(Some("resource-groups")));
         assert!(!ServiceType::VirtualMachines.is_tenant_scoped(None));
+    }
+
+    #[test]
+    fn audit_never_fans_out_across_subscriptions() {
+        assert!(!JumpView::Audit.fans_out(), "@audit is computed, never listed per subscription");
+        assert!(JumpView::VirtualMachines.fans_out());
     }
 
     #[test]

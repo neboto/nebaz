@@ -28,6 +28,7 @@ use crate::azure::services::json;
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::network::{NsgRow, SecurityRule, SubnetRow, VnetRow};
 use crate::azure::services::power_platform::{EnterprisePolicyRow, POWER_PLATFORM_DELEGATION};
+use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
 use crate::azure::services::sql::SqlServerRow;
 use crate::azure::services::storage::StorageAccountRow;
 use crate::lazy::Lazy;
@@ -48,9 +49,11 @@ const ACA_ENVS: &[V] = &[V::ContainerAppEnvironments];
 const PP: &[V] = &[V::EnterprisePolicies];
 const APP_REGS: &[V] = &[V::AppRegistrations];
 const SPS: &[V] = &[V::ServicePrincipals];
+const REDIS: &[V] = &[V::RedisCaches];
+const AMR: &[V] = &[V::ManagedRedis];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 31] = [
+pub static CHECKS: [Check; 35] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -275,6 +278,39 @@ pub static CHECKS: [Check; 31] = [
         fix: "Move the secret to Key Vault and set the app secret's keyVaultUrl and identity instead of a value.",
         sources: &[ACA_APPS],
         run: aca_secrets_not_kv,
+    },
+    // ── Redis ──
+    Check {
+        id: "redis-non-ssl-port",
+        title: "Redis cache non-SSL port enabled",
+        why: "Port 6379 carries the access key and every command in clear text: anyone on the path can read the data and replay the key. Every current client library speaks TLS on 6380.",
+        fix: "Move clients to the SSL port (6380) with TLS, then turn off the non-SSL port (enableNonSslPort false).",
+        sources: &[REDIS],
+        run: redis_non_ssl_port,
+    },
+    Check {
+        id: "redis-min-tls",
+        title: "Redis cache allows TLS below 1.2",
+        why: "TLS 1.0 and 1.1 have known weaknesses and are being retired across Azure; a minimum below 1.2 lets a client (or a downgrade) negotiate them.",
+        fix: "Set the cache's minimum TLS version to 1.2 once the clients support it.",
+        sources: &[REDIS],
+        run: redis_min_tls,
+    },
+    Check {
+        id: "redis-public-no-firewall",
+        title: "Redis cache public with no firewall rules",
+        why: "A cache with public network access, no VNet injection and no firewall rules accepts connections from every IP address; only the access key (or Entra token) stands between the internet and the data.",
+        fix: "Turn off public network access and reach the cache through a private endpoint, or add firewall rules for the address ranges that need it. Prefer Entra authentication and turn off access keys.",
+        sources: &[REDIS],
+        run: redis_public_no_firewall,
+    },
+    Check {
+        id: "amr-min-tls",
+        title: "Managed Redis allows TLS below 1.2",
+        why: "TLS 1.0 and 1.1 have known weaknesses and are being retired across Azure; a minimum below 1.2 lets a client negotiate them.",
+        fix: "Set the cluster's minimum TLS version to 1.2.",
+        sources: &[AMR],
+        run: amr_min_tls,
     },
     // ── Power Platform ──
     Check {
@@ -830,6 +866,65 @@ fn app_ftps(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFindin
         ftps.eq_ignore_ascii_case("AllAllowed")
             .then(|| (Severity::Medium, "plain FTP allowed (ftpsState AllAllowed)".into(), format!("ftpsState: {}", ftps)))
     });
+}
+
+// ── Redis ─────────────────────────────────────────────────────────────
+
+fn redis_non_ssl_port(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for c in input.of::<RedisCacheRow>(V::RedisCaches) {
+        if c.non_ssl_port == Some(true) {
+            let port = c.port.map(|p| p.to_string()).unwrap_or_else(|| "6379".into());
+            out.push(
+                AuditFinding::about(check, Severity::High, c, format!("non-SSL port {} enabled", port))
+                    .with_evidence(vec!["enableNonSslPort: true".into(), format!("port: {}", port)]),
+            );
+        }
+    }
+}
+
+fn redis_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for c in input.of::<RedisCacheRow>(V::RedisCaches) {
+        if let Some(tls) = c.min_tls.as_deref().filter(|t| tls_below_1_2(t)) {
+            out.push(
+                AuditFinding::about(check, Severity::Medium, c, format!("minimumTlsVersion {}", tls))
+                    .with_evidence(vec![format!("minimumTlsVersion: {}", tls)]),
+            );
+        }
+    }
+}
+
+/// Public, not VNet-injected (its subnet and NSG would decide), and the
+/// warm Network section's firewall list is empty. A cache whose rules
+/// aren't loaded is counted in the note, never passed.
+fn redis_public_no_firewall(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for c in input.of::<RedisCacheRow>(V::RedisCaches) {
+        if !public_enabled(c.public_network_access.as_deref()) || c.subnet_id.is_some() {
+            continue;
+        }
+        let rules = gaps.see(&c.base.name, input.lazy().and_then(|l| l.redis_firewall_rules.get(&c.base.id)));
+        if rules.is_some_and(|r| r.is_empty()) {
+            out.push(
+                AuditFinding::about(check, Severity::Medium, c, "public network access, no firewall rules").with_evidence(vec![
+                    format!("publicNetworkAccess: {}", c.public_network_access.as_deref().unwrap_or("(default: Enabled)")),
+                    "firewall rules: none".into(),
+                    format!("private endpoints: {}", c.private_endpoints.len()),
+                ]),
+            );
+        }
+    }
+    gaps.note(check, "firewall rules", "Network", out);
+}
+
+fn amr_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for c in input.of::<ManagedRedisRow>(V::ManagedRedis) {
+        if let Some(tls) = c.min_tls.as_deref().filter(|t| tls_below_1_2(t)) {
+            out.push(
+                AuditFinding::about(check, Severity::Medium, c, format!("minimumTlsVersion {}", tls))
+                    .with_evidence(vec![format!("minimumTlsVersion: {}", tls)]),
+            );
+        }
+    }
 }
 
 // ── Container Apps ────────────────────────────────────────────────────
