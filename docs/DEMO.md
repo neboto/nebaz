@@ -101,6 +101,15 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `snet-pp-injection-dr`, Power Platform's failover subnet in `vnet-pp-dr`, has no NSG | `@audit` |
 | `ca-orders-api-dev` (contoso-dev): external ingress on a public environment, no IP restrictions | `@audit` on contoso-dev |
 
+## Recordings
+
+The README's GIFs are VHS tapes over `--demo`: `demo/nebaz.tape` (the
+hero: this outage, then `@audit`) and one tape per story in
+`demo/scenes/` (the outage, `@audit`, identities, private DNS, following
+links). Each tape's header counts the rows its keys rely on, so a fixture
+change that adds or reorders rows on those screens means re-checking that
+tape; `demo/scenes/README.md` says how to re-record.
+
 ## Ids
 
 | | |
