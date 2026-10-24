@@ -139,6 +139,12 @@ pub struct Config {
     /// recordings and demos. Typed search and filter text is never shown.
     /// Same as `--show-keys` (default false).
     pub show_keys: Option<bool>,
+    /// Once a day, ask GitHub for the latest nebaz release and show a dim
+    /// `↑ vX.Y.Z` chip when it is newer than this build (default true). The
+    /// only request nebaz makes that isn't to Azure (ADR 0008): anonymous,
+    /// no token. `false`, `--no-update-check` or `NEBAZ_NO_UPDATE_CHECK=1`
+    /// turn it off; it never runs with `CI` set.
+    pub update_check: Option<bool>,
     /// Set when the config file existed but failed to parse — the app starts
     /// on defaults and surfaces this in the status bar. Never silently: a
     /// TOML typo used to wipe every setting (default_service, roles, …) with

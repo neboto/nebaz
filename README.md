@@ -278,6 +278,14 @@ The promise is held at three layers, not by convention
    a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
 
+**The one non-Azure request.** Once a day nebaz asks GitHub for its latest
+release (an anonymous `GET` of `api.github.com/repos/neboto/nebaz/releases/latest`,
+no token, 3 s timeout, failures silent) and shows a dim `↑ vX.Y.Z` chip
+when it is newer than your build. It is the only request that isn't to
+Azure, it goes through the same GET-only pipeline, and the guard allows it
+from one file. Turn it off with `update_check = false`,
+`--no-update-check` or `NEBAZ_NO_UPDATE_CHECK=1` (ADR 0008).
+
 Key Vault is the case people ask about: nebaz lists secret and key
 **names** through ARM's control-plane actions, which never return a value,
 and no vault data-plane call exists in the codebase (the guard checks).

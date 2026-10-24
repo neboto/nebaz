@@ -39,6 +39,8 @@ here="$PWD/scripts/smoke"
 dead="https://127.0.0.1:9"
 timeout="${SMOKE_TIMEOUT:-60}"
 fail=0
+# No network at all: the daily update check (api.github.com, ADR 0008) stays off.
+export NEBAZ_NO_UPDATE_CHECK=1
 
 run() { # name fake-az-dir service keys-json expected...
   name="$1"; fake="$2"; svc="$3"; keys="$4"; shift 4
