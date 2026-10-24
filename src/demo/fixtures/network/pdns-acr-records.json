@@ -1,0 +1,56 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io/SOA/@",
+      "name": "@",
+      "type": "Microsoft.Network/privateDnsZones/SOA",
+      "etag": "5a761627-de0b-56ec-b00d-c108e51ef161",
+      "properties": {
+        "fqdn": "privatelink.azurecr.io.",
+        "ttl": 3600,
+        "isAutoRegistered": false,
+        "soaRecord": {
+          "email": "azureprivatedns-host.microsoft.com",
+          "expireTime": 2419200,
+          "host": "azureprivatedns.net",
+          "minimumTtl": 10,
+          "refreshTime": 3600,
+          "retryTime": 300,
+          "serialNumber": 1
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io/A/acrcontosoprod.westeurope.data",
+      "name": "acrcontosoprod.westeurope.data",
+      "type": "Microsoft.Network/privateDnsZones/A",
+      "etag": "0d490f6b-dbbb-5bab-a1d7-6890e4781613",
+      "properties": {
+        "fqdn": "acrcontosoprod.westeurope.data.privatelink.azurecr.io.",
+        "ttl": 10,
+        "isAutoRegistered": false,
+        "aRecords": [
+          {
+            "ipv4Address": "10.10.5.7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io/A/acrcontosoprod",
+      "name": "acrcontosoprod",
+      "type": "Microsoft.Network/privateDnsZones/A",
+      "etag": "9db7a03d-b8a2-5556-97f5-908d65dacfd5",
+      "properties": {
+        "fqdn": "acrcontosoprod.privatelink.azurecr.io.",
+        "ttl": 10,
+        "isAutoRegistered": false,
+        "aRecords": [
+          {
+            "ipv4Address": "10.10.5.8"
+          }
+        ]
+      }
+    }
+  ]
+}

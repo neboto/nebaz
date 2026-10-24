@@ -1,0 +1,61 @@
+{
+  "name": "pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259",
+  "etag": "W/\"1cb64408-23c3-50bf-8c25-91046cd7ecce\"",
+  "type": "Microsoft.Network/networkInterfaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "kind": "Regular",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "b17eab97-dedb-51f8-a7af-d4e47ec29048",
+    "ipConfigurations": [
+      {
+        "name": "privateEndpointIpConfig.3d89a864-e235-58c3-8e8d-a343744b56b1",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259/ipConfigurations/privateEndpointIpConfig.3d89a864-e235-58c3-8e8d-a343744b56b1",
+        "etag": "W/\"d8f5f168-8680-54fb-9297-19ed29cb319b\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.5.4",
+          "privateIPAllocationMethod": "Dynamic",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+          },
+          "primary": true,
+          "privateIPAddressVersion": "IPv4",
+          "privateLinkConnectionProperties": {
+            "groupId": "vault",
+            "requiredMemberName": "default",
+            "fqdns": [
+              "kv-orders-prod.vault.azure.net"
+            ]
+          }
+        }
+      }
+    ],
+    "dnsSettings": {
+      "dnsServers": [],
+      "appliedDnsServers": [],
+      "internalDomainNameSuffix": "1fd0e9cc58245cd2a9a407.ax.internal.cloudapp.net"
+    },
+    "enableAcceleratedNetworking": false,
+    "vnetEncryptionSupported": false,
+    "enableIPForwarding": false,
+    "disableTcpStateTracking": false,
+    "hostedWorkloads": [],
+    "tapConfigurations": [],
+    "nicType": "Standard",
+    "allowPort25Out": false,
+    "auxiliaryMode": "None",
+    "auxiliarySku": "None",
+    "privateEndpoint": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders"
+    }
+  }
+}

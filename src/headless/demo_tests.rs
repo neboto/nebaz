@@ -15,15 +15,12 @@ fn demo_cli(args: &[&str]) -> Cli {
 
 /// Sub-tabs (by `ls` prefix) the demo has no rows for yet.
 const EMPTY_YET: &[&str] = &[
-    "rg", "all", "nic", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe", "dns", "dnsz", "dnsr", "dnsfr",
-    "dnsp", "agw", "afd", "waf", "changes", "activity", "deploys", "health",
+    "rg", "all", "changes", "activity", "deploys", "health",
 ];
 
 /// Sub-tabs whose demo rows still open with a `⚠` line somewhere.
 const WARNS_YET: &[&str] = &[
-    "sub", "rg", "all", "nic", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe", "dns", "dnsz", "dnsr",
-    "dnsfr", "dnsp", "agw", "afd", "waf", "acr", "mysql", "aca", "redis", "sb", "changes", "activity", "deploys",
-    "health",
+    "sub", "rg", "all", "acr", "mysql", "aca", "redis", "sb", "changes", "activity", "deploys", "health",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).
@@ -97,6 +94,41 @@ async fn every_demo_row_opens_without_a_warning() {
         clean_but_listed.is_empty(),
         "these open clean now; take them out of WARNS_YET: {clean_but_listed:?}"
     );
+}
+
+/// The `N` lens on the story's two NSG findings, from the demo fixtures
+/// alone (nothing warm, so every subnet, NIC and NSG is a GET): Power
+/// Platform's subnet meets `DenyAllOutbound` 4000, which shadows the
+/// default VNet allow, and the jump box's NIC is open to SSH from the
+/// internet through its subnet's NSG.
+#[tokio::test]
+async fn the_network_lens_finds_the_story_in_the_demo() {
+    use crate::azure::nsg_eval::{build_lines, resolve, Dir, Known, RuleView, Seed};
+    let fetch = |path: String| async move {
+        let r = crate::demo::respond(&path, "api-version=2025-09-01", 0);
+        match r.status {
+            200 => serde_json::from_str::<Value>(&r.body).map_err(|e| e.to_string()),
+            s => Err(format!("{s} {}", r.body)),
+        }
+    };
+    let rg = |name: &str| format!("/subscriptions/{}/resourceGroups/{name}/providers/Microsoft.Network", crate::demo::PROD);
+    let rule = |views: &[RuleView], name: &str| views.iter().find(|r| r.name == name).cloned();
+
+    let subnet = format!("{}/virtualNetworks/vnet-hub-prod/subnets/snet-pp-injection", rg("rg-network-prod"));
+    let r = resolve(Seed { subnets: vec![subnet], ..Default::default() }, Known::default(), fetch).await;
+    assert!(r.warnings.is_empty(), "{:?}", r.warnings);
+    let views: Vec<RuleView> = build_lines(&r, &[Dir::Outbound]).into_iter().filter_map(|l| l.rule).collect();
+    let deny = rule(&views, "DenyAllOutbound").expect("the lockdown rule");
+    assert!(!deny.allow && deny.priority == "4000" && deny.nsg_name == "nsg-pp-injection", "{deny:?}");
+    let vnet = rule(&views, "AllowVnetOutBound").expect("the default rule");
+    assert_eq!(vnet.shadowed_by.as_deref(), Some("4000 DenyAllOutbound"));
+
+    let nic = format!("{}/networkInterfaces/nic-vm-jump-01", rg("rg-legacy-prod"));
+    let r = resolve(Seed { nics: vec![nic], ..Default::default() }, Known::default(), fetch).await;
+    assert!(r.warnings.is_empty(), "{:?}", r.warnings);
+    let views: Vec<RuleView> = build_lines(&r, &[Dir::Inbound]).into_iter().filter_map(|l| l.rule).collect();
+    let ssh = rule(&views, "AllowSSHInbound").expect("the vendor's SSH rule");
+    assert!(ssh.allow && ssh.open_to_internet && ssh.nsg_name == "nsg-jump-prod", "{ssh:?}");
 }
 
 /// The demo's `appi-orders` carries an instrumentation key and connection

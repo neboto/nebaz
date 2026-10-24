@@ -1,0 +1,17 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsForwardingRulesets/dnsfrs-onprem/virtualNetworkLinks/link-vnet-hub-prod",
+      "name": "link-vnet-hub-prod",
+      "type": "Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks",
+      "etag": "\"33cf4245-12a7-50f2-b14b-b1046b16a80e\"",
+      "properties": {
+        "virtualNetwork": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+        },
+        "metadata": {},
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

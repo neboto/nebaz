@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolvers/dnspr-hub-prod/outboundEndpoints/outbound-onprem",
+      "name": "outbound-onprem",
+      "type": "Microsoft.Network/dnsResolvers/outboundEndpoints",
+      "etag": "\"57863b97-9e88-5e51-8663-c2452f2d2934\"",
+      "location": "westeurope",
+      "tags": {},
+      "properties": {
+        "subnet": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-dns-outbound"
+        },
+        "provisioningState": "Succeeded",
+        "resourceGuid": "bca827d1-5684-5ada-aff5-cde2cd603e72"
+      }
+    }
+  ]
+}

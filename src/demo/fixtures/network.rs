@@ -1,5 +1,113 @@
-//! Demo fixtures: the `network` area (see `docs/DEMO.md` for who owns what).
+//! Demo fixtures: the `network` area (see `docs/DEMO.md` for who owns what):
+//! Virtual Network (VNets and their subnets, NSGs, public IPs, the load
+//! balancer, route table, NAT gateway, private endpoints), the NICs, DNS
+//! (private and public zones, the resolver, its ruleset, a DNS security
+//! policy) and Edge (the application gateway, Front Door, both WAF
+//! policies). Lists first, then each lazy child list, then a single GET
+//! per resource: `r` on a row, the `N` lens (a VNet for its subnets, an
+//! NSG, a NIC) and jumps read those.
 
-use super::Fixture;
+use super::{fx, Fixture};
 
-pub static FIXTURES: &[Fixture] = &[];
+pub static FIXTURES: &[Fixture] = &[
+    // Virtual Network: lists (contoso-prod)
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/virtualNetworks", "vnets.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/networkSecurityGroups", "nsgs.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/publicIPAddresses", "public-ips.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/loadBalancers", "load-balancers.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/routeTables", "route-tables.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/natGateways", "nat-gateways.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/privateEndpoints", "private-endpoints.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/networkInterfaces", "nics.json"),
+    // contoso-dev
+    fx!("network", "/subscriptions/{{dev}}/providers/Microsoft.Network/virtualNetworks", "dev-vnets.json"),
+    fx!("network", "/subscriptions/{{dev}}/providers/Microsoft.Network/networkSecurityGroups", "dev-nsgs.json"),
+    // DNS: lists
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/privateDnsZones", "private-dns-zones.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/dnszones", "dns-zones.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/dnsResolvers", "dns-resolvers.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/dnsForwardingRulesets", "dns-forwarding-rulesets.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/dnsResolverPolicies", "dns-resolver-policies.json"),
+    // Private DNS zones: records, links, the zone
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io/ALL", "pdns-acr-records.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io/virtualNetworkLinks", "pdns-acr-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io", "pdns-acr.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net/ALL", "pdns-blob-records.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net/virtualNetworkLinks", "pdns-blob-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net", "pdns-blob.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net/ALL", "pdns-sql-records.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net/virtualNetworkLinks", "pdns-sql-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net", "pdns-sql.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net/ALL", "pdns-kv-records.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net/virtualNetworkLinks", "pdns-kv-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net", "pdns-kv.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com/ALL", "pdns-psql-records.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com/virtualNetworkLinks", "pdns-psql-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com", "pdns-psql.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/ALL", "pdns-aca-records.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/virtualNetworkLinks", "pdns-aca-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io", "pdns-aca.json"),
+    // Public zone, resolver, ruleset, policy
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/all", "dns-zone-records.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com", "dns-zone.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolvers/dnspr-hub-prod/outboundEndpoints", "dns-resolver-outbound.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolvers/dnspr-hub-prod/inboundEndpoints", "dns-resolver-inbound.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolvers/dnspr-hub-prod", "dns-resolver.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsForwardingRulesets/dnsfrs-onprem/forwardingRules", "dns-ruleset-rules.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsForwardingRulesets/dnsfrs-onprem/virtualNetworkLinks", "dns-ruleset-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsForwardingRulesets/dnsfrs-onprem", "dns-ruleset.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolverPolicies/dnssp-hub-prod/dnsSecurityRules", "dns-policy-rules.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolverPolicies/dnssp-hub-prod/virtualNetworkLinks", "dns-policy-links.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolverPolicies/dnssp-hub-prod", "dns-policy.json"),
+    // Edge
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/applicationGateways", "app-gateways.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies", "agw-waf-policies.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies", "afd-waf-policies.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Cdn/profiles", "cdn-profiles.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod", "agw-contoso-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/wafp-agw-prod", "wafp-agw-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/wafpafdcontoso", "wafpafdcontoso.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/afdEndpoints", "afd-endpoints.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/afdEndpoints/contoso-web/routes", "afd-routes.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/originGroups", "afd-origin-groups.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/originGroups/og-agw-prod/origins", "afd-origins.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/customDomains", "afd-custom-domains.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/securityPolicies", "afd-security-policies.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso", "afd-contoso.json"),
+    // Single GETs (`r`, the `N` lens, jumps)
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod", "vnet-hub-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca", "vnet-hub-prod--snet-aca.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pp-injection", "vnet-hub-prod--snet-pp-injection.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe", "vnet-hub-prod--snet-pe.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-appgw", "vnet-hub-prod--snet-appgw.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-data", "vnet-hub-prod--snet-data.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-jump", "vnet-hub-prod--snet-jump.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureFirewallSubnet", "vnet-hub-prod--AzureFirewallSubnet.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-dns-outbound", "vnet-hub-prod--snet-dns-outbound.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr", "vnet-pp-dr.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr/subnets/snet-pp-injection-dr", "vnet-pp-dr--snet-pp-injection-dr.json"),
+    fx!("network", "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev", "vnet-dev.json"),
+    fx!("network", "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-aca-dev", "vnet-dev--snet-aca-dev.json"),
+    fx!("network", "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-default", "vnet-dev--snet-default.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-aca", "nsg-aca.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-pp-injection", "nsg-pp-injection.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-jump-prod", "nsg-jump-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-appgw-prod", "nsg-appgw-prod.json"),
+    fx!("network", "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/networkSecurityGroups/nsg-aca-dev", "nsg-aca-dev.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-jump-01", "nic-vm-jump-01.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-app-01", "nic-vm-legacy-app-01.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259", "pe-kv-orders-nic.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924", "pe-sql-orders-nic.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694", "pe-st-orders-blob-nic.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348", "pe-acr-prod-nic.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod", "pip-agw-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ng-prod", "pip-ng-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vm-jump-01", "pip-vm-jump-01.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-legacy-internal", "lb-legacy-internal.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress", "rt-spoke-egress.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/natGateways/ng-prod", "ng-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders", "pe-kv-orders.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders", "pe-sql-orders.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob", "pe-st-orders-blob.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod", "pe-acr-prod.json"),
+];

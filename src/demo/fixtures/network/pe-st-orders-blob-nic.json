@@ -1,0 +1,61 @@
+{
+  "name": "pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694",
+  "etag": "W/\"70573e14-7973-54fb-9505-e10ef4ccaacf\"",
+  "type": "Microsoft.Network/networkInterfaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "kind": "Regular",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "ec969218-b314-541d-b38d-9a3787c206a3",
+    "ipConfigurations": [
+      {
+        "name": "privateEndpointIpConfig.ed710692-7f2b-54d3-92b6-926273570d73",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694/ipConfigurations/privateEndpointIpConfig.ed710692-7f2b-54d3-92b6-926273570d73",
+        "etag": "W/\"8622f582-a4d6-5b23-90a6-17f491c7d0ec\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.5.6",
+          "privateIPAllocationMethod": "Dynamic",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+          },
+          "primary": true,
+          "privateIPAddressVersion": "IPv4",
+          "privateLinkConnectionProperties": {
+            "groupId": "blob",
+            "requiredMemberName": "blob",
+            "fqdns": [
+              "stcontosoordersprod.blob.core.windows.net"
+            ]
+          }
+        }
+      }
+    ],
+    "dnsSettings": {
+      "dnsServers": [],
+      "appliedDnsServers": [],
+      "internalDomainNameSuffix": "ab7db43b90fd53bc86ab89.ax.internal.cloudapp.net"
+    },
+    "enableAcceleratedNetworking": false,
+    "vnetEncryptionSupported": false,
+    "enableIPForwarding": false,
+    "disableTcpStateTracking": false,
+    "hostedWorkloads": [],
+    "tapConfigurations": [],
+    "nicType": "Standard",
+    "allowPort25Out": false,
+    "auxiliaryMode": "None",
+    "auxiliarySku": "None",
+    "privateEndpoint": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "pe-st-orders-blob",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob",
+  "etag": "W/\"099eb746-3685-5404-b14e-57cc81538784\"",
+  "type": "Microsoft.Network/privateEndpoints",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "8c9598e8-5597-5fd5-b603-2dd020c1bc87",
+    "privateLinkServiceConnections": [
+      {
+        "name": "pe-st-orders-blob",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob/privateLinkServiceConnections/pe-st-orders-blob",
+        "etag": "W/\"db8abb78-5aa2-52ab-8f4f-6d4a5ed49ce8\"",
+        "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+          "groupIds": [
+            "blob"
+          ],
+          "privateLinkServiceConnectionState": {
+            "status": "Approved",
+            "description": "Auto-Approved",
+            "actionsRequired": "None"
+          }
+        }
+      }
+    ],
+    "manualPrivateLinkServiceConnections": [],
+    "customNetworkInterfaceName": "",
+    "subnet": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+    },
+    "ipConfigurations": [],
+    "networkInterfaces": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694"
+      }
+    ],
+    "customDnsConfigs": [
+      {
+        "fqdn": "stcontosoordersprod.blob.core.windows.net",
+        "ipAddresses": [
+          "10.10.5.6"
+        ]
+      }
+    ]
+  }
+}

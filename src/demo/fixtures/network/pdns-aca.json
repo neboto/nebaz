@@ -1,0 +1,24 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+  "name": "wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+  "type": "Microsoft.Network/privateDnsZones",
+  "etag": "dc61458c-ca48-5f41-bf9b-0b964c84f16e",
+  "location": "global",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200",
+    "purpose": "aca-internal-environment"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "internalId": "d3dc7a83-6776-5c88-90c5-a477755917e5",
+    "maxNumberOfRecordSets": 25000,
+    "numberOfRecordSets": 3,
+    "maxNumberOfVirtualNetworkLinks": 1000,
+    "numberOfVirtualNetworkLinks": 1,
+    "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+    "numberOfVirtualNetworkLinksWithRegistration": 0
+  }
+}

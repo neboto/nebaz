@@ -1,0 +1,40 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net/SOA/@",
+      "name": "@",
+      "type": "Microsoft.Network/privateDnsZones/SOA",
+      "etag": "3783ae5a-f827-5a49-bff9-a1a1aad00690",
+      "properties": {
+        "fqdn": "privatelink.blob.core.windows.net.",
+        "ttl": 3600,
+        "isAutoRegistered": false,
+        "soaRecord": {
+          "email": "azureprivatedns-host.microsoft.com",
+          "expireTime": 2419200,
+          "host": "azureprivatedns.net",
+          "minimumTtl": 10,
+          "refreshTime": 3600,
+          "retryTime": 300,
+          "serialNumber": 1
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net/A/stcontosoordersprod",
+      "name": "stcontosoordersprod",
+      "type": "Microsoft.Network/privateDnsZones/A",
+      "etag": "eca24dd9-9ad3-5eb0-ba66-6699f7302aef",
+      "properties": {
+        "fqdn": "stcontosoordersprod.privatelink.blob.core.windows.net.",
+        "ttl": 10,
+        "isAutoRegistered": false,
+        "aRecords": [
+          {
+            "ipv4Address": "10.10.5.6"
+          }
+        ]
+      }
+    }
+  ]
+}

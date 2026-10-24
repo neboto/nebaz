@@ -1,0 +1,37 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/afdEndpoints/contoso-web/routes/route-web",
+      "type": "Microsoft.Cdn/profiles/afdendpoints/routes",
+      "name": "route-web",
+      "properties": {
+        "customDomains": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/customDomains/www-contoso-demo-com",
+            "isActive": true
+          }
+        ],
+        "originGroup": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/originGroups/og-agw-prod"
+        },
+        "originPath": null,
+        "ruleSets": [],
+        "supportedProtocols": [
+          "Http",
+          "Https"
+        ],
+        "patternsToMatch": [
+          "/*"
+        ],
+        "cacheConfiguration": null,
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled",
+        "enabledState": "Enabled",
+        "endpointName": "contoso-web",
+        "provisioningState": "Succeeded",
+        "deploymentStatus": "Succeeded"
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "value": [
+    {
+      "name": "rt-spoke-egress",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress",
+      "etag": "W/\"9eb525ed-1ce6-509a-822c-e4db0af82d69\"",
+      "type": "Microsoft.Network/routeTables",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "2377a700-41d5-5733-9145-16a08268237b",
+        "disableBgpRoutePropagation": true,
+        "routes": [
+          {
+            "name": "default-to-firewall",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress/routes/default-to-firewall",
+            "etag": "W/\"a91a7ae3-12a0-5288-9081-df7e1eb47357\"",
+            "type": "Microsoft.Network/routeTables/routes",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "addressPrefix": "0.0.0.0/0",
+              "nextHopType": "VirtualAppliance",
+              "nextHopIpAddress": "10.10.9.4",
+              "hasBgpOverride": false
+            }
+          }
+        ],
+        "subnets": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca"
+          }
+        ]
+      }
+    }
+  ]
+}

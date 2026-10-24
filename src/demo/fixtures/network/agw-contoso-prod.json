@@ -1,0 +1,319 @@
+{
+  "name": "agw-contoso-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod",
+  "etag": "W/\"40e5ed3c-e2f3-5f0e-b128-eddfcc307b26\"",
+  "type": "Microsoft.Network/applicationGateways",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "zones": [
+    "1",
+    "2",
+    "3"
+  ],
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "ccbb79d0-295b-5d3a-b8f6-e463d7aa516f",
+    "sku": {
+      "name": "WAF_v2",
+      "tier": "WAF_v2",
+      "family": "Generation_1"
+    },
+    "operationalState": "Running",
+    "autoscaleConfiguration": {
+      "minCapacity": 2,
+      "maxCapacity": 10
+    },
+    "enableHttp2": true,
+    "enableFips": false,
+    "forceFirewallPolicyAssociation": true,
+    "firewallPolicy": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/wafp-agw-prod"
+    },
+    "sslPolicy": {
+      "policyType": "Predefined",
+      "policyName": "AppGwSslPolicy20220101"
+    },
+    "gatewayIPConfigurations": [
+      {
+        "name": "appGatewayIpConfig",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/gatewayIPConfigurations/appGatewayIpConfig",
+        "etag": "W/\"78b7902d-7158-52bb-a3dc-304fc74abab0\"",
+        "type": "Microsoft.Network/applicationGateways/gatewayIPConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-appgw"
+          }
+        }
+      }
+    ],
+    "sslCertificates": [
+      {
+        "name": "cert-api-contoso-demo",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/sslCertificates/cert-api-contoso-demo",
+        "etag": "W/\"de93b336-6e36-5a2f-8f37-323649252d1d\"",
+        "type": "Microsoft.Network/applicationGateways/sslCertificates",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "publicCertData": "MIIG3jCCBMagAwIBAgITMwAAAAAAAAAAAAAAAAAAAAAAADANBgkqhkiG9w0BAQwFADBZ",
+          "httpListeners": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-https"
+            }
+          ]
+        }
+      }
+    ],
+    "trustedRootCertificates": [],
+    "trustedClientCertificates": [],
+    "sslProfiles": [],
+    "frontendIPConfigurations": [
+      {
+        "name": "appGwPublicFrontendIp",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendIPConfigurations/appGwPublicFrontendIp",
+        "etag": "W/\"b601940c-9247-57f1-8f28-cae7a7ff3371\"",
+        "type": "Microsoft.Network/applicationGateways/frontendIPConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAllocationMethod": "Dynamic",
+          "publicIPAddress": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod"
+          },
+          "httpListeners": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-https"
+            },
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-http"
+            }
+          ]
+        }
+      }
+    ],
+    "frontendPorts": [
+      {
+        "name": "port_443",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendPorts/port_443",
+        "etag": "W/\"27717e3a-4505-5155-89b8-194ddd33c3cb\"",
+        "type": "Microsoft.Network/applicationGateways/frontendPorts",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "port": 443
+        }
+      },
+      {
+        "name": "port_80",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendPorts/port_80",
+        "etag": "W/\"d0723a21-f7f5-5096-be3f-7e90e98da9b6\"",
+        "type": "Microsoft.Network/applicationGateways/frontendPorts",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "port": 80
+        }
+      }
+    ],
+    "backendAddressPools": [
+      {
+        "name": "orders-api",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/backendAddressPools/orders-api",
+        "etag": "W/\"9b1f25fc-2e84-5f40-b32b-884497ba4bb6\"",
+        "type": "Microsoft.Network/applicationGateways/backendAddressPools",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "backendAddresses": [
+            {
+              "fqdn": "ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io"
+            }
+          ],
+          "requestRoutingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/requestRoutingRules/rule-api-https"
+            }
+          ]
+        }
+      }
+    ],
+    "backendHttpSettingsCollection": [
+      {
+        "name": "settings-orders-api",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/backendHttpSettingsCollection/settings-orders-api",
+        "etag": "W/\"ffd54586-2d67-5790-9198-14f74a46584b\"",
+        "type": "Microsoft.Network/applicationGateways/backendHttpSettingsCollection",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "port": 443,
+          "protocol": "Https",
+          "cookieBasedAffinity": "Disabled",
+          "pickHostNameFromBackendAddress": true,
+          "requestTimeout": 30,
+          "connectionDraining": {
+            "enabled": true,
+            "drainTimeoutInSec": 60
+          },
+          "probe": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/probes/probe-orders-api"
+          },
+          "requestRoutingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/requestRoutingRules/rule-api-https"
+            }
+          ]
+        }
+      }
+    ],
+    "backendSettingsCollection": [],
+    "httpListeners": [
+      {
+        "name": "listener-api-https",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-https",
+        "etag": "W/\"c2115f88-7ff1-589f-886b-507d83cde154\"",
+        "type": "Microsoft.Network/applicationGateways/httpListeners",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "frontendIPConfiguration": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendIPConfigurations/appGwPublicFrontendIp"
+          },
+          "frontendPort": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendPorts/port_443"
+          },
+          "protocol": "Https",
+          "hostName": "api.contoso-demo.com",
+          "hostNames": [],
+          "requireServerNameIndication": true,
+          "sslCertificate": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/sslCertificates/cert-api-contoso-demo"
+          },
+          "requestRoutingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/requestRoutingRules/rule-api-https"
+            }
+          ]
+        }
+      },
+      {
+        "name": "listener-api-http",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-http",
+        "etag": "W/\"ce91a009-33a1-5047-bf35-a61fcdf81ad3\"",
+        "type": "Microsoft.Network/applicationGateways/httpListeners",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "frontendIPConfiguration": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendIPConfigurations/appGwPublicFrontendIp"
+          },
+          "frontendPort": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendPorts/port_80"
+          },
+          "protocol": "Http",
+          "hostName": "api.contoso-demo.com",
+          "hostNames": [],
+          "requireServerNameIndication": false,
+          "requestRoutingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/requestRoutingRules/rule-api-http-redirect"
+            }
+          ]
+        }
+      }
+    ],
+    "listeners": [],
+    "urlPathMaps": [],
+    "requestRoutingRules": [
+      {
+        "name": "rule-api-https",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/requestRoutingRules/rule-api-https",
+        "etag": "W/\"23e993cd-7ae3-59db-a948-7fcdd036338b\"",
+        "type": "Microsoft.Network/applicationGateways/requestRoutingRules",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "ruleType": "Basic",
+          "priority": 100,
+          "httpListener": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-https"
+          },
+          "backendAddressPool": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/backendAddressPools/orders-api"
+          },
+          "backendHttpSettings": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/backendHttpSettingsCollection/settings-orders-api"
+          }
+        }
+      },
+      {
+        "name": "rule-api-http-redirect",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/requestRoutingRules/rule-api-http-redirect",
+        "etag": "W/\"68c851a8-8dbb-5444-90c1-5f81251638e7\"",
+        "type": "Microsoft.Network/applicationGateways/requestRoutingRules",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "ruleType": "Basic",
+          "priority": 200,
+          "httpListener": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-http"
+          },
+          "redirectConfiguration": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/redirectConfigurations/redirect-http-to-https"
+          }
+        }
+      }
+    ],
+    "routingRules": [],
+    "probes": [
+      {
+        "name": "probe-orders-api",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/probes/probe-orders-api",
+        "etag": "W/\"f5eceb30-0956-57de-b3d3-a112798be6d9\"",
+        "type": "Microsoft.Network/applicationGateways/probes",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "protocol": "Https",
+          "path": "/healthz",
+          "interval": 30,
+          "timeout": 30,
+          "unhealthyThreshold": 3,
+          "pickHostNameFromBackendHttpSettings": true,
+          "minServers": 0,
+          "match": {
+            "statusCodes": [
+              "200-399"
+            ]
+          },
+          "backendHttpSettings": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/backendHttpSettingsCollection/settings-orders-api"
+            }
+          ]
+        }
+      }
+    ],
+    "rewriteRuleSets": [],
+    "redirectConfigurations": [
+      {
+        "name": "redirect-http-to-https",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/redirectConfigurations/redirect-http-to-https",
+        "etag": "W/\"c34c48dd-fb8b-5cb6-864f-d3c36e87a4a9\"",
+        "type": "Microsoft.Network/applicationGateways/redirectConfigurations",
+        "properties": {
+          "redirectType": "Permanent",
+          "targetListener": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/httpListeners/listener-api-https"
+          },
+          "includePath": true,
+          "includeQueryString": true,
+          "requestRoutingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/requestRoutingRules/rule-api-http-redirect"
+            }
+          ]
+        }
+      }
+    ],
+    "privateLinkConfigurations": [],
+    "privateEndpointConnections": [],
+    "defaultPredefinedSslPolicy": "AppGwSslPolicy20220101"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/originGroups/og-agw-prod/origins/origin-agw-prod",
+      "type": "Microsoft.Cdn/profiles/origingroups/origins",
+      "name": "origin-agw-prod",
+      "properties": {
+        "hostName": "agw-contoso-prod.westeurope.cloudapp.azure.com",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "originHostHeader": "api.contoso-demo.com",
+        "priority": 1,
+        "weight": 1000,
+        "enabledState": "Enabled",
+        "enforceCertificateNameCheck": true,
+        "azureOrigin": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod"
+        },
+        "sharedPrivateLinkResource": null,
+        "originGroupName": "og-agw-prod",
+        "provisioningState": "Succeeded",
+        "deploymentStatus": "Succeeded"
+      }
+    }
+  ]
+}

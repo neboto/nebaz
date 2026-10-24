@@ -1,0 +1,62 @@
+{
+  "name": "pe-acr-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod",
+  "etag": "W/\"4e3faa86-f1f5-54ee-af38-ea97c14ca405\"",
+  "type": "Microsoft.Network/privateEndpoints",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "54c01ceb-5dee-5637-b26e-5a10200a5c9a",
+    "privateLinkServiceConnections": [
+      {
+        "name": "pe-acr-prod",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod/privateLinkServiceConnections/pe-acr-prod",
+        "etag": "W/\"ae46b4b3-ac18-5a7a-ba7e-3b67e82ebbe8\"",
+        "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod",
+          "groupIds": [
+            "registry"
+          ],
+          "privateLinkServiceConnectionState": {
+            "status": "Approved",
+            "description": "Auto-Approved",
+            "actionsRequired": "None"
+          }
+        }
+      }
+    ],
+    "manualPrivateLinkServiceConnections": [],
+    "customNetworkInterfaceName": "",
+    "subnet": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+    },
+    "ipConfigurations": [],
+    "networkInterfaces": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348"
+      }
+    ],
+    "customDnsConfigs": [
+      {
+        "fqdn": "acrcontosoprod.westeurope.data.azurecr.io",
+        "ipAddresses": [
+          "10.10.5.7"
+        ]
+      },
+      {
+        "fqdn": "acrcontosoprod.azurecr.io",
+        "ipAddresses": [
+          "10.10.5.8"
+        ]
+      }
+    ]
+  }
+}

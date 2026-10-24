@@ -1,0 +1,25 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolverPolicies/dnssp-hub-prod/dnsSecurityRules/block-malicious-domains",
+      "name": "block-malicious-domains",
+      "type": "Microsoft.Network/dnsResolverPolicies/dnsSecurityRules",
+      "etag": "\"4baacafa-722b-507c-b9cb-4a7a032bfe40\"",
+      "location": "westeurope",
+      "tags": {},
+      "properties": {
+        "priority": 100,
+        "action": {
+          "actionType": "Block"
+        },
+        "dnsResolverDomainLists": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolverDomainLists/dnsdl-malicious-domains"
+          }
+        ],
+        "dnsSecurityRuleState": "Enabled",
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

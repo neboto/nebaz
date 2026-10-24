@@ -1,0 +1,21 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolvers/dnspr-hub-prod",
+  "name": "dnspr-hub-prod",
+  "type": "Microsoft.Network/dnsResolvers",
+  "etag": "\"59c54f05-049f-580e-b670-9105209c541d\"",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "virtualNetwork": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+    },
+    "dnsResolverState": "Connected",
+    "provisioningState": "Succeeded",
+    "resourceGuid": "99e3a94f-1209-576a-9f95-f7c7d73079a5"
+  }
+}

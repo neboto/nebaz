@@ -1,0 +1,106 @@
+{
+  "name": "vnet-dev",
+  "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev",
+  "etag": "W/\"2373c309-3cad-54ca-99b8-9492ff655415\"",
+  "type": "Microsoft.Network/virtualNetworks",
+  "location": "westeurope",
+  "tags": {
+    "env": "dev",
+    "team": "platform",
+    "owner": "platform-team@contoso.com"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "21d07f7d-2180-521a-9e16-9ff5f1c58300",
+    "addressSpace": {
+      "addressPrefixes": [
+        "10.30.0.0/16"
+      ]
+    },
+    "dhcpOptions": {
+      "dnsServers": []
+    },
+    "subnets": [
+      {
+        "name": "snet-aca-dev",
+        "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-aca-dev",
+        "etag": "W/\"303c7b60-f408-574b-9d9c-4a4cb6edebe9\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "addressPrefix": "10.30.0.0/23",
+          "delegations": [
+            {
+              "name": "Microsoft.App.environments",
+              "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-aca-dev/delegations/Microsoft.App.environments",
+              "etag": "W/\"656e0b9e-eda1-56a6-97fb-32becf23cb53\"",
+              "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+              "properties": {
+                "provisioningState": "Succeeded",
+                "serviceName": "Microsoft.App/environments",
+                "actions": [
+                  "Microsoft.Network/virtualNetworks/subnets/join/action",
+                  "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"
+                ]
+              }
+            }
+          ],
+          "privateEndpointNetworkPolicies": "Disabled",
+          "privateLinkServiceNetworkPolicies": "Enabled",
+          "networkSecurityGroup": {
+            "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/networkSecurityGroups/nsg-aca-dev"
+          }
+        }
+      },
+      {
+        "name": "snet-default",
+        "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-default",
+        "etag": "W/\"897ee5a6-4977-5fae-82f7-6f1665f2ea6b\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "addressPrefix": "10.30.2.0/24",
+          "delegations": [],
+          "privateEndpointNetworkPolicies": "Disabled",
+          "privateLinkServiceNetworkPolicies": "Enabled"
+        }
+      }
+    ],
+    "virtualNetworkPeerings": [
+      {
+        "name": "peer-dev-to-hub-prod",
+        "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/virtualNetworkPeerings/peer-dev-to-hub-prod",
+        "etag": "W/\"8656be5b-aa22-55b3-9c7c-0bc8a4fccda5\"",
+        "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "resourceGuid": "57905dce-2640-5f23-b343-fcbc0eba8d8f",
+          "peeringState": "Connected",
+          "peeringSyncLevel": "FullyInSync",
+          "remoteVirtualNetwork": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+          },
+          "allowVirtualNetworkAccess": true,
+          "allowForwardedTraffic": false,
+          "allowGatewayTransit": false,
+          "useRemoteGateways": false,
+          "doNotVerifyRemoteGateways": false,
+          "peerCompleteVnets": true,
+          "remoteAddressSpace": {
+            "addressPrefixes": [
+              "10.10.0.0/16"
+            ]
+          },
+          "remoteVirtualNetworkAddressSpace": {
+            "addressPrefixes": [
+              "10.10.0.0/16"
+            ]
+          },
+          "routeServiceVips": {}
+        }
+      }
+    ],
+    "enableDdosProtection": false,
+    "privateEndpointVNetPolicies": "Disabled"
+  }
+}

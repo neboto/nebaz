@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/customDomains/www-contoso-demo-com",
+      "type": "Microsoft.Cdn/profiles/customdomains",
+      "name": "www-contoso-demo-com",
+      "properties": {
+        "hostName": "www.contoso-demo.com",
+        "tlsSettings": {
+          "certificateType": "ManagedCertificate",
+          "minimumTlsVersion": "TLS12",
+          "secret": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/secrets/www-contoso-demo-com-managed"
+          }
+        },
+        "azureDnsZone": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com"
+        },
+        "domainValidationState": "Approved",
+        "validationProperties": {
+          "validationToken": "_9k2m4x7q1w8e3r6t5y0u2i4o7p1a3s",
+          "expirationDate": "{{iso:now+5d}}"
+        },
+        "provisioningState": "Succeeded",
+        "deploymentStatus": "Succeeded"
+      }
+    }
+  ]
+}

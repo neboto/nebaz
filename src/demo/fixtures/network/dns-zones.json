@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com",
+      "name": "contoso-demo.com",
+      "type": "Microsoft.Network/dnszones",
+      "etag": "6c1436fc-cfc8-521e-9509-4a0d0a1bd42a",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "maxNumberOfRecordSets": 10000,
+        "maxNumberOfRecordsPerRecordSet": null,
+        "numberOfRecordSets": 7,
+        "nameServers": [
+          "ns1-03.azure-dns.com",
+          "ns2-03.azure-dns.net",
+          "ns3-03.azure-dns.org",
+          "ns4-03.azure-dns.info"
+        ],
+        "zoneType": "Public"
+      }
+    }
+  ]
+}
