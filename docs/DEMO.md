@@ -135,7 +135,9 @@ A new object id: any fresh `uuid4`, added to this table.
 ARM ids are `/subscriptions/{{prod}}/resourceGroups/<rg>/providers/<type>/<name>`.
 Everything is in `westeurope` unless it says otherwise. Tags on most
 things: `env` (`prod`/`dev`), `team` (`orders`, `platform`, `data`,
-`legacy`), `owner`; `costCenter` on some.
+`legacy`), `owner`; `costCenter` on some. The office's public address
+is `203.0.113.24`: the one allowed IP the firewalls name (SQL, MySQL,
+Redis, `stcontosoordersdev`, `kv-orders-dev`).
 
 ### contoso-prod
 
@@ -166,10 +168,11 @@ things: `env` (`prod`/`dev`), `team` (`orders`, `platform`, `data`,
 - `kv-orders-prod`: RBAC, public network disabled, purge protection on, behind `pe-kv-orders`
 - `stcontosoordersprod`: StorageV2, behind `pe-st-orders-blob` but public network still enabled, blob public access allowed, TLS 1.0
 - `sql-orders-prod` (SQL server) with database `sqldb-orders` (GP_S_Gen5_2), firewall `AllowAll-temp`, behind `pe-sql-orders`
-- `psql-orders-prod` (PostgreSQL flexible, 16, VNet-integrated in `snet-data`) — the good one
-- `redis-orders-cache` (Standard C1, non-TLS port on)
-- `sb-orders-prod` (Service Bus Standard): queue `orders` (1,284 dead-lettered), topic `order-events` with subscription `billing`
-- `evh-orders-prod` (Event Hubs namespace): hub `order-telemetry`
+- `psql-orders-prod` (PostgreSQL flexible, 16, VNet-integrated in `snet-data`) — the good one: Entra-only auth (admins `Contoso Platform Admins` and `id-orders-api`), zone-redundant HA, database `orders`; its private DNS zone is `psql-orders-prod.private.postgres.database.azure.com` in `rg-network-prod` (referenced by id; network may add the zone)
+- `redis-orders-cache` (Standard C1, non-TLS port on), firewall rules for `pip-ng-prod` (20.103.45.11) and the office (203.0.113.24)
+- `amr-orders-sessions` (Azure Managed Redis, Balanced_B5, zone-redundant, identity `id-orders-api`): database `default`, TLS only, access keys off — the `amr` row, nothing planted
+- `sb-orders-prod` (Service Bus Standard): queue `orders` (1,284 dead-lettered), `orders-retry` (forwards to `orders`), topic `order-events` with subscription `billing`; network rule set default action Allow
+- `evh-orders-prod` (Event Hubs namespace, Standard, local auth off): hub `order-telemetry` (8 partitions, 3 days); network rule set Deny with a VNet rule for `snet-aca`, trusted services on
 - `appi-orders` (App Insights, workspace-based on `law-contoso-prod`), the alert `orders-api-requests-dropped`
 
 **`rg-platform-prod`** (team platform)

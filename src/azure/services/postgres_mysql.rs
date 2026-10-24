@@ -889,7 +889,10 @@ fn ipv4(s: &str) -> Option<u32> {
 pub fn firewall_rows(items: &[Value], r: &FlexibleServerRow) -> Vec<(String, String)> {
     let mut lines = Vec::new();
     if r.is_vnet_integrated() {
-        lines.push((String::new(), "⚠ VNet-integrated: firewall rules do not apply".into()));
+        // A warning only when there are rules someone may think apply;
+        // with none, it is how the server should look.
+        let flag = if items.is_empty() { "·" } else { "⚠" };
+        lines.push((String::new(), format!("{} VNet-integrated: firewall rules do not apply", flag)));
         lines.push(blank());
     } else if !r.public_enabled() {
         lines.push((String::new(), "· public access is off: these rules admit nothing".into()));

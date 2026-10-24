@@ -1,0 +1,25 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/authorizationRules/RootManageSharedAccessKey",
+      "name": "RootManageSharedAccessKey",
+      "type": "Microsoft.ServiceBus/Namespaces/AuthorizationRules",
+      "location": "westeurope",
+      "properties": { "rights": ["Listen", "Manage", "Send"] }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/authorizationRules/orders-api-send",
+      "name": "orders-api-send",
+      "type": "Microsoft.ServiceBus/Namespaces/AuthorizationRules",
+      "location": "westeurope",
+      "properties": { "rights": ["Send"] }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/authorizationRules/orders-worker-listen",
+      "name": "orders-worker-listen",
+      "type": "Microsoft.ServiceBus/Namespaces/AuthorizationRules",
+      "location": "westeurope",
+      "properties": { "rights": ["Listen"] }
+    }
+  ]
+}

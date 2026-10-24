@@ -1,0 +1,115 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod",
+      "name": "kv-orders-prod",
+      "type": "Microsoft.KeyVault/vaults",
+      "location": "westeurope",
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com", "costCenter": "CC-4410" },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "2024-02-06T10:12:31.4410000Z",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "2025-11-18T08:44:02.1170000Z"
+      },
+      "properties": {
+        "sku": { "family": "A", "name": "standard" },
+        "tenantId": "{{tenant}}",
+        "accessPolicies": [],
+        "enabledForDeployment": false,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": false,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 90,
+        "enableRbacAuthorization": true,
+        "enablePurgeProtection": true,
+        "vaultUri": "https://kv-orders-prod.vault.azure.net/",
+        "provisioningState": "Succeeded",
+        "publicNetworkAccess": "Disabled",
+        "networkAcls": {
+          "bypass": "None",
+          "defaultAction": "Deny",
+          "ipRules": [],
+          "virtualNetworkRules": []
+        },
+        "privateEndpointConnections": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod/privateEndpointConnections/pe-kv-orders",
+            "etag": "\"2b00a1d4-0000-0d00-0000-65c1f2a30000\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateEndpoint": { "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders" },
+              "privateLinkServiceConnectionState": { "status": "Approved", "description": "", "actionsRequired": "None" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.KeyVault/vaults/kv-legacy-prod",
+      "name": "kv-legacy-prod",
+      "type": "Microsoft.KeyVault/vaults",
+      "location": "westeurope",
+      "tags": { "env": "prod", "team": "legacy", "owner": "legacy-apps@contoso.com" },
+      "systemData": {
+        "createdBy": "legacy-apps@contoso.com",
+        "createdByType": "User",
+        "createdAt": "2019-06-11T13:40:09.0000000Z",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "2024-09-30T16:05:44.3920000Z"
+      },
+      "properties": {
+        "sku": { "family": "A", "name": "standard" },
+        "tenantId": "{{tenant}}",
+        "accessPolicies": [
+          {
+            "tenantId": "{{tenant}}",
+            "objectId": "8851538f-3984-4858-a0fd-773a4f49a810",
+            "permissions": {
+              "keys": ["Get", "List", "Update", "Create", "Import", "Delete", "Recover", "Backup", "Restore"],
+              "secrets": ["Get", "List", "Set", "Delete", "Recover", "Backup", "Restore"],
+              "certificates": ["Get", "List", "Update", "Create", "Import", "Delete", "Recover", "ManageContacts", "ManageIssuers", "GetIssuers", "ListIssuers"]
+            }
+          },
+          {
+            "tenantId": "{{tenant}}",
+            "objectId": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+            "permissions": {
+              "keys": ["Get", "List"],
+              "secrets": ["Get", "List", "Set", "Delete"],
+              "certificates": ["Get", "List"]
+            }
+          },
+          {
+            "tenantId": "{{tenant}}",
+            "objectId": "f5233913-f487-4d23-b621-98c7511347d1",
+            "permissions": {
+              "keys": [],
+              "secrets": ["Get", "List"],
+              "certificates": []
+            }
+          }
+        ],
+        "enabledForDeployment": true,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 90,
+        "enableRbacAuthorization": false,
+        "vaultUri": "https://kv-legacy-prod.vault.azure.net/",
+        "provisioningState": "Succeeded",
+        "publicNetworkAccess": "Enabled",
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "defaultAction": "Allow",
+          "ipRules": [],
+          "virtualNetworkRules": []
+        },
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

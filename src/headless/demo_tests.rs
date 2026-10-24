@@ -15,18 +15,18 @@ fn demo_cli(args: &[&str]) -> Cli {
 
 /// Sub-tabs (by `ls` prefix) the demo has no rows for yet.
 const EMPTY_YET: &[&str] = &[
-    "rg", "all", "vm", "disk", "nic", "storage", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe",
-    "dns", "dnsz", "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "id", "sp", "appreg", "aks", "pool", "acr",
-    "app", "func", "plan", "sql", "cosmos", "pg", "mysql", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
-    "acajob", "redis", "amr", "sb", "eh", "changes", "activity", "deploys", "health",
+    "rg", "all", "vm", "disk", "nic", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe",
+    "dns", "dnsz", "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "id", "sp", "appreg", "aks", "pool", "acr",
+    "app", "func", "plan", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
+    "acajob", "changes", "activity", "deploys", "health",
 ];
 
 /// Sub-tabs whose demo rows still open with a `⚠` line somewhere.
 const WARNS_YET: &[&str] = &[
-    "sub", "rg", "all", "vm", "disk", "nic", "storage", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe",
-    "dns", "dnsz", "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "id", "sp", "appreg", "aks", "pool", "acr",
-    "app", "func", "plan", "sql", "cosmos", "pg", "mysql", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
-    "acajob", "redis", "amr", "sb", "eh", "changes", "activity", "deploys", "health",
+    "sub", "rg", "all", "vm", "disk", "nic", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe",
+    "dns", "dnsz", "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "id", "sp", "appreg", "aks", "pool", "acr",
+    "app", "func", "plan", "mysql", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
+    "acajob", "redis", "sb", "changes", "activity", "deploys", "health",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).

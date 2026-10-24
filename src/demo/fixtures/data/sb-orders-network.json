@@ -1,0 +1,13 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/networkRuleSets/default",
+  "name": "default",
+  "type": "Microsoft.ServiceBus/Namespaces/NetworkRuleSets",
+  "location": "West Europe",
+  "properties": {
+    "publicNetworkAccess": "Enabled",
+    "defaultAction": "Allow",
+    "virtualNetworkRules": [],
+    "ipRules": [],
+    "trustedServiceAccessEnabled": false
+  }
+}

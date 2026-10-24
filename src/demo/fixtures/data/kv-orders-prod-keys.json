@@ -1,0 +1,22 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod/keys/orders-pii-encryption",
+      "name": "orders-pii-encryption",
+      "type": "Microsoft.KeyVault/vaults/keys",
+      "location": "westeurope",
+      "properties": {
+        "attributes": { "enabled": true, "created": 1707214351, "updated": 1739182800, "exportable": false, "recoveryLevel": "Recoverable" },
+        "kty": "RSA",
+        "keyOps": ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+        "keySize": 3072,
+        "rotationPolicy": {
+          "attributes": { "expiryTime": "P2Y", "created": 1707214351, "updated": 1707214351 },
+          "lifetimeActions": [{ "trigger": { "timeBeforeExpiry": "P30D" }, "action": { "type": "rotate" } }]
+        },
+        "keyUri": "https://kv-orders-prod.vault.azure.net/keys/orders-pii-encryption",
+        "keyUriWithVersion": "https://kv-orders-prod.vault.azure.net/keys/orders-pii-encryption/9f8e7d6c5b4a43f2e1d0c9b8a7f6e5d4"
+      }
+    }
+  ]
+}

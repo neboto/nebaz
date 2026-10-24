@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventHub/namespaces/evh-orders-prod/eventhubs/order-telemetry",
+      "name": "order-telemetry",
+      "type": "Microsoft.EventHub/namespaces/eventhubs",
+      "location": "westeurope",
+      "properties": {
+        "messageRetentionInDays": 3,
+        "retentionDescription": { "cleanupPolicy": "Delete", "retentionTimeInHours": 72 },
+        "partitionCount": 8,
+        "partitionIds": ["0", "1", "2", "3", "4", "5", "6", "7"],
+        "status": "Active",
+        "createdAt": "2024-04-08T09:18:40.2000000Z",
+        "updatedAt": "2024-04-08T09:18:40.6970000Z"
+      }
+    }
+  ]
+}

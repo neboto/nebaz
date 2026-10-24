@@ -1,0 +1,74 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/configurations/max_connections",
+      "name": "max_connections",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "properties": {
+        "value": "1718", "description": "Sets the maximum number of concurrent connections to the database server.",
+        "defaultValue": "1718", "dataType": "Integer", "allowedValues": "25-5000", "source": "system-default",
+        "isDynamicConfig": false, "isReadOnly": false, "isConfigPendingRestart": false, "unit": "connections"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/configurations/password_encryption",
+      "name": "password_encryption",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "properties": {
+        "value": "scram-sha-256", "description": "Chooses the algorithm for encrypting passwords.",
+        "defaultValue": "scram-sha-256", "dataType": "Enumeration", "allowedValues": "md5,scram-sha-256", "source": "system-default",
+        "isDynamicConfig": true, "isReadOnly": false, "isConfigPendingRestart": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/configurations/pgbouncer.enabled",
+      "name": "pgbouncer.enabled",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "properties": {
+        "value": "true", "description": "Denotes whether pgBouncer service is enabled.",
+        "defaultValue": "false", "dataType": "Boolean", "allowedValues": "true,false", "source": "user-override",
+        "isDynamicConfig": true, "isReadOnly": false, "isConfigPendingRestart": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/configurations/require_secure_transport",
+      "name": "require_secure_transport",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "properties": {
+        "value": "on", "description": "Whether client connections to the server are required to use some form of secure transport.",
+        "defaultValue": "on", "dataType": "Boolean", "allowedValues": "on,off", "source": "system-default",
+        "isDynamicConfig": true, "isReadOnly": false, "isConfigPendingRestart": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/configurations/ssl_max_protocol_version",
+      "name": "ssl_max_protocol_version",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "properties": {
+        "value": "", "description": "Sets the maximum SSL/TLS protocol version to use.",
+        "defaultValue": "", "dataType": "Enumeration", "allowedValues": "TLSv1.2,TLSv1.3", "source": "system-default",
+        "isDynamicConfig": true, "isReadOnly": false, "isConfigPendingRestart": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/configurations/ssl_min_protocol_version",
+      "name": "ssl_min_protocol_version",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "properties": {
+        "value": "TLSv1.2", "description": "Sets the minimum SSL/TLS protocol version to use.",
+        "defaultValue": "TLSv1.2", "dataType": "Enumeration", "allowedValues": "TLSv1.2,TLSv1.3", "source": "system-default",
+        "isDynamicConfig": true, "isReadOnly": false, "isConfigPendingRestart": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/configurations/work_mem",
+      "name": "work_mem",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "properties": {
+        "value": "4096", "description": "Sets the amount of memory to be used by internal sort operations and hash tables before writing to temporary disk files.",
+        "defaultValue": "4096", "dataType": "Integer", "allowedValues": "4096-2097151", "source": "system-default",
+        "isDynamicConfig": true, "isReadOnly": false, "isConfigPendingRestart": false, "unit": "KB"
+      }
+    }
+  ]
+}

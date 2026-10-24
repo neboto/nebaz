@@ -1,0 +1,16 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/Redis/redis-orders-cache/firewallRules/aca_egress_ng_prod",
+      "name": "redis-orders-cache/aca_egress_ng_prod",
+      "type": "Microsoft.Cache/Redis/firewallRules",
+      "properties": { "startIP": "20.103.45.11", "endIP": "20.103.45.11" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/Redis/redis-orders-cache/firewallRules/contoso_office",
+      "name": "redis-orders-cache/contoso_office",
+      "type": "Microsoft.Cache/Redis/firewallRules",
+      "properties": { "startIP": "203.0.113.24", "endIP": "203.0.113.24" }
+    }
+  ]
+}

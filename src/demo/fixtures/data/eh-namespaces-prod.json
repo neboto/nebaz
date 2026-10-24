@@ -1,0 +1,28 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventHub/namespaces/evh-orders-prod",
+      "name": "evh-orders-prod",
+      "type": "Microsoft.EventHub/Namespaces",
+      "location": "West Europe",
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com" },
+      "sku": { "name": "Standard", "tier": "Standard", "capacity": 2 },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled",
+        "disableLocalAuth": true,
+        "zoneRedundant": true,
+        "isAutoInflateEnabled": true,
+        "maximumThroughputUnits": 6,
+        "kafkaEnabled": true,
+        "privateEndpointConnections": [],
+        "provisioningState": "Succeeded",
+        "metricId": "{{prod}}:evh-orders-prod",
+        "createdAt": "2024-04-08T09:15:02.6600000Z",
+        "updatedAt": "2025-01-21T13:22:47.9130000Z",
+        "serviceBusEndpoint": "https://evh-orders-prod.servicebus.windows.net:443/",
+        "status": "Active"
+      }
+    }
+  ]
+}

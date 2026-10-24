@@ -1,0 +1,69 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+      "name": "stcontosoordersprod",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "westeurope",
+      "kind": "StorageV2",
+      "sku": { "name": "Standard_GRS", "tier": "Standard" },
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com", "costCenter": "CC-4410" },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "creationTime": "2023-03-14T09:21:44.1180000Z",
+        "primaryLocation": "westeurope",
+        "statusOfPrimary": "available",
+        "secondaryLocation": "northeurope",
+        "statusOfSecondary": "available",
+        "accessTier": "Hot",
+        "primaryEndpoints": {
+          "dfs": "https://stcontosoordersprod.dfs.core.windows.net/",
+          "web": "https://stcontosoordersprod.z6.web.core.windows.net/",
+          "blob": "https://stcontosoordersprod.blob.core.windows.net/",
+          "queue": "https://stcontosoordersprod.queue.core.windows.net/",
+          "table": "https://stcontosoordersprod.table.core.windows.net/",
+          "file": "https://stcontosoordersprod.file.core.windows.net/"
+        },
+        "allowBlobPublicAccess": true,
+        "allowSharedKeyAccess": true,
+        "allowCrossTenantReplication": false,
+        "defaultToOAuthAuthentication": false,
+        "minimumTlsVersion": "TLS1_0",
+        "supportsHttpsTrafficOnly": true,
+        "publicNetworkAccess": "Enabled",
+        "dnsEndpointType": "Standard",
+        "isHnsEnabled": false,
+        "isSftpEnabled": false,
+        "isLocalUserEnabled": false,
+        "largeFileSharesState": "Disabled",
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "privateEndpointConnections": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod/privateEndpointConnections/stcontosoordersprod.4f1a9c2e-0b7d-4e61-9a3f-6c58d2e1b0a7",
+            "name": "stcontosoordersprod.4f1a9c2e-0b7d-4e61-9a3f-6c58d2e1b0a7",
+            "type": "Microsoft.Storage/storageAccounts/privateEndpointConnections",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateEndpoint": { "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob" },
+              "privateLinkServiceConnectionState": { "status": "Approved", "description": "Auto-Approved", "actionRequired": "None" }
+            }
+          }
+        ],
+        "encryption": {
+          "requireInfrastructureEncryption": false,
+          "keySource": "Microsoft.Storage",
+          "services": {
+            "file": { "keyType": "Account", "enabled": true, "lastEnabledTime": "2023-03-14T09:21:44.2430000Z" },
+            "blob": { "keyType": "Account", "enabled": true, "lastEnabledTime": "2023-03-14T09:21:44.2430000Z" }
+          }
+        },
+        "keyCreationTime": { "key1": "2023-03-14T09:21:44.1180000Z", "key2": "2023-03-14T09:21:44.1180000Z" }
+      }
+    }
+  ]
+}

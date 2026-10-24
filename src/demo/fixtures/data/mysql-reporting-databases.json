@@ -1,0 +1,34 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/databases/information_schema",
+      "name": "information_schema",
+      "type": "Microsoft.DBforMySQL/flexibleServers/databases",
+      "properties": { "charset": "utf8mb3", "collation": "utf8mb3_general_ci" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/databases/mysql",
+      "name": "mysql",
+      "type": "Microsoft.DBforMySQL/flexibleServers/databases",
+      "properties": { "charset": "utf8mb4", "collation": "utf8mb4_0900_ai_ci" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/databases/performance_schema",
+      "name": "performance_schema",
+      "type": "Microsoft.DBforMySQL/flexibleServers/databases",
+      "properties": { "charset": "utf8mb4", "collation": "utf8mb4_0900_ai_ci" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/databases/reporting",
+      "name": "reporting",
+      "type": "Microsoft.DBforMySQL/flexibleServers/databases",
+      "properties": { "charset": "utf8mb4", "collation": "utf8mb4_0900_ai_ci" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/databases/sys",
+      "name": "sys",
+      "type": "Microsoft.DBforMySQL/flexibleServers/databases",
+      "properties": { "charset": "utf8mb4", "collation": "utf8mb4_0900_ai_ci" }
+    }
+  ]
+}
