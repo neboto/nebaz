@@ -1,0 +1,40 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com/SOA/@",
+      "name": "@",
+      "type": "Microsoft.Network/privateDnsZones/SOA",
+      "etag": "d23e4f05-9631-5679-a436-db68f4e60a30",
+      "properties": {
+        "fqdn": "psql-orders-prod.private.postgres.database.azure.com.",
+        "ttl": 3600,
+        "isAutoRegistered": false,
+        "soaRecord": {
+          "email": "azureprivatedns-host.microsoft.com",
+          "expireTime": 2419200,
+          "host": "azureprivatedns.net",
+          "minimumTtl": 10,
+          "refreshTime": 3600,
+          "retryTime": 300,
+          "serialNumber": 1
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com/A/7f3a9c2e1b4d",
+      "name": "7f3a9c2e1b4d",
+      "type": "Microsoft.Network/privateDnsZones/A",
+      "etag": "7421afc8-d7ce-5543-9574-eb2a8f0be58f",
+      "properties": {
+        "fqdn": "7f3a9c2e1b4d.psql-orders-prod.private.postgres.database.azure.com.",
+        "ttl": 30,
+        "isAutoRegistered": false,
+        "aRecords": [
+          {
+            "ipv4Address": "10.10.7.4"
+          }
+        ]
+      }
+    }
+  ]
+}

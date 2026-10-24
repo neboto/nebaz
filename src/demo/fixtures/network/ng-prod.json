@@ -1,0 +1,35 @@
+{
+  "name": "ng-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/natGateways/ng-prod",
+  "etag": "W/\"3f46ee25-c452-560b-b2da-dd9c11b86e00\"",
+  "type": "Microsoft.Network/natGateways",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "sku": {
+    "name": "Standard",
+    "tier": "Regional"
+  },
+  "zones": [
+    "1"
+  ],
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "eb0f8790-7c14-5e18-8143-ee45a2de3e61",
+    "idleTimeoutInMinutes": 4,
+    "publicIpAddresses": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ng-prod"
+      }
+    ],
+    "subnets": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca"
+      }
+    ]
+  }
+}

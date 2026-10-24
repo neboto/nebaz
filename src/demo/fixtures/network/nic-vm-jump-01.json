@@ -1,0 +1,58 @@
+{
+  "name": "nic-vm-jump-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-jump-01",
+  "etag": "W/\"ae8d4924-3a7b-5e48-9de7-7794737270eb\"",
+  "type": "Microsoft.Network/networkInterfaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-apps@contoso.com"
+  },
+  "kind": "Regular",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "4d5de3e3-e4e3-5efd-9c4d-3b541ca5846a",
+    "ipConfigurations": [
+      {
+        "name": "ipconfig1",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-jump-01/ipConfigurations/ipconfig1",
+        "etag": "W/\"5567b90d-9231-5fae-a2fb-78cfe6ed6287\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.8.4",
+          "privateIPAllocationMethod": "Dynamic",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-jump"
+          },
+          "primary": true,
+          "privateIPAddressVersion": "IPv4",
+          "publicIPAddress": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vm-jump-01"
+          }
+        }
+      }
+    ],
+    "dnsSettings": {
+      "dnsServers": [],
+      "appliedDnsServers": [],
+      "internalDomainNameSuffix": "d491f0f409be55b9a66186.ax.internal.cloudapp.net"
+    },
+    "enableAcceleratedNetworking": false,
+    "vnetEncryptionSupported": false,
+    "enableIPForwarding": false,
+    "disableTcpStateTracking": false,
+    "hostedWorkloads": [],
+    "tapConfigurations": [],
+    "nicType": "Standard",
+    "allowPort25Out": false,
+    "auxiliaryMode": "None",
+    "auxiliarySku": "None",
+    "macAddress": "00-0D-3A-4E-B5-60",
+    "primary": true,
+    "virtualMachine": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01"
+    }
+  }
+}

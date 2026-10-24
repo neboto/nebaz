@@ -1,0 +1,60 @@
+{
+  "name": "nic-vm-legacy-app-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-app-01",
+  "etag": "W/\"a07f8426-9348-5f3f-b8a9-4480164af688\"",
+  "type": "Microsoft.Network/networkInterfaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-apps@contoso.com"
+  },
+  "kind": "Regular",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "30bdac50-288e-5aaa-a29b-599f44fc6b6c",
+    "ipConfigurations": [
+      {
+        "name": "ipconfig1",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-app-01/ipConfigurations/ipconfig1",
+        "etag": "W/\"a8b200e4-d38f-5428-91af-e5ff6e8f0632\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.8.5",
+          "privateIPAllocationMethod": "Static",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-jump"
+          },
+          "primary": true,
+          "privateIPAddressVersion": "IPv4",
+          "loadBalancerBackendAddressPools": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-legacy-internal/backendAddressPools/be-legacy-app"
+            }
+          ]
+        }
+      }
+    ],
+    "dnsSettings": {
+      "dnsServers": [],
+      "appliedDnsServers": [],
+      "internalDomainNameSuffix": "3ee76804c92655a7b52f2d.ax.internal.cloudapp.net"
+    },
+    "enableAcceleratedNetworking": true,
+    "vnetEncryptionSupported": false,
+    "enableIPForwarding": false,
+    "disableTcpStateTracking": false,
+    "hostedWorkloads": [],
+    "tapConfigurations": [],
+    "nicType": "Standard",
+    "allowPort25Out": false,
+    "auxiliaryMode": "None",
+    "auxiliarySku": "None",
+    "macAddress": "00-0D-3A-36-31-3B",
+    "primary": true,
+    "virtualMachine": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso",
+      "type": "Microsoft.Cdn/profiles",
+      "name": "afd-contoso",
+      "location": "Global",
+      "kind": "frontdoor",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "sku": {
+        "name": "Premium_AzureFrontDoor"
+      },
+      "properties": {
+        "originResponseTimeoutSeconds": 60,
+        "frontDoorId": "2d1b6183-8de8-5bc5-bdbd-5a8ba4c8022f",
+        "extendedProperties": {},
+        "provisioningState": "Succeeded",
+        "resourceState": "Active",
+        "logScrubbing": {
+          "state": "Disabled",
+          "scrubbingRules": []
+        }
+      }
+    }
+  ]
+}

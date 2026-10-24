@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/originGroups/og-agw-prod",
+      "type": "Microsoft.Cdn/profiles/origingroups",
+      "name": "og-agw-prod",
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3,
+          "additionalLatencyInMilliseconds": 50
+        },
+        "healthProbeSettings": {
+          "probePath": "/healthz",
+          "probeRequestType": "GET",
+          "probeProtocol": "Https",
+          "probeIntervalInSeconds": 100
+        },
+        "sessionAffinityState": "Disabled",
+        "trafficRestorationTimeToHealedOrNewEndpointsInMinutes": null,
+        "provisioningState": "Succeeded",
+        "deploymentStatus": "Succeeded"
+      }
+    }
+  ]
+}

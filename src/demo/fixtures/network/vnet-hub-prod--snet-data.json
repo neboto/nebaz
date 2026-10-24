@@ -1,0 +1,38 @@
+{
+  "name": "snet-data",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-data",
+  "etag": "W/\"55b0aea4-2da9-5cf2-a99d-98d4b2fdd8bb\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.7.0/24",
+    "delegations": [
+      {
+        "name": "Microsoft.DBforPostgreSQL.flexibleServers",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-data/delegations/Microsoft.DBforPostgreSQL.flexibleServers",
+        "etag": "W/\"f12e1aaf-06a1-5e07-929e-e2ac637e43d1\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "serviceName": "Microsoft.DBforPostgreSQL/flexibleServers",
+          "actions": [
+            "Microsoft.Network/virtualNetworks/subnets/join/action",
+            "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"
+          ]
+        }
+      }
+    ],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "serviceEndpoints": [
+      {
+        "provisioningState": "Succeeded",
+        "service": "Microsoft.Storage",
+        "locations": [
+          "westeurope",
+          "northeurope"
+        ]
+      }
+    ]
+  }
+}

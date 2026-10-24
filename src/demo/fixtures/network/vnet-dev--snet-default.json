@@ -1,0 +1,13 @@
+{
+  "name": "snet-default",
+  "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-default",
+  "etag": "W/\"897ee5a6-4977-5fae-82f7-6f1665f2ea6b\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.30.2.0/24",
+    "delegations": [],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled"
+  }
+}

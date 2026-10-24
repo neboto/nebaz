@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com/virtualNetworkLinks/link-vnet-hub-prod",
+      "name": "link-vnet-hub-prod",
+      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+      "etag": "\"83ebb465-89a8-5723-9f24-6edb5fae42d1\"",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "registrationEnabled": false,
+        "resolutionPolicy": "Default",
+        "virtualNetwork": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+        },
+        "virtualNetworkLinkState": "Completed"
+      }
+    }
+  ]
+}

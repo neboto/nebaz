@@ -1,0 +1,41 @@
+{
+  "name": "snet-pe",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe",
+  "etag": "W/\"e913ad79-7cd9-5d7f-962f-b31aa0767be2\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.5.0/24",
+    "delegations": [],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "ipConfigurations": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259/ipConfigurations/privateEndpointIpConfig.3d89a864-e235-58c3-8e8d-a343744b56b1"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924/ipConfigurations/privateEndpointIpConfig.ac1a7b85-30ea-5e4a-85ad-40262b9c74e9"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694/ipConfigurations/privateEndpointIpConfig.ed710692-7f2b-54d3-92b6-926273570d73"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348/ipConfigurations/privateEndpointIpConfig.7126cc28-3e8f-5579-94d0-c2433c2aec84"
+      }
+    ],
+    "privateEndpoints": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod"
+      }
+    ]
+  }
+}

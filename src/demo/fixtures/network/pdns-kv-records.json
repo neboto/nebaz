@@ -1,0 +1,40 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net/SOA/@",
+      "name": "@",
+      "type": "Microsoft.Network/privateDnsZones/SOA",
+      "etag": "11c163ea-99a5-5689-a3e0-3e0312c30086",
+      "properties": {
+        "fqdn": "privatelink.vaultcore.azure.net.",
+        "ttl": 3600,
+        "isAutoRegistered": false,
+        "soaRecord": {
+          "email": "azureprivatedns-host.microsoft.com",
+          "expireTime": 2419200,
+          "host": "azureprivatedns.net",
+          "minimumTtl": 10,
+          "refreshTime": 3600,
+          "retryTime": 300,
+          "serialNumber": 1
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net/A/kv-orders-prod",
+      "name": "kv-orders-prod",
+      "type": "Microsoft.Network/privateDnsZones/A",
+      "etag": "b473e8f3-b5dd-5fa9-bc70-cf82d86293f8",
+      "properties": {
+        "fqdn": "kv-orders-prod.privatelink.vaultcore.azure.net.",
+        "ttl": 10,
+        "isAutoRegistered": false,
+        "aRecords": [
+          {
+            "ipv4Address": "10.10.5.4"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -98,6 +98,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | The Fabrikam guest has Contributor on `rg-orders-prod` | Access |
 | `caj-nightly-export`'s last execution failed | Jobs |
 | `vnet-hub-prod` peers with `vnet-dev` in **contoso-dev** (a cross-subscription jump) | Related |
+| `snet-pp-injection-dr`, Power Platform's failover subnet in `vnet-pp-dr`, has no NSG | `@audit` |
 
 ## Ids
 
@@ -140,22 +141,24 @@ things: `env` (`prod`/`dev`), `team` (`orders`, `platform`, `data`,
 ### contoso-prod
 
 **`rg-network-prod`** (team platform)
-- `vnet-hub-prod` 10.10.0.0/16, peered with `vnet-dev` (contoso-dev). Subnets:
+- `vnet-hub-prod` 10.10.0.0/16, peered with `vnet-dev` (contoso-dev) and with `vnet-pp-dr`. Subnets:
   - `snet-aca` 10.10.0.0/23, delegated `Microsoft.App/environments`, NSG `nsg-aca`, route table `rt-spoke-egress`, NAT gateway `ng-prod`
   - `snet-pp-injection` 10.10.4.0/24, delegated `Microsoft.PowerPlatform/enterprisePolicies`, NSG `nsg-pp-injection`
   - `snet-pe` 10.10.5.0/24, private endpoints
-  - `snet-appgw` 10.10.6.0/24, `agw-contoso-prod`
+  - `snet-appgw` 10.10.6.0/24, `agw-contoso-prod`, NSG `nsg-appgw-prod`
   - `snet-data` 10.10.7.0/24, delegated `Microsoft.DBforPostgreSQL/flexibleServers`
-  - `snet-jump` 10.10.8.0/27, NSG `nsg-jump-prod`
+  - `snet-jump` 10.10.8.0/27, NSG `nsg-jump-prod`: `nic-vm-jump-01` 10.10.8.4, `nic-vm-legacy-app-01` 10.10.8.5, `lb-legacy-internal`'s frontend `fe-legacy-app` 10.10.8.10
   - `AzureFirewallSubnet` 10.10.9.0/26 (the firewall itself is not in the demo; `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.9.4)
-- `vnet-pp-dr` (northeurope) 10.20.0.0/16, subnet `snet-pp-injection-dr` 10.20.4.0/24 delegated `Microsoft.PowerPlatform/enterprisePolicies`
-- NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`)
-- Public IPs: `pip-agw-prod` (20.103.45.10), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12)
-- `ng-prod` (NAT gateway), `rt-spoke-egress`, `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`)
-- Private endpoints (in `snet-pe`): `pe-kv-orders` (vault), `pe-sql-orders` (sqlServer), `pe-st-orders-blob` (blob), `pe-acr-prod` (registry)
-- Private DNS zones (global): `privatelink.vaultcore.azure.net`, `privatelink.database.windows.net`, `privatelink.azurecr.io` (each linked to `vnet-hub-prod`), `privatelink.blob.core.windows.net` (**not linked**), and the environment's zone `wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (`*` → 10.10.0.62; linked to `vnet-hub-prod`, **not** to `vnet-pp-dr`)
-- Public DNS zone `contoso-demo.com` (global): `api` A → `pip-agw-prod`, `www` CNAME → the Front Door endpoint
-- A DNS private resolver `dnspr-hub-prod` with an outbound endpoint and a forwarding ruleset `dnsfrs-onprem` (`corp.contoso.com.` → 192.168.10.4)
+  - `snet-dns-outbound` 10.10.10.0/28, delegated `Microsoft.Network/dnsResolvers` (the resolver's outbound endpoint)
+- `vnet-pp-dr` (northeurope) 10.20.0.0/16, peered with `vnet-hub-prod`, subnet `snet-pp-injection-dr` 10.20.4.0/24 delegated `Microsoft.PowerPlatform/enterprisePolicies`, **no NSG**
+- NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`, "temp vendor access"; `AllowRdpFromOnPrem` 110 from 192.168.0.0/16), `nsg-appgw-prod` (GatewayManager 65200–65535, 443 from `AzureFrontDoor.Backend`)
+- Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12)
+- `ng-prod` (NAT gateway), `rt-spoke-egress`, `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443)
+- Private endpoints (in `snet-pe`): `pe-kv-orders` (vault, 10.10.5.4), `pe-sql-orders` (sqlServer, 10.10.5.5), `pe-st-orders-blob` (blob, 10.10.5.6), `pe-acr-prod` (registry, 10.10.5.7 data endpoint + 10.10.5.8); their NICs `<pe>.nic.<guid>` in this group too
+- Private DNS zones (global): `privatelink.vaultcore.azure.net`, `privatelink.database.windows.net`, `privatelink.azurecr.io` (each linked to `vnet-hub-prod` by `link-vnet-hub-prod`), `privatelink.blob.core.windows.net` (**not linked**), `psql-orders-prod.private.postgres.database.azure.com` (`psql-orders-prod`'s VNet-integration zone: A `7f3a9c2e1b4d` → 10.10.7.4 in `snet-data`; linked to `vnet-hub-prod`), and the environment's zone `wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (`*` and `@` → 10.10.0.62; linked to `vnet-hub-prod`, **not** to `vnet-pp-dr`)
+- Public DNS zone `contoso-demo.com` (global): `api` A alias → `pip-agw-prod`, `www` CNAME → the Front Door endpoint (`_dnsauth.www` TXT validates it), MX and SPF
+- A DNS private resolver `dnspr-hub-prod` with an outbound endpoint `outbound-onprem` (in `snet-dns-outbound`, no inbound endpoint) and a forwarding ruleset `dnsfrs-onprem` (rule `corp-contoso-com`: `corp.contoso.com.` → 192.168.10.4; linked to `vnet-hub-prod`)
+- A DNS security policy `dnssp-hub-prod` (rule `block-malicious-domains` 100 blocks the domain list `dnsdl-malicious-domains`; linked to `vnet-hub-prod`)
 
 **`rg-orders-prod`** (team orders)
 - Container Apps environment `cae-orders-prod`: internal, workload profiles (`Consumption`, `D4`), in `snet-aca`, static IP 10.10.0.62, default domain `wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io`, logs to `law-contoso-prod`
@@ -175,8 +178,8 @@ things: `env` (`prod`/`dev`), `team` (`orders`, `platform`, `data`,
 **`rg-platform-prod`** (team platform)
 - `acrcontosoprod` (Premium, admin user on, behind `pe-acr-prod`)
 - `aks-platform-prod`: 1.28.9, node pools `system` (3 × Standard_D4s_v5, Succeeded) and `batch` (0 → 4 × Standard_D8s_v5, Failed)
-- `agw-contoso-prod` (WAF_v2, in `snet-appgw`, `pip-agw-prod`): listener `api.contoso-demo.com` → backend pool `orders-api` → `ca-orders-api`'s FQDN; WAF policy `wafp-agw-prod` in **Detection**
-- Front Door `afd-contoso` (Premium, global): endpoint `contoso-web-c7d9e2f4a1b3` (`.z01.azurefd.net`), origin group → `agw-contoso-prod`'s public IP, WAF policy `wafpafdcontoso` in Prevention
+- `agw-contoso-prod` (WAF_v2, in `snet-appgw`, `pip-agw-prod`): listener `api.contoso-demo.com` → backend pool `orders-api` → `ca-orders-api`'s FQDN `ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (the app's `ingress.fqdn` must be exactly this for the backend to match); WAF policy `wafp-agw-prod` in **Detection**
+- Front Door `afd-contoso` (Premium, global): endpoint `contoso-web` (host `contoso-web-c7d9e2f4a1b3.z01.azurefd.net`) with route `route-web` for the custom domain `www.contoso-demo.com`, origin group `og-agw-prod` → origin `origin-agw-prod` at `pip-agw-prod`'s FQDN, WAF policy `wafpafdcontoso` in Prevention (through security policy `sp-wafpafdcontoso`)
 - `law-contoso-prod` (Log Analytics, 30 days)
 - Power Platform enterprise policy `ep-pp-network-injection` (kind `NetworkInjection`, location `europe`): `snet-pp-injection` in `vnet-hub-prod` and `snet-pp-injection-dr` in `vnet-pp-dr`
 

@@ -1,0 +1,84 @@
+{
+  "name": "pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348",
+  "etag": "W/\"ac806a31-8575-5b80-bd9c-a45134274688\"",
+  "type": "Microsoft.Network/networkInterfaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "kind": "Regular",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "8f7c1a5f-9b43-5fad-ae61-5d1ced565883",
+    "ipConfigurations": [
+      {
+        "name": "privateEndpointIpConfig.7126cc28-3e8f-5579-94d0-c2433c2aec84",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348/ipConfigurations/privateEndpointIpConfig.7126cc28-3e8f-5579-94d0-c2433c2aec84",
+        "etag": "W/\"020941c3-874d-5e28-983c-1da8f970247d\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.5.7",
+          "privateIPAllocationMethod": "Dynamic",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+          },
+          "primary": true,
+          "privateIPAddressVersion": "IPv4",
+          "privateLinkConnectionProperties": {
+            "groupId": "registry",
+            "requiredMemberName": "registry_data_westeurope",
+            "fqdns": [
+              "acrcontosoprod.westeurope.data.azurecr.io"
+            ]
+          }
+        }
+      },
+      {
+        "name": "privateEndpointIpConfig.4367a807-3c62-5218-b97d-4b089bec25ac",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348/ipConfigurations/privateEndpointIpConfig.4367a807-3c62-5218-b97d-4b089bec25ac",
+        "etag": "W/\"17160fa7-b503-5079-b571-5e23dc6b7a16\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.5.8",
+          "privateIPAllocationMethod": "Dynamic",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+          },
+          "primary": false,
+          "privateIPAddressVersion": "IPv4",
+          "privateLinkConnectionProperties": {
+            "groupId": "registry",
+            "requiredMemberName": "registry",
+            "fqdns": [
+              "acrcontosoprod.azurecr.io"
+            ]
+          }
+        }
+      }
+    ],
+    "dnsSettings": {
+      "dnsServers": [],
+      "appliedDnsServers": [],
+      "internalDomainNameSuffix": "3205f246072d5e04b9b9d1.ax.internal.cloudapp.net"
+    },
+    "enableAcceleratedNetworking": false,
+    "vnetEncryptionSupported": false,
+    "enableIPForwarding": false,
+    "disableTcpStateTracking": false,
+    "hostedWorkloads": [],
+    "tapConfigurations": [],
+    "nicType": "Standard",
+    "allowPort25Out": false,
+    "auxiliaryMode": "None",
+    "auxiliarySku": "None",
+    "privateEndpoint": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod"
+    }
+  }
+}

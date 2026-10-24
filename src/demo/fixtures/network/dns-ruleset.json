@@ -1,0 +1,22 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsForwardingRulesets/dnsfrs-onprem",
+  "name": "dnsfrs-onprem",
+  "type": "Microsoft.Network/dnsForwardingRulesets",
+  "etag": "\"0e3f6943-be54-563a-93b5-2a663f0fbef5\"",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "dnsResolverOutboundEndpoints": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolvers/dnspr-hub-prod/outboundEndpoints/outbound-onprem"
+      }
+    ],
+    "provisioningState": "Succeeded",
+    "resourceGuid": "ef767537-737b-5e71-9b66-545938df8ab1"
+  }
+}

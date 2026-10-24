@@ -1,0 +1,83 @@
+{
+  "value": [
+    {
+      "name": "wafpafdcontoso",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/wafpafdcontoso",
+      "etag": "\"693ed425-577f-50d3-94b7-47bea16847d6\"",
+      "type": "Microsoft.Network/frontdoorwebapplicationfirewallpolicies",
+      "location": "Global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "sku": {
+        "name": "Premium_AzureFrontDoor"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceState": "Enabled",
+        "policySettings": {
+          "enabledState": "Enabled",
+          "mode": "Prevention",
+          "requestBodyCheck": "Enabled",
+          "customBlockResponseStatusCode": 403,
+          "javascriptChallengeExpirationInMinutes": 30,
+          "logScrubbing": {
+            "state": "Disabled",
+            "scrubbingRules": []
+          }
+        },
+        "customRules": {
+          "rules": [
+            {
+              "name": "RateLimitPerClientIp",
+              "priority": 100,
+              "enabledState": "Enabled",
+              "ruleType": "RateLimitRule",
+              "rateLimitDurationInMinutes": 1,
+              "rateLimitThreshold": 500,
+              "action": "Block",
+              "matchConditions": [
+                {
+                  "matchVariable": "RequestUri",
+                  "operator": "Contains",
+                  "negateCondition": false,
+                  "matchValue": [
+                    "/"
+                  ],
+                  "transforms": []
+                }
+              ]
+            }
+          ]
+        },
+        "managedRules": {
+          "managedRuleSets": [
+            {
+              "ruleSetType": "Microsoft_DefaultRuleSet",
+              "ruleSetVersion": "2.1",
+              "ruleSetAction": "Block",
+              "ruleGroupOverrides": [],
+              "exclusions": []
+            },
+            {
+              "ruleSetType": "Microsoft_BotManagerRuleSet",
+              "ruleSetVersion": "1.1",
+              "ruleGroupOverrides": [],
+              "exclusions": []
+            }
+          ]
+        },
+        "frontendEndpointLinks": [],
+        "routingRuleLinks": [],
+        "securityPolicyLinks": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/securityPolicies/sp-wafpafdcontoso"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "snet-pp-injection-dr",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr/subnets/snet-pp-injection-dr",
+  "etag": "W/\"1387a7fa-29eb-58b0-a2d8-ae5ef7788d02\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.20.4.0/24",
+    "delegations": [
+      {
+        "name": "Microsoft.PowerPlatform.enterprisePolicies",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr/subnets/snet-pp-injection-dr/delegations/Microsoft.PowerPlatform.enterprisePolicies",
+        "etag": "W/\"0fd70f63-897e-5413-bbb2-4135715c4bb2\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "serviceName": "Microsoft.PowerPlatform/enterprisePolicies",
+          "actions": [
+            "Microsoft.Network/virtualNetworks/subnets/join/action"
+          ]
+        }
+      }
+    ],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled"
+  }
+}

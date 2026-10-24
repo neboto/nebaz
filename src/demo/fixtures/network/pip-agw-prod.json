@@ -1,0 +1,41 @@
+{
+  "name": "pip-agw-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod",
+  "etag": "W/\"661c0df3-f012-596d-bb5e-9a18853e13ce\"",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "zones": [
+    "1",
+    "2",
+    "3"
+  ],
+  "type": "Microsoft.Network/publicIPAddresses",
+  "sku": {
+    "name": "Standard",
+    "tier": "Regional"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "55e5321c-8720-536b-badd-1f51c4ff6998",
+    "ipAddress": "20.103.45.10",
+    "publicIPAddressVersion": "IPv4",
+    "publicIPAllocationMethod": "Static",
+    "idleTimeoutInMinutes": 4,
+    "ipTags": [],
+    "ddosSettings": {
+      "protectionMode": "VirtualNetworkInherited"
+    },
+    "dnsSettings": {
+      "domainNameLabel": "agw-contoso-prod",
+      "fqdn": "agw-contoso-prod.westeurope.cloudapp.azure.com"
+    },
+    "ipConfiguration": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/frontendIPConfigurations/appGwPublicFrontendIp"
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io",
+      "name": "privatelink.azurecr.io",
+      "type": "Microsoft.Network/privateDnsZones",
+      "etag": "c8d5802d-3745-5950-82dd-27b4de6164a1",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "internalId": "7b826ca7-d49e-5dc7-b79f-f4094f49e8d2",
+        "maxNumberOfRecordSets": 25000,
+        "numberOfRecordSets": 3,
+        "maxNumberOfVirtualNetworkLinks": 1000,
+        "numberOfVirtualNetworkLinks": 1,
+        "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+        "numberOfVirtualNetworkLinksWithRegistration": 0
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net",
+      "name": "privatelink.blob.core.windows.net",
+      "type": "Microsoft.Network/privateDnsZones",
+      "etag": "be5619d4-6360-589b-8663-9e717842898b",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "internalId": "0e6e9f12-d63b-5e9f-b6cc-f1afbefec763",
+        "maxNumberOfRecordSets": 25000,
+        "numberOfRecordSets": 2,
+        "maxNumberOfVirtualNetworkLinks": 1000,
+        "numberOfVirtualNetworkLinks": 0,
+        "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+        "numberOfVirtualNetworkLinksWithRegistration": 0
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net",
+      "name": "privatelink.database.windows.net",
+      "type": "Microsoft.Network/privateDnsZones",
+      "etag": "d0744421-13eb-5c0c-ae06-004f740421c5",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "internalId": "bc02f83f-8edb-525a-99b6-f8b69eb3a640",
+        "maxNumberOfRecordSets": 25000,
+        "numberOfRecordSets": 2,
+        "maxNumberOfVirtualNetworkLinks": 1000,
+        "numberOfVirtualNetworkLinks": 1,
+        "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+        "numberOfVirtualNetworkLinksWithRegistration": 0
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net",
+      "name": "privatelink.vaultcore.azure.net",
+      "type": "Microsoft.Network/privateDnsZones",
+      "etag": "68dac4a9-efc4-5b8e-8752-6a464fdbd8d7",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "internalId": "655a754d-553d-5a2d-a7d9-10cc23a2a289",
+        "maxNumberOfRecordSets": 25000,
+        "numberOfRecordSets": 2,
+        "maxNumberOfVirtualNetworkLinks": 1000,
+        "numberOfVirtualNetworkLinks": 1,
+        "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+        "numberOfVirtualNetworkLinksWithRegistration": 0
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com",
+      "name": "psql-orders-prod.private.postgres.database.azure.com",
+      "type": "Microsoft.Network/privateDnsZones",
+      "etag": "a691487d-cbf2-510e-8ecd-f68051c3bc7e",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "internalId": "a705ae40-6e2e-58bc-af85-21f482111549",
+        "maxNumberOfRecordSets": 25000,
+        "numberOfRecordSets": 2,
+        "maxNumberOfVirtualNetworkLinks": 1000,
+        "numberOfVirtualNetworkLinks": 1,
+        "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+        "numberOfVirtualNetworkLinksWithRegistration": 0
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+      "name": "wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+      "type": "Microsoft.Network/privateDnsZones",
+      "etag": "dc61458c-ca48-5f41-bf9b-0b964c84f16e",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200",
+        "purpose": "aca-internal-environment"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "internalId": "d3dc7a83-6776-5c88-90c5-a477755917e5",
+        "maxNumberOfRecordSets": 25000,
+        "numberOfRecordSets": 3,
+        "maxNumberOfVirtualNetworkLinks": 1000,
+        "numberOfVirtualNetworkLinks": 1,
+        "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+        "numberOfVirtualNetworkLinksWithRegistration": 0
+      }
+    }
+  ]
+}

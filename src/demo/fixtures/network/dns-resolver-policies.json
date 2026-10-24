@@ -1,0 +1,21 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolverPolicies/dnssp-hub-prod",
+      "name": "dnssp-hub-prod",
+      "type": "Microsoft.Network/dnsResolverPolicies",
+      "etag": "\"c0eb8850-e58f-5a64-92aa-f9ac36ec6b04\"",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "2da66111-d3df-5061-92e7-184b0e791e1c"
+      }
+    }
+  ]
+}
