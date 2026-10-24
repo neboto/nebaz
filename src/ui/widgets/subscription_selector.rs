@@ -1,4 +1,5 @@
-// ported from neboto-tui src/ui/widgets/profile_selector.rs @ d483900 (+ df76264, fd548fe)
+// ported from neboto-tui src/ui/widgets/profile_selector.rs @ d483900 (+ df76264, fd548fe;
+// the per-row counts from src/ui/widgets/region_selector.rs @ 7fbf5ed)
 //! The `P` picker: every subscription `az account list` knows, all tenants,
 //! with a tenant column instead of a tenant picker (ADR 0003). Disabled
 //! subscriptions are listed but dimmed; the current one is marked. When
@@ -18,6 +19,51 @@ use ratatui::{
     },
     Frame,
 };
+
+/// What the picker shows beside a configured subscription: the active
+/// sub-tab's row count there (config `subscriptions`, #62), or why there
+/// isn't one. Nothing at all for a subscription not listed yet: never a 0.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SubscriptionCount {
+    Loading,
+    Count(usize),
+    /// A 403: the identity has no read on that subscription.
+    Denied,
+    /// Not `Enabled` (disabled, warned, past due…), or ARM says so: not
+    /// listed.
+    Disabled,
+    Failed,
+}
+
+impl SubscriptionCount {
+    /// The word `ls --subscriptions` reports per subscription.
+    pub fn status(&self) -> &'static str {
+        match self {
+            SubscriptionCount::Loading => "loading",
+            SubscriptionCount::Count(_) => "ok",
+            SubscriptionCount::Denied => "denied",
+            SubscriptionCount::Disabled => "disabled",
+            SubscriptionCount::Failed => "error",
+        }
+    }
+
+    /// A failed list's message, classified: a 403 is `Denied` (expected
+    /// across a working set, not an error), a subscription ARM calls
+    /// disabled or unknown is `Disabled`, anything else `Failed`.
+    pub fn from_error(message: &str) -> Self {
+        let m = message.to_ascii_lowercase();
+        if m.contains(" 403 ") || m.contains("authorizationfailed") || m.contains("forbidden") {
+            SubscriptionCount::Denied
+        } else if ["subscriptionnotfound", "disabledsubscription", "subscription is disabled"]
+            .iter()
+            .any(|p| m.contains(p))
+        {
+            SubscriptionCount::Disabled
+        } else {
+            SubscriptionCount::Failed
+        }
+    }
+}
 
 pub struct SubscriptionSelectorState {
     pub visible: bool,
@@ -161,6 +207,8 @@ impl SubscriptionSelectorState {
 pub fn render_subscription_selector(
     state: &SubscriptionSelectorState,
     current_subscription: Option<&str>,
+    counts: &std::collections::HashMap<String, SubscriptionCount>,
+    count_label: Option<&str>,
     hits: &std::cell::RefCell<crate::app::PopupHits>,
     frame: &mut Frame,
 ) {
@@ -194,7 +242,14 @@ pub fn render_subscription_selector(
     }
 
     let (pos, total) = state.position();
-    let block = theme::popup_block("Switch Subscription")
+    let mut block = theme::popup_block("Switch Subscription");
+    if let (Some(label), false) = (count_label, counts.is_empty()) {
+        block = block.title(
+            Title::from(Span::styled(format!(" {label} per subscription "), Style::default().fg(theme::text_dim())))
+                .alignment(Alignment::Right),
+        );
+    }
+    let block = block
         .title(
             Title::from(theme::hint_line(&[
                 ("type", "fuzzy filter"),
@@ -262,13 +317,17 @@ pub fn render_subscription_selector(
                 name.pop();
                 name.push('…');
             }
-            ListItem::new(Line::from(vec![
+            let mut spans = vec![
                 marker,
                 Span::styled(format!("{:<w$}", name, w = name_w), name_style),
                 Span::styled(format!("  {}…", entry.short_id()), dim),
                 Span::styled(format!("  {}…", entry.short_tenant()), dim),
-                Span::styled(format!("  {}", entry.state.to_lowercase()), state_style),
-            ]))
+                Span::styled(format!("  {:<8}", entry.state.to_lowercase()), state_style),
+            ];
+            if let Some(count) = counts.get(&entry.id) {
+                spans.push(count_span(*count));
+            }
+            ListItem::new(Line::from(spans))
         })
         .collect();
 
@@ -283,6 +342,18 @@ pub fn render_subscription_selector(
 
     frame.render_stateful_widget(list, chunks[1], &mut list_state);
     hits.borrow_mut().record_list(area, chunks[1], list_state.offset(), filtered.len());
+}
+
+fn count_span(count: SubscriptionCount) -> Span<'static> {
+    let dim = Style::default().fg(theme::text_dim());
+    match count {
+        SubscriptionCount::Loading => Span::styled("  …", dim),
+        SubscriptionCount::Count(0) => Span::styled("  0", dim),
+        SubscriptionCount::Count(n) => Span::styled(format!("  {n}"), Style::default().fg(theme::text_primary())),
+        SubscriptionCount::Denied => Span::styled("  denied", Style::default().fg(theme::warning())),
+        SubscriptionCount::Disabled => Span::styled("  disabled", dim),
+        SubscriptionCount::Failed => Span::styled("  error", Style::default().fg(theme::error())),
+    }
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -342,7 +413,19 @@ mod tests {
     }
 
     #[test]
+    fn list_errors_classify_as_denied_disabled_or_failed() {
+        let c = SubscriptionCount::from_error;
+        assert_eq!(c("Azure error: 403 AuthorizationFailed: The client 'u' does not have authorization"), SubscriptionCount::Denied);
+        assert_eq!(c("Azure error: 404 SubscriptionNotFound: The subscription 'x' could not be found."), SubscriptionCount::Disabled);
+        assert_eq!(c("Azure error: 409 ReadOnlyDisabledSubscription: The subscription is disabled"), SubscriptionCount::Disabled);
+        assert_eq!(c("connection refused (management.azure.com)"), SubscriptionCount::Failed);
+        assert_eq!(SubscriptionCount::Count(3).status(), "ok");
+        assert_eq!(SubscriptionCount::Denied.status(), "denied");
+    }
+
+    #[test]
     fn filter_is_fuzzy_and_an_exact_name_floats() {
+
         let mut s = SubscriptionSelectorState::new();
         s.show(
             vec![

@@ -336,3 +336,139 @@ async fn get_never_emits_a_secret_value() {
 }
 
 use crate::azure::services::{container_apps, monitor};
+
+// ── ls --subscriptions (#62) ────────────────────────────────────────────────
+
+use crate::app::harness_tests::SUB_PROD;
+
+#[test]
+fn subscriptions_flags_parse_and_exclude_each_other() {
+    let ls = |argv: &[&str]| match parse(argv).command {
+        Some(Command::Ls(a)) => (a.subscriptions, a.all_configured),
+        _ => unreachable!(),
+    };
+    assert_eq!(ls(&["ls", "vm"]), (None, false));
+    assert_eq!(ls(&["ls", "vm", "--subscriptions", "Prod,Dev"]), (Some(vec!["Prod".into(), "Dev".into()]), false));
+    assert_eq!(ls(&["ls", "--subscriptions", "Prod", "vm"]), (Some(vec!["Prod".into()]), false));
+    assert_eq!(ls(&["ls", "vm", "--all-configured"]), (None, true));
+    let err = Cli::try_parse_from(["nebaz", "ls", "vm", "--all-configured", "--subscriptions", "Prod"]).unwrap_err();
+    assert_eq!(err.exit_code(), 2);
+    // Not the global `-p/--subscription`, which picks the one to browse.
+    let cli = parse(&["ls", "vm", "-p", "Dev", "--subscriptions", "Prod"]);
+    assert_eq!(cli.subscription.as_deref(), Some("Dev"));
+}
+
+#[tokio::test]
+async fn fan_out_subscriptions_explicit_configured_and_refused() {
+    let h = Harness::new().await;
+    let clients = &h.app.azure_clients;
+    let none = Config::default();
+    let args = |subs: Option<&[&str]>, all: bool| LsArgs {
+        target: "vm".into(),
+        filter: None,
+        state: None,
+        hide_noise: false,
+        limit: None,
+        subscriptions: subs.map(|s| s.iter().map(|x| x.to_string()).collect()),
+        all_configured: all,
+    };
+    // Explicit: ids or names, in order, each once; an unknown one is usage.
+    let ids = fan_out_subscriptions(&none, clients, &args(Some(&["prod", SUB_DEV, "Prod"]), false)).unwrap();
+    assert_eq!(ids, [SUB_PROD, SUB_DEV]);
+    let err = fan_out_subscriptions(&none, clients, &args(Some(&["Nope"]), false)).unwrap_err();
+    assert_eq!(err.code(), 2);
+    assert!(err.message().contains("known: Dev, Prod"), "{}", err.message());
+    assert_eq!(fan_out_subscriptions(&none, clients, &args(Some(&[""]), false)).unwrap_err().code(), 2);
+    // --all-configured: config `subscriptions`, unknown entries skipped.
+    let config: Config = toml::from_str(r#"subscriptions = ["Prod", "gone", "Dev"]"#).unwrap();
+    assert_eq!(fan_out_subscriptions(&config, clients, &args(None, true)).unwrap(), [SUB_PROD, SUB_DEV]);
+    let err = fan_out_subscriptions(&none, clients, &args(None, true)).unwrap_err();
+    assert_eq!(err.code(), 2);
+    assert!(err.message().contains("subscriptions = ["), "says how to set it: {}", err.message());
+}
+
+#[tokio::test]
+async fn ls_subscriptions_refuses_tenant_wide_lists_before_any_call() {
+    for target in ["sub", "id/service-principals", "changes"] {
+        let cli = parse(&["ls", target, "--subscriptions", "Prod"]);
+        let Some(Command::Ls(args)) = &cli.command else { panic!("ls") };
+        let err = ls(&cli, args, OutputFormat::Json).await.unwrap_err();
+        assert_eq!(err.code(), 2, "{target}: {}", err.message());
+        assert!(err.message().contains("drop --subscriptions"), "{}", err.message());
+    }
+}
+
+/// A VM in subscription `sub`, through the real `from_json`.
+fn vm_in(sub: &str, name: &str) -> Box<dyn Resource> {
+    let id = format!("/subscriptions/{sub}/resourceGroups/rg-app/providers/Microsoft.Compute/virtualMachines/{name}");
+    let v = serde_json::json!({
+        "id": id, "name": name, "location": "westeurope",
+        "properties": {"provisioningState": "Succeeded"},
+    });
+    Box::new(crate::azure::services::compute::VmRow::from_json(&v, Some(TENANT)).expect("a VM"))
+}
+
+/// Both subscriptions' lists already in their cache slots (as the
+/// fan-out leaves them), Prod's replaced by a 403 when `prod_denied`:
+/// each is opened, shaped and tagged.
+async fn collected(shaping: ListShaping, prod_denied: bool) -> (Vec<SubscriptionOutcome>, Vec<(String, Box<dyn Resource>)>) {
+    use crate::ui::widgets::subscription_selector::SubscriptionCount;
+    let mut h = Harness::new().await;
+    let vms = |sub, names: &[&str]| names.iter().map(|n| vm_in(sub, n)).collect::<Vec<_>>();
+    h.app.cache.insert(ServiceType::VirtualMachines, SUB_DEV, Some("vms".into()), vms(SUB_DEV, &["web-1", "db-1"]));
+    if prod_denied {
+        h.app.subscription_fanout.insert(
+            (JumpView::VirtualMachines, SUB_PROD.to_string()),
+            (SubscriptionCount::Denied, Some("Azure error: 403 AuthorizationFailed: no read".into())),
+        );
+    } else {
+        h.app.cache.insert(ServiceType::VirtualMachines, SUB_PROD, Some("vms".into()), vms(SUB_PROD, &["web-9"]));
+    }
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let targets = [SUB_PROD.to_string(), SUB_DEV.to_string()];
+    collect_subscriptions(&mut h.app, &tx, &mut rx, JumpView::VirtualMachines, &targets, &shaping)
+        .await
+        .unwrap_or_else(|f| panic!("{}", f.message()))
+}
+
+#[tokio::test]
+async fn ls_subscriptions_tags_every_row_in_every_format() {
+    let (outcomes, rows) = collected(ListShaping::default(), false).await;
+    let names: Vec<(&str, &str)> = rows.iter().map(|(s, r)| (s.as_str(), r.name())).collect();
+    assert_eq!(names, [(SUB_PROD, "web-9"), (SUB_DEV, "web-1"), (SUB_DEV, "db-1")], "in the order given");
+
+    let doc: Value = serde_json::from_str(&render_list_subscriptions(
+        JumpView::VirtualMachines,
+        &Location::All,
+        &outcomes,
+        &rows,
+        OutputFormat::Json,
+    ))
+    .unwrap();
+    assert!(doc.get("subscription").is_none(), "the single-subscription key would be a lie here");
+    assert_eq!(doc["count"], 3);
+    let per = doc["subscriptions"].as_array().unwrap();
+    assert_eq!(per[0], json!({"subscription": SUB_PROD, "name": "Prod", "status": "ok", "count": 1, "message": null}));
+    assert_eq!(per[1]["count"], 2);
+    assert_eq!(doc["resources"][0]["subscription"], SUB_PROD);
+    assert_eq!(doc["resources"][0]["subscription_name"], "Prod");
+    assert_eq!(doc["resources"][2]["subscription_name"], "Dev");
+
+    let md = render_list_subscriptions(JumpView::VirtualMachines, &Location::All, &outcomes, &rows, OutputFormat::Md);
+    assert!(md.contains("| Subscription | Type |"), "{md}");
+    assert!(md.contains("| Prod | Virtual Machine |"), "{md}");
+
+    // The TUI's filters apply per subscription.
+    let (_, rows) = collected(ListShaping { query: "web".into(), ..Default::default() }, false).await;
+    let names: Vec<&str> = rows.iter().map(|(_, r)| r.name()).collect();
+    assert_eq!(names, ["web-9", "web-1"]);
+}
+
+#[tokio::test]
+async fn a_denied_subscription_is_reported_not_fatal() {
+    let (outcomes, rows) = collected(ListShaping::default(), true).await;
+    assert_eq!(outcomes[0].status, "denied");
+    assert!(outcomes[0].message.as_deref().unwrap_or_default().contains("403"));
+    assert_eq!(outcomes[1].status, "ok");
+    assert_eq!(rows.len(), 2);
+}

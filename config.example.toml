@@ -27,6 +27,14 @@
 # `P` switches at runtime and switches tenant with it.
 # default_subscription = "Production"
 
+# The subscriptions you work across: ids or display names from `az account
+# list`. Opening `P` lists the current sub-tab in each one that isn't cached
+# yet (a few at a time, into the list cache, so picking one is instant) and
+# shows its row count beside it; `nebaz ls --all-configured` lists them all
+# at once. Unset: no fan-out, and `P` makes no calls. Unknown entries warn
+# at startup and are skipped.
+# subscriptions = ["Production", "Staging"]
+
 # Location filter to start with (an ARM location name such as "westeurope").
 # Lists are subscription-wide; the location is a client-side filter, so the
 # default is all locations. `R` switches at runtime.

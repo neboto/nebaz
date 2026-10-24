@@ -120,7 +120,10 @@ repeatedly. `App::trigger_selected` is the one way to start a fetch.
 
 **List cache** (`src/azure/cache.rs`): keyed `(service, subscription,
 sub-tab)`, survives a subscription switch (switching back is instant),
-untouched by a location change.
+untouched by a location change. The `P` fan-out (`src/app/subscription_fanout.rs`,
+config `subscriptions`) fills other subscriptions' slots directly, under its
+own `ListLoad` (an auth retry supersedes it, a subscription switch does
+not); `ls --subscriptions` drives the same fan-out headlessly.
 
 **Network access lens** (`N`; `src/azure/nsg_eval.rs`, `src/app/network_lens.rs`,
 `src/ui/widgets/network_lens.rs`): owns the detail pane while open; NSG

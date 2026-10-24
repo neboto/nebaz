@@ -186,6 +186,9 @@ headless headless-services ok 0 '"schema": "nebaz/v1"' '"prefix": "vm"' -- servi
 headless headless-ls-subs ok 0 '"subtab": "subscriptions"' 'Partner Dev' -- ls sub
 headless headless-ls-md ok 0 '# Subscriptions · Subscriptions' -- ls sub -o md
 headless headless-ls-arm ok 1 'cannot reach 127.0.0.1' -- ls rg
+headless headless-ls-fanout ok 1 'Partner Dev: ' 'no subscription could be listed' 'Old Sandbox disabled' \
+  -- ls rg --subscriptions 'Production,Partner Dev,Old Sandbox'
+headless headless-ls-unconfigured ok 2 'subscriptions = [' -- ls rg --all-configured
 headless headless-usage ok 2 'pass --in PREFIX' -- get vm-1
 headless headless-unknown ok 2 'unknown service' -- ls nope
 headless headless-auth nologin 4 'az login' -- ls vm

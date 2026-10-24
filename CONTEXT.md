@@ -16,6 +16,14 @@ The unit an Azure list call is scoped to, and the one thing the app is
 subscription.
 _Avoid_: profile, account (neboto words with no Azure meaning)
 
+**Configured subscriptions**:
+The working set named in config `subscriptions`. Opening `P` **fans out**
+over it: the current sub-tab is listed in each configured subscription not
+cached yet, a few at a time, into that subscription's list-cache slot, and
+the picker shows each one's row count. A sub-tab whose rows are the
+tenant's (or `@changes`) does not fan out (`JumpView::fans_out`).
+_Avoid_: favourites, working set (in code)
+
 **Location**:
 An Azure region name as ARM spells it (`westeurope`). In nebaz a location is
 a **filter** over rows already fetched for the subscription, never a scope a

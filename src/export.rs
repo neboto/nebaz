@@ -652,7 +652,23 @@ pub(crate) fn detail_markdown(resource: &dyn Resource, sections: &[(String, Vec<
 /// readability, which silently dropped every list-level field the `.json`
 /// and `.csv` beside it carried; a Markdown viewer scrolls the wider table.
 pub fn list_markdown(resources: &[&dyn Resource], label: &str) -> String {
-    let columns = list_columns(resources);
+    list_markdown_in_subscriptions(resources, None, label)
+}
+
+/// `list_markdown` with a leading Subscription column when `subscriptions`
+/// (one per row) is given: `nebaz ls --subscriptions` (#62; neboto's
+/// `list_markdown_in_regions` @ 1ebd69f).
+pub(crate) fn list_markdown_in_subscriptions(
+    resources: &[&dyn Resource],
+    subscriptions: Option<&[&str]>,
+    label: &str,
+) -> String {
+    let mut columns = list_columns(resources);
+    if subscriptions.is_some() {
+        // A list-level "Subscription" field would be a second, identical column.
+        columns.retain(|c| c != "Subscription");
+        columns.insert(0, "Subscription".into());
+    }
     let mut md = format!("# {} ({})\n\n", label, resources.len());
     let header: Vec<String> = columns.iter().map(|c| md_cell(c)).collect();
     md.push_str(&format!(
@@ -660,12 +676,15 @@ pub fn list_markdown(resources: &[&dyn Resource], label: &str) -> String {
         header.join(" | "),
         " --- |".repeat(columns.len())
     ));
-    for r in resources {
+    for (i, r) in resources.iter().enumerate() {
         let fields: std::collections::HashMap<String, String> =
             resource_fields(*r).into_iter().collect();
         let cells: Vec<String> = columns
             .iter()
-            .map(|c| md_cell(&list_cell(*r, &fields, c)))
+            .map(|c| match subscriptions {
+                Some(subs) if c == "Subscription" => md_cell(subs.get(i).copied().unwrap_or_default()),
+                _ => md_cell(&list_cell(*r, &fields, c)),
+            })
             .collect();
         md.push_str(&format!("| {} |\n", cells.join(" | ")));
     }

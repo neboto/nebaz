@@ -95,6 +95,23 @@ async fn current() -> Value {
         assert!(ls["resources"][0].get(*k).is_some(), "ls rows carry {k}");
     }
 
+    // `ls --subscriptions` (#62): `subscriptions` replaces `subscription`,
+    // and every row carries its own.
+    let outcomes = [SubscriptionOutcome { id: "sub".into(), name: "Dev".into(), status: "ok", message: None }];
+    let multi_rows = vec![("sub".to_string(), vm.resource.clone_box())];
+    let multi: Value = serde_json::from_str(&render_list_subscriptions(
+        JumpView::VirtualMachines,
+        &Location::All,
+        &outcomes,
+        &multi_rows,
+        OutputFormat::Json,
+    ))
+    .unwrap();
+    let multi_core: Vec<&str> = [LS_CORE, &["subscription", "subscription_name"]].concat();
+    for k in &multi_core {
+        assert!(multi["resources"][0].get(*k).is_some(), "ls --subscriptions rows carry {k}");
+    }
+
     let one: Value = serde_json::from_str(&render_detail("sub", std::slice::from_ref(&vm), OutputFormat::Json)).unwrap();
     let kv = capture(mock(JumpView::KeyVaults)).await;
     let several: Value = serde_json::from_str(&render_detail("sub", &[vm, kv], OutputFormat::Json)).unwrap();
@@ -115,6 +132,11 @@ async fn current() -> Value {
             "subtab": keys(&svcs["services"][0]["subtabs"][0]),
         },
         "ls": {"envelope": keys(&ls), "resource": LS_CORE},
+        "ls_subscriptions": {
+            "envelope": keys(&multi),
+            "subscription": keys(&multi["subscriptions"][0]),
+            "resource": multi_core,
+        },
         "get": {
             "one": keys(&one),
             "several": keys(&several),

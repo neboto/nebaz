@@ -242,6 +242,8 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
         subscription_selector::render_subscription_selector(
             &app.subscription_selector,
             app.azure_clients.current_subscription(),
+            &app.subscription_counts(),
+            app.subscription_count_label().as_deref(),
             &app.mouse.popup,
             frame,
         );

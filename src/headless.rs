@@ -1,5 +1,6 @@
 // ported from neboto-tui src/headless.rs @ 08fcd0c (services / ls / get;
-// table and CSV output, --regions and audit are not carried over)
+// table and CSV output and audit are not carried over; `ls --regions` came
+// over from 1ebd69f as `ls --subscriptions`, #62)
 //! Headless subcommands (`nebaz services`, `ls`, `get`): run once, print,
 //! exit, no terminal UI (#44). `ls` and `get` drive a terminal-less `App`
 //! (`src/app/headless.rs`) over the same `AzureClients` and `arm.rs` the
@@ -327,7 +328,223 @@ async fn load_view(
 
 async fn ls(cli: &Cli, args: &LsArgs, format: OutputFormat) -> Result<String, Failure> {
     let view = resolve_list(&args.target)?;
+    if args.subscriptions.is_some() || args.all_configured {
+        return ls_subscriptions(cli, view, args, format).await;
+    }
     list_view(cli, view, args, format, None).await
+}
+
+/// How one subscription's list went, for the `subscriptions` array.
+pub(crate) struct SubscriptionOutcome {
+    pub id: String,
+    pub name: String,
+    /// `ok`, `denied` (a 403), `disabled` (not `Enabled`) or `error`.
+    pub status: &'static str,
+    pub message: Option<String>,
+}
+
+/// The subscriptions `ls --subscriptions` lists, ids in order, each once.
+/// An explicit list must name only subscriptions `az account list` knows
+/// (the `--subscription` rule: a script is never answered from somewhere
+/// it didn't ask for). `--all-configured` is config `subscriptions`, whose
+/// unknown entries warn and are skipped (the config rule); unset, it is a
+/// usage error that says how to set it.
+pub(crate) fn fan_out_subscriptions(
+    config: &Config,
+    clients: &AzureClients,
+    args: &LsArgs,
+) -> Result<Vec<String>, Failure> {
+    let known = || {
+        let names: Vec<&str> = clients.subscriptions().iter().map(|s| s.name.as_str()).collect();
+        names.join(", ")
+    };
+    if let Some(given) = &args.subscriptions {
+        let mut ids: Vec<String> = Vec::new();
+        for g in given.iter().map(|g| g.trim()).filter(|g| !g.is_empty()) {
+            let entry = clients
+                .resolve_subscription(g)
+                .ok_or_else(|| Failure::Usage(format!("unknown subscription {g:?} — known: {}", known())))?;
+            if !ids.contains(&entry.id) {
+                ids.push(entry.id);
+            }
+        }
+        if ids.is_empty() {
+            return Err(Failure::Usage("--subscriptions: name at least one subscription".into()));
+        }
+        return Ok(ids);
+    }
+    let wanted = config.subscriptions.clone().ok_or_else(|| {
+        Failure::Usage(
+            "--all-configured: no `subscriptions` in config — set e.g. subscriptions = [\"Prod\", \"Dev\"], \
+             or name them: --subscriptions Prod,Dev"
+                .into(),
+        )
+    })?;
+    let (ids, unknown) = clients.resolve_configured(&wanted);
+    if !unknown.is_empty() {
+        eprintln!("nebaz: warning: config: subscriptions: unknown subscription {}", unknown.join(", "));
+    }
+    if ids.is_empty() {
+        return Err(Failure::Usage(format!(
+            "--all-configured: config `subscriptions` names none `az account list` knows — known: {}",
+            known()
+        )));
+    }
+    Ok(ids)
+}
+
+/// `ls --subscriptions`: the same list in each subscription, through the
+/// TUI's `P` fan-out (`App::fanout_subscriptions`: a few at a time, each
+/// on its tenant's pipeline, into its cache slot), then per subscription
+/// the TUI's filters, joined in the order given with the subscription on
+/// every row. A subscription that fails is reported and skipped; the
+/// command fails only when every one did, or on the app-wide auth line.
+async fn ls_subscriptions(cli: &Cli, view: JumpView, args: &LsArgs, format: OutputFormat) -> Result<String, Failure> {
+    if !view.fans_out() {
+        return Err(Failure::Usage(format!(
+            "{} · {} isn't listed per subscription (it is the tenant's, or @changes' one list per window) \
+             — drop --subscriptions",
+            view.service().name(),
+            view.label()
+        )));
+    }
+    let location = cli.location.as_deref().map(Location::parse).unwrap_or_default();
+    let (config, clients) = setup(cli, None).await?;
+    validate_location(&clients, &location).await?;
+    let targets = fan_out_subscriptions(&config, &clients, args)?;
+
+    let mut app = App::new_headless(config, clients);
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    // Start on the first target: the current subscription is the normal
+    // load's, so the fan-out lists the rest alongside it.
+    app.headless_switch_subscription(&targets[0]).map_err(Failure::Error)?;
+    app.fanout_subscriptions(view, &targets, &tx);
+    let shaping = ListShaping {
+        query: args.filter.clone().unwrap_or_default(),
+        location: location.clone(),
+        state: args.state.clone(),
+        hide_noise: args.hide_noise,
+    };
+    let (outcomes, rows) = collect_subscriptions(&mut app, &tx, &mut rx, view, &targets, &shaping).await?;
+    if outcomes.iter().all(|o| o.status != "ok") {
+        return Err(Failure::Error(format!(
+            "no subscription could be listed ({})",
+            outcomes.iter().map(|o| format!("{} {}", o.name, o.status)).collect::<Vec<_>>().join(", ")
+        )));
+    }
+    let mut rows = rows;
+    if let Some(n) = args.limit {
+        rows.truncate(n);
+    }
+    Ok(render_list_subscriptions(view, &location, &outcomes, &rows, format))
+}
+
+/// Each target in turn: wait for its fan-out slot, then open the sub-tab
+/// there (a cache hit, or the current subscription's own load) and shape
+/// it. `--limit` is the caller's, across every subscription.
+pub(crate) async fn collect_subscriptions(
+    app: &mut App,
+    tx: &mpsc::UnboundedSender<Event>,
+    rx: &mut mpsc::UnboundedReceiver<Event>,
+    view: JumpView,
+    targets: &[String],
+    shaping: &ListShaping,
+) -> Result<(Vec<SubscriptionOutcome>, Vec<(String, Box<dyn Resource>)>), Failure> {
+    use crate::ui::widgets::subscription_selector::SubscriptionCount;
+    let deadline = Instant::now() + LIST_LOAD_LIMIT;
+    let mut outcomes = Vec::new();
+    let mut rows: Vec<(String, Box<dyn Resource>)> = Vec::new();
+    for sub in targets {
+        let entry = app.azure_clients.resolve_subscription(sub);
+        let name = entry.as_ref().map(|e| e.name.clone()).unwrap_or_else(|| sub.clone());
+        if let Some(e) = entry.filter(|e| !e.is_enabled()) {
+            let message = format!("subscription is {}", e.state.to_lowercase());
+            eprintln!("nebaz: warning: {name}: {message}");
+            outcomes.push(SubscriptionOutcome { id: sub.clone(), name, status: "disabled", message: Some(message) });
+            continue;
+        }
+        while matches!(app.fanout_status(view, sub), Some((SubscriptionCount::Loading, _))) {
+            if Instant::now() >= deadline {
+                return Err(Failure::Error(format!("{} list load timed out in {name}", view.label())));
+            }
+            pump(app, tx, rx, deadline).await?;
+        }
+        if let Some((count, message)) = app.fanout_status(view, sub).cloned() {
+            eprintln!("nebaz: warning: {name}: {}", message.as_deref().unwrap_or(count.status()));
+            outcomes.push(SubscriptionOutcome { id: sub.clone(), name, status: count.status(), message });
+            continue;
+        }
+        app.headless_switch_subscription(sub).map_err(Failure::Error)?;
+        match load_view(app, tx, rx, view).await {
+            Ok(()) => {
+                rows.extend(app.headless_rows(shaping).into_iter().map(|r| (sub.clone(), r.clone_box())));
+                outcomes.push(SubscriptionOutcome { id: sub.clone(), name, status: "ok", message: None });
+            }
+            Err(f @ Failure::Auth(_)) => return Err(f),
+            Err(f) => {
+                let status = SubscriptionCount::from_error(f.message()).status();
+                eprintln!("nebaz: warning: {name}: {}", f.message());
+                outcomes.push(SubscriptionOutcome { id: sub.clone(), name, status, message: Some(f.message().to_string()) });
+            }
+        }
+    }
+    Ok((outcomes, rows))
+}
+
+pub(crate) fn render_list_subscriptions(
+    view: JumpView,
+    location: &Location,
+    outcomes: &[SubscriptionOutcome],
+    rows: &[(String, Box<dyn Resource>)],
+    format: OutputFormat,
+) -> String {
+    let name_of = |id: &str| outcomes.iter().find(|o| o.id == id).map(|o| o.name.clone()).unwrap_or_default();
+    match format {
+        OutputFormat::Json => {
+            let items: Vec<Value> = rows
+                .iter()
+                .map(|(sub, r)| {
+                    let mut o = list_item(r.as_ref());
+                    if let Some(m) = o.as_object_mut() {
+                        m.insert("subscription".into(), json!(sub));
+                        m.insert("subscription_name".into(), json!(name_of(sub)));
+                    }
+                    o
+                })
+                .collect();
+            let subs: Vec<Value> = outcomes
+                .iter()
+                .map(|o| {
+                    json!({
+                        "subscription": o.id,
+                        "name": o.name,
+                        "status": o.status,
+                        "count": rows.iter().filter(|(s, _)| *s == o.id).count(),
+                        "message": o.message,
+                    })
+                })
+                .collect();
+            pretty(&json!({
+                "schema": SCHEMA,
+                "service": service_key(view.service()),
+                "subtab": view.as_str(),
+                "subscriptions": subs,
+                "location": location.as_str(),
+                "count": items.len(),
+                "resources": items,
+            }))
+        }
+        OutputFormat::Md => {
+            let refs: Vec<&dyn Resource> = rows.iter().map(|(_, r)| r.as_ref()).collect();
+            let names: Vec<String> = rows.iter().map(|(s, _)| name_of(s)).collect();
+            let names: Vec<&str> = names.iter().map(String::as_str).collect();
+            crate::export::list_markdown_in_subscriptions(
+                &refs,
+                Some(&names),
+                &format!("{} · {}", view.service().name(), view.label()),
+            )
+        }
+    }
 }
 
 /// `nebaz changes --since 6h`: `ls changes` over a window (#61).
@@ -353,8 +570,11 @@ async fn changes(cli: &Cli, args: &ChangesArgs, format: OutputFormat) -> Result<
         state: None,
         hide_noise: args.hide_noise,
         limit: args.limit,
+        subscriptions: None,
+        all_configured: false,
     };
     list_view(cli, view, &ls, format, Some(window)).await
+
 }
 
 /// One sub-tab, listed and shaped (`ls`, `changes`).

@@ -49,6 +49,23 @@ impl App {
         }
     }
 
+    /// Point the app at another subscription for `ls --subscriptions`
+    /// (#62): the TUI's switch without its locations fetch (`ls` validates
+    /// the location once, up front) and with the last subscription's load
+    /// error and warnings dropped, so they can't be read as this one's. The
+    /// caller re-opens the sub-tab: a cache hit once the fan-out filled it.
+    pub(crate) fn headless_switch_subscription(&mut self, id: &str) -> Result<(), String> {
+        if self.subscription_id.as_deref() != Some(id) {
+            self.azure_clients.set_subscription(id).map_err(|e| e.to_string())?;
+            self.apply_subscription_identity();
+            self.lazy = crate::lazy::LazyStore::new(self.lazy.epoch() + 1);
+            self.load_service_resources();
+        }
+        self.error_message = None;
+        self.load_warnings.clear();
+        Ok(())
+    }
+
     /// Why the list did not load, if it did not: the auth condition (the
     /// one app-wide line) or the load's error. `(is_auth, message)`.
     pub(crate) fn headless_load_failure(&self) -> Option<(bool, String)> {

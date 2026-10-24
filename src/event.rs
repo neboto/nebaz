@@ -94,6 +94,19 @@ pub enum Event {
         subscription_id: String,
     },
 
+    /// One configured subscription's list of a sub-tab, fetched when `P`
+    /// opened (#62): it goes into that subscription's cache slot, never
+    /// `resources`. Not `Event::Lazy`: the LazyStore epoch bumps on every
+    /// subscription switch, which is exactly when these are wanted.
+    /// `generation` is the fan-out's (`App::fanout_load`); an auth retry
+    /// supersedes it.
+    SubscriptionFanoutLoaded {
+        generation: u64,
+        view: crate::azure::service::JumpView,
+        subscription: String,
+        result: std::result::Result<Vec<Box<dyn Resource>>, String>,
+    },
+
     /// `R` while the auth line is up: re-read `az account list` and reload.
     AuthRetryRequested,
 
