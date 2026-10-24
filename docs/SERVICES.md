@@ -206,7 +206,10 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `no HA`); Service Bus `{tier}` (+ `· {n} MU` on Premium) and Event
     Hubs `{tier} · {n} TU` (PU, CU), both `· private` when public access
     is off; flexible server
-    `{version} · {sku} · {VNet|public|PE|public + PE|no access}`; All resources `→`/`·` and
+    `{version} · {sku} · {VNet|public|PE|public + PE|no access}`; application gateway `{tier} · {n} instances` or
+    `autoscale {min}–{max}`; Front Door `Front Door {tier}`; WAF policy
+    `{App Gateway | Front Door tier} · {mode}` (+ `· {n} custom`, `· not
+    attached`); All resources `→`/`·` and
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
@@ -230,7 +233,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     NAT gateway, container registry, Application Insights, Foundry /
     Cognitive Services account, Redis cache (the `all…` names, every
     shard), Managed Redis, Service Bus and Event Hubs namespace,
-    PostgreSQL and MySQL flexible server
+    PostgreSQL and MySQL flexible server, application gateway (healthy and unhealthy host counts: what backend
+    health would say, without its POST), Front Door profile
     (`curated_metrics` is the list). Any other
     ARM resource opens on the `a` picker (its metric definitions);
     `supports_metrics` drives the status-bar hint, so the hint and the
@@ -290,7 +294,14 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     event hubs; network rule set, private endpoint connections, access
     policies (names and rights; `authorization-rule keys` is forbidden by
     the guard), all in the name form (`--namespace-name` has no
-    `id_part` on `list`). A list visual selection (#39) merged into one `--ids a b c` command
+    `id_part` on `list`). **Application gateway**
+    `show-backend-health` (`--ids`; a POST outside `Reader`, copied, never
+    sent), listeners, rules, pools, settings, probes (`--gateway-name`, no
+    `id_part`) · stop, start; never `ssl-cert` or `root-cert` (guard).
+    **WAF policy** custom rules (`--policy-name`; Front Door's from the
+    `front-door` extension). **Front Door profile** endpoints, origin
+    groups, custom domains, security policies (`--profile-name`, the `cdn`
+    extension); never `afd secret` or a purge. A list visual selection (#39) merged into one `--ids a b c` command
     (neboto's batch mode) is not built yet: `C` acts on the cursor row.
 21. **Referenced by** (`U`, #49, `src/azure/references.rs`, keys and the
     cache walk in `src/app/refs_lens.rs`, drawn by
@@ -421,6 +432,35 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     (default `low`), `not_checked` for what couldn't run. The checks are
     listed below the catalog.
 
+26. **Edge is its own tab** (#31, `src/azure/services/edge.rs`): App
+    gateways (`@agw`), Front Door (`@afd`) and WAF policies (`@waf`).
+    Network already had eight sub-tabs; two more reach the ten digit keys
+    and Front Door (`Microsoft.Cdn`) would be an eleventh, the DNS problem
+    of rule 15 again. The WAF policies serve both front ends (one list of
+    both kinds, the kind in the summary), and debugging ingress is one
+    workflow: listener → rule → pool → the app behind it. A gateway's own
+    subnet, NSG and public IP stay in Network and jump from its Related;
+    `N` on a gateway runs its gateway subnet's NSG (v2 needs GatewayManager
+    on 65200–65535). **Backends are matched, never resolved**: a pool
+    address or origin host is compared with the warm Container Apps
+    (FQDN, custom domains), environments (default domain suffix, static
+    IP), App Service sites (default and custom host names), private
+    endpoints (their DNS records) and public IPs lists; a match jumps, a
+    miss says which of those lists is cold. No DNS lookup, no call. The
+    same matches feed `U` (a gateway or Front Door fronting a Container
+    App, once its list and the gateway's are warm or the profile's
+    topology has loaded). A Front Door profile's endpoints, routes,
+    origin groups, origins, custom domains and security policies are one
+    lazy read per profile (`fetch_afd_topology`, the first 50 endpoints and
+    origin groups followed), shared by its four lazy sections and Related.
+    **Never**: a gateway certificate's `data` / `password` (stripped, also
+    from the gateways a WAF policy body embeds), a custom domain's
+    validation token (stripped), Front Door `secrets` (not listed), backend
+    health (a POST; the guard refuses the `backendhealth` literal). Classic
+    Front Door and classic CDN profiles are out (filtered from the
+    `Microsoft.Cdn/profiles` list; their ids land in All resources or are
+    not found).
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -451,6 +491,9 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | DNS · Resolvers | Endpoints ⧗ (inbound: private IP, subnet, allocation; outbound: subnet) · Rulesets ⧗ (those forwarding through its outbound endpoints) | ladder, then `dnsResolverState` (`Connected` → Available, `Disconnected` → Unavailable) | VNet; then ⧗ each endpoint's subnet, each ruleset | `az dns-resolver show` (the `dns-resolver` CLI extension) |
 | DNS · Rulesets | Rules ⧗ (domain → target servers and ports, enabled) · VNet links ⧗ (each linked VNet jumps; metadata) | ladder only | each outbound endpoint's resolver; then ⧗ the endpoints' subnets, the resolver's VNet, each linked VNet | `az dns-resolver forwarding-ruleset show` (extension) |
 | DNS · DNS policies | Rules ⧗ (security rules by priority: action, state, each domain list, which lands in All resources) · VNet links ⧗ | ladder only | ⧗ each linked VNet | `az dns-resolver policy show` (extension) |
+| Edge · App gateways (rule 26) | Frontends (public IP jumpable with its address from the warm list, or private IP + subnet; each frontend's listeners; the gateway subnet and its NSG requirement; private link configurations and endpoints) · Listeners (TLS policy; protocol, port, frontend, host names; certificate **name** and Key Vault secret id or "uploaded"; SNI; per-listener WAF policy; the rules using it, ⚠ when none) · Rules (by priority, the chain a request follows: listener → pool via settings, or path map → each path rule's pool, default, redirects; matched targets jumpable; ⚠ a Container App / App Service pool behind settings that keep the client's host) · Backends (pools with every address matched to a warm target or "not matched", backend NICs, empty pools flagged, which rules use each; HTTP and L4 settings: host name handling, path, affinity, probe, trusted roots, draining; probes; backend health is a POST, never sent) · WAF (gateway, listener and path-rule policies with mode and rule sets from the warm WAF list; classic WAF config; a policy on a non-WAF tier flagged) · (Overview: SKU, capacity or autoscale bounds, zones, HTTP/2, FIPS, counts) | ladder, then `operationalState` (`Running`, `Stopped`, else Pending) | gateway and frontend subnets, frontend public IPs, every WAF policy, backend NICs, private endpoints, user-assigned identities; then each matched backend | `az network application-gateway show` |
+| Edge · Front Door | Endpoints ⧗ (host name as text, enabled, deployment; each route: patterns, protocols → origin group, domains, forwarding protocol and HTTPS redirect, origin path, caching, rule sets, the group's origin hosts) · Origins ⧗ (per group: probe, load balancing, session affinity, origin auth identity, the routes using it; per origin by priority: host, priority, weight, ports, host header, certificate name check, the Azure resource (`azureOrigin`) or the warm-list match, host header warnings for Container Apps / App Service, Private Link target jumpable with status, ⚠ until approved) · Domains ⧗ (host name, validation state, ⚠ until approved, certificate type and secret **name**, min TLS, Azure DNS zone jumpable, routes and WAF using it; the DCV token is never shown) · Security ⧗ (each security policy's WAF policy jumpable, its mode from the warm WAF list, the domains and patterns it covers; ⚠ when none) · (Overview: SKU, resource state, Front Door id for `X-Azure-FDID`, origin response timeout, identity) | ladder, then `resourceState` (`Active` → available, `Disabled` → stopped); `location` is `global` | user-assigned identities; ⧗ WAF policies, Azure origins, Private Link targets, origin hosts matched in the warm lists, DNS zones, origin auth identities | `az afd profile show` (the `cdn` CLI extension) |
+| Edge · WAF policies | Settings (state, mode explained, request body inspection and limits, file upload limit, block response, log scrubbing) · Managed rules (each set and version, rule-group overrides with rule ids and state, exclusions) · Custom rules (by priority: action, type, rate limit, each condition with variable, selector, operator, negation, values, transforms) · Associations (gateways, listeners and path rules, Front Door security policies, classic endpoints; each jumps to its top resource) · (Overview: kind, resource state, mode, rule sets, counts) | ladder, then `resourceState` (`Enabled` → available, `Disabled` → stopped), else the policy's enabled state | each associated gateway or Front Door profile (classic Front Door lands in All resources) | `az network application-gateway waf-policy show`; Front Door: `az network front-door waf-policy show` (the `front-door` CLI extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
 | Identity · App registrations (Graph, rule 13) | Credentials · Federated credentials ⧗ (issuer, subject, audiences) · API permissions (`requiredResourceAccess`, each API's service principal fetched by app id to name it and its permissions) · Redirect URIs (web, SPA, public client) · Owners ⧗ · Exposed API (identifier URIs, scopes, app roles) · Tags; no Access or Activity | worst credential expiry | its service principal (by app id) | `az ad app show --id {appId}` |
@@ -477,7 +520,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @agw @afd @waf @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -575,6 +618,10 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
 | Ownership ribbon (rule 22) | 0 for tags and `managedBy`; with the pane focused, 1 per resource group per subscription visit, plus 1 per not-succeeded deployment among the newest 3 | `{group}/providers/Microsoft.Resources/deployments?$top=100` · `{group}/providers/Microsoft.Resources/deployments/{name}/operations` · `2025-04-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
+| App gateways | 1 (frontends, listeners, rules, pools, settings, probes embedded; certificate `data` and `password` stripped before the row keeps it; backend health is a POST, never sent) | `/providers/Microsoft.Network/applicationGateways` · `2025-09-01` |
+| WAF policies | 2 (one list; a failure of either beside the other is a warning) | `/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies` · `2025-09-01`; `/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies` · `2026-04-01` (its own spec) |
+| Front Door | 1 (classic CDN SKUs filtered out client-side) | `/providers/Microsoft.Cdn/profiles` · `2026-07-01` |
+| Front Door Endpoints, Origins, Domains, Security (and Related) | once per profile, on demand: `4 + endpoints + origin groups`, the first 50 of each followed; only the endpoints failing fails it, any other child is a warning line. Never `{profile}/secrets` | `{profile}/afdEndpoints` · `{endpoint}/routes` · `{profile}/originGroups` · `{group}/origins` · `{profile}/customDomains` · `{profile}/securityPolicies` · `2026-07-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
 | Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |
@@ -643,6 +690,17 @@ it; that floor is #63.
   list body; `az redis show` and `az redisenterprise show` take `--ids`
   (both names carry `id_part='name'` in azure-cli and the extension).
 
+- Edge (#31), built without an Azure login from azure-rest-api-specs
+  (2026-10-24): gateways and their WAF policies on the Network version
+  (`2025-09-01`; `2026-03-01` is the newest stable), `Microsoft.Cdn`
+  `2026-07-01` (`2026-10-01` landed two days earlier and is not pinned
+  yet), Front Door WAF `2026-04-01`. To check: the versions are accepted;
+  the subscription-wide Front Door WAF list answers; a gateway list body
+  carries no certificate `data` (stripped regardless); the profile list's
+  `location` is `Global`; `az network application-gateway show`,
+  `waf-policy show`, `az afd profile show` (cdn extension) and `az network
+  front-door waf-policy show` (front-door extension) take `--ids` (all
+  four name arguments carry `id_part='name'`); the Edge tab at 80×24.
 - Messaging (#27), built without an Azure login from the
   `2026-01-01` specs (the newest stable for both providers on
   2026-10-24; `2024-01-01` is the previous). To check: the api-version

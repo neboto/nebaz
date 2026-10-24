@@ -140,6 +140,13 @@ pub struct LazyStore {
     /// Related sections read.
     pub dns_topology: LazyMap<crate::azure::services::network_dns::DnsTopology>,
 
+    // ── Edge ─────────────────────────────────────────────────────────────
+    /// A Front Door profile's endpoints with their routes, origin groups
+    /// with their origins, custom domains and security policies, keyed by
+    /// profile id: one read per profile (`fetch_afd_topology`). Never the
+    /// profile's `secrets`.
+    pub afd_topology: LazyMap<crate::azure::services::edge::AfdTopology>,
+
     // ── App Service ──────────────────────────────────────────────────────
     /// `GET {site}/config/web` — the Configuration section, keyed by site
     /// id. Never app settings or connection strings.

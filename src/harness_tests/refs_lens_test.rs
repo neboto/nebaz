@@ -71,14 +71,19 @@ async fn u_on_a_subnet_lists_the_nic_environment_and_policy_pointing_at_it_and_j
         "the VNet that contains the subnet is not a reference"
     );
     let st = h.app.refs_lens.as_ref().unwrap();
-    // The Subnets list is on screen and warm; PEs, Apps, NAT are likely but cold.
-    assert_eq!(st.coverage.likely_cold, vec![
+    // The Subnets list is on screen and warm; PEs, Apps, NAT, the flexible
+    // servers and app gateways are likely but cold.
+    assert_eq!(
+        st.coverage.likely_cold,
+        vec![
             JumpView::PrivateEndpoints,
             JumpView::WebApps,
             JumpView::NatGateways,
             JumpView::PostgresServers,
-            JumpView::MysqlServers
-        ]);
+            JumpView::MysqlServers,
+            JumpView::AppGateways
+        ]
+    );
     h.press(KeyCode::Char('Z')).await;
     let screen = h.render();
     for s in ["REFERENCED BY", "nic-aca", "VMs/NICs", "via Infrastructure subnet snet-aca", "not checked — load VNet/PEs, App Svc/Apps, VNet/NAT"] {
@@ -156,4 +161,29 @@ async fn the_mouse_selects_a_referrer_and_a_right_click_closes() {
     assert_eq!(h.app.refs_lens.as_ref().unwrap().selected_row().unwrap().name, "ep-aca");
     h.right_click(at).await;
     assert!(h.app.refs_lens.is_none());
+}
+
+/// A gateway whose backend pool is the environment's static IP: a link only
+/// the warm lists can make (no `related()` id names the environment).
+#[tokio::test]
+async fn u_on_an_environment_finds_the_app_gateway_whose_backend_matches_it() {
+    use crate::azure::services::edge::AppGatewayRow;
+    let mut h = Harness::new().await;
+    h.install(mock_of(JumpView::ContainerAppEnvironments)).await;
+    let gw = AppGatewayRow::from_json(
+        &json!({"id": arm_id("Microsoft.Network/applicationGateways/agw-aca"), "name": "agw-aca", "location": "eastus",
+            "properties": {"backendAddressPools": [{"name": "pool-aca", "properties": {
+                "backendAddresses": [{"ipAddress": "10.0.16.4"}, {"fqdn": "other.example"}]}}]}}),
+        Some(TENANT),
+    )
+    .unwrap();
+    warm(&mut h, JumpView::AppGateways, vec![Box::new(gw)]);
+
+    h.press(KeyCode::Char('U')).await;
+    assert_eq!(
+        ref_names(&h),
+        vec![("agw-aca".to_string(), "Backend Container Apps environment cae-1 (pool-aca: 10.0.16.4)".to_string())]
+    );
+    let likely = h.app.refs_lens.as_ref().unwrap().coverage.likely_cold.clone();
+    assert!(likely.contains(&JumpView::FrontDoorProfiles) && !likely.contains(&JumpView::AppGateways), "{likely:?}");
 }

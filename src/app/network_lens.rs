@@ -29,6 +29,11 @@ pub fn lens_seed(r: &dyn Resource) -> Seed {
     if any.downcast_ref::<SubnetRow>().is_some() {
         return Seed { subnets: vec![r.id().to_string()], ..Default::default() };
     }
+    // An application gateway's own subnet is what its NSG guards (the
+    // GatewayManager ports); its backend NICs are the backends' business.
+    if let Some(g) = any.downcast_ref::<crate::azure::services::edge::AppGatewayRow>() {
+        return Seed { subnets: g.subnet_ids.clone(), ..Default::default() };
+    }
     let mut seed = Seed::default();
     for (_, id) in r.related() {
         let list = match JumpView::for_arm_id(&id) {
@@ -245,5 +250,19 @@ mod tests {
         .unwrap();
         assert_eq!(lens_seed(&vnet.subnets[0]).subnets.len(), 1);
         assert_eq!(lens_seed(&vnet).subnets.len(), 1);
+
+        // An application gateway seeds on its own subnet, not its backend NICs.
+        let agw = crate::azure::services::edge::AppGatewayRow::from_json(
+            &serde_json::json!({"id": format!("{}/Microsoft.Network/applicationGateways/agw", RG), "name": "agw", "location": "x",
+                "properties": {
+                    "gatewayIPConfigurations": [{"name": "gw", "properties": {"subnet": {"id": format!("{}/Microsoft.Network/virtualNetworks/v/subnets/agw", RG)}}}],
+                    "backendAddressPools": [{"name": "p", "properties": {"backendIPConfigurations": [
+                        {"id": format!("{}/Microsoft.Network/networkInterfaces/nic-1/ipConfigurations/ipconfig1", RG)}]}}]}}),
+            None,
+        )
+        .unwrap();
+        let seed = lens_seed(&agw);
+        assert_eq!(seed.subnets, vec![format!("{}/Microsoft.Network/virtualNetworks/v/subnets/agw", RG)]);
+        assert!(seed.nics.is_empty());
     }
 }

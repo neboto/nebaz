@@ -124,6 +124,26 @@ each one backs are in the catalog table
   The network access lens (`N`) needs nothing more: it reads NICs, VNets
   and NSGs with the actions above and computes the rules itself, because a
   NIC's effective rules and routes are POST actions nebaz never calls.
+- **Edge** (application gateways, Front Door, WAF policies):
+  `Microsoft.Network/applicationGateways/read` (frontends, listeners,
+  rules, pools, settings and probes arrive embedded),
+  `Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/read`,
+  `Microsoft.Network/frontDoorWebApplicationFirewallPolicies/read`,
+  `Microsoft.Cdn/profiles/read`; a Front Door profile's lazy topology:
+  `Microsoft.Cdn/profiles/afdendpoints/read`,
+  `Microsoft.Cdn/profiles/afdendpoints/routes/read`,
+  `Microsoft.Cdn/profiles/origingroups/read`,
+  `Microsoft.Cdn/profiles/origingroups/origins/read`,
+  `Microsoft.Cdn/profiles/customdomains/read`,
+  `Microsoft.Cdn/profiles/securitypolicies/read`. A gateway's backend
+  health is a `POST` (`…/backendhealth`), outside `Reader`, that nebaz never
+  sends (the guard refuses the literal; `C` copies the CLI command for you
+  to run). A gateway certificate's `data` and `password`, the certificate
+  blobs beside them and a custom domain's validation token are stripped
+  before the row keeps the JSON; Front Door `secrets` are never listed, and
+  `az network application-gateway ssl-cert`, `root-cert` and `az afd secret`
+  are named forbidden. The Front Door endpoints' own hosts are on the
+  guard's list.
 - **Key Vault**: `Microsoft.KeyVault/vaults/read`; the lazy Secrets and Keys
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:

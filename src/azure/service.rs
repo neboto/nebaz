@@ -24,6 +24,10 @@ pub enum ServiceType {
     /// rulesets, DNS security policies. Microsoft.Network, but its own tab
     /// (SERVICES.md says why).
     Dns,
+    /// The internet-facing entry points: application gateways, Front Door
+    /// Standard / Premium profiles and the WAF policies of both. Its own
+    /// tab (SERVICES.md rule 26 says why); backend health is never read.
+    Edge,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
     /// User-assigned managed identities (ARM); service principals and app
@@ -109,6 +113,14 @@ pub enum JumpView {
     DnsForwardingRulesets,
     /// DNS security policies (`dnsResolverPolicies`).
     DnsResolverPolicies,
+    // Edge
+    /// `Microsoft.Network/applicationGateways`.
+    AppGateways,
+    /// Front Door Standard / Premium (`Microsoft.Cdn/profiles`, the classic
+    /// CDN SKUs filtered out).
+    FrontDoorProfiles,
+    /// Application Gateway and Front Door WAF policies, one list of both.
+    WafPolicies,
     // Key Vault
     KeyVaults,
     // Identity
@@ -179,6 +191,7 @@ impl JumpView {
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
             | NatGateways | PrivateEndpoints => ServiceType::Network,
             PrivateDnsZones | DnsZones | DnsResolvers | DnsForwardingRulesets | DnsResolverPolicies => ServiceType::Dns,
+            AppGateways | FrontDoorProfiles | WafPolicies => ServiceType::Edge,
             KeyVaults => ServiceType::KeyVault,
             Identities | ServicePrincipals | AppRegistrations => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
@@ -222,6 +235,9 @@ impl JumpView {
             DnsResolvers => "dns-resolvers",
             DnsForwardingRulesets => "dns-forwarding-rulesets",
             DnsResolverPolicies => "dns-resolver-policies",
+            AppGateways => "app-gateways",
+            FrontDoorProfiles => "front-door-profiles",
+            WafPolicies => "waf-policies",
             KeyVaults => "vaults",
             Identities => "identities",
             ServicePrincipals => "service-principals",
@@ -279,6 +295,9 @@ impl JumpView {
             DnsResolvers => "Resolvers",
             DnsForwardingRulesets => "Rulesets",
             DnsResolverPolicies => "DNS policies",
+            AppGateways => "App gateways",
+            FrontDoorProfiles => "Front Door",
+            WafPolicies => "WAF policies",
             KeyVaults => "Vaults",
             Identities => "Identities",
             ServicePrincipals => "Service principals",
@@ -343,6 +362,12 @@ impl JumpView {
             ("microsoft.network", ["dnsresolvers"]) => JumpView::DnsResolvers,
             ("microsoft.network", ["dnsforwardingrulesets"]) => JumpView::DnsForwardingRulesets,
             ("microsoft.network", ["dnsresolverpolicies"]) => JumpView::DnsResolverPolicies,
+            ("microsoft.network", ["applicationgateways"]) => JumpView::AppGateways,
+            ("microsoft.network", ["applicationgatewaywebapplicationfirewallpolicies"])
+            | ("microsoft.network", ["frontdoorwebapplicationfirewallpolicies"]) => JumpView::WafPolicies,
+            // Classic CDN profiles share the type; the list keeps Front
+            // Door Standard / Premium only, so a classic one is not found.
+            ("microsoft.cdn", ["profiles"]) => JumpView::FrontDoorProfiles,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
@@ -430,6 +455,7 @@ impl ServiceType {
             ServiceType::Storage,
             ServiceType::Network,
             ServiceType::Dns,
+            ServiceType::Edge,
             ServiceType::KeyVault,
             ServiceType::Identity,
             ServiceType::Aks,
@@ -467,6 +493,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage",
             ServiceType::Network => "Networking",
             ServiceType::Dns => "Networking",
+            ServiceType::Edge => "Networking",
             ServiceType::KeyVault => "Security",
             ServiceType::Identity => "Security",
             ServiceType::Aks => "Containers",
@@ -493,6 +520,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage",
             ServiceType::Network => "Virtual Network",
             ServiceType::Dns => "DNS",
+            ServiceType::Edge => "Edge",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Managed Identity",
             ServiceType::Aks => "AKS",
@@ -520,6 +548,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage",
             ServiceType::Network => "VNet",
             ServiceType::Dns => "DNS",
+            ServiceType::Edge => "Edge",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Identity",
             ServiceType::Aks => "AKS",
@@ -546,6 +575,7 @@ impl ServiceType {
             ServiceType::Storage => "Storage Accounts & Containers",
             ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
             ServiceType::Dns => "DNS zones, Private Resolver & rulesets",
+            ServiceType::Edge => "App gateways, Front Door & WAF policies",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Identity => "Managed identities, service principals & app registrations",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
@@ -584,6 +614,7 @@ impl ServiceType {
                 PrivateEndpoints,
             ],
             ServiceType::Dns => &[PrivateDnsZones, DnsZones, DnsResolvers, DnsForwardingRulesets, DnsResolverPolicies],
+            ServiceType::Edge => &[AppGateways, FrontDoorProfiles, WafPolicies],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Identity => &[Identities, ServicePrincipals, AppRegistrations],
             ServiceType::Aks => &[Clusters, NodePools],
@@ -672,6 +703,11 @@ impl ServiceType {
             "dnsp" | "dnspolicy" | "dnspolicies" | "dnssecuritypolicy" | "dnssecuritypolicies" => {
                 (ServiceType::Dns, Some(JumpView::DnsResolverPolicies))
             }
+            "agw" | "appgw" | "appgateway" | "appgateways" | "applicationgateway" | "applicationgateways" | "edge" => {
+                (ServiceType::Edge, None)
+            }
+            "afd" | "frontdoor" | "frontdoors" | "fd" => (ServiceType::Edge, Some(JumpView::FrontDoorProfiles)),
+            "waf" | "wafs" | "wafpolicy" | "wafpolicies" => (ServiceType::Edge, Some(JumpView::WafPolicies)),
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
             // `@app` is App Service's; app registrations are `@appreg`.
@@ -743,6 +779,7 @@ impl ServiceType {
             ServiceType::Storage => "@storage",
             ServiceType::Network => "@vnet",
             ServiceType::Dns => "@dns",
+            ServiceType::Edge => "@agw",
             ServiceType::KeyVault => "@kv",
             ServiceType::Identity => "@id",
             ServiceType::Aks => "@aks",
@@ -765,12 +802,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@agw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1021,6 +1058,23 @@ mod tests {
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.EventHub/clusters/c")), Some(JumpView::AllResources));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/containerApps/api/revisions/api--v1")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.App/managedEnvironments/cae/certificates/c")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/applicationGateways/agw")), Some(JumpView::AppGateways));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/applicationGateways/agw/httpListeners/l")), None);
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/waf")),
+            Some(JumpView::WafPolicies)
+        );
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.Network/frontdoorWebApplicationFirewallPolicies/waf")),
+            Some(JumpView::WafPolicies)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cdn/profiles/afd")), Some(JumpView::FrontDoorProfiles));
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Cdn/profiles/afd/originGroups/og")), None);
+        // Classic Front Door is not browsed: All resources.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Network/frontDoors/fd")), Some(JumpView::AllResources));
+        assert_eq!(ServiceType::from_prefix("@agw"), Some((ServiceType::Edge, None)));
+        assert_eq!(ServiceType::from_prefix("@afd"), Some((ServiceType::Edge, Some(JumpView::FrontDoorProfiles))));
+        assert_eq!(ServiceType::from_prefix("@waf"), Some((ServiceType::Edge, Some(JumpView::WafPolicies))));
         assert_eq!(JumpView::for_arm_id("garbage"), None);
     }
 

@@ -26,6 +26,7 @@ use crate::azure::services::container_registry::ContainerRegistryService;
 use crate::azure::services::cosmos::CosmosService;
 use crate::azure::services::monitor::MonitorService;
 use crate::azure::services::network_dns::DnsService;
+use crate::azure::services::edge::EdgeService;
 use crate::azure::services::power_platform::PowerPlatformService;
 use crate::azure::services::sql::SqlService;
 use crate::azure::services::postgres_mysql::FlexibleServersService;
@@ -350,6 +351,7 @@ impl AzureClients {
             ServiceType::Redis => Arc::new(RedisService::new(scope)),
             ServiceType::Messaging => Arc::new(MessagingService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
+            ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Changes => Arc::new(ChangesService::new(scope, graph, ChangesWindow::default())),
             ServiceType::Audit => Arc::new(crate::audit::AuditService),
         }

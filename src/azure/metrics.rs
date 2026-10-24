@@ -301,6 +301,26 @@ const EVENT_HUBS: &[MetricSpec] = &[
     m("ThrottledRequests", "Throttled", Total),
     m("ServerErrors", "Server errors", Total),
 ];
+/// Application gateway: traffic, failures, and whether the backends are
+/// healthy (the health counts are what backend health would say, without
+/// its POST).
+const APP_GATEWAY: &[MetricSpec] = &[
+    m("TotalRequests", "Requests", Total),
+    m("FailedRequests", "Failed requests", Total),
+    m("HealthyHostCount", "Healthy hosts", Avg),
+    m("UnhealthyHostCount", "Unhealthy hosts", Max),
+    m("ApplicationGatewayTotalTime", "Total time", Avg),
+    m("Throughput", "Throughput", Avg),
+];
+/// Front Door Standard / Premium (`Microsoft.Cdn/profiles`).
+const FRONT_DOOR: &[MetricSpec] = &[
+    m("RequestCount", "Requests", Total),
+    m("Percentage4XX", "4xx", Avg),
+    m("Percentage5XX", "5xx", Avg),
+    m("OriginHealthPercentage", "Origin health", Avg),
+    m("TotalLatency", "Total latency", Avg),
+    m("WebApplicationFirewallRequestCount", "WAF matches", Total),
+];
 
 /// The default set for an ARM id, by its provider and type chain; empty
 /// for a type with none (the `a` picker still lists what it has).
@@ -331,6 +351,8 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.cache", ["redisenterprise"]) => MANAGED_REDIS,
         ("microsoft.servicebus", ["namespaces"]) => SERVICE_BUS,
         ("microsoft.eventhub", ["namespaces"]) => EVENT_HUBS,
+        ("microsoft.network", ["applicationgateways"]) => APP_GATEWAY,
+        ("microsoft.cdn", ["profiles"]) => FRONT_DOOR,
         _ => &[],
     }
 }
@@ -767,12 +789,15 @@ pub(crate) mod tests {
         assert!(names(&p("Microsoft.ServiceBus/namespaces/sb")).contains(&"DeadletteredMessages"));
         assert!(names(&p("microsoft.eventhub/namespaces/eh")).contains(&"IncomingBytes"));
         assert!(!supports_metrics(&p("Microsoft.ServiceBus/namespaces/sb/queues/q")));
+        assert!(names(&p("Microsoft.Network/applicationGateways/agw")).contains(&"UnhealthyHostCount"));
+        assert!(names(&p("Microsoft.Cdn/profiles/afd")).contains(&"OriginHealthPercentage"));
+        assert!(!supports_metrics(&p("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/w")));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));
         assert!(is_arm_resource(&p("Microsoft.Network/virtualNetworks/v")));
         assert!(!is_arm_resource("/subscriptions/0000"));
-        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS] {
+        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS, APP_GATEWAY, FRONT_DOOR] {
             assert!((2..=6).contains(&set.len()));
         }
     }

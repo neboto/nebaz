@@ -101,7 +101,18 @@ pub struct ReverseIndex {
 impl ReverseIndex {
     /// Index `lists` (each with the sub-tab it came from), in order; a row
     /// whose id an earlier list already supplied is skipped.
+    #[cfg(test)]
     pub fn build<'a, I>(lists: I) -> Self
+    where
+        I: IntoIterator<Item = (JumpView, &'a [Box<dyn Resource>])>,
+    {
+        Self::build_with(lists, |_| Vec::new())
+    }
+
+    /// [`build`](Self::build) with links a row has beyond its `related()`:
+    /// what only the warm lists or a loaded lazy read can tell (a gateway
+    /// backend matched to a Container App, a Front Door origin).
+    pub fn build_with<'a, I>(lists: I, derived: impl Fn(&dyn Resource) -> Vec<(String, String)>) -> Self
     where
         I: IntoIterator<Item = (JumpView, &'a [Box<dyn Resource>])>,
     {
@@ -113,14 +124,15 @@ impl ReverseIndex {
                 if own.is_empty() || !seen.insert(own.clone()) {
                     continue;
                 }
-                index.add(view, r.as_ref(), own);
+                let extra = derived(r.as_ref());
+                index.add(view, r.as_ref(), own, extra);
             }
         }
         index
     }
 
-    fn add(&mut self, view: JumpView, r: &dyn Resource, own: String) {
-        let mut links: Vec<(String, String)> = r.related().into_iter().filter(|(_, id)| is_link_id(id)).collect();
+    fn add(&mut self, view: JumpView, r: &dyn Resource, own: String, extra: Vec<(String, String)>) {
+        let mut links: Vec<(String, String)> = r.related().into_iter().chain(extra).filter(|(_, id)| is_link_id(id)).collect();
         for (k, v) in r.tags() {
             if let Some(key) = k.strip_prefix("hidden-link:").filter(|key| is_link_id(key)) {
                 links.push(("Tag hidden-link".to_string(), key.to_string()));
@@ -222,6 +234,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             NatGateways,
             PostgresServers,
             MysqlServers,
+            AppGateways,
         ],
         VirtualNetworks => &[
             Nics,
@@ -233,15 +246,34 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             PrivateDnsZones,
             PostgresServers,
             MysqlServers,
+            AppGateways,
         ],
-        Identities => &[VirtualMachines, Clusters, WebApps, ContainerApps, ContainerAppJobs, ServicePrincipals, ServiceBusNamespaces, EventHubNamespaces, PostgresServers, MysqlServers],
+        Identities => &[
+            VirtualMachines,
+            Clusters,
+            WebApps,
+            ContainerApps,
+            ContainerAppJobs,
+            ServicePrincipals,
+            ServiceBusNamespaces,
+            EventHubNamespaces,
+            PostgresServers,
+            MysqlServers,
+            AppGateways,
+            FrontDoorProfiles,
+        ],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
-        PublicIps => &[Nics, LoadBalancers, NatGateways],
+        PublicIps => &[Nics, LoadBalancers, NatGateways, AppGateways],
         Disks => &[VirtualMachines],
-        Nics => &[VirtualMachines, PrivateEndpoints],
+        Nics => &[VirtualMachines, PrivateEndpoints, AppGateways],
         RouteTables | NatGateways => &[Subnets],
         AppServicePlans => &[WebApps],
-        ContainerAppEnvironments => &[ContainerApps, ContainerAppJobs, WebApps],
+        ContainerAppEnvironments => &[ContainerApps, ContainerAppJobs, WebApps, AppGateways, FrontDoorProfiles],
+        // A gateway backend or a Front Door origin matched to the row.
+        ContainerApps | WebApps => &[AppGateways, FrontDoorProfiles],
+        AppGateways => &[PublicIps, WafPolicies],
+        WafPolicies => &[AppGateways, FrontDoorProfiles],
+        FrontDoorProfiles => &[WafPolicies],
         LogWorkspaces => &[AppInsights, Clusters],
         Clusters => &[ResourceGroups, NodePools],
         PrivateEndpoints => &[
@@ -258,6 +290,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             ManagedRedis,
             ServiceBusNamespaces,
             EventHubNamespaces,
+            AppGateways,
         ],
         StorageAccounts | Registries | SqlServers | CosmosAccounts | AiAccounts | RedisCaches | ManagedRedis
         | ServiceBusNamespaces | EventHubNamespaces => &[PrivateEndpoints],
