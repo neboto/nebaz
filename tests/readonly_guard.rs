@@ -60,6 +60,13 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // Container Apps: the apps themselves (the environment's default
     // domain).
     "azurecontainerapps.io",
+    // Redis (#29): the caches themselves (Azure Cache for Redis, public
+    // and sovereign clouds) and Azure Managed Redis / Redis Enterprise.
+    "redis.cache.windows.net",
+    "redis.cache.usgovcloudapi.net",
+    "redis.cache.chinacloudapi.cn",
+    "redis.azure.net",
+    "redisenterprise.cache.azure.net",
     // Monitor: log queries and App Insights data.
     "api.loganalytics.io",
     "api.applicationinsights.io",
@@ -161,6 +168,10 @@ const AZ_DESTRUCTIVE: &[&str] = &[
     "update",
     "import",
     "restore",
+    // Redis: empties a cache, or reboots its nodes (data loss without
+    // persistence).
+    "flush",
+    "force-reboot",
 ];
 
 /// Flags refused in every `az` literal: each makes a command print a
@@ -199,6 +210,10 @@ const AZ_FORBIDDEN: &[&str] = &[
     "sql db show-connection-string",
     "webapp deployment list-publishing",
     "functionapp deployment list-publishing",
+    // Redis access keys (the ARM side is the `listKeys` POST): both
+    // print the keys under a list verb.
+    "redis list-keys",
+    "redisenterprise database list-keys",
 ];
 
 /// `az` mentions that are not commands. Each needs a reason.
@@ -572,6 +587,9 @@ fn the_az_rules_catch_what_they_should() {
         "az acr login -n {} --expose-token",
         "az vm run-command invoke --ids {}",
         "az webapp update --ids {}",
+        "az redis list-keys -n {}",
+        "az redisenterprise database list-keys --cluster-name {}",
+        "az redis flush -n {}",
     ] {
         let line = format!("let c = \"{}\";", cmd);
         assert_eq!(count(CLI_CATALOGUE_FILE, &line), 1, "{cmd} must be refused in the catalogue");
@@ -602,11 +620,12 @@ fn permissions_doc_grants_only_read_actions() {
     assert!(doc.contains("`Reader`"), "PERMISSIONS.md must name the built-in Reader role");
 }
 
-/// ARM reads that are POSTs (a NIC's effective NSG rules and routes):
+/// ARM reads that are POSTs (a NIC's effective NSG rules and routes;
+/// `listKeys`, the access keys of Redis, Cosmos DB, storage and AI accounts):
 /// `ReadOnlyPolicy` would refuse them at runtime anyway; the guard keeps
 /// them out of `src/`. The network lens (#50) computes NSG access
 /// client-side from GETs instead.
-const POST_ONLY_READS: &[&str] = &["effectivenetworksecuritygroups", "effectiveroutetable"];
+const POST_ONLY_READS: &[&str] = &["effectivenetworksecuritygroups", "effectiveroutetable", "listkeys"];
 
 #[test]
 fn no_post_only_read_is_requested() {

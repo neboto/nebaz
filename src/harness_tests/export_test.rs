@@ -240,6 +240,20 @@ async fn an_exported_app_insights_component_holds_no_ingestion_key() {
     assert!(!out.contains("ikey-export-secret"), "{out}");
 }
 
+/// The same for a Redis cache: its GET can carry access keys and the
+/// persistence storage connection string.
+#[tokio::test]
+async fn an_exported_redis_cache_holds_no_key() {
+    let mut h = Harness::new().await;
+    let m = super::mocks::all_mocks().into_iter().find(|m| m.view == JumpView::RedisCaches).unwrap();
+    h.install(m).await;
+    h.press(KeyCode::Char('X')).await;
+    expire_wait(&mut h).await;
+    let out = all_written(&h);
+    assert!(out.contains("redis-1"));
+    assert!(!out.contains("mock-redis-key"), "{out}");
+}
+
 /// Directory rows export like ARM rows, under their `graph:/` id.
 #[tokio::test]
 async fn a_directory_row_exports_under_its_graph_id() {

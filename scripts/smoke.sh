@@ -119,6 +119,13 @@ run cosmos-tab ok cosmos '[]' \
   "Cosmos DB accounts" \
   "cannot reach 127.0.0.1"
 
+# The Redis tab loads through its routing prefix for Managed Redis, with
+# the Caches chip on the sub-tab row.
+run redis-amr ok amr '[6.0]' \
+  "Azure Cache for Redis & Managed Redis" \
+  "1 Caches" \
+  "cannot reach 127.0.0.1"
+
 # The Container Apps tab loads through a routing prefix (environments).
 run aca-env ok acaenv '[]' \
   "Container apps, environments & jobs" \
