@@ -267,6 +267,24 @@ const MANAGED_REDIS: &[MetricSpec] = &[
     m("operationsPerSecond", "Operations/s", Max),
     m("cachemisses", "Cache misses/s", Avg),
 ];
+/// Service Bus: what is waiting, what died, and whether the namespace is
+/// refusing work.
+const SERVICE_BUS: &[MetricSpec] = &[
+    m("IncomingMessages", "Incoming messages", Total),
+    m("OutgoingMessages", "Outgoing messages", Total),
+    m("ActiveMessages", "Active messages", Avg),
+    m("DeadletteredMessages", "Dead-lettered", Avg),
+    m("ServerErrors", "Server errors", Total),
+    m("ThrottledRequests", "Throttled", Total),
+];
+const EVENT_HUBS: &[MetricSpec] = &[
+    m("IncomingMessages", "Incoming events", Total),
+    m("OutgoingMessages", "Outgoing events", Total),
+    m("IncomingBytes", "Incoming bytes", Total),
+    m("OutgoingBytes", "Outgoing bytes", Total),
+    m("ThrottledRequests", "Throttled", Total),
+    m("ServerErrors", "Server errors", Total),
+];
 
 /// The default set for an ARM id, by its provider and type chain; empty
 /// for a type with none (the `a` picker still lists what it has).
@@ -293,6 +311,8 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.cognitiveservices", ["accounts"]) => COGNITIVE,
         ("microsoft.cache", ["redis"]) => REDIS_CACHE,
         ("microsoft.cache", ["redisenterprise"]) => MANAGED_REDIS,
+        ("microsoft.servicebus", ["namespaces"]) => SERVICE_BUS,
+        ("microsoft.eventhub", ["namespaces"]) => EVENT_HUBS,
         _ => &[],
     }
 }
@@ -724,12 +744,15 @@ pub(crate) mod tests {
         assert!(names(&p("Microsoft.Web/sites/app/slots/staging")).contains(&"Http5xx"));
         assert!(names(&p("Microsoft.Cache/Redis/r")).contains(&"allserverLoad"));
         assert!(names(&p("Microsoft.Cache/redisEnterprise/amr")).contains(&"usedmemorypercentage"));
+        assert!(names(&p("Microsoft.ServiceBus/namespaces/sb")).contains(&"DeadletteredMessages"));
+        assert!(names(&p("microsoft.eventhub/namespaces/eh")).contains(&"IncomingBytes"));
+        assert!(!supports_metrics(&p("Microsoft.ServiceBus/namespaces/sb/queues/q")));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));
         assert!(is_arm_resource(&p("Microsoft.Network/virtualNetworks/v")));
         assert!(!is_arm_resource("/subscriptions/0000"));
-        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS] {
+        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS] {
             assert!((2..=6).contains(&set.len()));
         }
     }

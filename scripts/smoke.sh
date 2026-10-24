@@ -131,6 +131,11 @@ run aca-env ok acaenv '[]' \
   "Container apps, environments & jobs" \
   "cannot reach 127.0.0.1"
 
+# The Messaging tab loads through a routing prefix (Event Hubs).
+run messaging-eh ok eh '[6.0]' \
+  "Service Bus & Event Hubs namespaces" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

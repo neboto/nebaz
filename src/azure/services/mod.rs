@@ -19,6 +19,7 @@ pub mod directory;
 pub mod foundry;
 pub mod identity;
 pub mod keyvault;
+pub mod messaging;
 pub mod monitor;
 pub mod network;
 pub mod network_dns;

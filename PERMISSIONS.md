@@ -219,6 +219,23 @@ each one backs are in the catalog table
   strings, are stripped before the row keeps the JSON. The apps' own
   hosts are on the guard's list, and `az containerapp secret` is named
   forbidden.
+- **Messaging** (Service Bus, Event Hubs):
+  `Microsoft.ServiceBus/namespaces/read`,
+  `Microsoft.EventHub/namespaces/read`; the lazy sections:
+  `Microsoft.ServiceBus/namespaces/networkrulesets/read`,
+  `Microsoft.ServiceBus/namespaces/authorizationRules/read`,
+  `Microsoft.ServiceBus/namespaces/queues/read`,
+  `Microsoft.ServiceBus/namespaces/topics/read`,
+  `Microsoft.EventHub/namespaces/networkrulesets/read`,
+  `Microsoft.EventHub/namespaces/authorizationRules/read`,
+  `Microsoft.EventHub/namespaces/eventhubs/read`. Access policies show
+  names and rights only: their keys and connection strings come only from
+  `listKeys`, a `POST` nebaz never sends (the guard also refuses the
+  literal), and any key-shaped field a `GET` body might carry is stripped
+  before the row keeps the JSON. The namespaces' own hosts (both
+  providers share one suffix) are on the guard's list, and every
+  `az servicebus … authorization-rule keys` and
+  `az eventhubs … authorization-rule keys` chain is named forbidden.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

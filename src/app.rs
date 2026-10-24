@@ -64,6 +64,10 @@ use crate::azure::services::container_apps::{
     ContainerAppDetailSection, ContainerAppRow, EnvironmentDetailSection, EnvironmentRow, JobDetailSection, JobRow,
     ACA_API_VERSION,
 };
+use crate::azure::services::messaging::{
+    api_version_for as messaging_api_version, eventhubs_section_lines, messaging_child_path, servicebus_section_lines,
+    EventHubsDetailSection, EventHubsRow, ServiceBusDetailSection, ServiceBusRow,
+};
 use crate::azure::services::container_registry::{
     registry_child_path, registry_section_lines, RegistryDetailSection, RegistryRow, ACR_API_VERSION,
 };
@@ -2079,6 +2083,59 @@ impl App {
         );
     }
 
+    /// On-enter hook for a messaging namespace's Network (and Service
+    /// Bus Related): the one rule set, `{ns}/networkRuleSets/default`.
+    pub fn trigger_messaging_network(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.messaging_network_rules,
+            event_tx,
+            |c, id| c.get_fetch(&messaging_child_path(id, "networkRuleSets/default"), messaging_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for a namespace's Access policies: names and rights.
+    pub fn trigger_messaging_auth_rules(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.messaging_auth_rules,
+            event_tx,
+            |c, id| c.list_fetch(&messaging_child_path(id, "authorizationRules"), messaging_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for a Service Bus namespace's Queues.
+    pub fn trigger_sb_queues(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.sb_queues,
+            event_tx,
+            |c, id| c.list_fetch(&messaging_child_path(id, "queues"), messaging_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for a Service Bus namespace's Topics.
+    pub fn trigger_sb_topics(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.sb_topics,
+            event_tx,
+            |c, id| c.list_fetch(&messaging_child_path(id, "topics"), messaging_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for an Event Hubs namespace's Event hubs.
+    pub fn trigger_eh_hubs(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.eh_hubs,
+            event_tx,
+            |c, id| c.list_fetch(&messaging_child_path(id, "eventhubs"), messaging_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for an Event Hubs namespace's Related: the rule set
+    /// (VNet rule subnets) and the hubs (capture storage accounts).
+    pub fn trigger_eh_related(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        App::trigger_messaging_network(app, event_tx);
+        App::trigger_eh_hubs(app, event_tx);
+    }
+
     // ── Detail sections ─────────────────────────────────────────────────
 
     fn selected_descriptor(&self) -> Option<&'static crate::sections::SectionDescriptor> {
@@ -2693,6 +2750,25 @@ impl App {
                 r,
                 ManagedRedisDetailSection::from_index(idx),
                 self.lazy.redis_databases.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<ServiceBusRow>() {
+            return Some(servicebus_section_lines(
+                r,
+                ServiceBusDetailSection::from_index(idx),
+                self.lazy.messaging_network_rules.get(r.id()),
+                self.lazy.sb_queues.get(r.id()),
+                self.lazy.sb_topics.get(r.id()),
+                self.lazy.messaging_auth_rules.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<EventHubsRow>() {
+            return Some(eventhubs_section_lines(
+                r,
+                EventHubsDetailSection::from_index(idx),
+                self.lazy.messaging_network_rules.get(r.id()),
+                self.lazy.eh_hubs.get(r.id()),
+                self.lazy.messaging_auth_rules.get(r.id()),
             ));
         }
         if let Some(r) = any.downcast_ref::<SqlServerRow>() {

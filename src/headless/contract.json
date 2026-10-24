@@ -197,6 +197,10 @@
       "redis-caches (redis)",
       "managed-redis (amr)"
     ],
+    "sb": [
+      "servicebus-namespaces (sb)",
+      "eventhub-namespaces (eh)"
+    ],
     "sql": [
       "sql-servers (sql)"
     ],
@@ -387,6 +391,17 @@
       "Related",
       "Tags"
     ],
+    "Event Hubs namespace": [
+      "Overview",
+      "Network",
+      "Security",
+      "Event hubs",
+      "Access policies",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Key Vault": [
       "Overview",
       "Access model",
@@ -544,6 +559,18 @@
       "Databases",
       "Firewall",
       "Networking",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Service Bus namespace": [
+      "Overview",
+      "Network",
+      "Security",
+      "Queues",
+      "Topics",
+      "Access policies",
       "Access",
       "Activity",
       "Related",

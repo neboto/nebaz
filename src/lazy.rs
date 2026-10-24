@@ -216,6 +216,20 @@ pub struct LazyStore {
     /// `GET {cluster}/databases` (Managed Redis), keyed by cluster id.
     pub redis_databases: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Messaging (Service Bus, Event Hubs) ──────────────────────────────
+    /// `GET {ns}/networkRuleSets/default`, keyed by namespace id: default
+    /// action, trusted services, IP and VNet rules.
+    pub messaging_network_rules: LazyMap<serde_json::Value>,
+    /// `GET {ns}/authorizationRules`, keyed by namespace id. Names and
+    /// rights; keys come only from `listKeys` (a POST, never sent).
+    pub messaging_auth_rules: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {ns}/queues`, keyed by Service Bus namespace id.
+    pub sb_queues: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {ns}/topics`, keyed by Service Bus namespace id.
+    pub sb_topics: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {ns}/eventhubs`, keyed by Event Hubs namespace id.
+    pub eh_hubs: LazyMap<Vec<serde_json::Value>>,
+
     // ── Ownership ribbon (every type) ────────────────────────────────────
     /// `GET {group}/providers/Microsoft.Resources/deployments` (and the
     /// operations of its newest unfinished ones), keyed by the lowercased
