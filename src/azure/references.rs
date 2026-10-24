@@ -233,8 +233,20 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
         ContainerAppEnvironments => &[ContainerApps, ContainerAppJobs, WebApps],
         LogWorkspaces => &[AppInsights, Clusters],
         Clusters => &[ResourceGroups, NodePools],
-        PrivateEndpoints => &[Nics, StorageAccounts, KeyVaults, Registries, SqlServers, CosmosAccounts, AiAccounts],
-        StorageAccounts | Registries | SqlServers | CosmosAccounts | AiAccounts => &[PrivateEndpoints],
+        PrivateEndpoints => &[
+            Nics,
+            StorageAccounts,
+            KeyVaults,
+            Registries,
+            SqlServers,
+            CosmosAccounts,
+            AiAccounts,
+            RedisCaches,
+            ManagedRedis,
+        ],
+        StorageAccounts | Registries | SqlServers | CosmosAccounts | AiAccounts | RedisCaches | ManagedRedis => {
+            &[PrivateEndpoints]
+        }
         DnsResolvers => &[DnsForwardingRulesets],
         ServicePrincipals => &[AppRegistrations],
         AppRegistrations => &[ServicePrincipals],
