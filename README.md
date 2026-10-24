@@ -1,327 +1,363 @@
 # nebaz
 
-A fast, keyboard-driven, **read-only** terminal UI for browsing Azure — the
-Azure sibling of [neboto](https://github.com/neboto/neboto-tui) (the AWS one).
+A fast, keyboard-driven, **read-only** terminal UI for browsing Azure: 20
+services, console-style detail panes, follow-the-links navigation across
+subscriptions, a network access lens, metrics, a change timeline and a
+security audit, all without leaving the terminal. The Azure sibling of
+[neboto](https://github.com/neboto/neboto-tui) (the AWS one).
 
-Built in Rust with [Ratatui](https://ratatui.rs/). Website and guide will live
-at **[neboto.dev/azure](https://neboto.dev/azure)** once there is a release.
+Built in Rust with [Ratatui](https://ratatui.rs/).
+
+<p align="center">
+  <img src="demo/nebaz.gif" width="100%"
+       alt="nebaz demo: a container app's failed revision, then @changes finds a new NSG deny rule, the change timeline puts it next to the alert, the network access lens shows it blocking the Power Platform subnet, and @audit lists the findings">
+</p>
+
+<p align="center"><em>Recorded with <code>nebaz --demo</code>. Nothing on screen is a real tenant.</em></p>
+
+**Try it without an Azure account:** `nebaz --demo` opens a made-up tenant
+with an outage to track down and misconfigurations planted for the audit to
+find. It needs no `az`, no login, and makes no network calls.
+
+**nebaz is read-only.** It issues only `GET`s, the built-in `Reader` role is
+all it needs, and a test fails the build if that ever changes. See
+[Why read-only](#why-read-only).
 
 > [!WARNING]
 > **nebaz is experimental.** Most services were built against Azure's API
-> specs and tested offline (unit tests, a fake `az`, a dead endpoint), and
-> have **not** had in-depth real-world testing against live subscriptions.
-> Expect missing fields, wrong labels and rough edges, especially in the
-> services added since `v0.1.0`. The read-only guarantee does not depend on
-> any of that: every layer that keeps nebaz from changing anything is
-> enforced and tested (see [Why read-only](#why-read-only)). Issues and
-> reports from real tenants are very welcome.
+> specs and tested offline, and have **not** had in-depth testing against
+> live subscriptions. Expect missing fields, wrong labels and rough edges.
+> The read-only guarantee does not depend on any of that: every layer that
+> keeps nebaz from changing anything is enforced and tested. Reports from
+> real tenants are very welcome.
 
-## Try it without Azure
+---
 
-```bash
-nebaz --demo
-```
+## Highlights
 
-`--demo` opens a made-up, offline tenant (`contoso-prod`, `contoso-dev`):
-no `az`, no login, nothing leaves your machine. It has a Power Platform
-VNet-injection outage to track down and plenty of misconfigurations
-planted for `@audit`. What is in it, and how it works:
-[`docs/DEMO.md`](docs/DEMO.md).
+- **20 Azure services** behind an `@prefix` fuzzy search (`@vm web`,
+  `@nsg`, `@aca`), with numbered sub-tabs: about 50 lists, every one
+  subscription-wide.
+- **Console-style split detail panes**: overview, the type's own sections
+  (loaded lazily on first view), **Access** (the role assignments that apply,
+  principals named through Microsoft Graph), **Activity** (the last week of
+  operations: who, what, when) and **Related**.
+- **Follow the links**: `Enter` on any ARM id jumps to that resource, across
+  services, resource groups and subscriptions. `⌫` comes back.
+- **Network access lens** (`N`) on a VM, NIC, subnet or NSG: the NSG rules
+  that apply, in priority order with defaults, shadowed rules marked.
+- **Metrics** (`m`): Azure Monitor charts in the pane, a curated set per type.
+- **Change timeline** (`W`) on any resource: the Activity Log, Resource Health
+  and fired alerts, merged. **`@changes`** does it subscription-wide.
+- **`@audit`**: over 50 security checks (world-open NSG rules, public storage
+  and vaults, open SQL firewalls, expiring app credentials, privileged guests
+  and service principals, …) computed from what is already loaded.
+- **Directory**: service principals and app registrations from Microsoft
+  Graph, with credential expiry.
+- **Referenced by** (`U`) and an **ownership ribbon**: what points at this
+  resource, and who manages it.
+- **Copy, never run**: `y` copies the id, `C` picks an `az` command to copy
+  (read, connect or change); nebaz runs none of them.
+- **Export** (`X` / `Ctrl-X`) to JSON, CSV and Markdown, **headless
+  subcommands** for scripts and agents, **macros**, **bookmarks**, **10
+  themes**, **mouse** support.
 
-## Status
+---
 
-Experimental. What has been checked live is listed under "Verified live" in
-[`docs/SERVICES.md`](docs/SERVICES.md); everything else is untested against a
-real subscription. The provider-neutral core (event loop, lazy sections, section
-descriptors, search, macros, bookmarks, export, themes, `$EDITOR`) is ported
-from neboto — see [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md)
-for what came from where and what was changed. The foundation is in: the
-scoping model ([ADR 0002](docs/adr/0002-subscription-scoped-lists-location-as-filter.md)),
-auth through the Azure CLI ([ADR 0003](docs/adr/0003-azure-cli-credential-per-tenant.md))
-and the first-release services are real, per the catalog in
-[`docs/SERVICES.md`](docs/SERVICES.md): Subscriptions +
-Resource Groups, Virtual Machines (+ disks, NICs; power state on the row),
-Storage Accounts (+ blob containers, lazy), Virtual Networks (+ subnets,
-NSGs; since `v0.1.0` public IPs, load balancers, route tables, NAT
-gateways, private endpoints and private DNS zones), Key Vault (metadata plus secret and key *names*, never values),
-Managed Identity (since `v0.1.0`; federated credentials lazy, and VMs and
-AKS link to the identities they use; service principals and app
-registrations from Microsoft Graph, with credential expiry), App Service (since `v0.1.0`; apps,
-function apps and plans, never app settings), SQL (since `v0.1.0`;
-servers, with databases and firewall rules lazy), AKS
-(+ node pools). Since `v0.1.0`: Container Registry (registry metadata;
-replications and webhooks lazy, never repositories, tags or credentials),
-Cosmos DB (accounts, with databases lazy on whichever API the account
-uses; never keys or connection strings), Foundry (every Cognitive Services
-account, Azure OpenAI included; model deployments and projects lazy, never
-keys), Monitor (Log Analytics workspaces and App Insights components,
-metadata only; AKS links to its workspace), Container Apps
-(apps, environments and jobs; revisions and auth settings lazy, secret and
-env var names only, never values), Redis (Azure Cache for Redis with
-its network posture, firewall rules and geo-replication lazy, and Managed
-Redis with databases lazy; never access keys), Messaging (Service Bus
-and Event Hubs namespaces; the firewall, queues, topics, event hubs and
-access policy names lazy, never keys), PostgreSQL & MySQL (flexible
-servers: VNet integration, private DNS zone and private endpoints
-jumpable; firewall rules, Entra admins, TLS parameters and databases
-lazy; never a password), and Edge (application gateways with
-their listener → rule → pool chains, Front Door Standard / Premium profiles
-with endpoints, routes, origins, custom domains and security policies lazy,
-and the WAF policies of both; backends matched to the Container Apps, App
-Service sites and private endpoints already loaded; never certificate
-material or backend health). Every row has an **Access**
-section (the role assignments that apply to it, principals named through
-Microsoft Graph, inherited ones jumping to where they were made; an
-identity also shows what it can do), an
-**Activity** section (the last week of operations on it: who, what, when,
-whether it worked) and a
-**Related** section listing the ARM ids it points at; Enter on one jumps
-there; a link to a type nebaz does not browse yet lands in **All
-resources**, which lists every resource in the subscription. The detail pane has a line cursor,
-vim-style visual selection (`V`, `J`/`K`, `Ctrl-A`, then `y`), a flat
-view (`\`) that puts every section in one scroll, a body filter (`/`,
-`n`/`N` while it is on), group jumps (`[[`/`]]`) and `Ctrl-W` to wrap long
-values such as ARM ids; `H`/`L` step sub-tabs from either pane. `X` exports the
-selected resource (every section, after waiting for the lazy ones to load;
-`Esc` cancels) and `Ctrl-X` the list, as JSON, CSV and Markdown carrying
-the same data (`export_formats` / `export_dir` in the config). The list
-pane has its own visual selection (`V`, `J`/`K`, `Ctrl-A`, or a mouse
-drag): `y` copies the rows as a Markdown table, `Ctrl-X` exports just
-those rows and `X` deep-exports them (every section of up to 50 rows, in
-one file per format). The mouse does what the keys do: a click selects a
-row or a detail line (under wrap and the filter too) or presses the chip,
-marker, badge or hint under it, a double-click is `⏎`, a right-click is
-`⌫` (back), a drag selects, the wheel scrolls the pane under it, and the
-pickers and popups take clicks without letting them through. `N` on a VM, NIC,
-subnet or NSG opens the **network access lens**: the NSG rules that apply,
-subnet then NIC, in priority order, defaults included, shadowed rules and
-rules the other layer blocks marked (computed from the rules with GETs
-only, not Azure's effective view). `m` opens **Azure Monitor metrics**
-in the detail pane: a curated set per type (VM, AKS, Container Apps, App
-Service, SQL database, storage, Key Vault, Cosmos, load balancer, public
-IP, …) with sparklines and last / min / max / avg, a chart of the
-selected one, 1h / 6h / 24h / 7d windows (`[`/`]`), and `a` for every
-metric the resource publishes. `U` shows what **references** the selected
-resource: every loaded row whose Related links point at it (the NICs, private
-endpoints and apps in a subnet, what attaches an identity), from the lists
-already loaded, with zero calls; it names the lists it did not check, and `L`
-loads the likely ones in the background. A dim **ownership ribbon** on the detail
-pane's top border says who owns the resource: what manages it (ARM's
-`managedBy`, also a Related line to jump to), Terraform / Bicep / azd hints
-and owner-ish tags (`ownership_tags` in the config), and the deployment that
-last touched it, read once per resource group when the pane is focused. `W` opens the **change timeline**: the
-Activity Log's changes, Resource Health transitions, fired alerts and
-the deployments that touched the row, merged newest first over 7d / 30d
-/ 90d (`[`/`]`), `f` for one source. `@changes` lists what changed
-across the subscription in the last 15m … 7d (`[`/`]`): Activity Log
-changes, deployments and health transitions, with managed identities' and
-Azure's own changes as noise (`a`); `nebaz changes --since 6h` prints it.
-**`@audit`** lists security findings
-(world-open NSG rules, public storage and vaults, SQL firewalls open to the
-internet, AKS API servers without IP ranges, plain-HTTP apps, open
-Container Apps ingress, plain-text or open Redis caches, PostgreSQL and MySQL servers open to the
-internet or accepting plain text, Service Bus and
-Event Hubs namespaces with SAS keys or no firewall, unhealthy Power
-Platform policies, expiring app credentials, guest or service-principal
-Owners, and more) computed from what is already loaded, with zero API
-calls; a check whose data is not loaded says "not checked", and `r` there
-loads it in the background; `nebaz audit --fail-on high` runs it headless
-([ADR 0007](docs/adr/0007-audit-checks-are-pure.md)).
-For recordings and demos, `--show-keys` (config `show_keys`) names each key
-in a corner box as it's pressed, with what it did (`W  change timeline`);
-typed search and filter text never shows. Verified against a live tenant:
-VM power state on the row, and the copied `az` commands (Key Vault and
-AKS use the name form, since those `show` commands take no `--ids`).
-What `v0.1.0` is, and what must be true before it is tagged, is in
-[`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md); what is not built yet is tracked in
-[GitHub issues](https://github.com/neboto/nebaz/issues).
+## See it in action
+
+Each clip is one workflow against `nebaz --demo`. Click for full size.
+
+<table>
+  <tr>
+    <td width="50%"><a href="demo/scenes/power-platform-outage.gif"><img src="demo/scenes/power-platform-outage.gif" alt="Tracking down a Power Platform outage: @changes, the change timeline, then the network access lens"></a><br><b>Why can't Power Platform reach the API?</b> <code>@changes</code> shows a new NSG rule, <kbd>W</kbd> puts it next to the alert, and <kbd>N</kbd> shows it shadowing the default allow for the injected subnet.</td>
+    <td width="50%"><a href="demo/scenes/audit.gif"><img src="demo/scenes/audit.gif" alt="The @audit findings, then opening the open SSH rule and its change timeline"></a><br><b>Audit.</b> <code>@audit</code> lists what is wrong, worst first; <kbd>Enter</kbd> opens the NSG with SSH open to the internet and <kbd>W</kbd> shows the vendor's guest account added it.</td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="demo/scenes/identities.gif"><img src="demo/scenes/identities.gif" alt="An app registration with expired and expiring secrets, a service principal's roles, and the subscription's Access section"></a><br><b>Who can do what.</b> An app registration with one secret expired and one expiring in six days, and a deploy service principal holding User Access Administrator on the subscription.</td>
+    <td width="50%"><a href="demo/scenes/dns.gif"><img src="demo/scenes/dns.gif" alt="Private DNS zones, their records and VNet links"></a><br><b>Private DNS.</b> A private-link zone with records but no VNet link, so nothing resolves it, and which networks each zone is linked to.</td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="demo/scenes/follow-links.gif"><img src="demo/scenes/follow-links.gif" alt="From an application gateway backend to the container app, its environment and subnet, then the network access lens"></a><br><b>Follow the links.</b> <kbd>Enter</kbd> from an application gateway's backend to the container app, its environment and its subnet, then <kbd>N</kbd> for what may reach it.</td>
+    <td width="50%"></td>
+  </tr>
+</table>
+
+---
 
 ## Install
 
-Prebuilt binaries for Linux (x86_64, aarch64) and macOS (Intel, Apple
-Silicon) are attached to every [GitHub release](https://github.com/neboto/nebaz/releases)
-(none cut yet; the pipeline is in place, see [`docs/RELEASING.md`](docs/RELEASING.md)).
-nebaz needs the **Azure CLI** (≥ 2.54.0), logged in with `az login`; the
+nebaz needs the **Azure CLI** (≥ 2.54.0), logged in with `az login`. The
 installer does not install it.
 
-**Installer** — picks the right binary, verifies its SHA-256 and, when the
-GitHub CLI is installed, its signed build provenance, and puts it in
-`~/.local/bin`:
+**Installer:** picks the right binary for Linux (x86_64, aarch64) or macOS
+(Intel, Apple Silicon), verifies its SHA-256 and, when the GitHub CLI is
+installed, its signed build provenance, and puts it in `~/.local/bin`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/neboto/nebaz/main/install.sh | sh
 ```
 
-Prefer to read a script before running it? Download it first:
+Prefer to read a script before running it?
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/neboto/nebaz/main/install.sh && less install.sh && sh install.sh
 ```
 
-**Or with [cargo-binstall](https://github.com/cargo-bins/cargo-binstall)**:
+`NEBAZ_VERSION=v0.3.0` pins a version and `NEBAZ_INSTALL_DIR` changes the
+destination.
+
+**Other ways:**
 
 ```bash
-cargo binstall --git https://github.com/neboto/nebaz nebaz
+cargo binstall --git https://github.com/neboto/nebaz nebaz   # cargo-binstall
+cargo install --git https://github.com/neboto/nebaz          # from source, recent stable Rust
 ```
 
-`NEBAZ_VERSION=v0.1.0` pins a version and `NEBAZ_INSTALL_DIR` changes the
-destination. Or grab the tarball for your platform from the releases page and
-put `nebaz` anywhere on your `PATH`.
-
-**Verify a download.** Every release archive carries a signed [build
-provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)
-naming the commit and workflow that built it. With the GitHub CLI:
+or download the archive for your platform from the
+[releases page](https://github.com/neboto/nebaz/releases). Every archive
+carries a signed build provenance attestation:
 
 ```bash
 gh attestation verify nebaz-aarch64-apple-darwin.tar.gz --repo neboto/nebaz
 ```
 
-**From source** — needs a recent stable Rust toolchain:
+---
+
+## Quick start
 
 ```bash
-cargo install --git https://github.com/neboto/nebaz
+az login
+nebaz                 # the welcome screen; S picks a service
+nebaz -s vm           # straight to virtual machines
+nebaz -s nsg -r westeurope -p "Prod"   # a sub-tab, a location filter, a subscription
+nebaz --demo          # the made-up tenant, no Azure needed
 ```
 
-Configuration lives in `~/.config/nebaz/config.toml`; every key is
-documented in [`config.example.toml`](config.example.toml).
+Then: `j`/`k` to move, `⏎` to open the detail pane, `1`–`9` for its
+sections, `⏎` on an ARM id to jump, `⌫` to come back, `/` to search,
+`@` to switch service, `?` for every key.
 
-## Build
+---
 
-```bash
-cargo build            # debug   (cargo build --release for release)
-cargo run -- -s sub    # subscriptions + resource groups (needs `az login`)
-cargo run -- -s rg     # straight to the Resource Groups sub-tab
-cargo run -- -s all    # every resource in the subscription; Enter on a → row opens its typed tab
-cargo run -- -s vm     # virtual machines (Tab / 2 / 3 for Disks, NICs)
-cargo run -- -s kv     # key vaults; 4 / 5 on a row list secret and key names
-cargo run -- -s id     # managed identities; search by client or principal id
-cargo run -- -s app    # App Service apps (2 Functions, 3 Plans); 2 on a row loads Configuration
-cargo run -- -s sql    # SQL servers; 3 / 4 on a row list databases and firewall rules
-cargo run -- -s acr    # container registries; 3 / 4 on a row list replications and webhooks
-cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
-cargo run -- -s pg     # PostgreSQL flexible servers (Tab for MySQL, or -s mysql); 2 Networking, 3 Firewall
-cargo run -- -s changes # what changed recently, subscription-wide; [ / ] window, a hides noise
-cargo run -- -s subnet # subnets; N on one shows the NSG rules for anything placed in it
-cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe)
-cargo run -- -s dns    # DNS: Private DNS, zones, Private Resolver (3), rulesets (4), DNS policies (5); -s dnsr for resolvers
-cargo run -- -s foundry  # Foundry / AI Services / OpenAI; 2 on a row lists deployments
-cargo run -- -s law    # Log Analytics workspaces (-s appi for App Insights)
-cargo run -- -s pp     # Power Platform enterprise policies; a delegated subnet's Related links back
-cargo run -- -s redis  # Redis caches (3 Network: VNet, private endpoints, firewall); -s amr for Managed Redis (4 Databases)
-cargo run -- -s aca    # container apps (2 Ingress); -s acaenv for environments (2 Network), -s acajob for jobs
-cargo run -- -s agw    # application gateways (4 Rules: listener → pool chains; 5 Backends); -s afd for Front Door (3 Origins), -s waf for WAF policies
-cargo run -- -s sb     # Service Bus namespaces (2 Network: firewall, private endpoints, private DNS; 4 Queues); -s eh for Event Hubs
-cargo run -- -s audit  # security findings from what is loaded; r loads the missing sources, Enter opens the resource
-cargo test             # all tests, including the read-only guard
-cargo test --test readonly_guard   # just the guard (see "Why read-only")
-cargo clippy --all-targets -- -D warnings   # lint; CI fails on any warning
-scripts/smoke.sh       # offline pty run with a fake az (needs python3)
-```
+## Services
 
-## Headless: `services`, `ls`, `get`, `changes`, `audit`
+`-s <prefix>` on the command line, or `@<prefix>` in the search box. Each
+service's sub-tabs have prefixes of their own (`nebaz services` lists them
+all).
+
+| Prefix | Service | Sub-tabs |
+|---|---|---|
+| `sub` | Subscriptions | Subscriptions, Resource groups (`rg`), All resources (`all`) |
+| `vm` | Virtual Machines | VMs, Disks (`disk`), NICs (`nic`) |
+| `storage` | Storage | Accounts (blob containers lazy) |
+| `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`), NAT gateways (`nat`), Private endpoints (`pe`) |
+| `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`) |
+| `agw` | Edge | Application gateways, Front Door (`afd`), WAF policies (`waf`) |
+| `kv` | Key Vault | Vaults (secret and key *names*, never values) |
+| `id` | Identity | Managed identities, Service principals (`sp`), App registrations (`appreg`) |
+| `aks` | AKS | Clusters, Node pools (`pool`) |
+| `acr` | Container Registry | Registries (replications, webhooks) |
+| `app` | App Service | Apps, Function apps (`func`), Plans (`plan`) |
+| `sql` | SQL | Servers (databases, firewall rules) |
+| `cosmos` | Cosmos DB | Accounts (databases on whichever API) |
+| `pg` | PostgreSQL & MySQL | PostgreSQL flexible servers, MySQL (`mysql`) |
+| `foundry` | Foundry | AI Services and Azure OpenAI accounts (deployments, projects) |
+| `monitor` | Monitor | Log Analytics workspaces, App Insights (`appi`) |
+| `pp` | Power Platform | Enterprise policies (VNet injection, encryption) |
+| `aca` | Container Apps | Apps (revisions), Environments (`acaenv`), Jobs (`acajob`, executions) |
+| `redis` | Redis | Azure Cache for Redis, Managed Redis (`amr`) |
+| `sb` | Messaging | Service Bus namespaces, Event Hubs (`eh`) |
+| `changes` | Changes | Everything that changed recently: activity, deployments, health |
+| `audit` | Audit | Security findings over what is loaded |
+
+What each service shows, its state rule and the calls behind it:
+[`docs/SERVICES.md`](docs/SERVICES.md). Keys, credentials, connection
+strings, app settings and secret values are never fetched.
+
+---
+
+## Keys
+
+`?` shows them all in the app.
+
+**Anywhere**
+
+| Key | |
+|---|---|
+| `S` · `R` · `P` | service · location · subscription pickers |
+| `/` · `@svc text` | fuzzy search · switch service and search |
+| `⌫` / `Ctrl-O` · `` ` `` | history back · jump list |
+| `B` · `'` | bookmark · bookmarks |
+| `,` | macros (record, replay; `--macro NAME` on startup) |
+| `M` · `b` · `?` · `q` | messages · banner · help · quit |
+
+**List pane**
+
+| Key | |
+|---|---|
+| `j`/`k` · `gg`/`G` · `^d`/`^u` | move · top/bottom · half page |
+| `⏎` / `l` | open the detail pane |
+| `Tab` · `1`–`9` · `H`/`L` | sub-tabs |
+| `z` · `F` · `a` | sort · state filter · hide noisy rows |
+| `V` · `J`/`K` · `^A` | select rows; then `y` copies a Markdown table, `X` deep-exports |
+| `r` / `F5` · `w` | refresh · watch mode |
+
+**Detail pane**
+
+| Key | |
+|---|---|
+| `Tab` · `1`–`9` | sections |
+| `⏎` | jump to the ARM id on the line |
+| `\` · `Z` · `^W` | every section in one scroll · full width · wrap long values |
+| `/` · `n`/`N` | filter the lines · step matches |
+| `[[` / `]]` | previous / next group |
+| `V` · `y` | select lines · copy line or selection |
+
+**On a resource**
+
+| Key | |
+|---|---|
+| `N` | network access lens (VM, NIC, subnet, NSG) |
+| `m` | metrics |
+| `W` | change timeline (`f` one source, `[`/`]` window) |
+| `U` | referenced by |
+| `C` | copy an `az` command (inspect, connect, change; never run) |
+| `y` · `O` · `e` | copy the id · open in the portal · open the JSON in `$EDITOR` |
+| `X` / `^X` | export the resource / the list |
+
+**Search tokens:** `rg:name` (resource group), `tag:key=value`, and
+`@* text` to search every list already loaded this session. **Mouse:**
+click, double-click (`⏎`), right-click (`⌫`), drag to select, wheel to
+scroll.
+
+---
+
+## Subscriptions and locations
+
+- Every list is **subscription-wide**. `P` (or `-p`, by id or name) switches
+  subscription, and with it tenant; the picker lists every subscription the
+  Azure CLI knows. With `subscriptions = [...]` in the config, `P` also
+  shows each one's row count for the current sub-tab.
+- **Location** (`R`, `-r`) is a filter over rows already fetched, never a
+  call scope; `global` resources pass every filter.
+- **Resource group** is the `rg:<name>` search token.
+
+---
+
+## Scripts and agents
 
 With a subcommand nebaz runs once and prints instead of opening the TUI:
-the same read-only calls, for scripts and agents. Output is JSON (the
-default, carrying `"schema": "nebaz/v1"`) or Markdown (`-o md`); stdout
-carries only the result, warnings go to stderr.
+the same read-only calls. Output is JSON (`"schema": "nebaz/v1"`) or
+Markdown (`-o md`); stdout carries only the result, warnings go to stderr.
 
 ```bash
 nebaz services                              # every service, its sub-tabs and their prefixes
 nebaz ls vm                                 # one subscription-wide list
 nebaz ls vnet/subnets -r westeurope -f 'rg:prod tag:env=prod' --limit 20
-nebaz ls nsg -p "Prod" -o md                # another subscription, as a Markdown table
-nebaz ls vm --subscriptions Prod,Dev        # several, every row tagged with its subscription
-nebaz ls kv --all-configured                # every subscription in config `subscriptions`
+nebaz ls vm --subscriptions Prod,Dev        # several subscriptions, each row tagged
 nebaz get /subscriptions/…/virtualMachines/vm-1          # every section, lazy ones fetched
 nebaz get vm-1 --in vm --section access --section related
-nebaz get graph:/servicePrincipals/<object id>
-nebaz audit --fail-on high                  # @audit with r pressed: findings, then what wasn't checked
+nebaz changes --since 6h                    # what changed, subscription-wide
+nebaz audit --fail-on high                  # exit 3 on a finding at or above high
 ```
 
-`get` shows what the detail pane shows: it drives the same `App` without a
-terminal, selects the row the way a jump does and enters every section
-(`--section` limits both the output and the calls; `--wait SECS`, default
-60, bounds the lazy fetches, and a section still loading prints as
-`null`). Exit codes: `0` ok (an empty list included), `1` an Azure error,
-`2` a wrong request (unknown prefix, section, subscription or location, a
-resource that isn't there or is ambiguous), `4` not signed in (`az
-login`), and `3` for `audit` when it found something at or above
-`--fail-on` (default `low`; `never` turns it off). `audit` loads the
-lists its checks read and the capped lazy reads they use, exactly as `r`
-in `@audit` does; a source it couldn't load is a stderr warning and its
-checks come back under `not_checked`, never as a pass. A wrong `-p` or `-r` fails rather
-than falling back. The stable keys, flags and exit codes are pinned in
+`get` shows what the detail pane shows, driving the same app without a
+terminal. Exit codes: `0` ok, `1` an Azure error, `2` a wrong request, `3`
+an audit finding at or above `--fail-on`, `4` not signed in. The stable
+keys, flags and exit codes are pinned in
 [`src/headless/contract.json`](src/headless/contract.json); an agent skill
 describing all of it is in [`skills/nebaz/SKILL.md`](skills/nebaz/SKILL.md).
+Every subcommand takes `--demo` too.
 
-## Scoping model
+---
 
-- `P` — **subscription** (the profile slot in neboto); `-p` takes an id or
-  a display name. With config `subscriptions = [...]` set, opening `P`
-  lists the current sub-tab in each of them that isn't cached (four at a
-  time, straight into the list cache, so picking one is instant) and shows
-  the row count per subscription, or `denied` / `disabled` / `error`;
-  unset, `P` makes no calls. Picking a subscription is a history step:
-  `⌫`, the jump list and bookmarks switch back, and name the subscription
-  they will switch to
+## Configuration
 
-- `R` — **location**, a client-side filter over subscription-wide lists
-  (Azure list APIs have no server-side location filter); `All locations`
-  is the default; the picker is fed from the subscription's locations list
-- resource group — the `rg:<name>` search token on every list
-- sub-tabs — digits / Tab, or a routing prefix (`@rg`, `@disk`, `@nsg`, …)
-- `@* <text>` — one search over every list already loaded this session
-  (warm caches only, never a fetch); `⏎` opens a row in its tab
+`~/.config/nebaz/config.toml`; every key is documented in
+[`config.example.toml`](config.example.toml). Command-line flags override it
+for one run.
 
-## Auth
+- **Auth** is the Azure CLI: `az login`, then run nebaz (`auth = "cli"`, env
+  `NEBAZ_AUTH`). A missing `az` exits with the install link; not being
+  logged in opens the TUI with one status line, and `R` retries.
+- **Sovereign clouds:** `endpoint_url` (`--endpoint-url`) sets the ARM base
+  URL.
+- **Themes:** `theme = "gruvbox-dark"` (`--theme`): dark, light,
+  solarized, gruvbox, dracula, nord and catppuccin presets.
+- **Recordings:** `--show-keys` names each key in a corner box as it's
+  pressed, with what it did.
+- **Update check:** once a day nebaz asks GitHub for its latest release and
+  shows a dim `↑ vX.Y.Z` when it is newer. `update_check = false`,
+  `--no-update-check` or `NEBAZ_NO_UPDATE_CHECK=1` turn it off.
 
-The first release authenticates through the **Azure CLI** (≥ 2.54):
-`az login`, then run nebaz. The `P` picker lists every subscription the CLI
-knows across tenants; switching subscription switches tenant implicitly.
-`auth = "cli"` in config (env `NEBAZ_AUTH`) is the only source for now;
-`endpoint_url` sets the ARM base URL for a sovereign cloud. A missing `az`
-exits with the install link; not being logged in opens the TUI with one
-status line and `R` retries.
+---
 
 ## Why read-only
 
-This is a design constraint, not a missing feature. A `PERMISSIONS.md`
-that documents a pure `*/read` footprint is a trust asset: a security team
-can approve nebaz precisely *because* it cannot change anything, and the
-built-in `Reader` role at subscription scope is the whole requirement. One
-gated write action would change that conversation permanently.
+This is a design constraint, not a missing feature. A
+[`PERMISSIONS.md`](PERMISSIONS.md) that documents a pure `*/read` footprint
+is a trust asset: a security team can approve nebaz precisely *because* it
+cannot change anything, and the built-in **Reader** role at subscription
+scope is the whole requirement.
 
-The promise is held at three layers, not by convention
-([`PERMISSIONS.md`](PERMISSIONS.md)):
+The promise is held at three layers, not by convention:
 
 1. the single request constructor only builds `GET`s, and a pipeline policy
    refuses any other method at runtime;
-2. `tests/readonly_guard.rs` fails `cargo test` if the source gains another
-   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, PostgreSQL and MySQL servers, container registries, Cosmos DB, container apps, Redis caches, Service Bus and Event Hubs namespaces, Front Door endpoints, log queries),
-   a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
+2. [`tests/readonly_guard.rs`](tests/readonly_guard.rs) fails `cargo test`
+   if the source gains another request builder, an HTTP client crate, a
+   data-plane host (Key Vault, blob, SQL, Cosmos, model endpoints, …), a
+   mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
 
-**The one non-Azure request.** Once a day nebaz asks GitHub for its latest
-release (an anonymous `GET` of `api.github.com/repos/neboto/nebaz/releases/latest`,
-no token, 3 s timeout, failures silent) and shows a dim `↑ vX.Y.Z` chip
-when it is newer than your build. It is the only request that isn't to
-Azure, it goes through the same GET-only pipeline, and the guard allows it
-from one file. Turn it off with `update_check = false`,
-`--no-update-check` or `NEBAZ_NO_UPDATE_CHECK=1` (ADR 0008).
-
-Key Vault is the case people ask about: nebaz lists secret and key
+**Key Vault** is the case people ask about: nebaz lists secret and key
 **names** through ARM's control-plane actions, which never return a value,
-and no vault data-plane call exists in the codebase (the guard checks).
+and no vault data-plane call exists in the codebase.
 
-**Check it yourself.** Every request nebaz makes, to ARM and to Microsoft
-Graph, carries `nebaz azsdk-rust-nebaz/<version>` at the front of its
-`User-Agent`. With Microsoft Graph activity logs sent to a Log Analytics
-workspace, `MicrosoftGraphActivityLogs | where UserAgent startswith "nebaz "`
-lists its directory reads, every one a `GET`. ARM's Activity Log records
-writes only, so nebaz should never appear in it at all.
+**Microsoft Graph** is read the same way: `GET`s of directory objects, never
+a secret ([ADR 0004](docs/adr/0004-read-only-microsoft-graph.md)).
 
-Where a change is what you want, **`C`** opens a picker of `az` commands
-for the selected resource — Inspect (reads), Connect (`ssh vm`,
-`aks get-credentials`, `containerapp exec`) and Change (start / stop /
-restart / scale, flagged ⚠) — and copies the one you pick for you to run
-yourself. nebaz never runs them (ADR 0005).
+**The one non-Azure request** is the daily update check: an anonymous `GET`
+of `api.github.com/repos/neboto/nebaz/releases/latest`, no token, through
+the same GET-only pipeline, allowed from one file
+([ADR 0008](docs/adr/0008-update-check-is-the-one-non-azure-request.md)).
+
+**Check it yourself.** Every request carries `nebaz azsdk-rust-nebaz/<version>`
+at the front of its `User-Agent`. With Microsoft Graph activity logs in a
+Log Analytics workspace, `MicrosoftGraphActivityLogs | where UserAgent
+startswith "nebaz "` lists its directory reads, every one a `GET`. ARM's
+Activity Log records writes only, so nebaz never appears in it.
+
+Where a change is what you want, `C` copies the `az` command (`vm start`,
+`aks get-credentials`, `containerapp exec`, …) for you to run yourself
+([ADR 0005](docs/adr/0005-copied-commands-may-change-azure.md)).
+
+---
+
+## Development
+
+```bash
+cargo build
+cargo run -- --demo                          # the offline tenant (docs/DEMO.md)
+cargo test                                   # every test, the read-only guard included
+cargo clippy --all-targets -- -D warnings    # CI fails on any warning
+scripts/smoke.sh                             # offline pty run with a fake az (needs python3)
+```
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): how to send a change.
+- [`CLAUDE.md`](CLAUDE.md): the architecture and the conventions.
+- [`docs/SERVICES.md`](docs/SERVICES.md): what each service shows and why.
+- [`docs/DEMO.md`](docs/DEMO.md): the demo tenant, and how to add to it.
+- [`docs/adr/`](docs/adr): the design decisions.
+- [`docs/RELEASING.md`](docs/RELEASING.md): how a release is cut.
+- [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md): the core
+  (event loop, lazy sections, search, macros, bookmarks, export, themes) is
+  copied from neboto, and this is what came from where.
+- What is not built yet: [GitHub issues](https://github.com/neboto/nebaz/issues).
+
+Security issues: see [`SECURITY.md`](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)
