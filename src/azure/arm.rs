@@ -34,7 +34,8 @@ use azure_core::credentials::TokenCredential;
 use azure_core::http::policies::auth::BearerTokenAuthorizationPolicy;
 use azure_core::http::policies::{Policy, PolicyResult};
 use azure_core::http::{
-    ClientOptions, Context, ExponentialRetryOptions, Method, Pipeline, Request, RetryOptions, Url, UserAgentOptions,
+    ClientOptions, Context, ExponentialRetryOptions, Method, Pipeline, Request, RetryOptions, Transport, Url,
+    UserAgentOptions,
 };
 use azure_core::time::Duration;
 use serde_json::Value;
@@ -123,6 +124,16 @@ impl ArmClient {
     fn build(source: CredentialSource, tenant_id: &str, endpoint: Url, scope: String, api: Api) -> Result<ArmClient> {
         let credential: Arc<dyn TokenCredential> = match source {
             CredentialSource::Cli => CliCredential::new(tenant_id)?,
+            // Demo mode (#45): a fixed token over a transport that answers
+            // from the embedded fixtures; still behind `ReadOnlyPolicy`.
+            CredentialSource::Demo => {
+                let options = ClientOptions {
+                    transport: Some(Transport::new(Arc::new(crate::demo::DemoTransport))),
+                    retry: RetryOptions::none(),
+                    ..client_options()
+                };
+                return Self::pipeline_with(options, Arc::new(crate::demo::DemoCredential), tenant_id, endpoint, scope, api);
+            }
             other => {
                 return Err(Error::InvalidConfig(format!(
                     "auth = \"{}\" is not supported yet; only \"cli\" is implemented",
@@ -170,8 +181,21 @@ impl ArmClient {
         scope: String,
         api: Api,
     ) -> Result<ArmClient> {
+        Self::pipeline_with(client_options(), credential, tenant_id, endpoint, scope, api)
+    }
+
+    /// [`pipeline_over`](Self::pipeline_over) with its options given: the
+    /// demo's carry its transport.
+    fn pipeline_with(
+        options: ClientOptions,
+        credential: Arc<dyn TokenCredential>,
+        tenant_id: &str,
+        endpoint: Url,
+        scope: String,
+        api: Api,
+    ) -> Result<ArmClient> {
         let bearer = BearerTokenAuthorizationPolicy::new(credential, [scope]);
-        let pipeline = build_pipeline(client_options(), vec![Arc::new(ReadOnlyPolicy), Arc::new(bearer)]);
+        let pipeline = build_pipeline(options, vec![Arc::new(ReadOnlyPolicy), Arc::new(bearer)]);
         Ok(ArmClient {
             pipeline,
             endpoint,

@@ -73,7 +73,7 @@ impl AzureClients {
     /// opens with the auth line and the `P` picker.
     pub async fn new(config: &Config) -> Result<Self> {
         let source = CredentialSource::resolve(config.auth.as_deref())?;
-        if source != CredentialSource::Cli {
+        if !matches!(source, CredentialSource::Cli | CredentialSource::Demo) {
             return Err(Error::InvalidConfig(format!(
                 "auth = \"{}\" is not supported yet; only \"cli\" is implemented",
                 source.as_str()
@@ -105,7 +105,12 @@ impl AzureClients {
     /// (Re-)read `az account list`. A missing `az` is fatal; any other
     /// auth condition is recorded and the list left empty.
     async fn load_subscriptions(&mut self) -> Result<()> {
-        match az_account_list().await {
+        // Demo mode (#45) runs no `az`: its tenant's table is fixed.
+        let listed = match self.source {
+            CredentialSource::Demo => Ok(crate::demo::subscriptions()),
+            _ => az_account_list().await,
+        };
+        match listed {
             Ok(entries) => {
                 self.subscriptions = entries;
                 self.auth_error = None;
@@ -169,6 +174,11 @@ impl AzureClients {
             .and_then(|id| self.subscriptions.iter().position(|s| s.id == id))
             .or_else(|| self.default_index());
         Ok(self.current.is_some())
+    }
+
+    /// Demo mode (#45): the made-up tenant in `src/demo`, not Azure.
+    pub fn is_demo(&self) -> bool {
+        self.source == CredentialSource::Demo
     }
 
     /// The auth condition found while reading the subscription list.

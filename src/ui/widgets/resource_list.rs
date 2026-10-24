@@ -192,6 +192,11 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
                     },
                 )
             }
+        } else if app.resources.is_empty() && app.azure_clients.is_demo() {
+            (
+                "Not in the demo dataset yet".to_string(),
+                "this tab has no made-up rows · S another service".to_string(),
+            )
         } else if app.resources.is_empty() {
             (
                 "No resources found".to_string(),

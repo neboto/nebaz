@@ -72,6 +72,12 @@ pub struct Cli {
     /// `update_check = false` turns it off for good).
     #[arg(long)]
     pub no_update_check: bool,
+
+    /// Browse a made-up, offline Azure tenant (`contoso-prod`, `contoso-dev`)
+    /// with problems planted to find: no `az`, no login, no network. Works
+    /// with the subcommands too (`nebaz --demo ls vm`).
+    #[arg(long, global = true)]
+    pub demo: bool,
 }
 
 /// The one-shot subcommands. Each makes the same read-only calls the TUI
@@ -245,6 +251,11 @@ impl Cli {
         if self.no_update_check {
             config.update_check = Some(false);
         }
+        // Demo mode is offline: the made-up tenant, and no release check.
+        if self.demo {
+            config.auth = Some("demo".to_string());
+            config.update_check = Some(false);
+        }
     }
 }
 
@@ -267,6 +278,7 @@ mod tests {
             theme: None,
             show_keys: false,
             no_update_check: false,
+            demo: false,
         }
     }
 

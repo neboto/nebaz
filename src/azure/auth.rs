@@ -38,6 +38,9 @@ pub enum CredentialSource {
     Environment,
     /// Managed identity (later).
     ManagedIdentity,
+    /// `nebaz --demo` (#45): the offline made-up tenant in `src/demo`, a
+    /// fixed token and no `az`.
+    Demo,
 }
 
 impl CredentialSource {
@@ -47,6 +50,7 @@ impl CredentialSource {
             CredentialSource::Cli => "cli",
             CredentialSource::Environment => "environment",
             CredentialSource::ManagedIdentity => "managed-identity",
+            CredentialSource::Demo => "demo",
         }
     }
 
@@ -55,13 +59,19 @@ impl CredentialSource {
             "cli" | "azure-cli" | "az" => Some(CredentialSource::Cli),
             "environment" | "env" => Some(CredentialSource::Environment),
             "managed-identity" | "managedidentity" | "msi" => Some(CredentialSource::ManagedIdentity),
+            "demo" => Some(CredentialSource::Demo),
             _ => None,
         }
     }
 
     /// Resolve from the config value with `NEBAZ_AUTH` overriding it;
     /// default `cli`. An unknown spelling is a config error, not a fallback.
+    /// `demo` (what `--demo` sets) is never overridden: a run asked to be
+    /// offline stays offline.
     pub fn resolve(config_value: Option<&str>) -> Result<CredentialSource> {
+        if config_value.and_then(CredentialSource::parse) == Some(CredentialSource::Demo) {
+            return Ok(CredentialSource::Demo);
+        }
         let env = std::env::var("NEBAZ_AUTH").ok();
         let (value, origin) = match (env.as_deref(), config_value) {
             (Some(e), _) if !e.trim().is_empty() => (e, "NEBAZ_AUTH"),
@@ -70,7 +80,7 @@ impl CredentialSource {
         };
         CredentialSource::parse(value).ok_or_else(|| {
             Error::InvalidConfig(format!(
-                "{} = {:?} is not a credential source (cli | environment | managed-identity)",
+                "{} = {:?} is not a credential source (cli | environment | managed-identity | demo)",
                 origin, value
             ))
         })

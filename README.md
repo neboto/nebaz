@@ -16,6 +16,18 @@ at **[neboto.dev/azure](https://neboto.dev/azure)** once there is a release.
 > enforced and tested (see [Why read-only](#why-read-only)). Issues and
 > reports from real tenants are very welcome.
 
+## Try it without Azure
+
+```bash
+nebaz --demo
+```
+
+`--demo` opens a made-up, offline tenant (`contoso-prod`, `contoso-dev`):
+no `az`, no login, nothing leaves your machine. It has a Power Platform
+VNet-injection outage to track down and plenty of misconfigurations
+planted for `@audit`. What is in it, and how it works:
+[`docs/DEMO.md`](docs/DEMO.md).
+
 ## Status
 
 Experimental. What has been checked live is listed under "Verified live" in

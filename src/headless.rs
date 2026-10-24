@@ -1044,3 +1044,5 @@ fn pretty(v: &Value) -> String {
 mod tests;
 #[cfg(test)]
 mod contract_tests;
+#[cfg(test)]
+mod demo_tests;

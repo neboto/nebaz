@@ -3,6 +3,7 @@
   "flags": {
     "": [
       "--banner",
+      "--demo",
       "--endpoint-url",
       "--location",
       "--macro",
