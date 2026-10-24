@@ -1,0 +1,36 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod/projects/orders-assistant",
+      "name": "ai-contoso-prod/orders-assistant",
+      "type": "Microsoft.CognitiveServices/accounts/projects",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "data"
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "2163cbd0-48ad-4c52-bb85-c34c6c4809cf",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "displayName": "Orders assistant",
+        "description": "Answers back-office questions about orders, grounded on the orders API.",
+        "isDefault": true,
+        "provisioningState": "Succeeded",
+        "endpoints": {
+          "AI Foundry API": "https://ai-contoso-prod.services.ai.azure.com/api/projects/orders-assistant"
+        }
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-121d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-121d}}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#applications('4087b8f1-0c36-436a-a23c-1868b3c7fb86')/federatedIdentityCredentials",
+  "value": [
+    {
+      "audiences": [
+        "api://AzureADTokenExchange"
+      ],
+      "description": "Deploys from the production environment only.",
+      "id": "b109a803-56b4-4e3b-af1a-f8f21b092681",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "name": "github-orders-platform-production",
+      "subject": "repo:contoso/orders-platform:environment:production"
+    },
+    {
+      "audiences": [
+        "api://AzureADTokenExchange"
+      ],
+      "description": "Plan-only runs on pull requests.",
+      "id": "1396cc81-8b66-4d5f-ad5c-e09409ace561",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "name": "github-orders-platform-pr",
+      "subject": "repo:contoso/orders-platform:pull_request"
+    }
+  ]
+}

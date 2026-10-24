@@ -1,0 +1,54 @@
+{
+  "@odata.type": "#microsoft.graph.servicePrincipal",
+  "id": "f5233913-f487-4d23-b621-98c7511347d1",
+  "deletedDateTime": null,
+  "accountEnabled": true,
+  "alternativeNames": [],
+  "appDisplayName": "github-actions-deploy",
+  "appDescription": null,
+  "appId": "edc89266-a363-4046-9c6e-e0629dfedbad",
+  "applicationTemplateId": null,
+  "appOwnerOrganizationId": "{{tenant}}",
+  "appRoleAssignmentRequired": false,
+  "createdDateTime": "{{iso:now-188d}}",
+  "description": null,
+  "disabledByMicrosoftStatus": null,
+  "displayName": "github-actions-deploy",
+  "homepage": null,
+  "loginUrl": null,
+  "logoutUrl": null,
+  "notes": "CI/CD for the orders platform: contoso/orders-platform, environment production. Federated, no secrets.",
+  "notificationEmailAddresses": [],
+  "preferredSingleSignOnMode": null,
+  "preferredTokenSigningKeyThumbprint": null,
+  "replyUrls": [],
+  "servicePrincipalNames": [
+    "edc89266-a363-4046-9c6e-e0629dfedbad"
+  ],
+  "servicePrincipalType": "Application",
+  "signInAudience": "AzureADMyOrg",
+  "tags": [
+    "HideApp",
+    "WindowsAzureActiveDirectoryIntegratedApp"
+  ],
+  "tokenEncryptionKeyId": null,
+  "info": {
+    "logoUrl": null,
+    "marketingUrl": null,
+    "privacyStatementUrl": null,
+    "supportUrl": null,
+    "termsOfServiceUrl": null
+  },
+  "samlSingleSignOnSettings": null,
+  "addIns": [],
+  "appRoles": [],
+  "keyCredentials": [],
+  "oauth2PermissionScopes": [],
+  "passwordCredentials": [],
+  "resourceSpecificApplicationPermissions": [],
+  "verifiedPublisher": {
+    "displayName": null,
+    "verifiedPublisherId": null,
+    "addedDateTime": null
+  }
+}

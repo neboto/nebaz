@@ -1,0 +1,15 @@
+{
+  "@odata.type": "#microsoft.graph.user",
+  "id": "e37ad877-49b0-4f5a-b333-31c5f278f12f",
+  "businessPhones": [],
+  "displayName": "Jordan Ortiz (Fabrikam)",
+  "givenName": "Jordan",
+  "jobTitle": null,
+  "mail": "j.ortiz@fabrikam.com",
+  "mobilePhone": null,
+  "officeLocation": null,
+  "preferredLanguage": null,
+  "surname": "Ortiz",
+  "userPrincipalName": "j.ortiz_fabrikam.com#EXT#@contoso.onmicrosoft.com",
+  "userType": "Guest"
+}

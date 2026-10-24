@@ -1,0 +1,79 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod",
+      "name": "ai-contoso-prod",
+      "type": "Microsoft.CognitiveServices/accounts",
+      "location": "westeurope",
+      "kind": "AIServices",
+      "sku": {
+        "name": "S0"
+      },
+      "tags": {
+        "env": "prod",
+        "team": "data",
+        "owner": "data-team@contoso.com",
+        "costCenter": "cc-5120"
+      },
+      "etag": "\"7a01b2c3-0000-0d00-0000-66f1a2b50000\"",
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "1f342012-a634-4ddc-8970-f178395ab2e5",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "endpoint": "https://ai-contoso-prod.cognitiveservices.azure.com/",
+        "endpoints": {
+          "AI Foundry API": "https://ai-contoso-prod.services.ai.azure.com/",
+          "OpenAI Language Model Instance API": "https://ai-contoso-prod.openai.azure.com/",
+          "Content Safety": "https://ai-contoso-prod.cognitiveservices.azure.com/"
+        },
+        "internalId": "3dff1b2a56614703bcca8642d6c7dc9e",
+        "dateCreated": "{{iso:now-121d}}",
+        "callRateLimit": {
+          "rules": []
+        },
+        "allowProjectManagement": true,
+        "defaultProject": "orders-assistant",
+        "associatedProjects": [
+          "orders-assistant"
+        ],
+        "customSubDomainName": "ai-contoso-prod",
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "virtualNetworkRules": [],
+          "ipRules": []
+        },
+        "privateEndpointConnections": [],
+        "publicNetworkAccess": "Enabled",
+        "disableLocalAuth": false,
+        "restrictOutboundNetworkAccess": false,
+        "dynamicThrottlingEnabled": false,
+        "provisioningState": "Succeeded",
+        "capabilities": [
+          {
+            "name": "VirtualNetworks"
+          },
+          {
+            "name": "CustomerManagedKey"
+          },
+          {
+            "name": "MaxFineTuneCount",
+            "value": "100"
+          },
+          {
+            "name": "ProjectManagement"
+          }
+        ]
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-121d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-30d}}"
+      }
+    }
+  ]
+}

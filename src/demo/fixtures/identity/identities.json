@@ -1,0 +1,50 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api",
+      "name": "id-orders-api",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders-team@contoso.com"
+      },
+      "properties": {
+        "isolationScope": "None",
+        "tenantId": "{{tenant}}",
+        "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+        "clientId": "a486b752-7257-42ba-bc16-23a4e0381f56"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-212d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-212d}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/MC_rg-platform-prod_aks-platform-prod_westeurope/providers/Microsoft.ManagedIdentity/userAssignedIdentities/aks-platform-prod-agentpool",
+      "name": "aks-platform-prod-agentpool",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "location": "westeurope",
+      "tags": {},
+      "properties": {
+        "isolationScope": "None",
+        "tenantId": "{{tenant}}",
+        "principalId": "37ec34fc-62c5-4180-a17f-0cccd5ed2e95",
+        "clientId": "e12c192b-685e-4570-b8f9-758cef84d4d0"
+      },
+      "systemData": {
+        "createdBy": "6dae42f8-4368-4678-94ff-3960e28e3630",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-301d}}",
+        "lastModifiedBy": "6dae42f8-4368-4678-94ff-3960e28e3630",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-301d}}"
+      }
+    }
+  ]
+}
