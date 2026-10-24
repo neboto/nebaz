@@ -1,0 +1,37 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/law-contoso-prod",
+  "name": "law-contoso-prod",
+  "type": "Microsoft.OperationalInsights/workspaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "alex.kim@contoso.com",
+    "costCenter": "cc-4410"
+  },
+  "etag": "\"6b00c1d2-0000-0d00-0000-66f1a2b30000\"",
+  "properties": {
+    "customerId": "9635b837-da0d-40f4-8264-eedbdcd48583",
+    "provisioningState": "Succeeded",
+    "sku": {
+      "name": "PerGB2018",
+      "lastSkuUpdate": "{{iso:now-512d}}"
+    },
+    "retentionInDays": 30,
+    "features": {
+      "legacy": 0,
+      "searchVersion": 1,
+      "enableLogAccessUsingOnlyResourcePermissions": true,
+      "disableLocalAuth": false
+    },
+    "workspaceCapping": {
+      "dailyQuotaGb": -1.0,
+      "quotaNextResetTime": "{{iso:now+9h}}",
+      "dataIngestionStatus": "RespectQuota"
+    },
+    "publicNetworkAccessForIngestion": "Enabled",
+    "publicNetworkAccessForQuery": "Enabled",
+    "createdDate": "{{iso:now-512d}}",
+    "modifiedDate": "{{iso:now-21d}}"
+  }
+}

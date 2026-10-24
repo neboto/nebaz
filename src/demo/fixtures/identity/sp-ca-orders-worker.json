@@ -1,0 +1,49 @@
+{
+  "@odata.type": "#microsoft.graph.servicePrincipal",
+  "id": "51b687b3-bdb3-4408-b436-500e659cc8cb",
+  "deletedDateTime": null,
+  "accountEnabled": true,
+  "alternativeNames": [
+    "isExplicit=False",
+    "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker"
+  ],
+  "appDisplayName": null,
+  "appDescription": null,
+  "appId": "8587b0bc-6107-463b-a8d3-278472a07067",
+  "applicationTemplateId": null,
+  "appOwnerOrganizationId": null,
+  "appRoleAssignmentRequired": false,
+  "createdDateTime": null,
+  "description": null,
+  "disabledByMicrosoftStatus": null,
+  "displayName": "ca-orders-worker",
+  "homepage": null,
+  "loginUrl": null,
+  "logoutUrl": null,
+  "notes": null,
+  "notificationEmailAddresses": [],
+  "preferredSingleSignOnMode": null,
+  "preferredTokenSigningKeyThumbprint": null,
+  "replyUrls": [],
+  "servicePrincipalNames": [
+    "8587b0bc-6107-463b-a8d3-278472a07067",
+    "https://identity.azure.net/51b687b3-bdb3-4408-b436-500e659cc8cb="
+  ],
+  "servicePrincipalType": "ManagedIdentity",
+  "signInAudience": null,
+  "tags": [],
+  "tokenEncryptionKeyId": null,
+  "info": null,
+  "samlSingleSignOnSettings": null,
+  "addIns": [],
+  "appRoles": [],
+  "keyCredentials": [],
+  "oauth2PermissionScopes": [],
+  "passwordCredentials": [],
+  "resourceSpecificApplicationPermissions": [],
+  "verifiedPublisher": {
+    "displayName": null,
+    "verifiedPublisherId": null,
+    "addedDateTime": null
+  }
+}

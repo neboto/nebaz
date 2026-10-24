@@ -15,17 +15,16 @@ fn demo_cli(args: &[&str]) -> Cli {
 
 /// Sub-tabs (by `ls` prefix) the demo has no rows for yet.
 const EMPTY_YET: &[&str] = &[
-    "rg", "all", "nic", "storage", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe", "dns", "dnsz",
-    "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "id", "sp", "appreg", "sql", "cosmos", "pg", "mysql",
-    "foundry", "monitor", "appi", "pp", "redis", "amr", "sb", "eh", "changes", "activity", "deploys", "health",
+    "rg", "all", "nic", "storage", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe", "dns", "dnsz", "dnsr",
+    "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "sql", "cosmos", "pg", "mysql", "redis", "amr", "sb", "eh",
+    "changes", "activity", "deploys", "health",
 ];
 
 /// Sub-tabs whose demo rows still open with a `⚠` line somewhere.
 const WARNS_YET: &[&str] = &[
     "sub", "rg", "all", "nic", "storage", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe", "dns", "dnsz",
-    "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "id", "sp", "appreg", "acr", "sql", "cosmos", "pg",
-    "mysql", "foundry", "monitor", "appi", "pp", "aca", "redis", "amr", "sb", "eh", "changes", "activity",
-    "deploys", "health",
+    "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "acr", "sql", "cosmos", "pg", "mysql", "aca", "redis",
+    "amr", "sb", "eh", "changes", "activity", "deploys", "health",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).
@@ -99,4 +98,21 @@ async fn every_demo_row_opens_without_a_warning() {
         clean_but_listed.is_empty(),
         "these open clean now; take them out of WARNS_YET: {clean_but_listed:?}"
     );
+}
+
+/// The demo's `appi-orders` carries an instrumentation key and connection
+/// string, as a real ARM `GET` does; the row (and so the `e` view) must not.
+#[test]
+fn demo_app_insights_credentials_are_stripped() {
+    use crate::azure::resource::Resource;
+    use crate::azure::services::monitor::ComponentRow;
+    let path = format!(
+        "/subscriptions/{}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders",
+        crate::demo::PROD
+    );
+    let reply = crate::demo::respond(&path, "api-version=2020-02-02", 1_790_000_000);
+    assert!(reply.body.contains("InstrumentationKey") && reply.body.contains("ConnectionString"), "the fixture keeps them");
+    let v: Value = serde_json::from_str(&reply.body).expect("JSON");
+    let raw = ComponentRow::from_json(&v, None).expect("parses").raw_content().unwrap_or_default();
+    assert!(!raw.contains("InstrumentationKey") && !raw.contains("ConnectionString"), "{raw}");
 }
