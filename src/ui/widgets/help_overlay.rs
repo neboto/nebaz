@@ -69,10 +69,12 @@ const RIGHT_SECTIONS: &[Section] = &[
         entries: &[
             ("O", "open in Azure portal"),
             ("y", "copy resource id"),
-            ("C", "copy az CLI command"),
+            ("C", "copy an az command: inspect / connect / change (never run)"),
             ("e", "open in $EDITOR"),
             ("N", "network access (NSG rules)"),
+            ("U", "referenced by (warm lists; L loads likely)"),
             ("m", "metrics (Azure Monitor)"),
+            ("W", "change timeline (f · [ / ])"),
             ("X / ^X", "export detail / list"),
             ("M", "message history"),
             (",", "macros (⏎ run · n record)"),
@@ -98,6 +100,17 @@ const RIGHT_SECTIONS: &[Section] = &[
         entries: &[
             ("S / R / P", "service / location / subscription"),
             ("@vm …", "switch via prefix"),
+        ],
+    },
+    Section {
+        title: "Mouse",
+        entries: &[
+            ("click", "row · line · chip · hint"),
+            ("double-click", "⏎ (open · jump)"),
+            ("right-click", "⌫ back · close a popup"),
+            ("drag", "select rows / lines"),
+            ("wheel", "scroll the pane under it"),
+            ("Shift-drag", "terminal text selection"),
         ],
     },
 ];
@@ -126,6 +139,7 @@ pub fn render_help_overlay(app: &App, frame: &mut Frame) {
     let offset = app.help_scroll.min(max_scroll);
 
     frame.render_widget(Clear, area);
+    app.mouse.popup.borrow_mut().record_area(area);
 
     let mut block = theme::popup_block("Help").title(
         Title::from(Span::styled(

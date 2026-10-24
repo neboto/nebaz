@@ -109,6 +109,20 @@ pub struct Config {
     /// pinned_services = ["vm", "aks", "kv", "storage"]
     /// ```
     pub pinned_services: Option<Vec<String>>,
+    /// Tag keys the ownership ribbon on the detail pane reads, tried in
+    /// order and matched case-insensitively (`owner` also covers `Owner`);
+    /// a key ending in `:` is a prefix (`hidden-link:`). Setting this
+    /// replaces the default list: `["owner", "team", "CreatedBy",
+    /// "cost-center", "azd-env-name", "hidden-link:"]`.
+    ///
+    /// ```toml
+    /// ownership_tags = ["squad", "owner", "cost-center"]
+    /// ```
+    pub ownership_tags: Option<Vec<String>>,
+    /// Show the ownership ribbon (`⛓ managed by … · terraform · owner … ·
+    /// deployed by …`) on the detail pane's top border (default true).
+    /// `false` also skips its one lazy call, the group's deployments.
+    pub ownership_ribbon: Option<bool>,
     /// Set when the config file existed but failed to parse — the app starts
     /// on defaults and surfaces this in the status bar. Never silently: a
     /// TOML typo used to wipe every setting (default_service, roles, …) with

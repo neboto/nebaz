@@ -155,6 +155,16 @@ impl ServiceSelectorState {
         }
     }
 
+    /// Put the highlight on row `idx` (a click). False for a category
+    /// header or past the end, which can't be selected.
+    pub fn select_row(&mut self, idx: usize) -> bool {
+        let selectable = matches!(self.rows.get(idx), Some(SelectorRow::Service(_)));
+        if selectable {
+            self.selected_index = idx;
+        }
+        selectable
+    }
+
     pub fn selected_service(&self) -> Option<ServiceType> {
         match self.rows.get(self.selected_index) {
             Some(SelectorRow::Service(s)) => Some(*s),
@@ -261,6 +271,7 @@ impl ServiceSelectorState {
 pub fn render_service_selector(
     state: &ServiceSelectorState,
     current: Option<ServiceType>,
+    hits: &std::cell::RefCell<crate::app::PopupHits>,
     frame: &mut Frame,
 ) {
     if !state.visible {
@@ -362,6 +373,7 @@ pub fn render_service_selector(
             .alignment(Alignment::Right),
         );
 
+    let list_rows = list_block.inner(chunks[1]);
     let list = List::new(items)
         .block(list_block)
         .highlight_style(theme::selection_style(true))
@@ -378,6 +390,7 @@ pub fn render_service_selector(
     });
 
     frame.render_stateful_widget(list, chunks[1], &mut list_state);
+    hits.borrow_mut().record_list(area, list_rows, list_state.offset(), state.rows.len());
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

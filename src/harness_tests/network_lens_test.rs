@@ -9,16 +9,16 @@ use super::*;
 use crate::azure::services::network::{NsgRow, VnetRow};
 use serde_json::json;
 
-fn nsg_id() -> String {
+pub(super) fn nsg_id() -> String {
     arm_id("Microsoft.Network/networkSecurityGroups/aca-nsg")
 }
 
-fn subnet_id() -> String {
+pub(super) fn subnet_id() -> String {
     arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/snet-aca")
 }
 
 /// `vnet-1` with one subnet, `snet-aca` (the shared ACA environment mock's infrastructure subnet), guarded by `aca-nsg`.
-fn vnet() -> VnetRow {
+pub(super) fn vnet() -> VnetRow {
     VnetRow::from_json(
         &json!({"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1"), "name": "vnet-1", "location": "westeurope",
             "properties": {"addressSpace": {"addressPrefixes": ["10.0.0.0/16"]}, "subnets": [
@@ -45,7 +45,7 @@ fn nsg() -> NsgRow {
 }
 
 /// Warm the NSGs list (and, for the environment case, the VNets list).
-fn warm(h: &mut Harness, with_vnet: bool) {
+pub(super) fn warm(h: &mut Harness, with_vnet: bool) {
     let sub = h.app.subscription_key();
     h.app.cache.insert(
         ServiceType::Network,

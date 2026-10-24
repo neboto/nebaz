@@ -224,6 +224,8 @@ pub fn render_network_lens(app: &crate::app::App, area: Rect, frame: &mut Frame)
         body.push(lens_line(l, i == st.selected));
     }
     frame.render_widget(Paragraph::new(body), chunks[2]);
+    // A click puts the cursor on a line, a double-click follows it.
+    app.mouse.pane_rows.borrow_mut().record_rows(chunks[2], top, st.lines.len());
 
     // ── Footer ──
     let mut spans = vec![Span::raw(" ")];
@@ -239,7 +241,10 @@ pub fn render_network_lens(app: &crate::app::App, area: Rect, frame: &mut Frame)
     ] {
         spans.extend(theme::hint(k, d));
     }
-    frame.render_widget(Paragraph::new(Line::from(spans)), chunks[3]);
+    let footer = Line::from(spans);
+    let c = chunks[3];
+    crate::app::record_hint_regions(app, &footer, 1, c.x, c.y, c.x + c.width);
+    frame.render_widget(Paragraph::new(footer), c);
 }
 
 fn lens_line(l: &LensLine, selected: bool) -> Line<'static> {

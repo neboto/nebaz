@@ -79,7 +79,15 @@ pub fn overview_rows(r: &dyn Resource) -> Vec<(String, String)> {
 
 /// The Related body: the row's labelled ARM ids, Enter jumps.
 pub fn related_rows(r: &dyn Resource) -> Vec<(String, String)> {
-    related_lines(r.related())
+    let mut lines = r.related();
+    // ARM's `managedBy`, for every type that does not link it itself: the
+    // ownership ribbon names it, this line is how `⏎` gets there.
+    if let Some(m) = crate::azure::ownership::managed_by_of(r).filter(|m| m.starts_with("/subscriptions/")) {
+        if !lines.iter().any(|(_, id)| id.eq_ignore_ascii_case(&m)) {
+            lines.push((format!("Managed by {}", crate::azure::resource::name_of_id(&m)), m));
+        }
+    }
+    related_lines(lines)
 }
 
 /// [`related_rows`] from lines already gathered: a type whose Related

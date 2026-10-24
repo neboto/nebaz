@@ -161,6 +161,7 @@ impl SubscriptionSelectorState {
 pub fn render_subscription_selector(
     state: &SubscriptionSelectorState,
     current_subscription: Option<&str>,
+    hits: &std::cell::RefCell<crate::app::PopupHits>,
     frame: &mut Frame,
 ) {
     if !state.visible {
@@ -188,6 +189,7 @@ pub fn render_subscription_selector(
         .block(block)
         .wrap(ratatui::widgets::Wrap { trim: false });
         frame.render_widget(msg, area);
+        hits.borrow_mut().record_area(area);
         return;
     }
 
@@ -280,6 +282,7 @@ pub fn render_subscription_selector(
     }
 
     frame.render_stateful_widget(list, chunks[1], &mut list_state);
+    hits.borrow_mut().record_list(area, chunks[1], list_state.offset(), filtered.len());
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

@@ -64,7 +64,11 @@ the same data (`export_formats` / `export_dir` in the config). The list
 pane has its own visual selection (`V`, `J`/`K`, `Ctrl-A`, or a mouse
 drag): `y` copies the rows as a Markdown table, `Ctrl-X` exports just
 those rows and `X` deep-exports them (every section of up to 50 rows, in
-one file per format). `N` on a VM, NIC,
+one file per format). The mouse does what the keys do: a click selects a
+row or a detail line (under wrap and the filter too) or presses the chip,
+marker, badge or hint under it, a double-click is `⏎`, a right-click is
+`⌫` (back), a drag selects, the wheel scrolls the pane under it, and the
+pickers and popups take clicks without letting them through. `N` on a VM, NIC,
 subnet or NSG opens the **network access lens**: the NSG rules that apply,
 subnet then NIC, in priority order, defaults included, shadowed rules and
 rules the other layer blocks marked (computed from the rules with GETs
@@ -73,7 +77,18 @@ in the detail pane: a curated set per type (VM, AKS, Container Apps, App
 Service, SQL database, storage, Key Vault, Cosmos, load balancer, public
 IP, …) with sparklines and last / min / max / avg, a chart of the
 selected one, 1h / 6h / 24h / 7d windows (`[`/`]`), and `a` for every
-metric the resource publishes. Verified against a live tenant:
+metric the resource publishes. `U` shows what **references** the selected
+resource: every loaded row whose Related links point at it (the NICs, private
+endpoints and apps in a subnet, what attaches an identity), from the lists
+already loaded, with zero calls; it names the lists it did not check, and `L`
+loads the likely ones in the background. A dim **ownership ribbon** on the detail
+pane's top border says who owns the resource: what manages it (ARM's
+`managedBy`, also a Related line to jump to), Terraform / Bicep / azd hints
+and owner-ish tags (`ownership_tags` in the config), and the deployment that
+last touched it, read once per resource group when the pane is focused. `W` opens the **change timeline**: the
+Activity Log's changes, Resource Health transitions, fired alerts and
+the deployments that touched the row, merged newest first over 7d / 30d
+/ 90d (`[`/`]`), `f` for one source. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in
@@ -236,5 +251,8 @@ workspace, `MicrosoftGraphActivityLogs | where UserAgent startswith "nebaz "`
 lists its directory reads, every one a `GET`. ARM's Activity Log records
 writes only, so nebaz should never appear in it at all.
 
-Where a change is what you want, **`C`** copies the `az … show` command for
-the selected resource; edit the verb and run it yourself.
+Where a change is what you want, **`C`** opens a picker of `az` commands
+for the selected resource — Inspect (reads), Connect (`ssh vm`,
+`aks get-credentials`, `containerapp exec`) and Change (start / stop /
+restart / scale, flagged ⚠) — and copies the one you pick for you to run
+yourself. nebaz never runs them (ADR 0005).

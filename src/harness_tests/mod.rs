@@ -33,11 +33,13 @@
 use super::*;
 use crate::azure::auth::SubscriptionEntry;
 use azure_core::credentials::{AccessToken, TokenCredential, TokenRequestOptions};
+use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 use ratatui::backend::TestBackend;
 use ratatui::Terminal;
 use std::sync::Arc;
 
 mod all_search_test;
+mod command_picker_test;
 mod directory_test;
 mod list_ux_test;
 mod export_test;
@@ -47,7 +49,11 @@ pub(crate) mod mocks;
 mod detail_pane_test;
 mod navigation_test;
 mod metrics_test;
+mod mouse_test;
 mod network_lens_test;
+mod refs_lens_test;
+mod ownership_test;
+mod timeline_test;
 mod wiring_test;
 
 /// The CLI's default subscription in the fixture account list.
@@ -147,6 +153,7 @@ impl Harness {
             self.app.macro_tick(&self.tx);
             self.app.flat_tick(&self.tx);
             self.app.export_tick(&self.tx);
+            self.app.ownership_tick(&self.tx);
             self.draw();
             self.app.process_pending_search();
             self.app.record_message_history();
@@ -270,6 +277,83 @@ impl Harness {
             .map(|row| row.iter().map(|c| c.symbol()).collect::<String>())
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    // ── The mouse: one event per call, then settle (a draw included, so
+    // the next event hits what is now on screen). ────────────────────────
+
+    pub async fn mouse(&mut self, kind: MouseEventKind, (column, row): (u16, u16)) {
+        self.send(Event::Mouse(MouseEvent { kind, column, row, modifiers: KeyModifiers::NONE })).await;
+    }
+
+    pub async fn click(&mut self, at: (u16, u16)) {
+        self.mouse(MouseEventKind::Down(MouseButton::Left), at).await;
+        self.mouse(MouseEventKind::Up(MouseButton::Left), at).await;
+    }
+
+    /// Two presses on the same cell, well inside the double-click window.
+    pub async fn double_click(&mut self, at: (u16, u16)) {
+        self.click(at).await;
+        self.click(at).await;
+    }
+
+    pub async fn right_click(&mut self, at: (u16, u16)) {
+        self.mouse(MouseEventKind::Down(MouseButton::Right), at).await;
+    }
+
+    /// Press at `from`, drag through `to`, release there.
+    pub async fn drag(&mut self, from: (u16, u16), to: (u16, u16)) {
+        self.mouse(MouseEventKind::Down(MouseButton::Left), from).await;
+        self.mouse(MouseEventKind::Drag(MouseButton::Left), to).await;
+        self.mouse(MouseEventKind::Up(MouseButton::Left), to).await;
+    }
+
+    pub async fn scroll(&mut self, at: (u16, u16), down: bool) {
+        let kind = if down { MouseEventKind::ScrollDown } else { MouseEventKind::ScrollUp };
+        self.mouse(kind, at).await;
+    }
+
+    /// The screen cell where `text` first appears (top to bottom), drawn
+    /// fresh. Panics with the screen when it is not there.
+    pub fn find(&mut self, text: &str) -> (u16, u16) {
+        self.find_nth(text, 0)
+    }
+
+    /// Like [`Harness::find`], the `n`th occurrence (0-based).
+    pub fn find_nth(&mut self, text: &str, n: usize) -> (u16, u16) {
+        let screen = self.render();
+        let buffer = self.terminal.backend().buffer();
+        let width = buffer.area.width as usize;
+        let mut seen = 0;
+        for (y, row) in buffer.content().chunks(width).enumerate() {
+            // Each cell's byte offset in the row's text, to turn a match
+            // back into a column (a wide glyph is one cell of several bytes).
+            let mut line = String::new();
+            let mut starts = Vec::with_capacity(width);
+            for cell in row {
+                starts.push(line.len());
+                line.push_str(cell.symbol());
+            }
+            for (at, _) in line.match_indices(text) {
+                if seen == n {
+                    let x = starts.iter().position(|&s| s >= at).unwrap_or(0);
+                    return (x as u16, y as u16);
+                }
+                seen += 1;
+            }
+        }
+        panic!("{text:?} (#{n}) is not on screen:\n{screen}");
+    }
+
+    /// The first recorded click region with `action` (its left cell).
+    pub fn region(&mut self, action: ClickAction) -> (u16, u16) {
+        self.render();
+        let regions = self.app.click_regions.borrow();
+        let r = regions
+            .iter()
+            .find(|r| r.action == action)
+            .unwrap_or_else(|| panic!("no click region for {action:?}"));
+        (r.rect.x, r.rect.y)
     }
 
     /// Names of the rows the list shows, in order.

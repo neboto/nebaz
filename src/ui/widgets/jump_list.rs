@@ -28,6 +28,7 @@ pub fn render_jump_list(app: &App, frame: &mut Frame) {
     );
     let inner = block.inner(area);
     frame.render_widget(block, area);
+    app.mouse.popup.borrow_mut().record_area(area);
 
     let total = app.nav_history.len();
     if total == 0 {
@@ -46,6 +47,7 @@ pub fn render_jump_list(app: &App, frame: &mut Frame) {
     let height = inner.height as usize;
     let selected = app.jump_list_selected.min(total - 1);
     let offset = selected.saturating_sub(height.saturating_sub(1));
+    app.mouse.popup.borrow_mut().record_list(area, inner, offset, total);
 
     // The cursor (where `Ctrl-O` has parked us) as a display row, so the user
     // sees that going back walks a position rather than consuming the list.
@@ -109,6 +111,7 @@ pub fn render_bookmarks(app: &App, frame: &mut Frame) {
     );
     let inner = block.inner(area);
     frame.render_widget(block, area);
+    app.mouse.popup.borrow_mut().record_area(area);
 
     let total = app.bookmarks.len();
     if total == 0 {
@@ -126,6 +129,7 @@ pub fn render_bookmarks(app: &App, frame: &mut Frame) {
     let height = inner.height as usize;
     let selected = app.bookmarks_selected.min(total - 1);
     let offset = selected.saturating_sub(height.saturating_sub(1));
+    app.mouse.popup.borrow_mut().record_list(area, inner, offset, total);
 
     let lines: Vec<Line> = app
         .bookmarks

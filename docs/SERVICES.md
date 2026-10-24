@@ -215,7 +215,6 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     resources row of a browsed type in its typed tab), `l` peeks in
     place, `Ctrl-O` returns to the results. Not `@all`: that is the All
     resources routing prefix (#23), which lists the subscription from ARM.
-
 19. **Metrics** (`m`, #51, `src/azure/metrics.rs`, drawn by
     `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics
     for the selected row, owning the detail pane until `Esc` (`Z` full
@@ -237,6 +236,111 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     task, a generation drops a superseded answer). Opening from the list
     fires the default section's on-enter hook first, so closing never
     leaves a section waiting.
+20. **`C` command picker** (#47, ADR 0005, `src/azure/cli_actions.rs`):
+    the row's read command first (rule 9; `⏎` on it is the old `C`),
+    then the type's commands in three tiers, then two reads every ARM
+    row shares (`role assignment list --scope {id} --include-inherited`;
+    for a resource, `monitor activity-log list --resource-id {id}
+    --offset 7d`). Copied, never run. `--ids` or the name form per
+    command from the CLI's `id_part`, checked 2026-10-23 against
+    azure-cli `dev` and azure-cli-extensions (`ssh`, `serial-console`):
+    `vm`, `webapp`, `containerapp` (not `exec` / `logs show` / `replica` /
+    `revision list`), `containerapp job` (not `execution`), `network nic`,
+    `nsg` / `route-table` / `vnet subnet show` take `--ids`; `aks`,
+    `functionapp`, `logicapp`, `ssh vm`, `serial-console`, `acr`,
+    `keyvault … list`, `storage account network-rule`, `sql … list` use
+    names. Per type: **VM** get-instance-view, boot log · ssh vm, Bastion
+    ssh (rdp on Windows; the Bastion host is a placeholder), serial
+    console · start, restart, stop, deallocate. **NIC** effective NSG and
+    routes (Azure `POST`s; not under `Reader`). **AKS** get-upgrades,
+    nodepool list · get-credentials (never `--admin`) · start, stop;
+    **node pool** get-upgrades · scale `--node-count <current>` (a no-op
+    as pasted; noted when the autoscaler owns it), start, stop.
+    **Container App** revision / replica list, last 50 log lines · exec,
+    log stream · restart the latest revision; **environment** its apps,
+    certificates · system log stream; **job** executions · start one.
+    **Web app** config, instances · ssh, log tail · restart, stop, start;
+    **function / logic app** restart, stop, start (function list).
+    **Key Vault** secret and key names, network rules (never a value).
+    **ACR** repositories, replications · `acr login` (never
+    `--expose-token`). **Storage** network rules, containers with
+    `--auth-mode login` (never the account key). **SQL server**
+    databases, firewall rules, Entra admin. **NSG** rules with defaults.
+    **Subnet** its NSG, its route table. **Service principal / app
+    registration** credential metadata, owners, federated credentials
+    (never `credential reset`). **Power Platform policy** each injected
+    subnet. A list visual selection (#39) merged into one `--ids a b c` command
+    (neboto's batch mode) is not built yet: `C` acts on the cursor row.
+21. **Referenced by** (`U`, #49, `src/azure/references.rs`, keys and the
+    cache walk in `src/app/refs_lens.rs`, drawn by
+    `src/ui/widgets/refs_lens.rs`): the reverse of Related. A reverse
+    index over every warm list of the current subscription (the `@*`
+    walk: typed lists first, All resources last for ids no typed list
+    has; the on-screen list stands in for a lapsed entry) maps each id a
+    row's `related()` points at, and each ARM id in a tag key or value
+    (`hidden-link:/subscriptions/…`), to the row. Ids match
+    case-insensitively; a link to a child (`…/subnets/s`) also counts
+    for its parent (`via Subnet s (in it)`); Graph `graph:/` ids match
+    through the target's own `matches_id` (a service principal's
+    `(appId='…')` alias). Not references: the subscription and resource
+    group links every row has, a row's own id, and containment either
+    way (a VNet listing its subnets). **Zero calls**: the index is kept
+    and reused while the cache's write generation, the subscription and
+    the warm-list count hold. The coverage line counts the lists searched
+    and names the cold ones likely to point at this type
+    (`likely_referrers`, a hand-kept table) as `not checked — load …`;
+    `L` loads those through their ordinary list load in the background
+    (into the cache, never onto the screen; a failure is a `⚠` line) and
+    the lens rescans as each lands. `f` narrows to one service, `⏎`
+    jumps through the jump path, `y` copies the id, `e` opens the list
+    in `$EDITOR`, `r` rescans.
+22. **Ownership ribbon** (#48, `src/azure/ownership.rs`, `src/app/ownership.rs`,
+    drawn right-aligned on the detail pane's top border by
+    `details_pane.rs`): one dim line on every type, e.g. `⛓ managed by
+    aks-1 · terraform · owner alice · deployed by main 2026-10-20 14:03`,
+    cut to the border. In order: ARM's `managedBy` (read from the row's
+    raw ARM body; the Related section carries it as a `Managed by` line
+    for every type, so `⏎` jumps there); IaC hints (a `managed-by` /
+    `provisioner` / `iac` / `deployed-by` tag's value as written, and
+    `terraform` / `bicep` / `pulumi` / `azd` when a tag key or value names
+    one); the configured `ownership_tags` (default `owner`, `team`,
+    `CreatedBy`, `cost-center`, `azd-env-name`, `hidden-link:`; tried in
+    order, case-insensitively, a trailing `:` a key prefix, so App
+    Insights' `hidden-link:/subscriptions/…` reads `linked to app-1`); then
+    the **deployment that last touched it**. That last part is the one call:
+    with the pane focused on a row inside a group, the group's deployments
+    (one page of up to 100, newest first) are read once per group per
+    subscription visit and matched by `outputResources` and `dependencies`
+    id; for the newest three that did not succeed (no `outputResources`),
+    their operations are read too and matched by `targetResource.id`. An
+    inline template (Bicep, `-f`) names only the deployment; a template
+    spec or linked template is named. `⧗` while loading; a failure is
+    `⚠ deployments: …` on the ribbon in the warning colour, never an
+    error. `ownership_ribbon = false` hides it and skips the call.
+
+23. **Change timeline** (`W`, #52, `src/azure/timeline.rs`, drawn by
+    `src/ui/widgets/timeline_lens.rs`): "what changed around this row?",
+    owning the detail pane until `Esc` (`Z` full width). Four sources,
+    each one task under one generation (a reopen, `[` / `]` or `r`
+    supersedes them; off the `LazyStore`, every open refetches), merged
+    newest first with a badge: **ACT**, the Activity Log through rule
+    12's query over the window, collapsed to operations and kept to the
+    changes (a `/write`, `/delete` or `/action` that ended `Succeeded` or
+    `Failed`; `a` shows every operation), at most 1,000 events;
+    **HLTH**, the resource's Resource Health history (resources only; a
+    group or subscription says so); **ALRT**, alerts fired on the row (its
+    resource, or its group), a row when one fired and one when it
+    resolved; **DEP**, the deployments in the row's group that deployed
+    it (`outputResources`; a group's timeline takes all of them),
+    at most 200 items each. The Activity Log failing is the header's
+    error; any other source failing is a dim note, never an error. Windows
+    7d / 30d / 90d (`[` / `]`; 90 days is the log's retention, and alerts
+    keep 30, which the 90d window notes). Rows keep named fields only:
+    `⏎` / `v` open the row's in `$EDITOR`, `e` the whole timeline, `y`
+    copies the row, `l` goes to what the row is about, `f` cycles one
+    source; the counts row carries the ownership ribbon (rule 22). Never a deployment's parameters or outputs, an event's
+    `properties` or the caller's claims. Any ARM row has one (a directory
+    row does not).
 
 ## The catalog
 
@@ -327,7 +431,10 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
+| Change timeline (`W`, rule 23) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
+| Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
+| Ownership ribbon (rule 22) | 0 for tags and `managedBy`; with the pane focused, 1 per resource group per subscription visit, plus 1 per not-succeeded deployment among the newest 3 | `{group}/providers/Microsoft.Resources/deployments?$top=100` · `{group}/providers/Microsoft.Resources/deployments/{name}/operations` · `2025-04-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |

@@ -49,9 +49,9 @@ run() { # name fake-az-dir service keys-json expected...
   done
 }
 
-run logged-in ok sub '[2.0, "j", "C", 1.0]' \
+run logged-in ok sub '[2.0, "j", "C", 0.5, "\r", 1.0]' \
   "Production" "Partner Dev" \
-  "Copied az command"
+  'Copied `account show`'
 
 run arm-unreachable ok rg '[8.0]' \
   "cannot reach 127.0.0.1" \
