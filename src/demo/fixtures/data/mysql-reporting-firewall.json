@@ -1,0 +1,22 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/firewallRules/AllowAllAzureServicesAndResourcesWithinAzureIps_2022-8-17_14-55-21",
+      "name": "AllowAllAzureServicesAndResourcesWithinAzureIps_2022-8-17_14-55-21",
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules",
+      "properties": { "startIpAddress": "0.0.0.0", "endIpAddress": "0.0.0.0" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/firewallRules/contoso-office",
+      "name": "contoso-office",
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules",
+      "properties": { "startIpAddress": "203.0.113.24", "endIpAddress": "203.0.113.24" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/firewallRules/fabrikam-bi",
+      "name": "fabrikam-bi",
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules",
+      "properties": { "startIpAddress": "198.51.100.0", "endIpAddress": "198.51.100.255" }
+    }
+  ]
+}

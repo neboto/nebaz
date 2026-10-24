@@ -1,0 +1,18 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.KeyVault/vaults/kv-legacy-prod/keys/legacy-portal-signing",
+      "name": "legacy-portal-signing",
+      "type": "Microsoft.KeyVault/vaults/keys",
+      "location": "westeurope",
+      "properties": {
+        "attributes": { "enabled": true, "created": 1560261012, "updated": 1560261012, "exportable": false, "recoveryLevel": "Recoverable+Purgeable" },
+        "kty": "RSA",
+        "keyOps": ["sign", "verify"],
+        "keySize": 2048,
+        "keyUri": "https://kv-legacy-prod.vault.azure.net/keys/legacy-portal-signing",
+        "keyUriWithVersion": "https://kv-legacy-prod.vault.azure.net/keys/legacy-portal-signing/8e7d6c5b4a3f42e1d0c9b8a7f6e5d4c3"
+      }
+    }
+  ]
+}

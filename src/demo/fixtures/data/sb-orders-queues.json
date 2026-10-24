@@ -1,0 +1,72 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/queues/orders",
+      "name": "orders",
+      "type": "Microsoft.ServiceBus/Namespaces/Queues",
+      "location": "westeurope",
+      "properties": {
+        "maxMessageSizeInKilobytes": 256,
+        "lockDuration": "PT1M",
+        "maxSizeInMegabytes": 5120,
+        "requiresDuplicateDetection": true,
+        "duplicateDetectionHistoryTimeWindow": "PT10M",
+        "requiresSession": false,
+        "defaultMessageTimeToLive": "P14D",
+        "deadLetteringOnMessageExpiration": true,
+        "enableBatchedOperations": true,
+        "maxDeliveryCount": 10,
+        "sizeInBytes": 9437184,
+        "messageCount": 1326,
+        "status": "Active",
+        "enablePartitioning": false,
+        "enableExpress": false,
+        "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+        "createdAt": "2023-03-14T10:05:12.1500000Z",
+        "updatedAt": "2025-06-02T07:44:03.2270000Z",
+        "accessedAt": "{{iso:now-2h}}",
+        "countDetails": {
+          "activeMessageCount": 42,
+          "deadLetterMessageCount": 1284,
+          "scheduledMessageCount": 0,
+          "transferMessageCount": 0,
+          "transferDeadLetterMessageCount": 0
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/queues/orders-retry",
+      "name": "orders-retry",
+      "type": "Microsoft.ServiceBus/Namespaces/Queues",
+      "location": "westeurope",
+      "properties": {
+        "maxMessageSizeInKilobytes": 256,
+        "lockDuration": "PT5M",
+        "maxSizeInMegabytes": 1024,
+        "requiresDuplicateDetection": false,
+        "requiresSession": false,
+        "defaultMessageTimeToLive": "P1D",
+        "deadLetteringOnMessageExpiration": false,
+        "enableBatchedOperations": true,
+        "maxDeliveryCount": 5,
+        "sizeInBytes": 0,
+        "messageCount": 0,
+        "status": "Active",
+        "enablePartitioning": false,
+        "enableExpress": false,
+        "forwardTo": "orders",
+        "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+        "createdAt": "2024-05-21T12:30:44.0100000Z",
+        "updatedAt": "2024-05-21T12:30:44.0100000Z",
+        "accessedAt": "{{iso:now-3h}}",
+        "countDetails": {
+          "activeMessageCount": 0,
+          "deadLetterMessageCount": 0,
+          "scheduledMessageCount": 0,
+          "transferMessageCount": 0,
+          "transferDeadLetterMessageCount": 0
+        }
+      }
+    }
+  ]
+}

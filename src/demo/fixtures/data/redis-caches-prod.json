@@ -1,0 +1,40 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/Redis/redis-orders-cache",
+      "name": "redis-orders-cache",
+      "type": "Microsoft.Cache/Redis",
+      "location": "West Europe",
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com", "costCenter": "CC-4410" },
+      "identity": { "type": "None" },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "redisVersion": "6.0.20",
+        "sku": { "name": "Standard", "family": "C", "capacity": 1 },
+        "enableNonSslPort": true,
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled",
+        "disableAccessKeyAuthentication": false,
+        "redisConfiguration": {
+          "aad-enabled": "False",
+          "maxclients": "1000",
+          "maxmemory-reserved": "125",
+          "maxfragmentationmemory-reserved": "125",
+          "maxmemory-delta": "125",
+          "maxmemory-policy": "volatile-lru"
+        },
+        "updateChannel": "Stable",
+        "zonalAllocationPolicy": "NoZones",
+        "hostName": "redis-orders-cache.redis.cache.windows.net",
+        "port": 6379,
+        "sslPort": 6380,
+        "linkedServers": [],
+        "instances": [
+          { "sslPort": 15000, "nonSslPort": 13000, "isMaster": true, "isPrimary": true },
+          { "sslPort": 15001, "nonSslPort": 13001, "isMaster": false, "isPrimary": false }
+        ],
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod/databases/master",
+      "name": "master",
+      "type": "Microsoft.Sql/servers/databases",
+      "location": "westeurope",
+      "kind": "v12.0,system",
+      "managedBy": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod",
+      "sku": { "name": "System", "tier": "System", "capacity": 0 },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "maxSizeBytes": 34359738368,
+        "status": "Online",
+        "databaseId": "0f1e2d3c-4b5a-4968-8776-655443322110",
+        "creationDate": "2023-03-14T09:40:12.0170000Z",
+        "currentServiceObjectiveName": "System0",
+        "requestedServiceObjectiveName": "System0",
+        "defaultSecondaryLocation": "northeurope",
+        "catalogCollation": "SQL_Latin1_General_CP1_CI_AS",
+        "zoneRedundant": false,
+        "readScale": "Disabled",
+        "currentSku": { "name": "System", "tier": "System", "capacity": 0 },
+        "currentBackupStorageRedundancy": "Local",
+        "requestedBackupStorageRedundancy": "Local",
+        "isLedgerOn": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod/databases/sqldb-orders",
+      "name": "sqldb-orders",
+      "type": "Microsoft.Sql/servers/databases",
+      "location": "westeurope",
+      "kind": "v12.0,user,vcore,serverless",
+      "tags": { "env": "prod", "team": "orders" },
+      "sku": { "name": "GP_S_Gen5", "tier": "GeneralPurpose", "family": "Gen5", "capacity": 2 },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "maxSizeBytes": 68719476736,
+        "status": "Online",
+        "databaseId": "6a5b4c3d-2e1f-4a0b-9c8d-7e6f5a4b3c2d",
+        "creationDate": "2023-03-14T09:44:51.6300000Z",
+        "currentServiceObjectiveName": "GP_S_Gen5_2",
+        "requestedServiceObjectiveName": "GP_S_Gen5_2",
+        "defaultSecondaryLocation": "northeurope",
+        "catalogCollation": "SQL_Latin1_General_CP1_CI_AS",
+        "zoneRedundant": false,
+        "licenseType": "LicenseIncluded",
+        "maxLogSizeBytes": 68719476736,
+        "earliestRestoreDate": "{{iso:now-7d}}",
+        "readScale": "Disabled",
+        "currentSku": { "name": "GP_S_Gen5", "tier": "GeneralPurpose", "family": "Gen5", "capacity": 2 },
+        "autoPauseDelay": -1,
+        "currentBackupStorageRedundancy": "Geo",
+        "requestedBackupStorageRedundancy": "Geo",
+        "minCapacity": 0.5,
+        "maintenanceConfigurationId": "/subscriptions/{{prod}}/providers/Microsoft.Maintenance/publicMaintenanceConfigurations/SQL_Default",
+        "isLedgerOn": false,
+        "isInfraEncryptionEnabled": false,
+        "availabilityZone": "NoPreference"
+      }
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod/deployments/gpt-4o",
+      "name": "gpt-4o",
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "sku": {
+        "name": "GlobalStandard",
+        "capacity": 50
+      },
+      "etag": "\"0c02d3e4-0000-0d00-0000-66f1a2b60000\"",
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "gpt-4o",
+          "version": "2024-11-20"
+        },
+        "versionUpgradeOption": "OnceNewDefaultVersionAvailable",
+        "currentCapacity": 50,
+        "capabilities": {
+          "chatCompletion": "true",
+          "assistants": "true",
+          "agentsV2": "true",
+          "responses": "true"
+        },
+        "provisioningState": "Succeeded",
+        "deploymentState": "Running",
+        "raiPolicyName": "Microsoft.DefaultV2",
+        "rateLimits": [
+          {
+            "key": "request",
+            "renewalPeriod": 60,
+            "count": 50
+          },
+          {
+            "key": "token",
+            "renewalPeriod": 60,
+            "count": 50000
+          }
+        ]
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-118d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-30d}}"
+      }
+    }
+  ]
+}

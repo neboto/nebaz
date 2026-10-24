@@ -1,0 +1,120 @@
+{
+  "name": "vm-legacy-app-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01",
+  "type": "Microsoft.Compute/virtualMachines",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-ops@contoso.com",
+    "costCenter": "CC-4410",
+    "decommission": "pending"
+  },
+  "properties": {
+    "vmId": "8c59713d-cfba-4f66-9668-b140a31d295f",
+    "hardwareProfile": {
+      "vmSize": "Standard_D4s_v3"
+    },
+    "storageProfile": {
+      "imageReference": {
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2019-Datacenter",
+        "version": "latest",
+        "exactVersion": "17763.6532.241101"
+      },
+      "osDisk": {
+        "osType": "Windows",
+        "name": "vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+        "createOption": "FromImage",
+        "caching": "ReadWrite",
+        "managedDisk": {
+          "storageAccountType": "Premium_LRS",
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13"
+        },
+        "deleteOption": "Detach",
+        "diskSizeGB": 127
+      },
+      "dataDisks": [],
+      "diskControllerType": "SCSI"
+    },
+    "osProfile": {
+      "computerName": "LEGACYAPP01",
+      "adminUsername": "contosoadmin",
+      "windowsConfiguration": {
+        "provisionVMAgent": true,
+        "enableAutomaticUpdates": true,
+        "patchSettings": {
+          "patchMode": "AutomaticByOS",
+          "assessmentMode": "ImageDefault"
+        }
+      },
+      "secrets": [],
+      "allowExtensionOperations": true,
+      "requireGuestProvisionSignal": true
+    },
+    "networkProfile": {
+      "networkInterfaces": [
+        {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-app-01",
+          "properties": {
+            "primary": true
+          }
+        }
+      ]
+    },
+    "diagnosticsProfile": {
+      "bootDiagnostics": {
+        "enabled": true
+      }
+    },
+    "licenseType": "Windows_Server",
+    "priority": "Regular",
+    "provisioningState": "Succeeded",
+    "timeCreated": "{{iso:now-1460d}}",
+    "instanceView": {
+      "computerName": "LEGACYAPP01",
+      "osName": "Windows Server 2019 Datacenter",
+      "osVersion": "10.0.17763.6532",
+      "hyperVGeneration": "V1",
+      "vmAgent": {
+        "vmAgentVersion": "Unknown",
+        "statuses": [
+          {
+            "code": "ProvisioningState/Unavailable",
+            "level": "Warning",
+            "displayStatus": "Not Ready",
+            "message": "VM status blob is found but not yet populated.",
+            "time": "{{iso:now-40d}}"
+          }
+        ]
+      },
+      "disks": [
+        {
+          "name": "vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-40d}}"
+            }
+          ]
+        }
+      ],
+      "statuses": [
+        {
+          "code": "ProvisioningState/succeeded",
+          "level": "Info",
+          "displayStatus": "Provisioning succeeded",
+          "time": "{{iso:now-40d}}"
+        },
+        {
+          "code": "PowerState/deallocated",
+          "level": "Info",
+          "displayStatus": "VM deallocated"
+        }
+      ]
+    }
+  }
+}

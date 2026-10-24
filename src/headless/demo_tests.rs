@@ -15,18 +15,12 @@ fn demo_cli(args: &[&str]) -> Cli {
 
 /// Sub-tabs (by `ls` prefix) the demo has no rows for yet.
 const EMPTY_YET: &[&str] = &[
-    "rg", "all", "vm", "disk", "storage",
-    "kv", "id", "sp", "appreg", "aks", "pool", "acr",
-    "app", "func", "plan", "sql", "cosmos", "pg", "mysql", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
-    "acajob", "redis", "amr", "sb", "eh", "changes", "activity", "deploys", "health",
+    "rg", "all", "changes", "activity", "deploys", "health",
 ];
 
 /// Sub-tabs whose demo rows still open with a `⚠` line somewhere.
 const WARNS_YET: &[&str] = &[
-    "sub", "rg", "all", "vm", "disk", "storage",
-    "kv", "id", "sp", "appreg", "aks", "pool", "acr",
-    "app", "func", "plan", "sql", "cosmos", "pg", "mysql", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
-    "acajob", "redis", "amr", "sb", "eh", "changes", "activity", "deploys", "health",
+    "sub", "rg", "all", "acr", "mysql", "aca", "redis", "sb", "changes", "activity", "deploys", "health",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).
@@ -135,4 +129,21 @@ async fn the_network_lens_finds_the_story_in_the_demo() {
     let views: Vec<RuleView> = build_lines(&r, &[Dir::Inbound]).into_iter().filter_map(|l| l.rule).collect();
     let ssh = rule(&views, "AllowSSHInbound").expect("the vendor's SSH rule");
     assert!(ssh.allow && ssh.open_to_internet && ssh.nsg_name == "nsg-jump-prod", "{ssh:?}");
+}
+
+/// The demo's `appi-orders` carries an instrumentation key and connection
+/// string, as a real ARM `GET` does; the row (and so the `e` view) must not.
+#[test]
+fn demo_app_insights_credentials_are_stripped() {
+    use crate::azure::resource::Resource;
+    use crate::azure::services::monitor::ComponentRow;
+    let path = format!(
+        "/subscriptions/{}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders",
+        crate::demo::PROD
+    );
+    let reply = crate::demo::respond(&path, "api-version=2020-02-02", 1_790_000_000);
+    assert!(reply.body.contains("InstrumentationKey") && reply.body.contains("ConnectionString"), "the fixture keeps them");
+    let v: Value = serde_json::from_str(&reply.body).expect("JSON");
+    let raw = ComponentRow::from_json(&v, None).expect("parses").raw_content().unwrap_or_default();
+    assert!(!raw.contains("InstrumentationKey") && !raw.contains("ConnectionString"), "{raw}");
 }

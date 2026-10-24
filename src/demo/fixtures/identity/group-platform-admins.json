@@ -1,0 +1,22 @@
+{
+  "@odata.type": "#microsoft.graph.group",
+  "id": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+  "deletedDateTime": null,
+  "classification": null,
+  "createdDateTime": "{{iso:now-640d}}",
+  "creationOptions": [],
+  "description": "Break-glass and day-to-day admins of the Azure platform.",
+  "displayName": "Contoso Platform Admins",
+  "expirationDateTime": null,
+  "groupTypes": [],
+  "isAssignableToRole": true,
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "contoso-platform-admins",
+  "membershipRule": null,
+  "membershipRuleProcessingState": null,
+  "onPremisesSyncEnabled": null,
+  "securityEnabled": true,
+  "securityIdentifier": "S-1-12-1-3802725259-1245353508-2851994810-2377337644",
+  "visibility": "Private"
+}

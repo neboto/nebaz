@@ -1,0 +1,50 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-worker/revisions/ca-orders-worker--v118/replicas/ca-orders-worker--v118-7d9f4c6b8-x2kqp",
+      "name": "ca-orders-worker--v118-7d9f4c6b8-x2kqp",
+      "type": "Microsoft.App/containerApps/revisions/replicas",
+      "properties": {
+        "createdTime": "{{iso:now-6d}}",
+        "runningState": "Running",
+        "runningStateDetails": "",
+        "containers": [
+          {
+            "name": "orders-worker",
+            "containerId": "containerd://0f3a9c1e7b2d4",
+            "ready": true,
+            "started": true,
+            "restartCount": 0,
+            "runningState": "Running",
+            "runningStateDetails": "",
+            "image": "acrcontosoprod.azurecr.io/orders-worker:1.18.2"
+          }
+        ],
+        "initContainers": []
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-worker/revisions/ca-orders-worker--v118/replicas/ca-orders-worker--v118-7d9f4c6b8-m8vtn",
+      "name": "ca-orders-worker--v118-7d9f4c6b8-m8vtn",
+      "type": "Microsoft.App/containerApps/revisions/replicas",
+      "properties": {
+        "createdTime": "{{iso:now-6d}}",
+        "runningState": "Running",
+        "runningStateDetails": "",
+        "containers": [
+          {
+            "name": "orders-worker",
+            "containerId": "containerd://1f3a9c1e7b2d4",
+            "ready": true,
+            "started": true,
+            "restartCount": 0,
+            "runningState": "Running",
+            "runningStateDetails": "",
+            "image": "acrcontosoprod.azurecr.io/orders-worker:1.18.2"
+          }
+        ],
+        "initContainers": []
+      }
+    }
+  ]
+}

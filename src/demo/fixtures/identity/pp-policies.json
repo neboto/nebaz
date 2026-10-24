@@ -1,0 +1,45 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.PowerPlatform/enterprisePolicies/ep-pp-network-injection",
+      "name": "ep-pp-network-injection",
+      "type": "Microsoft.PowerPlatform/enterprisePolicies",
+      "location": "europe",
+      "kind": "NetworkInjection",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "alex.kim@contoso.com",
+        "vendor": "fabrikam"
+      },
+      "properties": {
+        "systemId": "/regions/europe/providers/Microsoft.PowerPlatform/enterprisePolicies/7802614e-1f52-4770-bbf8-fe5e208bc1ed",
+        "healthStatus": "Healthy",
+        "networkInjection": {
+          "virtualNetworks": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod",
+              "subnet": {
+                "name": "snet-pp-injection"
+              }
+            },
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr",
+              "subnet": {
+                "name": "snet-pp-injection-dr"
+              }
+            }
+          ]
+        }
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-143d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-143d}}"
+      }
+    }
+  ]
+}

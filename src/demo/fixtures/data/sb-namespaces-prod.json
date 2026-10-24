@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod",
+      "name": "sb-orders-prod",
+      "type": "Microsoft.ServiceBus/Namespaces",
+      "location": "West Europe",
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com", "costCenter": "CC-4410" },
+      "sku": { "name": "Standard", "tier": "Standard" },
+      "properties": {
+        "premiumMessagingPartitions": 0,
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled",
+        "disableLocalAuth": false,
+        "zoneRedundant": true,
+        "privateEndpointConnections": [],
+        "provisioningState": "Succeeded",
+        "metricId": "{{prod}}:sb-orders-prod",
+        "createdAt": "2023-03-14T10:02:37.4300000Z",
+        "updatedAt": "2025-06-02T07:41:19.0870000Z",
+        "serviceBusEndpoint": "https://sb-orders-prod.servicebus.windows.net:443/",
+        "status": "Active"
+      }
+    }
+  ]
+}

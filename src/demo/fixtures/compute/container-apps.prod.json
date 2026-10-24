@@ -1,0 +1,307 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-api",
+      "name": "ca-orders-api",
+      "type": "Microsoft.App/containerApps",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders-team@contoso.com",
+        "costCenter": "CC-3020"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-300d}}",
+        "lastModifiedBy": "github-actions-deploy",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-3d}}"
+      },
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api": {
+            "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+            "clientId": "a486b752-7257-42ba-bc16-23a4e0381f56"
+          }
+        }
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "runningStatus": "Running",
+        "managedEnvironmentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+        "environmentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+        "workloadProfileName": "D4",
+        "outboundIpAddresses": [
+          "20.103.45.11"
+        ],
+        "latestRevisionName": "ca-orders-api--v231",
+        "latestReadyRevisionName": "ca-orders-api--v231",
+        "latestRevisionFqdn": "ca-orders-api--v231.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+        "customDomainVerificationId": "8E2C5A7F1B4D9E3A6C0F2B5D8A1E4C7F9B3D6A0E2C5F8B1D4A7E0C3F6B9D2A5E",
+        "configuration": {
+          "secrets": [
+            {
+              "name": "orders-db-connection",
+              "keyVaultUrl": "https://kv-orders-prod.vault.azure.net/secrets/orders-db-connection",
+              "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+            },
+            {
+              "name": "servicebus-connection",
+              "keyVaultUrl": "https://kv-orders-prod.vault.azure.net/secrets/servicebus-connection",
+              "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+            },
+            {
+              "name": "fabrikam-webhook-signing",
+              "keyVaultUrl": "https://kv-orders-prod.vault.azure.net/secrets/fabrikam-webhook-signing",
+              "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+            }
+          ],
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "fqdn": "ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+            "external": true,
+            "targetPort": 8080,
+            "exposedPort": 0,
+            "transport": "Auto",
+            "traffic": [
+              {
+                "weight": 100,
+                "latestRevision": true
+              }
+            ],
+            "customDomains": null,
+            "allowInsecure": false,
+            "ipSecurityRestrictions": [
+              {
+                "name": "pp-injection",
+                "description": "Power Platform delegated subnet (Fabrikam connector)",
+                "ipAddressRange": "10.10.4.0/24",
+                "action": "Allow"
+              },
+              {
+                "name": "pp-injection-dr",
+                "description": "Power Platform failover subnet",
+                "ipAddressRange": "10.20.4.0/24",
+                "action": "Allow"
+              },
+              {
+                "name": "appgw",
+                "description": "agw-contoso-prod",
+                "ipAddressRange": "10.10.6.0/24",
+                "action": "Allow"
+              }
+            ],
+            "stickySessions": null,
+            "clientCertificateMode": "Ignore",
+            "corsPolicy": null,
+            "additionalPortMappings": null
+          },
+          "registries": [
+            {
+              "server": "acrcontosoprod.azurecr.io",
+              "username": "",
+              "passwordSecretRef": "",
+              "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+            }
+          ],
+          "identitySettings": [],
+          "dapr": null,
+          "runtime": null,
+          "maxInactiveRevisions": 100,
+          "service": null
+        },
+        "template": {
+          "revisionSuffix": "v231",
+          "terminationGracePeriodSeconds": null,
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-api:2.31.0",
+              "imageType": "ContainerImage",
+              "name": "orders-api",
+              "env": [
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ORDERS_DB",
+                  "secretRef": "orders-db-connection"
+                },
+                {
+                  "name": "SERVICEBUS",
+                  "secretRef": "servicebus-connection"
+                },
+                {
+                  "name": "WEBHOOK_SIGNING_KEY",
+                  "secretRef": "fabrikam-webhook-signing"
+                },
+                {
+                  "name": "AZURE_CLIENT_ID",
+                  "value": "a486b752-7257-42ba-bc16-23a4e0381f56"
+                }
+              ],
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2Gi"
+              },
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/healthz/live",
+                    "port": 8080,
+                    "scheme": "HTTP"
+                  },
+                  "initialDelaySeconds": 5,
+                  "periodSeconds": 10,
+                  "failureThreshold": 3
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/healthz/ready",
+                    "port": 8080,
+                    "scheme": "HTTP"
+                  },
+                  "initialDelaySeconds": 3,
+                  "periodSeconds": 5,
+                  "failureThreshold": 3
+                }
+              ]
+            }
+          ],
+          "initContainers": null,
+          "scale": {
+            "minReplicas": 3,
+            "maxReplicas": 10,
+            "cooldownPeriod": 300,
+            "pollingInterval": 30,
+            "rules": [
+              {
+                "name": "http-concurrency",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "50"
+                  }
+                }
+              }
+            ]
+          },
+          "volumes": [],
+          "serviceBinds": null
+        },
+        "eventStreamEndpoint": "https://westeurope.azurecontainerapps.dev/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/containerApps/ca-orders-api/eventstream",
+        "delegatedIdentities": []
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-worker",
+      "name": "ca-orders-worker",
+      "type": "Microsoft.App/containerApps",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders-team@contoso.com",
+        "costCenter": "CC-3020"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-300d}}",
+        "lastModifiedBy": "edc89266-a363-4046-9c6e-e0629dfedbad",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-25m}}"
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "51b687b3-bdb3-4408-b436-500e659cc8cb",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "provisioningState": "Failed",
+        "runningStatus": "Running",
+        "managedEnvironmentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+        "environmentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+        "workloadProfileName": "Consumption",
+        "outboundIpAddresses": [
+          "20.103.45.11"
+        ],
+        "latestRevisionName": "ca-orders-worker--v119",
+        "latestReadyRevisionName": "ca-orders-worker--v118",
+        "latestRevisionFqdn": "",
+        "configuration": {
+          "secrets": [],
+          "activeRevisionsMode": "Single",
+          "ingress": null,
+          "registries": [
+            {
+              "server": "acrcontosoprod.azurecr.io",
+              "username": "",
+              "passwordSecretRef": "",
+              "identity": "system"
+            }
+          ],
+          "identitySettings": [],
+          "dapr": null,
+          "runtime": null,
+          "maxInactiveRevisions": 100,
+          "service": null
+        },
+        "template": {
+          "revisionSuffix": "v119",
+          "terminationGracePeriodSeconds": 60,
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-worker:1.19.0",
+              "imageType": "ContainerImage",
+              "name": "orders-worker",
+              "env": [
+                {
+                  "name": "SERVICEBUS_NAMESPACE",
+                  "value": "sb-orders-prod.servicebus.windows.net"
+                },
+                {
+                  "name": "QUEUE_NAME",
+                  "value": "orders"
+                }
+              ],
+              "resources": {
+                "cpu": 0.5,
+                "memory": "1Gi"
+              },
+              "probes": []
+            }
+          ],
+          "initContainers": null,
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 8,
+            "cooldownPeriod": 300,
+            "pollingInterval": 30,
+            "rules": [
+              {
+                "name": "orders-queue",
+                "custom": {
+                  "type": "azure-servicebus",
+                  "metadata": {
+                    "namespace": "sb-orders-prod",
+                    "queueName": "orders",
+                    "messageCount": "100"
+                  },
+                  "identity": "system"
+                }
+              }
+            ]
+          },
+          "volumes": [],
+          "serviceBinds": null
+        },
+        "delegatedIdentities": []
+      }
+    }
+  ]
+}

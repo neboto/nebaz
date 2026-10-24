@@ -1,0 +1,49 @@
+{
+  "@odata.type": "#microsoft.graph.servicePrincipal",
+  "id": "535edf48-335f-4761-b6ed-e0613ed690b3",
+  "deletedDateTime": null,
+  "accountEnabled": true,
+  "alternativeNames": [
+    "isExplicit=True",
+    "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+  ],
+  "appDisplayName": null,
+  "appDescription": null,
+  "appId": "a486b752-7257-42ba-bc16-23a4e0381f56",
+  "applicationTemplateId": null,
+  "appOwnerOrganizationId": null,
+  "appRoleAssignmentRequired": false,
+  "createdDateTime": null,
+  "description": null,
+  "disabledByMicrosoftStatus": null,
+  "displayName": "id-orders-api",
+  "homepage": null,
+  "loginUrl": null,
+  "logoutUrl": null,
+  "notes": null,
+  "notificationEmailAddresses": [],
+  "preferredSingleSignOnMode": null,
+  "preferredTokenSigningKeyThumbprint": null,
+  "replyUrls": [],
+  "servicePrincipalNames": [
+    "a486b752-7257-42ba-bc16-23a4e0381f56",
+    "https://identity.azure.net/535edf48-335f-4761-b6ed-e0613ed690b3="
+  ],
+  "servicePrincipalType": "ManagedIdentity",
+  "signInAudience": null,
+  "tags": [],
+  "tokenEncryptionKeyId": null,
+  "info": null,
+  "samlSingleSignOnSettings": null,
+  "addIns": [],
+  "appRoles": [],
+  "keyCredentials": [],
+  "oauth2PermissionScopes": [],
+  "passwordCredentials": [],
+  "resourceSpecificApplicationPermissions": [],
+  "verifiedPublisher": {
+    "displayName": null,
+    "verifiedPublisherId": null,
+    "addedDateTime": null
+  }
+}

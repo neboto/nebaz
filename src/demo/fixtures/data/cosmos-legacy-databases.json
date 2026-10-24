@@ -1,0 +1,36 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DocumentDB/databaseAccounts/cosmos-legacy/sqlDatabases/catalog",
+      "name": "catalog",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "properties": {
+        "resource": {
+          "id": "catalog",
+          "_rid": "Qm8hAA==",
+          "_self": "dbs/Qm8hAA==/",
+          "_etag": "\"0000a52e-0000-0d00-0000-5ea0000b0000\"",
+          "_colls": "colls/",
+          "_users": "users/",
+          "_ts": 1587543221
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DocumentDB/databaseAccounts/cosmos-legacy/sqlDatabases/sessions",
+      "name": "sessions",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "properties": {
+        "resource": {
+          "id": "sessions",
+          "_rid": "x3Q1AA==",
+          "_self": "dbs/x3Q1AA==/",
+          "_etag": "\"0000b80c-0000-0d00-0000-5f1c00a20000\"",
+          "_colls": "colls/",
+          "_users": "users/",
+          "_ts": 1595670690
+        }
+      }
+    }
+  ]
+}

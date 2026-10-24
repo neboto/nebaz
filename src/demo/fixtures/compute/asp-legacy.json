@@ -1,0 +1,50 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/serverfarms/asp-legacy",
+  "name": "asp-legacy",
+  "type": "Microsoft.Web/serverfarms",
+  "kind": "app",
+  "location": "West Europe",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-ops@contoso.com",
+    "costCenter": "CC-4410"
+  },
+  "properties": {
+    "serverFarmId": 48213,
+    "name": "asp-legacy",
+    "workerSize": "Default",
+    "workerSizeId": 0,
+    "currentWorkerSize": "Default",
+    "currentWorkerSizeId": 0,
+    "currentNumberOfWorkers": 1,
+    "status": "Ready",
+    "webSpace": "rg-legacy-prod-WestEuropewebspace",
+    "subscription": "{{prod}}",
+    "maximumNumberOfWorkers": 10,
+    "geoRegion": "West Europe",
+    "numberOfSites": 2,
+    "isSpot": false,
+    "computeMode": "Dedicated",
+    "perSiteScaling": false,
+    "elasticScaleEnabled": false,
+    "maximumElasticWorkerCount": 1,
+    "numberOfWorkers": 1,
+    "isXenon": false,
+    "hyperV": false,
+    "reserved": false,
+    "targetWorkerCount": 0,
+    "targetWorkerSizeId": 0,
+    "provisioningState": "Succeeded",
+    "kubeEnvironmentProfile": null,
+    "zoneRedundant": false,
+    "resourceGroup": "rg-legacy-prod"
+  },
+  "sku": {
+    "name": "S1",
+    "tier": "Standard",
+    "size": "S1",
+    "family": "S",
+    "capacity": 1
+  }
+}

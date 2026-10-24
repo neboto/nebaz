@@ -1,0 +1,35 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy",
+      "name": "mysql-reporting-legacy",
+      "type": "Microsoft.DBforMySQL/flexibleServers",
+      "location": "West Europe",
+      "tags": { "env": "prod", "team": "legacy", "owner": "legacy-apps@contoso.com" },
+      "sku": { "name": "Standard_B2ms", "tier": "Burstable" },
+      "systemData": { "createdAt": "2022-08-17T14:52:03.7770000Z" },
+      "properties": {
+        "administratorLogin": "reportadmin",
+        "storage": { "storageSizeGB": 64, "iops": 432, "autoGrow": "Enabled", "autoIoScaling": "Disabled", "storageSku": "Premium_LRS", "logOnDisk": "Disabled" },
+        "version": "8.0.21",
+        "fullVersion": "8.0.40",
+        "state": "Ready",
+        "fullyQualifiedDomainName": "mysql-reporting-legacy.mysql.database.azure.com",
+        "availabilityZone": "3",
+        "maintenanceWindow": { "customWindow": "Disabled", "dayOfWeek": 0, "startHour": 0, "startMinute": 0 },
+        "replicationRole": "None",
+        "replicaCapacity": 10,
+        "network": { "publicNetworkAccess": "Enabled" },
+        "backup": {
+          "backupRetentionDays": 7,
+          "backupIntervalHours": 24,
+          "geoRedundantBackup": "Disabled",
+          "earliestRestoreDate": "{{iso:now-7d}}"
+        },
+        "highAvailability": { "mode": "Disabled", "state": "NotEnabled", "standbyAvailabilityZone": "" },
+        "dataEncryption": { "type": "SystemManaged" },
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

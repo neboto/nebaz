@@ -1,0 +1,59 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.App/managedEnvironments/cae-orders-dev",
+      "name": "cae-orders-dev",
+      "type": "Microsoft.App/managedEnvironments",
+      "location": "West Europe",
+      "tags": {
+        "env": "dev",
+        "team": "orders",
+        "owner": "orders-team@contoso.com"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-180d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-6d}}"
+      },
+      "kind": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "defaultDomain": "happyhill-4f2d8c1a.westeurope.azurecontainerapps.io",
+        "staticIp": "51.105.164.93",
+        "appLogsConfiguration": null,
+        "zoneRedundant": false,
+        "kedaConfiguration": {
+          "version": "2.17.2"
+        },
+        "daprConfiguration": {
+          "version": "1.13.6-msft.6"
+        },
+        "customDomainConfiguration": {
+          "dnsSuffix": null
+        },
+        "workloadProfiles": [
+          {
+            "workloadProfileType": "Consumption",
+            "name": "Consumption",
+            "enableFips": false
+          }
+        ],
+        "infrastructureResourceGroup": "ME_cae-orders-dev_rg-dev_westeurope",
+        "peerAuthentication": {
+          "mtls": {
+            "enabled": false
+          }
+        },
+        "peerTrafficConfiguration": {
+          "encryption": {
+            "enabled": false
+          }
+        },
+        "publicNetworkAccess": "Enabled"
+      }
+    }
+  ]
+}
