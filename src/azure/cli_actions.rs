@@ -37,6 +37,7 @@ use crate::azure::services::directory::{AppRegistrationRow, ServicePrincipalRow}
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::network::{NsgRow, SubnetRow};
 use crate::azure::services::power_platform::EnterprisePolicyRow;
+use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
 use crate::azure::services::sql::SqlServerRow;
 use crate::azure::services::storage::StorageAccountRow;
 
@@ -200,6 +201,10 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         storage_actions(sa)
     } else if let Some(s) = any.downcast_ref::<SqlServerRow>() {
         sql_actions(s)
+    } else if let Some(c) = any.downcast_ref::<RedisCacheRow>() {
+        redis_cache_actions(c)
+    } else if let Some(c) = any.downcast_ref::<ManagedRedisRow>() {
+        Some(managed_redis_actions(c))
     } else if let Some(n) = any.downcast_ref::<NsgRow>() {
         nsg_actions(n)
     } else if let Some(s) = any.downcast_ref::<SubnetRow>() {
@@ -433,6 +438,29 @@ fn storage_actions(sa: &StorageAccountRow) -> Option<Vec<CliAction>> {
         inspect(format!("az storage container list --account-name {} --auth-mode login", n))
             .note("the blob data plane as you (Storage Blob Data Reader); login mode never fetches the account key"),
     ])
+}
+
+/// `az redis` children take the name form (`id_part=None` on the cache
+/// name for `firewall-rules list`, `server-link`, `patch-schedule`,
+/// `access-policy-assignment list`). Nothing here prints a key: `redis
+/// list-keys` is refused by the guard, and there is no Connect command
+/// because every client needs a key or an Entra token.
+fn redis_cache_actions(c: &RedisCacheRow) -> Option<Vec<CliAction>> {
+    let args = name_args(&c.base.name, &c.base.id)?;
+    Some(vec![
+        inspect(format!("az redis firewall-rules list {}", args)).note("the IP rules (the Network section)"),
+        inspect(format!("az redis server-link list {}", args)).note("geo-replication links"),
+        inspect(format!("az redis patch-schedule show {}", args)).note("the maintenance window; errors when none is set"),
+        inspect(format!("az redis access-policy-assignment list {}", args))
+            .note("Entra data-access assignments (who may connect with a token)"),
+    ])
+}
+
+/// `az redisenterprise` is a CLI extension; `database list` takes the
+/// cluster by name (`--cluster-name`, no `id_part`).
+fn managed_redis_actions(c: &ManagedRedisRow) -> Vec<CliAction> {
+    vec![inspect(format!("az redisenterprise database list {}", c.cluster_args()))
+        .note("needs the redisenterprise CLI extension; ports, protocol, persistence, modules")]
 }
 
 fn sql_actions(s: &SqlServerRow) -> Option<Vec<CliAction>> {
@@ -672,6 +700,19 @@ mod tests {
         assert!(s.iter().all(|a| a.tier == CliTier::Inspect));
         let q = actions_for(mock("SqlServerRow").as_ref());
         assert!(find(&q, "sql server firewall-rule list").command.contains("-s "));
+    }
+
+    #[test]
+    fn redis_offers_reads_only_and_never_a_key() {
+        let c = actions_for(mock("RedisCacheRow").as_ref());
+        assert!(c[0].command.starts_with("az redis show --ids "));
+        assert!(find(&c, "redis firewall-rules list").command.contains("--subscription"));
+        let m = actions_for(mock("ManagedRedisRow").as_ref());
+        assert!(find(&m, "redisenterprise database list").command.contains("--cluster-name amr-1"));
+        for a in c.iter().chain(&m) {
+            assert_eq!(a.tier, CliTier::Inspect, "{}", a.command);
+            assert!(!a.command.contains("keys"), "{}", a.command);
+        }
     }
 
     #[test]

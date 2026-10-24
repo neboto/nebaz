@@ -53,6 +53,10 @@ pub enum ServiceType {
     /// Container apps, their environments and jobs (`Microsoft.App`);
     /// revisions and auth settings lazy. Never a secret or env var value.
     ContainerApps,
+    /// Azure Cache for Redis and Azure Managed Redis (`Microsoft.Cache`);
+    /// firewall rules, geo-replication links and databases lazy. Never a
+    /// key (`listKeys` is a POST).
+    Redis,
     /// What changed recently, subscription-wide (#61, ADR 0006): the
     /// Activity Log's changes, deployments and health transitions over a
     /// `[` / `]` window. A service that fetches, not a view over caches.
@@ -133,6 +137,11 @@ pub enum JumpView {
     ContainerApps,
     ContainerAppEnvironments,
     ContainerAppJobs,
+    // Redis
+    /// Azure Cache for Redis (`Microsoft.Cache/redis`).
+    RedisCaches,
+    /// Azure Managed Redis (`Microsoft.Cache/redisEnterprise`).
+    ManagedRedis,
     // Changes: one list per window; the sub-tabs filter it by source.
     ChangesAll,
     ChangesActivity,
@@ -162,6 +171,7 @@ impl JumpView {
             LogWorkspaces | AppInsights => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
+            RedisCaches | ManagedRedis => ServiceType::Redis,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
         }
     }
@@ -209,6 +219,8 @@ impl JumpView {
             ContainerApps => "container-apps",
             ContainerAppEnvironments => "container-app-environments",
             ContainerAppJobs => "container-app-jobs",
+            RedisCaches => "redis-caches",
+            ManagedRedis => "managed-redis",
             ChangesAll => "changes",
             ChangesActivity => "changes-activity",
             ChangesDeployments => "changes-deployments",
@@ -259,6 +271,8 @@ impl JumpView {
             ContainerApps => "Apps",
             ContainerAppEnvironments => "Environments",
             ContainerAppJobs => "Jobs",
+            RedisCaches => "Caches",
+            ManagedRedis => "Managed Redis",
             ChangesAll => "All",
             ChangesActivity => "Activity",
             ChangesDeployments => "Deployments",
@@ -314,6 +328,8 @@ impl JumpView {
             ("microsoft.app", ["containerapps"]) => JumpView::ContainerApps,
             ("microsoft.app", ["managedenvironments"]) => JumpView::ContainerAppEnvironments,
             ("microsoft.app", ["jobs"]) => JumpView::ContainerAppJobs,
+            ("microsoft.cache", ["redis"]) => JumpView::RedisCaches,
+            ("microsoft.cache", ["redisenterprise"]) => JumpView::ManagedRedis,
             _ => return None,
         })
     }
@@ -387,6 +403,7 @@ impl ServiceType {
             ServiceType::Monitor,
             ServiceType::PowerPlatform,
             ServiceType::ContainerApps,
+            ServiceType::Redis,
             ServiceType::Changes,
         ]
     }
@@ -413,6 +430,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitoring",
             ServiceType::PowerPlatform => "Management",
             ServiceType::ContainerApps => "Containers",
+            ServiceType::Redis => "Databases",
             ServiceType::Changes => "Monitoring",
         }
     }
@@ -435,6 +453,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Platform",
             ServiceType::ContainerApps => "Container Apps",
+            ServiceType::Redis => "Redis",
             ServiceType::Changes => "Changes",
         }
     }
@@ -458,6 +477,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Plat",
             ServiceType::ContainerApps => "ACA",
+            ServiceType::Redis => "Redis",
             ServiceType::Changes => "Changes",
         }
     }
@@ -480,6 +500,7 @@ impl ServiceType {
             ServiceType::Monitor => "Log Analytics & App Insights",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::ContainerApps => "Container apps, environments & jobs",
+            ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Changes => "What changed recently, subscription-wide",
         }
     }
@@ -514,6 +535,7 @@ impl ServiceType {
             ServiceType::Monitor => &[LogWorkspaces, AppInsights],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
+            ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
         }
     }
@@ -630,6 +652,8 @@ impl ServiceType {
             "acajob" | "acajobs" | "containerappjob" | "containerappjobs" => {
                 (ServiceType::ContainerApps, Some(JumpView::ContainerAppJobs))
             }
+            "redis" | "cache" | "caches" | "rediscache" | "azurecache" => (ServiceType::Redis, None),
+            "amr" | "managedredis" | "redisenterprise" => (ServiceType::Redis, Some(JumpView::ManagedRedis)),
             _ => return None,
         };
         Some((service, view))
@@ -660,6 +684,7 @@ impl ServiceType {
             ServiceType::Monitor => "@monitor",
             ServiceType::PowerPlatform => "@pp",
             ServiceType::ContainerApps => "@aca",
+            ServiceType::Redis => "@redis",
             ServiceType::Changes => "@changes",
         }
     }
@@ -667,12 +692,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@changes"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@changes"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -890,6 +915,9 @@ mod tests {
             Some(JumpView::ContainerAppEnvironments)
         );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/jobs/nightly")), Some(JumpView::ContainerAppJobs));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/Redis/redis-prod")), Some(JumpView::RedisCaches));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/redisEnterprise/amr-prod")), Some(JumpView::ManagedRedis));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/redisEnterprise/amr-prod/databases/default")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/containerApps/api/revisions/api--v1")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.App/managedEnvironments/cae/certificates/c")), None);
         assert_eq!(JumpView::for_arm_id("garbage"), None);

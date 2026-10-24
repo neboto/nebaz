@@ -29,22 +29,39 @@ const MENU_W: u16 = 60;
 pub fn render_splash(area: Rect, frame: &mut Frame) {
     let logo_h = BANNER_ART.len() as u16; // 6
     let menu_h = MENU.len() as u16; // 7
-    // logo + subtitle + gap + menu + gap + footer
-    let total_h = logo_h + 1 + 1 + menu_h + 1 + 1;
+    // The menu is the point of the screen; the logo, then the footer tip,
+    // go first when the terminal is short (#103).
+    let core_h = 1 + 1 + menu_h; // subtitle + gap + menu
+    let show_logo = area.height >= logo_h + core_h + 2;
+    let show_footer = area.height >= core_h + 2;
+    let logo_h = if show_logo { logo_h } else { 0 };
+    let total_h = logo_h + core_h + if show_footer { 2 } else { 0 };
     let top = area.y + area.height.saturating_sub(total_h) / 2;
+    // Every block is clipped to the frame area, so nothing is written
+    // outside the buffer however small the terminal is.
+    let render = |frame: &mut Frame, widget: Paragraph, rect: Rect| {
+        let rect = rect.intersection(area);
+        if !rect.is_empty() {
+            frame.render_widget(widget, rect);
+        }
+    };
 
     // ── Logo (centered across the full width) ──
     let logo_lines: Vec<Line> = BANNER_ART
         .iter()
         .map(|row| Line::from(Span::styled(*row, Style::default().fg(theme::brand()))))
         .collect();
-    frame.render_widget(
-        Paragraph::new(logo_lines).alignment(Alignment::Center),
-        Rect { x: area.x, y: top, width: area.width, height: logo_h },
-    );
+    if show_logo {
+        render(
+            frame,
+            Paragraph::new(logo_lines).alignment(Alignment::Center),
+            Rect { x: area.x, y: top, width: area.width, height: logo_h },
+        );
+    }
 
     // ── Subtitle (centered) ──
-    frame.render_widget(
+    render(
+        frame,
         Paragraph::new(Line::from(Span::styled(
             "Nothing loaded — pick a service to begin",
             Style::default()
@@ -52,12 +69,12 @@ pub fn render_splash(area: Rect, frame: &mut Frame) {
                 .add_modifier(Modifier::ITALIC),
         )))
         .alignment(Alignment::Center),
-        Rect { x: area.x, y: top + logo_h, width: area.width, height: 1 },
+        Rect { x: area.x, y: top.saturating_add(logo_h), width: area.width, height: 1 },
     );
 
     // ── Menu (centered block; label left, shortcut right) ──
     let menu_x = area.x + area.width.saturating_sub(MENU_W) / 2;
-    let menu_y = top + logo_h + 2;
+    let menu_y = top.saturating_add(logo_h + 2);
     let menu_lines: Vec<Line> = MENU
         .iter()
         .map(|(key, label)| {
@@ -75,13 +92,18 @@ pub fn render_splash(area: Rect, frame: &mut Frame) {
             ])
         })
         .collect();
-    frame.render_widget(
+    render(
+        frame,
         Paragraph::new(menu_lines).alignment(Alignment::Left),
         Rect { x: menu_x, y: menu_y, width: MENU_W, height: menu_h },
     );
 
     // ── Footer tip (centered) ──
-    frame.render_widget(
+    if !show_footer {
+        return;
+    }
+    render(
+        frame,
         Paragraph::new(Line::from(Span::styled(
             "Tip: set default_service in ~/.config/nebaz/config.toml to skip this screen",
             Style::default()
@@ -89,6 +111,6 @@ pub fn render_splash(area: Rect, frame: &mut Frame) {
                 .add_modifier(Modifier::ITALIC),
         )))
         .alignment(Alignment::Center),
-        Rect { x: area.x, y: menu_y + menu_h + 1, width: area.width, height: 1 },
+        Rect { x: area.x, y: menu_y.saturating_add(menu_h + 1), width: area.width, height: 1 },
     );
 }

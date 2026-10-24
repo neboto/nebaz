@@ -55,6 +55,7 @@ mod network_lens_test;
 mod refs_lens_test;
 mod subscription_fanout_test;
 mod ownership_test;
+mod small_terminal_test;
 mod timeline_test;
 mod wiring_test;
 

@@ -1,11 +1,18 @@
 #!/bin/sh
 # Offline smoke run: drives the built binary in a pseudo-terminal with a fake
-# `az` on PATH and a dead ARM endpoint, and greps the final screen. No Azure,
-# no network. It is a manual check, not a CI gate (needs python3; `pyte`
-# makes the screen dump exact, without it the raw stream is stripped).
+# `az` on PATH and a dead ARM endpoint, and polls the screen for the expected
+# text. No Azure, no network. It is a manual check, not a CI gate (needs
+# python3; `pyte` makes the screen dump exact, without it the raw stream is
+# stripped).
 #
-#   scripts/smoke.sh            # builds debug, runs every scenario
-#   scripts/smoke.sh -v         # also prints each final screen
+#   scripts/smoke.sh                    # builds debug, runs every scenario
+#   scripts/smoke.sh -v                 # also prints each last screen
+#   SMOKE_TIMEOUT=120 scripts/smoke.sh  # seconds per wait (default 60)
+#
+# No fixed sleeps: a key list waits on text ({"wait": "Partner Dev"}) before
+# keys that need a loaded list, and each expected text is polled for until
+# it appears or SMOKE_TIMEOUT runs out, when the last screen is printed. A
+# passing scenario ends as soon as everything has been seen.
 #
 # Scenarios:
 #   logged-in   fake az with three subscriptions across two tenants →
@@ -19,7 +26,8 @@
 #               app-wide auth line, no crash
 #
 # `python3 -m pip install --user pyte` makes the screen dump exact; without
-# it the raw byte stream is stripped of escapes, which is enough to grep.
+# it the raw byte stream is stripped of escapes and matched ignoring
+# whitespace (cursor moves stand in for some spaces), which is enough.
 set -eu
 cd "$(dirname "$0")/.."
 verbose=0; [ "${1:-}" = "-v" ] && verbose=1
@@ -29,36 +37,30 @@ cargo build --quiet
 bin="$PWD/target/debug/nebaz"
 here="$PWD/scripts/smoke"
 dead="https://127.0.0.1:9"
+timeout="${SMOKE_TIMEOUT:-60}"
 fail=0
 
 run() { # name fake-az-dir service keys-json expected...
   name="$1"; fake="$2"; svc="$3"; keys="$4"; shift 4
-  spec="$(printf '{"cmd":["%s","-s","%s","--endpoint-url","%s"],"keys":%s,"env":{"PATH":"%s:%s","NEBAZ_CONFIG":"/dev/null","HOME":"%s"}}' \
-    "$bin" "$svc" "$dead" "$keys" "$here/fake-az/$fake" "$PATH" "$PWD/target/smoke-home")"
+  v=false; [ "$verbose" = 1 ] && v=true
+  spec="$(printf '{"name":"%s","cmd":["%s","-s","%s","--endpoint-url","%s"],"keys":%s,"timeout":%s,"verbose":%s,"env":{"PATH":"%s:%s","NEBAZ_CONFIG":"/dev/null","HOME":"%s"}}' \
+    "$name" "$bin" "$svc" "$dead" "$keys" "$timeout" "$v" "$here/fake-az/$fake" "$PATH" "$PWD/target/smoke-home")"
   mkdir -p target/smoke-home
-  screen="$(python3 "$here/ptyrun.py" "$spec")"
-  [ "$verbose" = 1 ] && { echo "=== $name ==="; echo "$screen"; }
-  for want in "$@"; do
-    if echo "$screen" | grep -qF -- "$want"; then
-      echo "ok   $name: $want"
-    else
-      echo "FAIL $name: expected \"$want\"" >&2
-      [ "$verbose" = 1 ] || echo "$screen" >&2
-      fail=1
-    fi
-  done
+  # Polls for every expected text up to $timeout; prints ok / FAIL lines
+  # and, on a timeout, the last screen.
+  python3 "$here/ptyrun.py" "$spec" "$@" || fail=1
 }
 
-run logged-in ok sub '[2.0, "j", "C", 0.5, "\r", 1.0]' \
+run logged-in ok sub '[{"wait": "Partner Dev"}, "j", "C", "\r"]' \
   "Production" "Partner Dev" \
   'Copied `account show`'
 
-run arm-unreachable ok rg '[8.0]' \
+run arm-unreachable ok rg '[]' \
   "cannot reach 127.0.0.1" \
   "Connection refused"
 
 # Focus the pane, flat view, select three lines from the top, copy.
-run flat-and-select ok sub '[2.0, "\r", 0.3, "\\", 0.5, "V", "J", "J", "y", 1.0]' \
+run flat-and-select ok sub '[{"wait": "Partner Dev"}, "\r", "\\", "V", "J", "J", "y"]' \
   "━━ Overview" "━━ Access" \
   "3 lines"
 
@@ -67,87 +69,94 @@ run flat-and-select ok sub '[2.0, "\r", 0.3, "\\", 0.5, "V", "J", "J", "y", 1.0]
 # in `ServiceType::all()` order: Subscriptions → Power Platform (both
 # Management) → Virtual Machines → Storage, then Enter. A new service in
 # Management or Compute needs one more press here.
-run picker-ctrl-n ok sub '[2.0, "S", 0.3, "\u000e", "\u000e", "\u000e", 0.3, "\r", 3.0]' \
+run picker-ctrl-n ok sub '[{"wait": "Partner Dev"}, "S", "\u000e", "\u000e", "\u000e", "\r"]' \
   "Loading Storage…"
 
 # A seventh tab still fits, and the Foundry list goes to ARM like the rest.
-run foundry-tab ok foundry '[8.0]' \
+run foundry-tab ok foundry '[]' \
   "Foundry" \
   "cannot reach 127.0.0.1"
 
 # A routing prefix lands on a Network edge sub-tab, which lists through ARM.
-run network-edge-lb ok lb '[6.0]' \
+run network-edge-lb ok lb '[]' \
   "5 LBs" \
   "cannot reach 127.0.0.1"
 
 # The Identity tab loads and lists through ARM.
-run identity-tab ok id '[6.0]' \
+run identity-tab ok id '[]' \
   "Managed identities" \
   "cannot reach 127.0.0.1"
 
 # Private DNS is the DNS tab's first chip (it moved from Network in #37),
 # and the zone list goes to ARM on the private DNS api-version.
-run private-dns-tab ok pdns '[6.0]' \
+run private-dns-tab ok pdns '[]' \
   "1 Private DNS" \
   "cannot reach 127.0.0.1"
 
 # The DNS tab's resolver chip has a digit key, and the resolver list goes
 # to ARM on the resolver api-version.
-run dns-resolver-tab ok dnsr '[6.0]' \
+run dns-resolver-tab ok dnsr '[]' \
   "3 Resolvers" \
   "cannot reach 127.0.0.1"
 
 # A routing prefix lands on App Service's filtered Functions sub-tab.
-run app-service-func ok func '[6.0]' \
+run app-service-func ok func '[]' \
   "2 Functions" \
   "cannot reach 127.0.0.1"
 
 # The SQL tab loads and lists servers through ARM.
-run sql-tab ok sql '[6.0]' \
+run sql-tab ok sql '[]' \
   "SQL servers & databases" \
   "cannot reach 127.0.0.1"
 
 # The Container Registry tab loads and lists registries through ARM.
-run acr-tab ok acr '[6.0]' \
+run acr-tab ok acr '[]' \
   "Container registries" \
   "cannot reach 127.0.0.1"
 
 # The Cosmos DB tab loads and lists accounts through ARM.
-run cosmos-tab ok cosmos '[6.0]' \
+run cosmos-tab ok cosmos '[]' \
   "Cosmos DB accounts" \
   "cannot reach 127.0.0.1"
 
+# The Redis tab loads through its routing prefix for Managed Redis, with
+# the Caches chip on the sub-tab row.
+run redis-amr ok amr '[6.0]' \
+  "Azure Cache for Redis & Managed Redis" \
+  "1 Caches" \
+  "cannot reach 127.0.0.1"
+
 # The Container Apps tab loads through a routing prefix (environments).
-run aca-env ok acaenv '[6.0]' \
+run aca-env ok acaenv '[]' \
   "Container apps, environments & jobs" \
   "cannot reach 127.0.0.1"
 
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
-run monitor-appi ok appi '[6.0]' \
+run monitor-appi ok appi '[]' \
   "Log Analytics & App Insights" \
   "cannot reach 127.0.0.1"
 
 # Access on a subscription row fetches role assignments from ARM; the
 # Subscriptions list itself makes no ARM call, so the error proves the
 # section fired.
-run access-section ok sub '[2.0, "\r", 0.3, "4", 10.0]' \
+run access-section ok sub '[{"wait": "Partner Dev"}, "\r", "4"]' \
   "Access" \
   "cannot reach 127.0.0.1"
 
 # @all lands on the All resources sub-tab, whose list goes to ARM (the
 # Subscriptions sub-tab itself makes no ARM call).
-run all-resources ok all '[8.0]' \
+run all-resources ok all '[]' \
   "All resources" \
   "cannot reach 127.0.0.1"
 
 # Activity on a subscription row reads the activity log from ARM; like
 # Access, the error proves the section fired.
-run activity-section ok sub '[2.0, "\r", 0.3, "5", 10.0]' \
+run activity-section ok sub '[{"wait": "Partner Dev"}, "\r", "5"]' \
   "Activity" \
   "cannot reach 127.0.0.1"
 
-run not-logged-in nologin sub '[2.0]' \
+run not-logged-in nologin sub '[]' \
   "az login"
 
 # Headless (#44): no pty. Each run checks the exit code and greps stdout

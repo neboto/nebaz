@@ -193,6 +193,10 @@
     "pp": [
       "enterprise-policies (pp)"
     ],
+    "redis": [
+      "redis-caches (redis)",
+      "managed-redis (amr)"
+    ],
     "sql": [
       "sql-servers (sql)"
     ],
@@ -431,6 +435,16 @@
       "Related",
       "Tags"
     ],
+    "Managed Redis": [
+      "Overview",
+      "Security",
+      "Network",
+      "Databases",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Microsoft.Network/publicIPPrefixes": [
       "Overview",
       "Access",
@@ -490,6 +504,16 @@
     ],
     "Public IP": [
       "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Redis cache": [
+      "Overview",
+      "Security",
+      "Network",
+      "Geo-replication",
       "Access",
       "Activity",
       "Related",

@@ -77,6 +77,10 @@ use crate::azure::services::monitor::{
 use crate::azure::services::power_platform::{
     enterprise_policy_section_lines, subnet_policy_lines, EnterprisePolicyDetailSection, EnterprisePolicyRow,
 };
+use crate::azure::services::redis::{
+    managed_redis_section_lines, redis_cache_section_lines, redis_child_path, ManagedRedisDetailSection,
+    ManagedRedisRow, RedisCacheDetailSection, RedisCacheRow, REDIS_API_VERSION, REDIS_ENTERPRISE_API_VERSION,
+};
 use crate::azure::services::sql::{
     server_child_path, sql_server_section_lines, SqlServerDetailSection, SqlServerRow, SQL_API_VERSION,
 };
@@ -1691,6 +1695,43 @@ impl App {
         );
     }
 
+    /// On-enter hook for a Redis cache's Network section: its firewall
+    /// rules, one list per cache.
+    pub fn trigger_redis_firewall(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.redis_firewall_rules,
+            event_tx,
+            |c, id| c.list_fetch(&redis_child_path(id, "firewallRules"), REDIS_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a Redis cache's Geo-replication (and Related):
+    /// `GET {cache}/linkedServers`, only when the list body names one.
+    pub fn trigger_redis_linked_servers(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let linked = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<RedisCacheRow>())
+            .is_some_and(|r| !r.linked_server_ids.is_empty());
+        if !linked {
+            return;
+        }
+        app.trigger_selected(
+            |s| &mut s.redis_linked_servers,
+            event_tx,
+            |c, id| c.list_fetch(&redis_child_path(id, "linkedServers"), REDIS_API_VERSION),
+        );
+    }
+
+    /// On-enter hook for a Managed Redis cluster's Databases: one list per
+    /// cluster.
+    pub fn trigger_redis_databases(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.redis_databases,
+            event_tx,
+            |c, id| c.list_fetch(&redis_child_path(id, "databases"), REDIS_ENTERPRISE_API_VERSION),
+        );
+    }
+
     /// On-enter hook for an app's Configuration: `GET {site}/config/web`.
     pub fn trigger_site_config(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         app.trigger_selected(
@@ -2638,6 +2679,21 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<JobRow>() {
             return Some(job_section_lines(r, JobDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<RedisCacheRow>() {
+            return Some(redis_cache_section_lines(
+                r,
+                RedisCacheDetailSection::from_index(idx),
+                self.lazy.redis_firewall_rules.get(r.id()),
+                self.lazy.redis_linked_servers.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<ManagedRedisRow>() {
+            return Some(managed_redis_section_lines(
+                r,
+                ManagedRedisDetailSection::from_index(idx),
+                self.lazy.redis_databases.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<SqlServerRow>() {
             return Some(sql_server_section_lines(
