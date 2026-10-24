@@ -1,7 +1,9 @@
 // ported from neboto-tui src/headless.rs @ 08fcd0c (services / ls / get;
-// table and CSV output and audit are not carried over; `ls --regions` came
-// over from 1ebd69f as `ls --subscriptions`, #62)
-//! Headless subcommands (`nebaz services`, `ls`, `get`): run once, print,
+// table and CSV output are not carried over; `ls --regions` came over
+// from 1ebd69f as `ls --subscriptions`, #62; audit from neboto-tui @
+// 693449a, driven through the TUI's own `r`)
+//! Headless subcommands (`nebaz services`, `ls`, `get`, `changes`,
+//! `audit`): run once, print,
 //! exit, no terminal UI (#44). `ls` and `get` drive a terminal-less `App`
 //! (`src/app/headless.rs`) over the same `AzureClients` and `arm.rs` the
 //! TUI uses, so the read-only guard covers them like everything else under
@@ -16,7 +18,8 @@ use crate::azure::client::AzureClients;
 use crate::azure::location::{Location, GLOBAL};
 use crate::azure::resource::{subscription_of, Resource};
 use crate::azure::service::{JumpView, ServiceType};
-use crate::cli::{ChangesArgs, Cli, Command, GetArgs, LsArgs, OutputFormat};
+use crate::audit::{AuditFinding, RowKind, Severity};
+use crate::cli::{AuditArgs, ChangesArgs, Cli, Command, GetArgs, LsArgs, OutputFormat};
 use crate::config::Config;
 use crate::error::Error;
 use crate::event::Event;
@@ -37,7 +40,8 @@ const MAX_GET: usize = 50;
 const LIST_LOAD_LIMIT: Duration = Duration::from_secs(600);
 
 /// A failure and the exit code it maps to. 0 is success (an empty list
-/// included); 3 is reserved for `audit --fail-on` (#60).
+/// included); 3 is `audit`'s: it ran and found something at or above
+/// `--fail-on` ([`FINDINGS_EXIT`]).
 #[derive(Debug)]
 pub enum Failure {
     /// The request itself is wrong: an unknown prefix, sub-tab, section,
@@ -67,20 +71,27 @@ impl Failure {
     }
 }
 
+/// `nebaz audit`'s exit code when it ran and found something at or above
+/// `--fail-on`: distinct from every failure, so a script can tell "found
+/// something" from "couldn't look".
+pub const FINDINGS_EXIT: i32 = 3;
+
 /// Run the subcommand in `cli.command` and return the process exit code.
 pub async fn run(cli: Cli) -> i32 {
     let format = cli.output.unwrap_or(OutputFormat::Json);
+    let ok = |r: Result<String, Failure>| r.map(|out| (out, 0));
     let result = match &cli.command {
-        Some(Command::Services) => Ok(services(format)),
-        Some(Command::Ls(args)) => ls(&cli, args, format).await,
-        Some(Command::Get(args)) => get(&cli, args, format).await,
-        Some(Command::Changes(args)) => changes(&cli, args, format).await,
-        None => Ok(String::new()),
+        Some(Command::Services) => Ok((services(format), 0)),
+        Some(Command::Ls(args)) => ok(ls(&cli, args, format).await),
+        Some(Command::Get(args)) => ok(get(&cli, args, format).await),
+        Some(Command::Changes(args)) => ok(changes(&cli, args, format).await),
+        Some(Command::Audit(args)) => audit(&cli, args, format).await,
+        None => Ok((String::new(), 0)),
     };
     match result {
-        Ok(out) => {
+        Ok((out, code)) => {
             emit(&out);
-            0
+            code
         }
         Err(f) => {
             eprintln!("nebaz: {}", f.message());
@@ -328,6 +339,12 @@ async fn load_view(
 
 async fn ls(cli: &Cli, args: &LsArgs, format: OutputFormat) -> Result<String, Failure> {
     let view = resolve_list(&args.target)?;
+    if view.service().is_virtual() {
+        return Err(Failure::Usage(format!(
+            "{} is computed, not listed — run `nebaz audit`",
+            view.service().prefix()
+        )));
+    }
     if args.subscriptions.is_some() || args.all_configured {
         return ls_subscriptions(cli, view, args, format).await;
     }
@@ -644,6 +661,132 @@ pub(crate) fn render_list(
             }))
         }
         OutputFormat::Md => crate::export::list_markdown(rows, &format!("{} · {}", view.service().name(), view.label())),
+    }
+}
+
+// ── audit ───────────────────────────────────────────────────────────────────
+
+/// `--fail-on`: the lowest severity that exits 3, or `None` for never.
+pub(crate) fn parse_fail_on(s: &str) -> Result<Option<Severity>, Failure> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "never" | "none" => Ok(None),
+        other => Severity::parse(other).map(Some).ok_or_else(|| {
+            Failure::Usage(format!("--fail-on {s:?}: one of critical, high, medium, low, info, never"))
+        }),
+    }
+}
+
+/// 3 when a finding is at or above `fail_on`, else 0. Coverage notes never
+/// count: a check that could not run is not a finding.
+pub(crate) fn audit_exit_code(rows: &[AuditFinding], fail_on: Option<Severity>) -> i32 {
+    match fail_on {
+        Some(min) if rows.iter().any(|f| f.is_finding() && f.severity <= min) => FINDINGS_EXIT,
+        _ => 0,
+    }
+}
+
+/// `nebaz audit`: the TUI's `@audit` with `r` pressed. A terminal-less
+/// `App` loads every source list the checks read and the capped lazy reads
+/// that follow (`App::load_audit_sources`, the same code), pumps until
+/// nothing is in flight, then prints the findings worst first and the
+/// checks that could not run. A source that fails is a warning on stderr
+/// and its checks come back as `not_checked`: a permission gap never reads
+/// as a clean bill.
+async fn audit(cli: &Cli, args: &AuditArgs, format: OutputFormat) -> Result<(String, i32), Failure> {
+    let fail_on = parse_fail_on(&args.fail_on)?;
+    let location = cli.location.as_deref().map(Location::parse).unwrap_or_default();
+    let (config, clients) = setup(cli, None).await?;
+    validate_location(&clients, &location).await?;
+    let subscription = clients.current_subscription().unwrap_or_default().to_string();
+
+    let mut app = App::new_headless(config, clients);
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    app.headless_audit_start(&tx);
+    let deadline = Instant::now() + LIST_LOAD_LIMIT;
+    while app.audit_in_flight() {
+        if Instant::now() >= deadline {
+            eprintln!(
+                "nebaz: warning: audit sources still loading after {}s; printed as not checked",
+                LIST_LOAD_LIMIT.as_secs()
+            );
+            break;
+        }
+        pump(&mut app, &tx, &mut rx, deadline).await?;
+    }
+    if let Some(a) = &app.auth_error {
+        return Err(Failure::Auth(auth_line(&a.status_line())));
+    }
+    if let Some(w) = app.headless_audit_warning() {
+        eprintln!("nebaz: warning: {w}");
+    }
+    let rows: Vec<AuditFinding> = app
+        .headless_audit_rows()
+        .into_iter()
+        .filter(|f| location.admits(f.location.as_deref()))
+        .collect();
+    let code = audit_exit_code(&rows, fail_on);
+    Ok((render_audit(&subscription, &location, &rows, format), code))
+}
+
+pub(crate) fn render_audit(subscription: &str, location: &Location, rows: &[AuditFinding], format: OutputFormat) -> String {
+    let findings: Vec<&AuditFinding> = rows.iter().filter(|f| f.is_finding()).collect();
+    let skipped: Vec<&AuditFinding> = rows.iter().filter(|f| f.kind == RowKind::NotChecked).collect();
+    match format {
+        OutputFormat::Json => {
+            let items: Vec<Value> = findings
+                .iter()
+                .map(|f| {
+                    json!({
+                        "severity": f.severity.label(),
+                        "check": f.check_id,
+                        "title": f.check_title,
+                        "resource_id": f.resource_id,
+                        "resource_name": f.resource_name,
+                        "location": f.location,
+                        "reason": f.reason,
+                        "evidence": f.evidence,
+                        "remediation": f.fix,
+                    })
+                })
+                .collect();
+            let not_checked: Vec<Value> = skipped
+                .iter()
+                .map(|f| json!({"check": f.check_id, "title": f.check_title, "status": f.list_note(), "reason": f.reason}))
+                .collect();
+            pretty(&json!({
+                "schema": SCHEMA,
+                "subscription": subscription,
+                "location": location.as_str(),
+                "count": items.len(),
+                "findings": items,
+                "not_checked": not_checked,
+            }))
+        }
+        OutputFormat::Md => {
+            let cell = |s: &str| s.replace('|', "\\|").replace('\n', " ");
+            let mut out = format!("# nebaz audit · {subscription}\n\n");
+            if findings.is_empty() {
+                out.push_str("No findings.\n");
+            } else {
+                out.push_str("| Severity | Check | Resource | Finding |\n| --- | --- | --- | --- |\n");
+                for f in &findings {
+                    out.push_str(&format!(
+                        "| {} | {} | `{}` | {} |\n",
+                        f.severity.label(),
+                        cell(f.check_title),
+                        cell(&f.resource_id),
+                        cell(&f.reason)
+                    ));
+                }
+            }
+            if !skipped.is_empty() {
+                out.push_str("\n## Not checked\n\n");
+                for f in &skipped {
+                    out.push_str(&format!("- {} (`{}`): {}\n", f.check_title, f.check_id, f.list_note()));
+                }
+            }
+            out
+        }
     }
 }
 

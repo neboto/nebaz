@@ -161,6 +161,14 @@ run activity-section ok sub '[{"wait": "Partner Dev"}, "\r", "5"]' \
   "Activity" \
   "cannot reach 127.0.0.1"
 
+# @audit opens with coverage notes and no call; `r` loads its sources in
+# the background, and against the dead endpoint they fail as one status
+# error while the checks stay "not checked".
+run audit ok audit '[{"wait": "not checked"}, "r"]' \
+  "Security findings from what's loaded" \
+  "not checked" \
+  "Audit: some checks couldn't run"
+
 run not-logged-in nologin sub '[]' \
   "az login"
 
@@ -197,6 +205,11 @@ headless headless-ls-unconfigured ok 2 'subscriptions = [' -- ls rg --all-config
 headless headless-usage ok 2 'pass --in PREFIX' -- get vm-1
 headless headless-unknown ok 2 'unknown service' -- ls nope
 headless headless-auth nologin 4 'az login' -- ls vm
+# Every audit source fails against the dead endpoint: a stderr warning,
+# every check under not_checked, and no finding, so exit 0.
+headless headless-audit ok 0 '"not_checked"' "Audit: some checks couldn't run" -- audit
+headless headless-audit-fail-on ok 2 'one of critical, high' -- audit --fail-on severe
+headless headless-ls-audit ok 2 'run `nebaz audit`' -- ls audit
 
 [ "$fail" = 0 ] && echo "smoke: all scenarios passed"
 exit "$fail"

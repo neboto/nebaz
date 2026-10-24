@@ -41,6 +41,7 @@ use std::sync::Arc;
 mod all_search_test;
 mod command_picker_test;
 mod changes_test;
+mod audit_test;
 mod directory_test;
 mod list_ux_test;
 mod export_test;

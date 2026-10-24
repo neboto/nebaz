@@ -172,4 +172,27 @@ impl App {
             .map(|(_, s)| s)
             .collect()
     }
+
+    /// `nebaz audit`: open `@audit` and press `r` — every source list the
+    /// checks read loads into its cache slot and the capped lazy reads
+    /// follow as each lands. The caller pumps until `audit_in_flight` is
+    /// false, then reads `headless_audit_rows`.
+    pub(crate) fn headless_audit_start(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        self.headless_open(JumpView::Audit);
+        self.load_audit_sources(event_tx);
+    }
+
+    /// The findings and coverage notes over what is cached now.
+    pub(crate) fn headless_audit_rows(&self) -> Vec<crate::audit::AuditFinding> {
+        self.run_audit()
+            .into_iter()
+            .filter_map(|r| r.as_any().downcast_ref::<crate::audit::AuditFinding>().cloned())
+            .collect()
+    }
+
+    /// What `r` reported: the one status error naming each source that
+    /// failed or loaded partially (`None` when all landed clean).
+    pub(crate) fn headless_audit_warning(&self) -> Option<&str> {
+        self.error_message.as_deref().filter(|m| m.starts_with("Audit:"))
+    }
 }

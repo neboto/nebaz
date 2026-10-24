@@ -67,8 +67,8 @@ pub struct Cli {
 
 /// The one-shot subcommands. Each makes the same read-only calls the TUI
 /// makes and prints the result; nothing here can change a subscription.
-/// Later headless forms (`audit`, #60) are new variants here and new arms
-/// in `headless::run`.
+/// A new headless form is a new variant here and a new arm in
+/// `headless::run`.
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// List every service: its prefix, name, and sub-tabs with their
@@ -83,6 +83,18 @@ pub enum Command {
     /// What changed recently, subscription-wide (`@changes`), newest
     /// first: Activity Log changes, deployments, health transitions.
     Changes(ChangesArgs),
+    /// Security findings (`@audit`): loads the lists the checks read, runs
+    /// them, prints the findings and what could not be checked. Exits 3 on
+    /// a finding at or above `--fail-on`.
+    Audit(AuditArgs),
+}
+
+#[derive(Debug, clap::Args)]
+pub struct AuditArgs {
+    /// Lowest severity that makes the exit code 3: critical, high, medium,
+    /// low, info, or never (exit 0 whenever the audit ran).
+    #[arg(long, value_name = "SEVERITY", default_value = "low")]
+    pub fail_on: String,
 }
 
 #[derive(Debug, clap::Args)]

@@ -621,8 +621,13 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
         m(JumpView::ChangesHealth, "ChangeRow (health)", change_health()),
     ];
     // Lost coverage fails loudly. One row per sub-tab, except Function apps
-    // (the sites list, SiteRow); `every_sub_tab_has_a_mock` names a gap.
-    let sub_tabs: usize = crate::azure::service::ServiceType::all().iter().map(|s| s.views().len()).sum();
+    // (the sites list, SiteRow) and the virtual `@audit`;
+    // `every_sub_tab_has_a_mock` names a gap.
+    let sub_tabs: usize = crate::azure::service::ServiceType::all()
+        .iter()
+        .filter(|s| !s.is_virtual())
+        .map(|s| s.views().len())
+        .sum();
     assert!(out.len() >= sub_tabs - 1, "{} mock rows for {} sub-tabs", out.len(), sub_tabs);
     out
 }

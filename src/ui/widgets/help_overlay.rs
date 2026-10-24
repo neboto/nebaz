@@ -114,6 +114,15 @@ const RIGHT_SECTIONS: &[Section] = &[
             ("Shift-drag", "terminal text selection"),
         ],
     },
+    Section {
+        title: "@audit",
+        entries: &[
+            ("⏎", "open the finding's resource"),
+            ("l / →", "evidence + remediation (text)"),
+            ("r", "load missing sources, re-audit"),
+            ("F · z", "filter · sort by severity"),
+        ],
+    },
 ];
 
 /// Render the help overlay: two aligned key/description columns, sized to the

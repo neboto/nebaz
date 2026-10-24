@@ -243,6 +243,16 @@ each one backs are in the catalog table
   are a `POST` nebaz never sends, and no model is ever called: the AI
   data-plane hosts are on the guard's list, and
   `az cognitiveservices account keys` is named forbidden.
+- **`@audit`**: no action of its own. Its checks read lists and sections
+  already loaded (ADR 0007); `r` there runs the same list loads and lazy
+  reads listed above for Network, Storage, Key Vault, SQL (servers and
+  firewall rules), Cosmos DB, AKS, Container Registry, App Service (sites
+  and `config/web`), Container Apps, Redis (caches, Managed Redis and cache
+  firewall rules), Service Bus and Event Hubs (namespaces and their
+  network rule sets), Power Platform, the subscription's
+  Access list, and the Graph directory reads (app registrations, service
+  principals, principal names). A denied one leaves its checks "not
+  checked". `nebaz audit` makes the same calls.
 
 ## Local commands
 

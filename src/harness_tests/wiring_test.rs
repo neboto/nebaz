@@ -39,6 +39,11 @@ fn every_sub_tab_has_a_mock() {
             if *view == JumpView::FunctionApps {
                 continue;
             }
+            // `@audit` rows are computed findings, not a parsed list
+            // (`audit_test.rs` covers them).
+            if st.is_virtual() {
+                continue;
+            }
             assert!(mocked.contains(view), "{view:?} has no mock in harness_tests/mocks.rs");
         }
     }
@@ -124,7 +129,7 @@ async fn every_split_pane_type_reaches_its_renderer() {
 
 /// Every key the panes answer, in an order that opens and closes each
 /// overlay so later keys reach the pane.
-fn smash_sequence() -> Vec<KeyEvent> {
+pub(super) fn smash_sequence() -> Vec<KeyEvent> {
     let ctrl = |c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL);
     let mut keys = vec![key(KeyCode::Char('l'))];
     keys.extend(('1'..='9').chain(['0']).map(|c| key(KeyCode::Char(c))));

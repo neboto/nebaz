@@ -472,3 +472,114 @@ async fn a_denied_subscription_is_reported_not_fatal() {
     assert_eq!(outcomes[1].status, "ok");
     assert_eq!(rows.len(), 2);
 }
+
+// ── audit ───────────────────────────────────────────────────────────────────
+
+/// An NSG with SSH open to the internet: one critical finding.
+fn open_nsg() -> Box<dyn Resource> {
+    Box::new(
+        crate::azure::services::network::NsgRow::from_json(
+            &serde_json::json!({"id": mocks::arm_id("Microsoft.Network/networkSecurityGroups/nsg-ssh"), "name": "nsg-ssh",
+                "location": "westeurope", "properties": {"securityRules": [
+                {"name": "ssh-anywhere", "properties": {"priority": 100, "direction": "Inbound", "access": "Allow",
+                    "protocol": "Tcp", "sourceAddressPrefix": "*", "sourcePortRange": "*",
+                    "destinationAddressPrefix": "*", "destinationPortRange": "22"}}]}}),
+            Some(TENANT),
+        )
+        .expect("parses"),
+    )
+}
+
+/// A storage account at TLS 1.1 and nothing else wrong: one medium finding.
+fn old_tls_account() -> Box<dyn Resource> {
+    Box::new(
+        crate::azure::services::storage::StorageAccountRow::from_json(
+            &serde_json::json!({"id": mocks::arm_id("Microsoft.Storage/storageAccounts/stold"), "name": "stold",
+                "location": "eastus", "properties": {"minimumTlsVersion": "TLS1_1", "allowSharedKeyAccess": false,
+                    "allowBlobPublicAccess": false, "publicNetworkAccess": "Disabled"}}),
+            Some(TENANT),
+        )
+        .expect("parses"),
+    )
+}
+
+/// The audit rows a headless run prints, over caches a test warmed.
+async fn audit_rows(lists: Vec<(JumpView, Vec<Box<dyn Resource>>)>) -> Vec<crate::audit::AuditFinding> {
+    let mut h = Harness::new().await;
+    for (view, rows) in lists {
+        h.app.cache.insert(view.service(), SUB_DEV, Some(view.as_str().to_string()), rows);
+    }
+    h.app.headless_audit_rows()
+}
+
+#[test]
+fn audit_parses_fail_on_and_defaults_to_low() {
+    let Some(Command::Audit(a)) = parse(&["audit"]).command else { panic!("audit") };
+    assert_eq!(a.fail_on, "low");
+    let Some(Command::Audit(a)) = parse(&["audit", "--fail-on", "critical", "-o", "md"]).command else { panic!("audit") };
+    assert_eq!(a.fail_on, "critical");
+    assert_eq!(parse_fail_on("HIGH").ok(), Some(Some(Severity::High)));
+    assert_eq!(parse_fail_on("never").ok(), Some(None));
+}
+
+#[tokio::test]
+async fn a_wrong_fail_on_and_ls_audit_are_usage_errors_before_any_call() {
+    let cli = parse(&["audit", "--fail-on", "severe"]);
+    let Some(Command::Audit(args)) = &cli.command else { panic!("audit") };
+    let err = audit(&cli, args, OutputFormat::Json).await.unwrap_err();
+    assert_eq!(err.code(), 2);
+    assert!(err.message().contains("critical, high, medium, low, info, never"), "{}", err.message());
+
+    let cli = parse(&["ls", "audit"]);
+    let Some(Command::Ls(args)) = &cli.command else { panic!("ls") };
+    let err = ls(&cli, args, OutputFormat::Json).await.unwrap_err();
+    assert_eq!(err.code(), 2);
+    assert!(err.message().contains("nebaz audit"), "{}", err.message());
+}
+
+#[tokio::test]
+async fn audit_exits_3_on_a_finding_at_or_above_fail_on() {
+    let rows = audit_rows(vec![(JumpView::StorageAccounts, vec![old_tls_account()])]).await;
+    let worst = rows.iter().filter(|f| f.is_finding()).map(|f| f.severity).min();
+    assert_eq!(worst, Some(Severity::High), "TLS 1.1 on storage is high");
+    let code = |s: &str| audit_exit_code(&rows, parse_fail_on(s).ok().flatten());
+    assert_eq!(code("low"), FINDINGS_EXIT);
+    assert_eq!(code("high"), FINDINGS_EXIT, "at the threshold counts");
+    assert_eq!(code("critical"), 0, "below the threshold does not");
+    assert_eq!(code("never"), 0);
+
+    let rows = audit_rows(vec![(JumpView::NetworkSecurityGroups, vec![open_nsg()])]).await;
+    assert_eq!(audit_exit_code(&rows, Some(Severity::Critical)), FINDINGS_EXIT);
+}
+
+#[tokio::test]
+async fn coverage_notes_never_fail_the_run() {
+    // Nothing cached: every check is a note, none a finding.
+    let rows = audit_rows(Vec::new()).await;
+    assert!(!rows.is_empty() && rows.iter().all(|f| !f.is_finding()));
+    assert_eq!(audit_exit_code(&rows, Some(Severity::Info)), 0);
+}
+
+#[tokio::test]
+async fn audit_json_and_markdown_carry_findings_and_what_was_not_checked() {
+    let rows = audit_rows(vec![
+        (JumpView::NetworkSecurityGroups, vec![open_nsg()]),
+        (JumpView::StorageAccounts, vec![old_tls_account()]),
+    ])
+    .await;
+    let v: Value = serde_json::from_str(&render_audit(SUB_DEV, &Location::All, &rows, OutputFormat::Json)).unwrap();
+    assert_eq!(v["schema"], SCHEMA);
+    assert_eq!(v["subscription"], SUB_DEV);
+    let findings = v["findings"].as_array().unwrap();
+    assert_eq!(v["count"], findings.len());
+    assert_eq!(findings[0]["severity"], "critical", "worst first");
+    assert_eq!(findings[0]["check"], "nsg-open-internet");
+    assert_eq!(findings[0]["resource_id"], mocks::arm_id("Microsoft.Network/networkSecurityGroups/nsg-ssh"));
+    assert!(findings[0]["remediation"].as_str().is_some_and(|s| !s.is_empty()));
+    let not_checked = v["not_checked"].as_array().unwrap();
+    assert!(not_checked.iter().any(|n| n["check"] == "kv-soft-delete" && n["status"] == "not checked — load @kv"));
+
+    let md = render_audit(SUB_DEV, &Location::All, &rows, OutputFormat::Md);
+    assert!(md.contains("| critical | NSG allows inbound from the internet |"), "{md}");
+    assert!(md.contains("## Not checked"));
+}

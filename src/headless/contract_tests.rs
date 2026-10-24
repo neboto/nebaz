@@ -116,6 +116,22 @@ async fn current() -> Value {
     let kv = capture(mock(JumpView::KeyVaults)).await;
     let several: Value = serde_json::from_str(&render_detail("sub", &[vm, kv], OutputFormat::Json)).unwrap();
 
+    // `audit` over one warm finding (and every other check a note).
+    let nsg = crate::azure::services::network::NsgRow::from_json(
+        &json!({"id": crate::app::harness_tests::mocks::arm_id("Microsoft.Network/networkSecurityGroups/nsg"),
+            "name": "nsg", "location": "westeurope", "properties": {"securityRules": [
+            {"name": "ssh", "properties": {"priority": 100, "direction": "Inbound", "access": "Allow", "protocol": "Tcp",
+                "sourceAddressPrefix": "*", "sourcePortRange": "*", "destinationAddressPrefix": "*",
+                "destinationPortRange": "22"}}]}}),
+        None,
+    )
+    .expect("parses");
+    let mut input = crate::audit::AuditInput::new("sub", 0);
+    let nsgs: Vec<Box<dyn Resource>> = vec![Box::new(nsg)];
+    input.add(JumpView::NetworkSecurityGroups, &nsgs);
+    let audit_rows = crate::audit::run(&input);
+    let audit: Value = serde_json::from_str(&render_audit("sub", &Location::All, &audit_rows, OutputFormat::Json)).unwrap();
+
     let mut prefixes = BTreeMap::new();
     for s in ServiceType::all() {
         let subtabs: Vec<String> = s.views().iter().map(|v| format!("{} ({})", v.as_str(), view_prefix(*v))).collect();
@@ -142,6 +158,12 @@ async fn current() -> Value {
             "several": keys(&several),
             "item": keys(&several["resources"][0]),
             "resource": keys(&one["resource"]),
+        },
+        "audit": {
+            "envelope": keys(&audit),
+            "finding": keys(&audit["findings"][0]),
+            "not_checked": keys(&audit["not_checked"][0]),
+            "severities": ["critical", "high", "medium", "low", "info"],
         },
         "prefixes": prefixes,
         "sections": sections_by_type(),
