@@ -142,6 +142,13 @@ each one backs are in the catalog table
   and, for the all-metrics picker, `Microsoft.Insights/metricDefinitions/read`.
   Both are control-plane `GET`s on the resource's own id (platform
   metrics only; no log query); a 403 is a line in the view, never fatal.
+- **Change timeline** (`W`, any ARM row): the Activity log action
+  above, `Microsoft.AlertsManagement/alerts/read` (fired alerts),
+  `Microsoft.ResourceHealth/availabilityStatuses/read` (the health
+  history) and `Microsoft.Resources/deployments/read` (the group's
+  deployments: their state, what they deployed and their error; nebaz
+  never shows a deployment's parameters or outputs). Each source that
+  is denied is a note in the view.
 - **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
   Environments and their policy links are in the Power Platform admin
   API, not ARM: nebaz never calls it, and its hosts are on the guard's

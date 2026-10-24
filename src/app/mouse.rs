@@ -324,6 +324,7 @@ impl App {
             self.network_lens = None;
             self.refs_lens = None;
             self.metrics = None;
+            self.timeline = None;
         }
         match action {
             ClickAction::Service(service) => {
@@ -551,7 +552,7 @@ impl App {
     /// the view and goes on to what is under the pointer. Whether the view
     /// took the event.
     fn handle_pane_view_mouse(&mut self, mouse: MouseEvent, event_tx: &mpsc::UnboundedSender<Event>) -> bool {
-        if self.network_lens.is_none() && self.refs_lens.is_none() && self.metrics.is_none() {
+        if self.network_lens.is_none() && self.refs_lens.is_none() && self.metrics.is_none() && self.timeline.is_none() {
             return false;
         }
         let (col, row) = (mouse.column, mouse.row);
@@ -563,6 +564,7 @@ impl App {
                 self.network_lens = None;
                 self.refs_lens = None;
                 self.metrics = None;
+                self.timeline = None;
             }
             return false;
         }
@@ -591,6 +593,11 @@ impl App {
                 return true;
             }
         } else if let Some(st) = self.refs_lens.as_mut() {
+            if idx < st.rows.len() {
+                st.selected = idx;
+                return true;
+            }
+        } else if let Some(st) = self.timeline.as_mut() {
             if idx < st.rows.len() {
                 st.selected = idx;
                 return true;
