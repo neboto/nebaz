@@ -230,6 +230,10 @@
       "log-workspaces (monitor)",
       "app-insights (appi)"
     ],
+    "pg": [
+      "postgres-servers (pg)",
+      "mysql-servers (mysql)"
+    ],
     "pp": [
       "enterprise-policies (pp)"
     ],
@@ -507,6 +511,19 @@
       "Related",
       "Tags"
     ],
+    "MySQL server": [
+      "Overview",
+      "Networking",
+      "Firewall",
+      "Security",
+      "Parameters",
+      "HA & backup",
+      "Databases",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "NAT Gateway": [
       "Overview",
       "Access",
@@ -534,6 +551,19 @@
     ],
     "Node Pool": [
       "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "PostgreSQL server": [
+      "Overview",
+      "Networking",
+      "Firewall",
+      "Security",
+      "Parameters",
+      "HA & backup",
+      "Databases",
       "Access",
       "Activity",
       "Related",

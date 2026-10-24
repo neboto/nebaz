@@ -28,6 +28,7 @@ use crate::azure::services::json;
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, Namespace, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SecurityRule, SubnetRow, VnetRow};
+use crate::azure::services::postgres_mysql::{Engine, FlexibleServerRow};
 use crate::azure::services::power_platform::{EnterprisePolicyRow, POWER_PLATFORM_DELEGATION};
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
 use crate::azure::services::sql::SqlServerRow;
@@ -54,9 +55,11 @@ const REDIS: &[V] = &[V::RedisCaches];
 const AMR: &[V] = &[V::ManagedRedis];
 const SERVICE_BUS: &[V] = &[V::ServiceBusNamespaces];
 const EVENT_HUBS: &[V] = &[V::EventHubNamespaces];
+const PG: &[V] = &[V::PostgresServers];
+const MYSQL: &[V] = &[V::MysqlServers];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 41] = [
+pub static CHECKS: [Check; 51] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -363,6 +366,87 @@ pub static CHECKS: [Check; 41] = [
         fix: "Turn off public network access and use private endpoints, or set the default action to Deny with IP or VNet rules for the callers that need it (Premium for Service Bus VNet rules).",
         sources: &[EVENT_HUBS],
         run: eh_public_network,
+    },
+    // ── PostgreSQL & MySQL ──
+    Check {
+        id: "pg-public-network",
+        title: "PostgreSQL server public network access enabled",
+        why: "With public access on, the server has an internet endpoint and its firewall rules are the only network control: one broad rule (or Allow Azure services) away from every address. A VNet-integrated server or a private endpoint takes it off the internet.",
+        fix: "Reach the server through a private endpoint (or a VNet-integrated server) and set public network access to Disabled; until then keep the firewall rules to the exact addresses that need it.",
+        sources: &[PG],
+        run: pg_public_network,
+    },
+    Check {
+        id: "pg-firewall-open",
+        title: "PostgreSQL server firewall open to the internet or to all of Azure",
+        why: "A 0.0.0.0–255.255.255.255 rule admits every address on the internet; the 0.0.0.0 rule (Allow Azure services) admits every Azure service, in any tenant. Either leaves only the password or token in the way.",
+        fix: "Delete the rule and add rules for the addresses that need the server, or move callers to a private endpoint and turn off public access.",
+        sources: &[PG],
+        run: pg_firewall_open,
+    },
+    Check {
+        id: "pg-insecure-transport",
+        title: "PostgreSQL server accepts unencrypted connections",
+        why: "require_secure_transport off lets a client connect without TLS, so credentials and every query cross the network in clear text.",
+        fix: "Set the server parameter require_secure_transport to ON once every client connects with TLS (sslmode=require or stricter).",
+        sources: &[PG],
+        run: pg_insecure_transport,
+    },
+    Check {
+        id: "pg-min-tls",
+        title: "PostgreSQL server allows TLS below 1.2",
+        why: "TLS 1.0 and 1.1 have known weaknesses and are being retired across Azure; a minimum below 1.2 lets a client negotiate them.",
+        fix: "Set the server parameter ssl_min_protocol_version to TLSv1.2.",
+        sources: &[PG],
+        run: pg_min_tls,
+    },
+    Check {
+        id: "pg-password-no-entra",
+        title: "PostgreSQL server uses passwords with no Entra admin",
+        why: "Password authentication with no Microsoft Entra admin means every login is a database password: no conditional access, no MFA, no managed identity, and rotation by hand.",
+        fix: "Enable Microsoft Entra authentication, add an Entra admin (a group), move apps to managed identities, then consider turning password authentication off.",
+        sources: &[PG],
+        run: pg_password_no_entra,
+    },
+    Check {
+        id: "mysql-public-network",
+        title: "MySQL server public network access enabled",
+        why: "With public access on, the server has an internet endpoint and its firewall rules are the only network control: one broad rule (or Allow Azure services) away from every address. A VNet-integrated server or a private endpoint takes it off the internet.",
+        fix: "Reach the server through a private endpoint (or a VNet-integrated server) and set public network access to Disabled; until then keep the firewall rules to the exact addresses that need it.",
+        sources: &[MYSQL],
+        run: mysql_public_network,
+    },
+    Check {
+        id: "mysql-firewall-open",
+        title: "MySQL server firewall open to the internet or to all of Azure",
+        why: "A 0.0.0.0–255.255.255.255 rule admits every address on the internet; the 0.0.0.0 rule (Allow Azure services) admits every Azure service, in any tenant. Either leaves only the password or token in the way.",
+        fix: "Delete the rule and add rules for the addresses that need the server, or move callers to a private endpoint and turn off public access.",
+        sources: &[MYSQL],
+        run: mysql_firewall_open,
+    },
+    Check {
+        id: "mysql-insecure-transport",
+        title: "MySQL server accepts unencrypted connections",
+        why: "require_secure_transport OFF lets a client connect without TLS, so credentials and every query cross the network in clear text.",
+        fix: "Set the server parameter require_secure_transport to ON once every client connects with TLS (ssl-mode=REQUIRED or stricter).",
+        sources: &[MYSQL],
+        run: mysql_insecure_transport,
+    },
+    Check {
+        id: "mysql-min-tls",
+        title: "MySQL server allows TLS below 1.2",
+        why: "TLS 1.0 and 1.1 have known weaknesses and are being retired across Azure; a tls_version that lists them lets a client negotiate them.",
+        fix: "Set the server parameter tls_version to TLSv1.2 (and TLSv1.3 where supported).",
+        sources: &[MYSQL],
+        run: mysql_min_tls,
+    },
+    Check {
+        id: "mysql-password-no-entra",
+        title: "MySQL server uses passwords with no Entra admin",
+        why: "With no Microsoft Entra admin every login is a database password: no conditional access, no MFA, no managed identity, and rotation by hand.",
+        fix: "Add a Microsoft Entra admin (a group, with a user-assigned identity for the Graph lookups), move apps to managed identities, then consider aad_auth_only.",
+        sources: &[MYSQL],
+        run: mysql_password_no_entra,
     },
     // ── Power Platform ──
     Check {
@@ -1075,6 +1159,184 @@ fn eh_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFind
 
 fn eh_public_network(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
     ns_public_network(check, input, V::EventHubNamespaces, out)
+}
+
+// ── PostgreSQL & MySQL ────────────────────────────────────────────────
+
+/// The cached flexible servers of one engine's list.
+fn flexible_servers<'a>(input: &AuditInput<'a>, view: V) -> impl Iterator<Item = &'a FlexibleServerRow> + 'a {
+    let rows: Vec<&'a FlexibleServerRow> = input.of::<FlexibleServerRow>(view).collect();
+    rows.into_iter()
+}
+
+/// Whether a server takes connections from the internet at all: public
+/// access on and not VNet-integrated (a VNet-integrated server has no
+/// public endpoint; its subnet's NSG decides).
+fn flex_public(s: &FlexibleServerRow) -> bool {
+    s.delegated_subnet_id.is_none() && public_enabled(s.public_network_access.as_deref())
+}
+
+/// A server parameter's value from the warm Parameters section
+/// (`GET {server}/configurations`).
+fn flex_param(params: &[Value], name: &str) -> Option<String> {
+    params
+        .iter()
+        .find(|p| json::str_at(p, "/name").is_some_and(|n| n.eq_ignore_ascii_case(name)))
+        .and_then(|p| json::str_at(p, "/properties/value"))
+}
+
+fn flex_public_network(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    for s in flexible_servers(input, view) {
+        if !flex_public(s) {
+            continue;
+        }
+        let mut evidence = vec![
+            format!("publicNetworkAccess: {}", s.public_network_access.as_deref().unwrap_or("(default: Enabled)")),
+            "delegated subnet: none".into(),
+            format!("private endpoints: {}", s.private_endpoints.len()),
+        ];
+        if let Some(Lazy::Loaded(rules)) = input.lazy().and_then(|l| l.flex_firewall_rules.get(&s.base.id)) {
+            evidence.push(format!("firewall rules: {}", rules.len()));
+        }
+        out.push(AuditFinding::about(check, Severity::Medium, s, "public network access enabled").with_evidence(evidence));
+    }
+}
+
+/// The SQL rule, on the warm Firewall section. A VNet-integrated server
+/// or one with public access off has rules that admit nothing: skipped,
+/// not counted as unchecked.
+fn flex_firewall_open(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for s in flexible_servers(input, view) {
+        if !flex_public(s) {
+            continue;
+        }
+        let rules = gaps.see(&s.base.name, input.lazy().and_then(|l| l.flex_firewall_rules.get(&s.base.id)));
+        let Some(rules) = rules else { continue };
+        let mut worst: Option<Severity> = None;
+        let mut evidence = Vec::new();
+        for r in rules {
+            let start = json::text(r, "/properties/startIpAddress");
+            let end = json::text(r, "/properties/endIpAddress");
+            let sev = match (start.as_str(), end.as_str()) {
+                ("0.0.0.0", "255.255.255.255") => Severity::Critical,
+                ("0.0.0.0", "0.0.0.0") => Severity::Low,
+                _ => continue,
+            };
+            evidence.push(format!("{}: {} – {} ({})", json::text(r, "/name"), start, end, sev.label()));
+            worst = Some(worst.map_or(sev, |w| w.min(sev)));
+        }
+        if let Some(sev) = worst {
+            let reason = if sev == Severity::Critical {
+                "firewall rule 0.0.0.0 – 255.255.255.255"
+            } else {
+                "firewall allows all Azure services (0.0.0.0)"
+            };
+            out.push(AuditFinding::about(check, sev, s, reason).with_evidence(evidence));
+        }
+    }
+    gaps.note(check, "firewall rules", "Firewall", out);
+}
+
+/// `require_secure_transport` OFF, from the warm Parameters section; a
+/// server whose parameters aren't loaded is counted in the note.
+fn flex_insecure_transport(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for s in flexible_servers(input, view) {
+        let params = gaps.see(&s.base.name, input.lazy().and_then(|l| l.flex_parameters.get(&s.base.id)));
+        let Some(params) = params else { continue };
+        if let Some(v) = flex_param(params, "require_secure_transport").filter(|v| v.eq_ignore_ascii_case("off")) {
+            out.push(
+                AuditFinding::about(check, Severity::High, s, "require_secure_transport off")
+                    .with_evidence(vec![format!("require_secure_transport: {}", v)]),
+            );
+        }
+    }
+    gaps.note(check, "server parameters", "Parameters", out);
+}
+
+/// The TLS floor, from the warm Parameters section: PostgreSQL's
+/// `ssl_min_protocol_version`, MySQL's `tls_version` (a list: any entry
+/// below 1.2 counts).
+fn flex_min_tls(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for s in flexible_servers(input, view) {
+        let params = gaps.see(&s.base.name, input.lazy().and_then(|l| l.flex_parameters.get(&s.base.id)));
+        let Some(params) = params else { continue };
+        let name = match s.engine {
+            Engine::Postgres => "ssl_min_protocol_version",
+            Engine::Mysql => "tls_version",
+        };
+        let Some(v) = flex_param(params, name) else { continue };
+        if v.split(',').map(str::trim).filter(|t| !t.is_empty()).any(tls_below_1_2) {
+            out.push(
+                AuditFinding::about(check, Severity::Medium, s, format!("{} {}", name, v))
+                    .with_evidence(vec![format!("{}: {}", name, v)]),
+            );
+        }
+    }
+    gaps.note(check, "server parameters", "Parameters", out);
+}
+
+/// Password logins with no Entra admin. PostgreSQL says both modes on the
+/// row (Entra off needs no lazy read); otherwise the warm Security
+/// section's admin list decides.
+fn flex_password_no_entra(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for s in flexible_servers(input, view) {
+        let password_on = s.password_auth.as_deref().is_none_or(|p| p.eq_ignore_ascii_case("enabled"));
+        if !password_on {
+            continue;
+        }
+        let entra_off = s.engine == Engine::Postgres && !eq(s.entra_auth.as_deref(), "enabled");
+        let no_admin = entra_off || {
+            let admins = gaps.see(&s.base.name, input.lazy().and_then(|l| l.flex_admins.get(&s.base.id)));
+            admins.is_some_and(|a| a.is_empty())
+        };
+        if no_admin {
+            let mut evidence = vec![format!("admin login: {}", s.admin_login.as_deref().unwrap_or("-"))];
+            if s.engine == Engine::Postgres {
+                evidence.push(format!("passwordAuth: {}", s.password_auth.as_deref().unwrap_or("(default: Enabled)")));
+                evidence.push(format!("activeDirectoryAuth: {}", s.entra_auth.as_deref().unwrap_or("Disabled")));
+            }
+            if !entra_off {
+                evidence.push("Entra admins: none".into());
+            }
+            out.push(AuditFinding::about(check, Severity::Low, s, "password auth, no Entra admin").with_evidence(evidence));
+        }
+    }
+    gaps.note(check, "Entra admins", "Security", out);
+}
+
+fn pg_public_network(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_public_network(check, input, V::PostgresServers, out)
+}
+fn pg_firewall_open(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_firewall_open(check, input, V::PostgresServers, out)
+}
+fn pg_insecure_transport(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_insecure_transport(check, input, V::PostgresServers, out)
+}
+fn pg_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_min_tls(check, input, V::PostgresServers, out)
+}
+fn pg_password_no_entra(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_password_no_entra(check, input, V::PostgresServers, out)
+}
+fn mysql_public_network(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_public_network(check, input, V::MysqlServers, out)
+}
+fn mysql_firewall_open(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_firewall_open(check, input, V::MysqlServers, out)
+}
+fn mysql_insecure_transport(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_insecure_transport(check, input, V::MysqlServers, out)
+}
+fn mysql_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_min_tls(check, input, V::MysqlServers, out)
+}
+fn mysql_password_no_entra(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    flex_password_no_entra(check, input, V::MysqlServers, out)
 }
 
 // ── Container Apps ────────────────────────────────────────────────────

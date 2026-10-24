@@ -151,6 +151,17 @@ pub struct LazyStore {
     /// `GET {server}/firewallRules`, keyed by server id.
     pub sql_firewall_rules: LazyMap<Vec<serde_json::Value>>,
 
+    // ── PostgreSQL & MySQL ───────────────────────────────────────────────
+    /// `GET {server}/databases`, keyed by flexible server id (either engine).
+    pub flex_databases: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {server}/firewallRules`, keyed by flexible server id.
+    pub flex_firewall_rules: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {server}/administrators` — the Entra admins, keyed by server id.
+    pub flex_admins: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {server}/configurations` — every server parameter, keyed by
+    /// server id; only the TLS and auth ones are rendered.
+    pub flex_parameters: LazyMap<Vec<serde_json::Value>>,
+
     // ── Access (every type) ──────────────────────────────────────────────
     /// `GET {id}/…/roleAssignments?$filter=atScope()`, keyed by ARM id.
     pub role_assignments: LazyMap<Vec<serde_json::Value>>,

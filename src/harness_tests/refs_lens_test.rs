@@ -72,7 +72,13 @@ async fn u_on_a_subnet_lists_the_nic_environment_and_policy_pointing_at_it_and_j
     );
     let st = h.app.refs_lens.as_ref().unwrap();
     // The Subnets list is on screen and warm; PEs, Apps, NAT are likely but cold.
-    assert_eq!(st.coverage.likely_cold, vec![JumpView::PrivateEndpoints, JumpView::WebApps, JumpView::NatGateways]);
+    assert_eq!(st.coverage.likely_cold, vec![
+            JumpView::PrivateEndpoints,
+            JumpView::WebApps,
+            JumpView::NatGateways,
+            JumpView::PostgresServers,
+            JumpView::MysqlServers
+        ]);
     h.press(KeyCode::Char('Z')).await;
     let screen = h.render();
     for s in ["REFERENCED BY", "nic-aca", "VMs/NICs", "via Infrastructure subnet snet-aca", "not checked — load VNet/PEs, App Svc/Apps, VNet/NAT"] {

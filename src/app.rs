@@ -85,6 +85,10 @@ use crate::azure::services::redis::{
     managed_redis_section_lines, redis_cache_section_lines, redis_child_path, ManagedRedisDetailSection,
     ManagedRedisRow, RedisCacheDetailSection, RedisCacheRow, REDIS_API_VERSION, REDIS_ENTERPRISE_API_VERSION,
 };
+use crate::azure::services::postgres_mysql::{
+    api_version_for as flex_api_version, flexible_server_child_path, flexible_server_section_lines,
+    FlexibleServerDetailSection, FlexibleServerLazy, FlexibleServerRow,
+};
 use crate::azure::services::sql::{
     server_child_path, sql_server_section_lines, SqlServerDetailSection, SqlServerRow, SQL_API_VERSION,
 };
@@ -1753,6 +1757,43 @@ impl App {
         );
     }
 
+    /// On-enter hook for a flexible server's Databases (either engine).
+    pub fn trigger_flex_databases(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.flex_databases,
+            event_tx,
+            |c, id| c.list_fetch(&flexible_server_child_path(id, "databases"), flex_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for a flexible server's Firewall.
+    pub fn trigger_flex_firewall(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.flex_firewall_rules,
+            event_tx,
+            |c, id| c.list_fetch(&flexible_server_child_path(id, "firewallRules"), flex_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for a flexible server's Security: its Entra admins.
+    pub fn trigger_flex_admins(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.flex_admins,
+            event_tx,
+            |c, id| c.list_fetch(&flexible_server_child_path(id, "administrators"), flex_api_version(id)),
+        );
+    }
+
+    /// On-enter hook for a flexible server's Parameters: one list of
+    /// every server parameter, of which the TLS and auth ones render.
+    pub fn trigger_flex_parameters(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.flex_parameters,
+            event_tx,
+            |c, id| c.list_fetch(&flexible_server_child_path(id, "configurations"), flex_api_version(id)),
+        );
+    }
+
     /// On-enter hook for an app's Configuration: `GET {site}/config/web`.
     pub fn trigger_site_config(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         app.trigger_selected(
@@ -2794,6 +2835,18 @@ impl App {
                 SqlServerDetailSection::from_index(idx),
                 self.lazy.sql_databases.get(r.id()),
                 self.lazy.sql_firewall_rules.get(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<FlexibleServerRow>() {
+            return Some(flexible_server_section_lines(
+                r,
+                FlexibleServerDetailSection::from_index(idx),
+                FlexibleServerLazy {
+                    databases: self.lazy.flex_databases.get(r.id()),
+                    firewall: self.lazy.flex_firewall_rules.get(r.id()),
+                    admins: self.lazy.flex_admins.get(r.id()),
+                    parameters: self.lazy.flex_parameters.get(r.id()),
+                },
             ));
         }
         if let Some(r) = any.downcast_ref::<SiteRow>() {

@@ -82,8 +82,9 @@ after 10 pages (it says how far back it got), is a warning on stderr.
 
 `audit` loads the lists its checks read (NSGs, VNets, storage, Key Vault,
 SQL, Cosmos, AKS, ACR, App Service, Container Apps, Redis, Service Bus,
-Event Hubs, Power Platform, app registrations, service principals), the
-capped per-resource reads a few need (SQL and Redis firewall rules,
+Event Hubs, PostgreSQL and MySQL flexible servers, Power Platform, app registrations, service principals), the
+capped per-resource reads a few need (SQL and Redis firewall rules, a
+flexible server's firewall rules, parameters and Entra admins,
 messaging network rule sets, site configs, the subscription's
 role assignments; at most 50 each), and prints the **findings**, worst
 first: severity, check, resource id, reason, evidence and remediation as

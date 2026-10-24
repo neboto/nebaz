@@ -25,6 +25,7 @@ pub mod network;
 pub mod network_dns;
 pub mod network_edge;
 pub mod network_private;
+pub mod postgres_mysql;
 pub mod power_platform;
 pub mod redis;
 pub mod sql;

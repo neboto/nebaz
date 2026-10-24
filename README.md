@@ -47,9 +47,12 @@ metadata only; AKS links to its workspace), Container Apps
 (apps, environments and jobs; revisions and auth settings lazy, secret and
 env var names only, never values), Redis (Azure Cache for Redis with
 its network posture, firewall rules and geo-replication lazy, and Managed
-Redis with databases lazy; never access keys), and Messaging (Service Bus
+Redis with databases lazy; never access keys), Messaging (Service Bus
 and Event Hubs namespaces; the firewall, queues, topics, event hubs and
-access policy names lazy, never keys). Every row has an **Access**
+access policy names lazy, never keys), and PostgreSQL & MySQL (flexible
+servers: VNet integration, private DNS zone and private endpoints
+jumpable; firewall rules, Entra admins, TLS parameters and databases
+lazy; never a password). Every row has an **Access**
 section (the role assignments that apply to it, principals named through
 Microsoft Graph, inherited ones jumping to where they were made; an
 identity also shows what it can do), an
@@ -99,7 +102,8 @@ Azure's own changes as noise (`a`); `nebaz changes --since 6h` prints it.
 **`@audit`** lists security findings
 (world-open NSG rules, public storage and vaults, SQL firewalls open to the
 internet, AKS API servers without IP ranges, plain-HTTP apps, open
-Container Apps ingress, plain-text or open Redis caches, Service Bus and
+Container Apps ingress, plain-text or open Redis caches, PostgreSQL and MySQL servers open to the
+internet or accepting plain text, Service Bus and
 Event Hubs namespaces with SAS keys or no firewall, unhealthy Power
 Platform policies, expiring app credentials, guest or service-principal
 Owners, and more) computed from what is already loaded, with zero API
@@ -175,6 +179,7 @@ cargo run -- -s app    # App Service apps (2 Functions, 3 Plans); 2 on a row loa
 cargo run -- -s sql    # SQL servers; 3 / 4 on a row list databases and firewall rules
 cargo run -- -s acr    # container registries; 3 / 4 on a row list replications and webhooks
 cargo run -- -s cosmos # Cosmos DB accounts; 5 on a row lists databases
+cargo run -- -s pg     # PostgreSQL flexible servers (Tab for MySQL, or -s mysql); 2 Networking, 3 Firewall
 cargo run -- -s changes # what changed recently, subscription-wide; [ / ] window, a hides noise
 cargo run -- -s subnet # subnets; N on one shows the NSG rules for anything placed in it
 cargo run -- -s pip    # public IPs, attached / unattached on the row (also -s lb / rt / nat / pe)
@@ -271,7 +276,7 @@ The promise is held at three layers, not by convention
 1. the single request constructor only builds `GET`s, and a pipeline policy
    refuses any other method at runtime;
 2. `tests/readonly_guard.rs` fails `cargo test` if the source gains another
-   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, container registries, Cosmos DB, container apps, Redis caches, Service Bus and Event Hubs namespaces, log queries),
+   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, PostgreSQL and MySQL servers, container registries, Cosmos DB, container apps, Redis caches, Service Bus and Event Hubs namespaces, log queries),
    a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
 

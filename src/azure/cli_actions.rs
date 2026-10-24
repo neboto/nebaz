@@ -37,6 +37,7 @@ use crate::azure::services::directory::{AppRegistrationRow, ServicePrincipalRow}
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SubnetRow};
+use crate::azure::services::postgres_mysql::{Engine, FlexibleServerRow};
 use crate::azure::services::power_platform::EnterprisePolicyRow;
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
 use crate::azure::services::sql::SqlServerRow;
@@ -206,6 +207,8 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         redis_cache_actions(c)
     } else if let Some(c) = any.downcast_ref::<ManagedRedisRow>() {
         Some(managed_redis_actions(c))
+    } else if let Some(f) = any.downcast_ref::<FlexibleServerRow>() {
+        flexible_server_actions(f)
     } else if let Some(n) = any.downcast_ref::<NsgRow>() {
         nsg_actions(n)
     } else if let Some(s) = any.downcast_ref::<SubnetRow>() {
@@ -475,6 +478,61 @@ fn sql_actions(s: &SqlServerRow) -> Option<Vec<CliAction>> {
         inspect(format!("az sql server firewall-rule list {}", args)),
         inspect(format!("az sql server ad-admin list {}", args)),
     ])
+}
+
+// ── PostgreSQL & MySQL ───────────────────────────────────────────────
+
+/// `flexible-server show / start / stop / restart` take `--ids` (the
+/// server name has `id_part='name'`); the child lists reset it, so they use
+/// the name form, and `connect` (the rdbms-connect extension) takes the
+/// server name alone. `connect --interactive` prompts for the password:
+/// the command never carries one.
+fn flexible_server_actions(f: &FlexibleServerRow) -> Option<Vec<CliAction>> {
+    let id = &f.base.id;
+    let i = ids(id);
+    let s = format!("--server-name {} {}", shell_quote(&f.base.name), rg_sub(id)?);
+    let n = shell_quote(&f.base.name);
+    let user = f.admin_login.as_deref().map(shell_quote).unwrap_or_else(|| "<user>".into());
+    let reach = "needs the rdbms-connect extension and a network path to the server (VNet, private endpoint or a firewall rule for your IP); prompts for the password";
+    let running = f.state.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("ready"));
+    let stopped = f.state.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("stopped"));
+    let mut out = match f.engine {
+        Engine::Postgres => vec![
+            inspect(format!("az postgres flexible-server db list {}", s)),
+            inspect(format!("az postgres flexible-server firewall-rule list {}", s)),
+            inspect(format!("az postgres flexible-server microsoft-entra-admin list {}", s)),
+            inspect(format!("az postgres flexible-server parameter show {} -n require_secure_transport", s)),
+            inspect(format!("az postgres flexible-server private-endpoint-connection list {}", s)),
+            connect(format!("az postgres flexible-server connect -n {} -u {} --interactive", n, user)).note(reach),
+        ],
+        Engine::Mysql => vec![
+            inspect(format!("az mysql flexible-server db list {}", s)),
+            inspect(format!("az mysql flexible-server firewall-rule list --name {} {}", n, rg_sub(id)?)),
+            inspect(format!("az mysql flexible-server ad-admin list {}", s)),
+            inspect(format!("az mysql flexible-server parameter show {} -n require_secure_transport", s)),
+            connect(format!("az mysql flexible-server connect -n {} -u {} --interactive", n, user)).note(reach),
+        ],
+    };
+    let (start, stop, restart) = match f.engine {
+        Engine::Postgres => (
+            format!("az postgres flexible-server start {}", i),
+            format!("az postgres flexible-server stop {}", i),
+            format!("az postgres flexible-server restart {}", i),
+        ),
+        Engine::Mysql => (
+            format!("az mysql flexible-server start {}", i),
+            format!("az mysql flexible-server stop {}", i),
+            format!("az mysql flexible-server restart {}", i),
+        ),
+    };
+    if stopped {
+        out.push(change(start));
+    }
+    if running {
+        out.push(change(restart).note("a short outage; with HA, a failover is an option on the CLI"));
+        out.push(change(stop).note("stopped for at most 7 days, then Azure starts it again; storage is still billed"));
+    }
+    Some(out)
 }
 
 // ── Network ──────────────────────────────────────────────────────────
@@ -796,6 +854,30 @@ mod tests {
         assert!(find(&sb, "servicebus queue list").command.contains("--namespace-name sb-1 -g "));
         let eh = actions_for(mock("EventHubsRow").as_ref());
         assert!(find(&eh, "eventhubs namespace network-rule-set list").command.contains("--subscription"));
+    }
+
+    #[test]
+    fn flexible_servers_connect_without_a_password_and_change_by_state() {
+        let pg = mock("FlexibleServerRow (PostgreSQL)");
+        let a = actions_for(pg.as_ref());
+        assert_eq!(a[0].command, format!("az postgres flexible-server show --ids {}", pg.id()));
+        let conn = find(&a, "postgres flexible-server connect");
+        assert_eq!(conn.tier, CliTier::Connect);
+        assert!(conn.command.ends_with("--interactive"), "{}", conn.command);
+        assert!(
+            !conn.command.split_whitespace().any(|w| w == "-p" || w == "--admin-password"),
+            "connect never carries a password: {}",
+            conn.command
+        );
+        assert!(find(&a, "postgres flexible-server microsoft-entra-admin list").command.contains("--server-name pg-1"));
+        assert_eq!(find(&a, "postgres flexible-server restart").tier, CliTier::Change);
+        assert!(a.iter().all(|x| x.label != "postgres flexible-server start"), "already running");
+
+        let my = mock("FlexibleServerRow (MySQL)");
+        let a = actions_for(my.as_ref());
+        assert!(find(&a, "mysql flexible-server firewall-rule list").command.contains("--name mysql-1 -g"));
+        assert!(find(&a, "mysql flexible-server ad-admin list").command.contains("--server-name mysql-1"));
+        assert_eq!(find(&a, "mysql flexible-server stop").command, format!("az mysql flexible-server stop --ids {}", my.id()));
     }
 
     #[test]

@@ -193,6 +193,21 @@ each one backs are in the catalog table
   `listKeys` `POST` on both types, never sent (`az redis list-keys` and
   `az redisenterprise database list-keys` are named forbidden); the
   caches' own hosts are on the guard's list.
+- **PostgreSQL & MySQL** (flexible servers):
+  `Microsoft.DBforPostgreSQL/flexibleServers/read` and
+  `Microsoft.DBforMySQL/flexibleServers/read`; the lazy Databases,
+  Firewall, Security (Entra admins) and Parameters sections:
+  `Microsoft.DBforPostgreSQL/flexibleServers/databases/read`,
+  `Microsoft.DBforPostgreSQL/flexibleServers/firewallRules/read`,
+  `Microsoft.DBforPostgreSQL/flexibleServers/administrators/read`,
+  `Microsoft.DBforPostgreSQL/flexibleServers/configurations/read`,
+  `Microsoft.DBforMySQL/flexibleServers/databases/read`,
+  `Microsoft.DBforMySQL/flexibleServers/firewallRules/read`,
+  `Microsoft.DBforMySQL/flexibleServers/administrators/read`,
+  `Microsoft.DBforMySQL/flexibleServers/configurations/read`. The admin
+  password is write-only and MySQL's import SAS token create-only; both
+  are stripped from the body before the row keeps it. nebaz never
+  connects to a server (the server endpoints are on the guard's list).
 - **Cosmos DB**: `Microsoft.DocumentDB/databaseAccounts/read`; the lazy
   Databases section, one of (the account's API picks):
   `Microsoft.DocumentDB/databaseAccounts/sqlDatabases/read`,
@@ -248,7 +263,8 @@ each one backs are in the catalog table
   reads listed above for Network, Storage, Key Vault, SQL (servers and
   firewall rules), Cosmos DB, AKS, Container Registry, App Service (sites
   and `config/web`), Container Apps, Redis (caches, Managed Redis and cache
-  firewall rules), Service Bus and Event Hubs (namespaces and their
+  firewall rules), PostgreSQL and MySQL (servers, and each one's firewall
+  rules, parameters and Entra admins), Service Bus and Event Hubs (namespaces and their
   network rule sets), Power Platform, the subscription's
   Access list, and the Graph directory reads (app registrations, service
   principals, principal names). A denied one leaves its checks "not
