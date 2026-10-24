@@ -5,8 +5,8 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, container_apps, container_registry, cosmos, directory, keyvault, messaging, network, postgres_mysql,
-    power_platform, redis, sql, storage,
+    aks, app_service, compute, container_apps, container_registry, cosmos, directory, edge, foundry, keyvault, messaging,
+    network, postgres_mysql, power_platform, redis, sql, storage,
 };
 use crate::lazy::LazyStore;
 use serde_json::json;
@@ -666,6 +666,85 @@ fn an_unhealthy_power_platform_policy_is_medium() {
     assert_eq!(findings(&audit("pp-policy-unhealthy", &lists, None)), vec![("ep-bad".into(), Severity::Medium)]);
 }
 
+// ── Edge ──
+
+fn waf(path: &str, settings: Value, links: Value) -> Box<dyn Resource> {
+    let mut props = json!({"policySettings": settings});
+    props.as_object_mut().unwrap().extend(links.as_object().unwrap().clone());
+    boxed(edge::WafPolicyRow::from_json(&body(path, props), None))
+}
+
+#[test]
+fn a_waf_policy_that_does_not_block_is_medium_when_attached() {
+    let agw = |name: &str| json!({"applicationGateways": [{"id": id(&format!("Microsoft.Network/applicationGateways/{name}"))}]});
+    let lists = vec![(
+        V::WafPolicies,
+        vec![
+            waf("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/waf-detect",
+                json!({"state": "Enabled", "mode": "Detection"}), agw("agw-1")),
+            waf("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/waf-prevent",
+                json!({"state": "Enabled", "mode": "Prevention"}), agw("agw-2")),
+            waf("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/waf-spare",
+                json!({"state": "Enabled", "mode": "Detection"}), json!({})),
+            waf("Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/wafafdoff",
+                json!({"enabledState": "Disabled", "mode": "Prevention"}),
+                json!({"securityPolicyLinks": [{"id": id("Microsoft.Cdn/profiles/afd/securityPolicies/sp")}]})),
+        ],
+    )];
+    let rows = audit("waf-not-blocking", &lists, None);
+    assert_eq!(
+        findings(&rows),
+        vec![("waf-detect".into(), Severity::Medium), ("wafafdoff".into(), Severity::Medium)],
+        "Prevention passes; an unattached policy protects nothing either way"
+    );
+    let off = rows.iter().find(|f| f.resource_name == "wafafdoff").unwrap();
+    assert_eq!(off.reason, "policy disabled");
+    assert!(off.evidence.iter().any(|e| e == "kind: Front Door"), "{:?}", off.evidence);
+}
+
+// ── Foundry ──
+
+fn ai_account(name: &str, props: Value) -> Box<dyn Resource> {
+    let mut v = body(&format!("Microsoft.CognitiveServices/accounts/{name}"), props);
+    v["kind"] = json!("AIServices");
+    boxed(foundry::FoundryRow::from_json(&v, None))
+}
+
+#[test]
+fn foundry_network_and_key_auth() {
+    let lists = vec![(
+        V::AiAccounts,
+        vec![
+            ai_account("ai-open", json!({"publicNetworkAccess": "Enabled", "networkAcls": {"defaultAction": "Allow"}})),
+            ai_account("ai-ranged", json!({"publicNetworkAccess": "Enabled", "disableLocalAuth": true,
+                "networkAcls": {"defaultAction": "Deny", "ipRules": [{"value": "203.0.113.24"}]}})),
+            ai_account("ai-private", json!({"publicNetworkAccess": "Disabled", "disableLocalAuth": false})),
+        ],
+    )];
+    assert_eq!(findings(&audit("foundry-public-network", &lists, None)), vec![("ai-open".into(), Severity::Medium)]);
+    assert_eq!(
+        findings(&audit("foundry-local-auth", &lists, None)),
+        vec![("ai-open".into(), Severity::Medium), ("ai-private".into(), Severity::Medium)],
+        "unset is the service default: keys work"
+    );
+}
+
+// ── Compute ──
+
+fn disk(name: &str, state: &str) -> Box<dyn Resource> {
+    let mut v = body(&format!("Microsoft.Compute/disks/{name}"), json!({"diskState": state, "diskSizeGB": 1024}));
+    v["sku"] = json!({"name": "Premium_LRS"});
+    boxed(compute::DiskRow::from_json(&v, None))
+}
+
+#[test]
+fn an_unattached_disk_is_info() {
+    let lists = vec![(V::Disks, vec![disk("d-loose", "Unattached"), disk("d-used", "Attached"), disk("d-reserved", "Reserved")])];
+    let rows = audit("disk-unattached", &lists, None);
+    assert_eq!(findings(&rows), vec![("d-loose".into(), Severity::Info)], "Reserved is a deallocated VM's disk");
+    assert_eq!(rows[0].reason, "unattached, 1024 GiB");
+}
+
 // ── Directory ──
 
 fn iso(unix: i64) -> String {
@@ -750,6 +829,42 @@ fn privileged_guests_and_service_principals_on_the_subscription() {
     assert_eq!(got[1], (sp.to_string(), Severity::High), "an unresolved SP shows its object id");
     assert_eq!(rows[0].resource_id, format!("/subscriptions/{SUB}"), "Enter opens the subscription");
     assert_eq!(notes(&rows), vec!["1 privileged user(s) not resolved — r looks them up".to_string()]);
+}
+
+#[test]
+fn contributor_on_the_subscription_for_a_guest_or_sp_is_its_own_lower_check() {
+    let guest = "00000000-0000-0000-0000-0000000000b1";
+    let sp = "00000000-0000-0000-0000-0000000000b2";
+    let rg_sp = "00000000-0000-0000-0000-0000000000b3";
+    let other_sub_sp = "00000000-0000-0000-0000-0000000000b4";
+    let mg_sp = "00000000-0000-0000-0000-0000000000b5";
+    let narrow = |pid: &str, scope: String| {
+        let mut a = assignment(pid, "ServicePrincipal", CONTRIBUTOR_ROLE);
+        a["properties"]["scope"] = json!(scope);
+        a
+    };
+    let items = vec![
+        assignment(guest, "User", CONTRIBUTOR_ROLE),
+        assignment(sp, "ServicePrincipal", CONTRIBUTOR_ROLE),
+        assignment(sp, "ServicePrincipal", USER_ACCESS_ADMIN_ROLE),
+        narrow(rg_sp, format!("/subscriptions/{SUB}/resourceGroups/rg")),
+        narrow(other_sub_sp, "/subscriptions/00000000-0000-0000-0000-0000000000ff".into()),
+        narrow(mg_sp, "/providers/Microsoft.Management/managementGroups/root".into()),
+    ];
+    assert_eq!(privileged_user_ids(&items), vec![guest.to_string()], "a Contributor user is resolved too");
+    let mut lazy = LazyStore::new(0);
+    lazy.role_assignments.apply(format!("/subscriptions/{SUB}"), Ok(items));
+    lazy.principals.apply(guest.into(), Ok(json!({"@odata.type": "#microsoft.graph.user", "displayName": "Pat", "userType": "Guest"})));
+    let rows = audit("sub-contributor-guest-or-sp", &[], Some(&lazy));
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(
+        got,
+        vec![(sp.to_string(), Severity::Medium), (mg_sp.to_string(), Severity::Medium), ("Pat".to_string(), Severity::High)],
+        "a resource-group or other-subscription assignment is not subscription-wide; a management group's is"
+    );
+    let privileged = findings(&audit("sub-privileged-guest-or-sp", &[], Some(&lazy)));
+    assert_eq!(privileged, vec![(sp.to_string(), Severity::High)], "UAA stays in the privileged check");
 }
 
 #[test]

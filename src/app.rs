@@ -2219,6 +2219,15 @@ impl App {
         );
     }
 
+    /// On-enter hook for a Container Apps job's Executions: one list per job.
+    pub fn trigger_aca_job_executions(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.aca_job_executions,
+            event_tx,
+            |c, id| c.list_fetch(&container_app_child_path(id, "executions"), ACA_API_VERSION),
+        );
+    }
+
     /// On-enter hook for a container app's Auth: one list per app.
     pub fn trigger_aca_auth(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         app.trigger_selected(
@@ -2902,7 +2911,11 @@ impl App {
             return Some(environment_section_lines(r, EnvironmentDetailSection::from_index(idx)));
         }
         if let Some(r) = any.downcast_ref::<JobRow>() {
-            return Some(job_section_lines(r, JobDetailSection::from_index(idx)));
+            return Some(job_section_lines(
+                r,
+                JobDetailSection::from_index(idx),
+                self.lazy.aca_job_executions.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<RedisCacheRow>() {
             return Some(redis_cache_section_lines(

@@ -1,7 +1,7 @@
 //! The Container Apps service (issue #26): apps, their environments and
 //! jobs (`Microsoft.App`), three subscription-wide lists. An app's
 //! Revisions and its Auth (Easy Auth) settings are lazy sections, one call
-//! per app each.
+//! per app each; a job's Executions is one, one call per job.
 //!
 //! The list bodies carry credentials: a secret's `value` (when the caller
 //! may read it), a container env var's literal `value`, an environment's
@@ -77,6 +77,7 @@ crate::sections! {
     pub static JOB_SECTIONS = [
         Overview "Overview",
         Trigger "Trigger",
+        Executions "Executions" => crate::app::App::trigger_aca_job_executions,
         Containers "Containers",
         Identity "Identity",
         Secrets "Secrets",
@@ -1289,6 +1290,17 @@ impl JobRow {
     fn cron(&self) -> Option<String> {
         self.trigger_config().and_then(|t| json::str_at(t, "/cronExpression"))
     }
+
+    /// `-n {job} -g {rg} --subscription {sub}`: `job execution list`
+    /// takes no `--ids`.
+    fn name_args(&self) -> Option<String> {
+        Some(format!(
+            "-n {} -g {} --subscription {}",
+            shell_quote(&self.base.name),
+            shell_quote(resource_group_of(&self.base.id)?),
+            shell_quote(subscription_of(&self.base.id)?)
+        ))
+    }
 }
 
 impl Resource for JobRow {
@@ -1344,10 +1356,15 @@ impl Resource for JobRow {
     }
 }
 
-pub fn job_section_lines(r: &JobRow, section: JobDetailSection) -> Vec<(String, String)> {
+pub fn job_section_lines(
+    r: &JobRow,
+    section: JobDetailSection,
+    executions: Option<&Lazy<Vec<Value>>>,
+) -> Vec<(String, String)> {
     match section {
         JobDetailSection::Overview => overview_rows(r),
         JobDetailSection::Trigger => trigger_rows(r),
+        JobDetailSection::Executions => lazy_list_rows(executions, "Executions", |items| execution_rows(items, r)),
         JobDetailSection::Containers => r.workload.container_rows(),
         JobDetailSection::Identity => r.workload.identity_rows(),
         JobDetailSection::Secrets => r.workload.secret_rows(),
@@ -1356,6 +1373,41 @@ pub fn job_section_lines(r: &JobRow, section: JobDetailSection) -> Vec<(String, 
         JobDetailSection::Related => related_rows(r),
         JobDetailSection::Tags => tag_rows(r.tags()),
     }
+}
+
+/// How many executions the section shows: the newest. `GET {job}/executions`
+/// returns the platform's recent history in one page.
+const EXECUTIONS_SHOWN: usize = 20;
+
+/// The Executions section body from `GET {job}/executions`: newest first,
+/// each with its status, start and end. A failed one is marked `⚠`.
+/// Never the execution's template (it carries env).
+pub fn execution_rows(items: &[Value], r: &JobRow) -> Vec<(String, String)> {
+    let mut items: Vec<&Value> = items.iter().collect();
+    items.sort_by_key(|a| std::cmp::Reverse(json::text(a, "/properties/startTime")));
+    let mut lines = Vec::new();
+    if items.is_empty() {
+        lines.push((String::new(), "No executions".into()));
+    }
+    for ex in items.iter().take(EXECUTIONS_SHOWN) {
+        let status = json::text(ex, "/properties/status");
+        let failed = matches!(status.to_ascii_lowercase().as_str(), "failed" | "degraded");
+        let status = if failed { format!("⚠ {}", status) } else { status };
+        lines.push((String::new(), String::new()));
+        lines.push((json::text(ex, "/name"), status));
+        lines.push(("  Started".into(), json::time(json::str_at(ex, "/properties/startTime"))));
+        lines.push(("  Ended".into(), json::time(json::str_at(ex, "/properties/endTime"))));
+    }
+    if items.len() > EXECUTIONS_SHOWN {
+        lines.push((String::new(), String::new()));
+        lines.push((String::new(), format!("· {} older not shown", items.len() - EXECUTIONS_SHOWN)));
+    }
+    lines.push((String::new(), String::new()));
+    lines.push((
+        "Read command".into(),
+        format!("az containerapp job execution list {}", r.name_args().unwrap_or_default()),
+    ));
+    lines
 }
 
 /// The Trigger section: manual, scheduled (cron) or event-driven (KEDA
@@ -1724,7 +1776,7 @@ mod tests {
         let all = everything(
             &job,
             (0..JOB_SECTIONS.sections.len())
-                .map(|i| job_section_lines(&job, JobDetailSection::from_index(i)))
+                .map(|i| job_section_lines(&job, JobDetailSection::from_index(i), None))
                 .collect(),
         );
         assert!(!all.contains("job-secret") && !all.contains("job-literal"), "a job credential leaked");
@@ -1759,13 +1811,34 @@ mod tests {
     fn job_trigger_reads_schedule_and_limits() {
         let job = JobRow::from_json(&job_json(), None).unwrap();
         assert!(job.details().iter().any(|(k, v)| k == "Trigger" && v == "Schedule · 0 2 * * *"));
-        let lines = job_section_lines(&job, JobDetailSection::Trigger);
+        let lines = job_section_lines(&job, JobDetailSection::Trigger, None);
         assert!(lines.iter().any(|(k, v)| k == "Cron" && v == "0 2 * * * (UTC)"));
         assert!(lines.iter().any(|(k, v)| k == "Replica timeout" && v == "1800s"));
         assert!(lines.iter().any(|(k, v)| k == "Retry limit" && v == "2"));
         assert!(job.related().iter().any(|(l, _)| l == "Environment cae-prod"));
         assert!(job.cli_command().unwrap().starts_with("az containerapp job show --ids "));
         assert_eq!(ContainerAppsService::rows(JumpView::ContainerAppJobs, &[job_json()], None).len(), 1);
+    }
+
+    #[test]
+    fn executions_put_the_newest_first_and_mark_a_failure() {
+        let job = JobRow::from_json(&job_json(), None).unwrap();
+        let items = vec![
+            serde_json::json!({"name": "job-old", "properties": {"status": "Succeeded",
+                "startTime": "2026-01-01T02:00:00Z", "endTime": "2026-01-01T02:04:00Z"}}),
+            serde_json::json!({"name": "job-new", "properties": {"status": "Failed",
+                "startTime": "2026-01-02T02:00:00Z", "endTime": "2026-01-02T02:03:00Z",
+                "template": {"containers": [{"env": [{"name": "X", "value": "exec-secret"}]}]}}}),
+        ];
+        let lines = job_section_lines(&job, JobDetailSection::Executions, Some(&Lazy::Loaded(items)));
+        assert_eq!(lines[1], ("job-new".to_string(), "⚠ Failed".to_string()));
+        assert!(lines.iter().any(|(k, v)| k == "  Started" && v == "2026-01-02 02:00:00"));
+        assert!(lines.iter().any(|(k, v)| k == "job-old" && v == "Succeeded"));
+        assert!(!lines.iter().any(|(_, v)| v.contains("exec-secret")));
+        assert!(lines.last().unwrap().1.starts_with("az containerapp job execution list -n "), "{:?}", lines.last());
+        let empty = job_section_lines(&job, JobDetailSection::Executions, Some(&Lazy::Loaded(vec![])));
+        assert_eq!(empty[0].1, "No executions");
+        assert_eq!(container_app_child_path(&job.base.id, "executions"), format!("{}/executions", job.base.id));
     }
 
     #[test]

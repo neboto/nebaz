@@ -106,6 +106,8 @@ fn kind_label(id: &str) -> &'static str {
         "Firewall"
     } else if lower.contains("/bastionhosts/") {
         "Bastion"
+    } else if lower.contains("/natgateways/") {
+        "NAT gateway"
     } else {
         "Attached to"
     }
@@ -811,6 +813,7 @@ mod tests {
         let nat = PublicIpRow::from_json(&v, None).unwrap();
         assert_eq!(nat.state_label(), "attached");
         assert!(nat.related().iter().any(|(l, _)| l == "NAT gateway nat-1"));
+        assert!(nat.details().iter().any(|(k, val)| k == "Attached to" && val == "NAT gateway nat-1"), "{:?}", nat.details());
     }
 
     fn lb_json() -> Value {

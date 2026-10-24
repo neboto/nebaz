@@ -76,8 +76,8 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | What | Where it shows |
 |---|---|
 | `nsg-jump-prod` allows SSH from the Internet ("temp vendor access", added 3 days ago by the Fabrikam guest `j.ortiz_fabrikam.com#EXT#`) | `@audit`, `N`, `W` |
-| `vm-jump-01` has a public IP | `@audit`, Related |
-| `disk-legacy-data-01`: 1 TiB Premium SSD, unattached | Disks state, `@audit` |
+| `vm-jump-01` has a public IP | Related, `@pip` (no audit check: the lists `@audit` reads carry no NIC's public IP) |
+| `disk-legacy-data-01`: 1 TiB Premium SSD, unattached | Disks state, `@audit` (info) |
 | `vm-legacy-app-01` deallocated for 40 days | VMs state |
 | `stcontosoordersprod` allows blob public access, minimum TLS 1.0 | `@audit` |
 | `privatelink.blob.core.windows.net` has the PE's A record but no link to `vnet-hub-prod`: the blob PE resolves publicly | DNS topology |
@@ -96,7 +96,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `github-actions-deploy` has Contributor and User Access Administrator on the **subscription** (both granted yesterday by alex; UAA so its Bicep can assign AcrPull) | Access, `@changes`, `@audit` |
 | App registration `orders-api-client`: one client secret expires in 6 days, one expired last month, no owners | `@appreg` |
 | The Fabrikam guest has Contributor on `rg-orders-prod` and Network Contributor on `nsg-jump-prod` (granted 3 days ago, just before the SSH rule) | Access |
-| `caj-nightly-export`'s last execution failed | Jobs |
+| `caj-nightly-export`'s last execution failed | Jobs (Executions) |
 | `vnet-hub-prod` peers with `vnet-dev` in **contoso-dev** (a cross-subscription jump) | Related |
 | `snet-pp-injection-dr`, Power Platform's failover subnet in `vnet-pp-dr`, has no NSG | `@audit` |
 | `ca-orders-api-dev` (contoso-dev): external ingress on a public environment, no IP restrictions | `@audit` on contoso-dev |
@@ -183,7 +183,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - Container Apps environment `cae-orders-prod`: internal, workload profiles (`Consumption`, `D4` 1–3 nodes), zone redundant, in `snet-aca`, static IP 10.10.0.62, default domain `wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io`, logs to `law-contoso-prod`
 - `ca-orders-api` (profile `D4`): ingress 443 → 8080, `external: true` on the internal environment (so: reachable from the VNet, never the internet; with `external: false` neither Power Platform nor the app gateway could call it), IP restrictions allowing only 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24 (the same sources as `nsg-aca`), FQDN `ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io`, image `acrcontosoprod.azurecr.io/orders-api:2.31.0`, revision `ca-orders-api--v231` (100%, healthy, 3 replicas; `--v230`, `--v229` inactive), identity `id-orders-api` (also its ACR pull identity), three secrets, all Key Vault references to `kv-orders-prod`
 - `ca-orders-worker`: no ingress, system-assigned identity (pulls from ACR with it), KEDA `azure-servicebus` scale rule on `sb-orders-prod`/`orders`; app provisioning state Failed, latest revision `ca-orders-worker--v119` failed (image `orders-worker:1.19.0` not found, the revision's `provisioningError`), previous `ca-orders-worker--v118` (`orders-worker:1.18.2`, 2 replicas) still running
-- Job `caj-nightly-export`: scheduled `0 2 * * *`, identity `id-orders-api`, image `orders-export:1.4.2`; last execution (`caj-nightly-export-q7k2m9x`, 6h ago) Failed, the three before Succeeded (the `executions` fixture; no screen reads it yet)
+- Job `caj-nightly-export`: scheduled `0 2 * * *`, identity `id-orders-api`, image `orders-export:1.4.2`; last execution (`caj-nightly-export-q7k2m9x`, 6h ago) Failed, the three before Succeeded (the `executions` fixture, read by the job's Executions section)
 - `id-orders-api` (user-assigned): AcrPull on `acrcontosoprod`, Key Vault Secrets User on `kv-orders-prod`
 - `kv-orders-prod`: RBAC, public network disabled, purge protection on, behind `pe-kv-orders`
 - `stcontosoordersprod`: StorageV2, behind `pe-st-orders-blob` but public network still enabled, blob public access allowed, TLS 1.0

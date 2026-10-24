@@ -224,6 +224,9 @@ pub struct LazyStore {
     pub aca_revisions: LazyMap<Vec<serde_json::Value>>,
     /// `GET {app}/authConfigs`, keyed by app id. Secret setting names only.
     pub aca_auth_configs: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {job}/executions`, keyed by job id. The template (env) is
+    /// never rendered.
+    pub aca_job_executions: LazyMap<Vec<serde_json::Value>>,
 
     // ── Redis ────────────────────────────────────────────────────────────
     /// `GET {cache}/firewallRules`, keyed by cache id.
