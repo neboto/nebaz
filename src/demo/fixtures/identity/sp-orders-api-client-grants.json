@@ -1,0 +1,13 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#oauth2PermissionGrants",
+  "value": [
+    {
+      "clientId": "47302d33-ba06-4194-bc89-bec920f2a564",
+      "consentType": "AllPrincipals",
+      "id": "Mz0wR8-6lEG8ib7JIKtlZMd_pg-ry0lJsGwT3_jrlS0",
+      "principalId": null,
+      "resourceId": "0fa66fc7-cbb8-497a-84a2-8c6dc97ef59a",
+      "scope": " User.Read openid profile offline_access"
+    }
+  ]
+}

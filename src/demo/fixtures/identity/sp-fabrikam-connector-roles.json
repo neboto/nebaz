@@ -1,0 +1,16 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#servicePrincipals('80303294-4904-46c2-87a0-d8cb283aa2a9')/appRoleAssignments",
+  "value": [
+    {
+      "id": "lDAwgAQ5wka8eI2BHwdpxRfbSvWNXk5PoMwzRsXlBhk",
+      "deletedDateTime": null,
+      "appRoleId": "df021288-bdef-4463-88db-98f22de89214",
+      "createdDateTime": "{{iso:now-143d}}",
+      "principalDisplayName": "Fabrikam Orders Connector",
+      "principalId": "80303294-4904-46c2-87a0-d8cb283aa2a9",
+      "principalType": "ServicePrincipal",
+      "resourceDisplayName": "Microsoft Graph",
+      "resourceId": "0fa66fc7-cbb8-497a-84a2-8c6dc97ef59a"
+    }
+  ]
+}

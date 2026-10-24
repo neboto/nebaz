@@ -1,0 +1,25 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api",
+  "name": "id-orders-api",
+  "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "orders",
+    "owner": "orders-team@contoso.com"
+  },
+  "properties": {
+    "isolationScope": "None",
+    "tenantId": "{{tenant}}",
+    "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+    "clientId": "a486b752-7257-42ba-bc16-23a4e0381f56"
+  },
+  "systemData": {
+    "createdBy": "alex.kim@contoso.com",
+    "createdByType": "User",
+    "createdAt": "{{iso:now-212d}}",
+    "lastModifiedBy": "alex.kim@contoso.com",
+    "lastModifiedByType": "User",
+    "lastModifiedAt": "{{iso:now-212d}}"
+  }
+}

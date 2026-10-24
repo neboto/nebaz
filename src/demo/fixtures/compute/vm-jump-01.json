@@ -1,0 +1,141 @@
+{
+  "name": "vm-jump-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01",
+  "type": "Microsoft.Compute/virtualMachines",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "alex.kim@contoso.com",
+    "purpose": "bastion"
+  },
+  "identity": {
+    "type": "SystemAssigned",
+    "principalId": "6a0f3e1c-9b52-4d7e-8c34-1f2e5d6a7b80",
+    "tenantId": "{{tenant}}"
+  },
+  "zones": [
+    "1"
+  ],
+  "properties": {
+    "vmId": "f97dc33f-b6ee-48ce-8ec9-13c05b1e1b48",
+    "hardwareProfile": {
+      "vmSize": "Standard_B2s"
+    },
+    "storageProfile": {
+      "imageReference": {
+        "publisher": "Canonical",
+        "offer": "0001-com-ubuntu-server-jammy",
+        "sku": "22_04-lts-gen2",
+        "version": "latest",
+        "exactVersion": "22.04.202409260"
+      },
+      "osDisk": {
+        "osType": "Linux",
+        "name": "vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68",
+        "createOption": "FromImage",
+        "caching": "ReadWrite",
+        "managedDisk": {
+          "storageAccountType": "Premium_LRS",
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68"
+        },
+        "deleteOption": "Delete",
+        "diskSizeGB": 30
+      },
+      "dataDisks": [],
+      "diskControllerType": "SCSI"
+    },
+    "osProfile": {
+      "computerName": "vm-jump-01",
+      "adminUsername": "azureuser",
+      "linuxConfiguration": {
+        "disablePasswordAuthentication": true,
+        "provisionVMAgent": true,
+        "patchSettings": {
+          "patchMode": "ImageDefault",
+          "assessmentMode": "ImageDefault"
+        }
+      },
+      "secrets": [],
+      "allowExtensionOperations": true,
+      "requireGuestProvisionSignal": true
+    },
+    "securityProfile": {
+      "uefiSettings": {
+        "secureBootEnabled": true,
+        "vTpmEnabled": true
+      },
+      "securityType": "TrustedLaunch"
+    },
+    "networkProfile": {
+      "networkInterfaces": [
+        {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-jump-01",
+          "properties": {
+            "primary": true,
+            "deleteOption": "Detach"
+          }
+        }
+      ]
+    },
+    "diagnosticsProfile": {
+      "bootDiagnostics": {
+        "enabled": true
+      }
+    },
+    "priority": "Regular",
+    "provisioningState": "Succeeded",
+    "timeCreated": "{{iso:now-212d}}",
+    "instanceView": {
+      "computerName": "vm-jump-01",
+      "osName": "ubuntu",
+      "osVersion": "22.04",
+      "hyperVGeneration": "V2",
+      "vmAgent": {
+        "vmAgentVersion": "2.11.1.12",
+        "statuses": [
+          {
+            "code": "ProvisioningState/succeeded",
+            "level": "Info",
+            "displayStatus": "Ready",
+            "message": "Guest Agent is running",
+            "time": "{{iso:now-1m}}"
+          }
+        ],
+        "extensionHandlers": []
+      },
+      "disks": [
+        {
+          "name": "vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68",
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-212d}}"
+            }
+          ]
+        }
+      ],
+      "bootDiagnostics": {},
+      "statuses": [
+        {
+          "code": "ProvisioningState/succeeded",
+          "level": "Info",
+          "displayStatus": "Provisioning succeeded",
+          "time": "{{iso:now-19d}}"
+        },
+        {
+          "code": "PowerState/running",
+          "level": "Info",
+          "displayStatus": "VM running"
+        }
+      ]
+    }
+  },
+  "resources": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/extensions/AzureMonitorLinuxAgent"
+    }
+  ]
+}

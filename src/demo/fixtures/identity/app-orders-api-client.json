@@ -1,0 +1,156 @@
+{
+  "@odata.type": "#microsoft.graph.application",
+  "id": "65269b0d-f929-40b3-a28d-a281b6b6503b",
+  "deletedDateTime": null,
+  "appId": "7b985643-85cc-4880-8e95-9dac694b9dfc",
+  "applicationTemplateId": null,
+  "disabledByMicrosoftStatus": null,
+  "createdDateTime": "{{iso:now-402d}}",
+  "displayName": "orders-api-client",
+  "description": "Confidential client the back office uses to call the orders API.",
+  "groupMembershipClaims": null,
+  "identifierUris": [
+    "api://7b985643-85cc-4880-8e95-9dac694b9dfc"
+  ],
+  "isDeviceOnlyAuthSupported": null,
+  "isFallbackPublicClient": false,
+  "nativeAuthenticationApisEnabled": null,
+  "notes": null,
+  "publisherDomain": "contoso.onmicrosoft.com",
+  "serviceManagementReference": null,
+  "signInAudience": "AzureADMyOrg",
+  "tags": [],
+  "tokenEncryptionKeyId": null,
+  "uniqueName": null,
+  "samlMetadataUrl": null,
+  "defaultRedirectUri": null,
+  "certification": null,
+  "optionalClaims": null,
+  "requestSignatureVerification": null,
+  "addIns": [],
+  "api": {
+    "acceptMappedClaims": null,
+    "knownClientApplications": [],
+    "requestedAccessTokenVersion": 2,
+    "preAuthorizedApplications": [],
+    "oauth2PermissionScopes": [
+      {
+        "adminConsentDescription": "Read and submit orders on behalf of the signed-in user.",
+        "adminConsentDisplayName": "Access the orders API",
+        "id": "1ccf9621-76ca-4fd9-b97e-4ea411195fd9",
+        "isEnabled": true,
+        "type": "User",
+        "userConsentDescription": "Read and submit orders as you.",
+        "userConsentDisplayName": "Access the orders API",
+        "value": "Orders.ReadWrite"
+      }
+    ]
+  },
+  "appRoles": [
+    {
+      "allowedMemberTypes": [
+        "Application"
+      ],
+      "description": "Daemon access to every order.",
+      "displayName": "Orders reader (daemon)",
+      "id": "5903dfff-0e5e-45ee-bf56-840bea4dec73",
+      "isEnabled": true,
+      "origin": "Application",
+      "value": "Orders.Read.All"
+    }
+  ],
+  "info": {
+    "logoUrl": null,
+    "marketingUrl": null,
+    "privacyStatementUrl": null,
+    "supportUrl": null,
+    "termsOfServiceUrl": null
+  },
+  "keyCredentials": [],
+  "parentalControlSettings": {
+    "countriesBlockedForMinors": [],
+    "legalAgeGroupRule": "Allow"
+  },
+  "passwordCredentials": [
+    {
+      "customKeyIdentifier": null,
+      "displayName": "backoffice-2025",
+      "endDateTime": "{{iso:now-34d}}",
+      "hint": "q7W",
+      "keyId": "7f8f135e-6cf3-4d86-a498-982bf0a8733b",
+      "startDateTime": "{{iso:now-399d}}"
+    },
+    {
+      "customKeyIdentifier": null,
+      "displayName": "backoffice-2026",
+      "endDateTime": "{{iso:now+146h}}",
+      "hint": "Zk~",
+      "keyId": "fd9886ad-6079-4424-8932-c2103e3781bd",
+      "startDateTime": "{{iso:now-174d}}"
+    }
+  ],
+  "publicClient": {
+    "redirectUris": []
+  },
+  "requiredResourceAccess": [
+    {
+      "resourceAppId": "00000003-0000-0000-c000-000000000000",
+      "resourceAccess": [
+        {
+          "id": "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
+          "type": "Scope"
+        },
+        {
+          "id": "37f7f235-527c-4136-accd-4a02d197296e",
+          "type": "Scope"
+        },
+        {
+          "id": "14dad69e-099b-42c9-810b-d002981feec1",
+          "type": "Scope"
+        },
+        {
+          "id": "7427e0e9-2fba-42fe-b0c0-848c9e6a8182",
+          "type": "Scope"
+        }
+      ]
+    }
+  ],
+  "verifiedPublisher": {
+    "displayName": null,
+    "verifiedPublisherId": null,
+    "addedDateTime": null
+  },
+  "web": {
+    "homePageUrl": "https://backoffice.contoso-demo.com",
+    "logoutUrl": null,
+    "redirectUris": [
+      "https://backoffice.contoso-demo.com/signin-oidc",
+      "https://localhost:5001/signin-oidc"
+    ],
+    "implicitGrantSettings": {
+      "enableAccessTokenIssuance": false,
+      "enableIdTokenIssuance": true
+    },
+    "redirectUriSettings": [
+      {
+        "uri": "https://backoffice.contoso-demo.com/signin-oidc",
+        "index": null
+      },
+      {
+        "uri": "https://localhost:5001/signin-oidc",
+        "index": null
+      }
+    ]
+  },
+  "servicePrincipalLockConfiguration": {
+    "isEnabled": true,
+    "allProperties": true,
+    "credentialsWithUsageVerify": true,
+    "credentialsWithUsageSign": true,
+    "identifierUris": false,
+    "tokenEncryptionKeyId": true
+  },
+  "spa": {
+    "redirectUris": []
+  }
+}

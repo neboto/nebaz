@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries/webhooks",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod/webhooks/ordersapipush",
+      "name": "ordersapipush",
+      "location": "westeurope",
+      "tags": {},
+      "properties": {
+        "status": "enabled",
+        "scope": "orders-api:*",
+        "actions": [
+          "push"
+        ],
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

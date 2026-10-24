@@ -1,0 +1,100 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export",
+      "name": "caj-nightly-export",
+      "type": "Microsoft.App/jobs",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders-team@contoso.com",
+        "costCenter": "CC-3020"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-200d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-30d}}"
+      },
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api": {
+            "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+            "clientId": "a486b752-7257-42ba-bc16-23a4e0381f56"
+          }
+        }
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "runningState": "Ready",
+        "environmentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+        "workloadProfileName": "Consumption",
+        "outboundIpAddresses": [
+          "20.103.45.11"
+        ],
+        "configuration": {
+          "secrets": [
+            {
+              "name": "export-storage-connection",
+              "keyVaultUrl": "https://kv-orders-prod.vault.azure.net/secrets/export-storage-connection",
+              "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+            }
+          ],
+          "triggerType": "Schedule",
+          "replicaTimeout": 1800,
+          "replicaRetryLimit": 1,
+          "manualTriggerConfig": null,
+          "scheduleTriggerConfig": {
+            "replicaCompletionCount": 1,
+            "cronExpression": "0 2 * * *",
+            "parallelism": 1
+          },
+          "eventTriggerConfig": null,
+          "registries": [
+            {
+              "server": "acrcontosoprod.azurecr.io",
+              "username": "",
+              "passwordSecretRef": "",
+              "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+            }
+          ],
+          "identitySettings": []
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-export:1.4.2",
+              "imageType": "ContainerImage",
+              "name": "orders-export",
+              "env": [
+                {
+                  "name": "EXPORT_CONTAINER",
+                  "value": "nightly-exports"
+                },
+                {
+                  "name": "STORAGE",
+                  "secretRef": "export-storage-connection"
+                },
+                {
+                  "name": "AZURE_CLIENT_ID",
+                  "value": "a486b752-7257-42ba-bc16-23a4e0381f56"
+                }
+              ],
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2Gi"
+              }
+            }
+          ],
+          "initContainers": null,
+          "volumes": []
+        },
+        "eventStreamEndpoint": "https://westeurope.azurecontainerapps.dev/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/containerApps/caj-nightly-export/eventstream"
+      }
+    }
+  ]
+}

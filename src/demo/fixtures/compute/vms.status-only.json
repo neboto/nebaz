@@ -1,0 +1,50 @@
+{
+  "value": [
+    {
+      "name": "vm-jump-01",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "westeurope",
+      "properties": {
+        "instanceView": {
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-19d}}"
+            },
+            {
+              "code": "PowerState/running",
+              "level": "Info",
+              "displayStatus": "VM running"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "vm-legacy-app-01",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "westeurope",
+      "properties": {
+        "instanceView": {
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-40d}}"
+            },
+            {
+              "code": "PowerState/deallocated",
+              "level": "Info",
+              "displayStatus": "VM deallocated"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
