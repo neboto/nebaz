@@ -90,7 +90,7 @@ impl HttpClient for DemoTransport {
     async fn execute_request(&self, request: &Request) -> azure_core::Result<AsyncRawResponse> {
         let url = request.url();
         let query = decoded_query(url.query().unwrap_or(""));
-        let reply = respond(url.path(), &query, now_secs());
+        let reply = respond(url.path(), &query, demo_now());
         trace(&reply, url.path(), &query);
         if let Some(delay) = latency(url.path(), &reply) {
             tokio::time::sleep(delay).await;
@@ -265,6 +265,14 @@ fn decoded_query(raw: &str) -> String {
                 .join("&")
         })
         .unwrap_or_else(|_| raw.to_string())
+}
+
+/// The demo's "now": the moment the first request was answered, held for
+/// the run. Every relative time renders against it, so an id built from
+/// one (a health event's) is the same in the list and in a later `get`.
+fn demo_now() -> i64 {
+    static ANCHOR: std::sync::OnceLock<i64> = std::sync::OnceLock::new();
+    *ANCHOR.get_or_init(now_secs)
 }
 
 fn now_secs() -> i64 {
