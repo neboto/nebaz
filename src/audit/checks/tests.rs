@@ -5,8 +5,8 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, container_apps, container_registry, cosmos, directory, keyvault, messaging, network, power_platform,
-    redis, sql, storage,
+    aks, app_service, container_apps, container_registry, cosmos, directory, keyvault, messaging, network, postgres_mysql,
+    power_platform, redis, sql, storage,
 };
 use crate::lazy::LazyStore;
 use serde_json::json;
@@ -387,6 +387,138 @@ fn a_public_redis_cache_with_no_firewall_rules_reads_the_warm_network_section() 
     // Private and VNet-injected caches need no rules; the unvisited one is
     // counted, never passed.
     assert_eq!(notes(&rows), vec!["1 of 3 not checked — r fetches firewall rules".to_string()]);
+}
+
+// ── PostgreSQL & MySQL ──
+
+fn pg(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(postgres_mysql::FlexibleServerRow::from_json(
+        &body(&format!("Microsoft.DBforPostgreSQL/flexibleServers/{name}"), props),
+        None,
+    ))
+}
+
+fn mysql(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(postgres_mysql::FlexibleServerRow::from_json(
+        &body(&format!("Microsoft.DBforMySQL/flexibleServers/{name}"), props),
+        None,
+    ))
+}
+
+fn param(name: &str, value: &str) -> Value {
+    json!({"name": name, "properties": {"value": value}})
+}
+
+#[test]
+fn flexible_server_public_access_skips_vnet_integrated_and_private_servers() {
+    let subnet = id("Microsoft.Network/virtualNetworks/vnet/subnets/snet-pg");
+    let lists = vec![(
+        V::PostgresServers,
+        vec![
+            pg("pg-public", json!({"network": {"publicNetworkAccess": "Enabled"}})),
+            pg("pg-private", json!({"network": {"publicNetworkAccess": "Disabled"}})),
+            pg("pg-vnet", json!({"network": {"publicNetworkAccess": "Disabled", "delegatedSubnetResourceId": subnet}})),
+        ],
+    )];
+    assert_eq!(findings(&audit("pg-public-network", &lists, None)), vec![("pg-public".into(), Severity::Medium)]);
+    assert_eq!(
+        notes(&audit("mysql-public-network", &lists, None)),
+        vec!["not checked — load @pg MySQL".to_string()],
+        "MySQL has its own list"
+    );
+}
+
+#[test]
+fn flexible_server_firewall_grades_the_internet_and_allow_azure_rules() {
+    let lists = vec![(
+        V::MysqlServers,
+        vec![
+            mysql("my-world", json!({"network": {"publicNetworkAccess": "Enabled"}})),
+            mysql("my-azure", json!({"network": {"publicNetworkAccess": "Enabled"}})),
+            mysql("my-office", json!({"network": {"publicNetworkAccess": "Enabled"}})),
+            mysql("my-closed", json!({"network": {"publicNetworkAccess": "Disabled"}})),
+            mysql("my-unvisited", json!({"network": {"publicNetworkAccess": "Enabled"}})),
+        ],
+    )];
+    let mut lazy = LazyStore::new(0);
+    let fid = |n: &str| id(&format!("Microsoft.DBforMySQL/flexibleServers/{n}"));
+    lazy.flex_firewall_rules.apply(fid("my-world"), Ok(vec![fw("AllowAll", "0.0.0.0", "255.255.255.255")]));
+    lazy.flex_firewall_rules.apply(
+        fid("my-azure"),
+        Ok(vec![fw("AllowAllAzureServicesAndResourcesWithinAzureIps_2026", "0.0.0.0", "0.0.0.0")]),
+    );
+    lazy.flex_firewall_rules.apply(fid("my-office"), Ok(vec![fw("office", "203.0.113.1", "203.0.113.9")]));
+    let rows = audit("mysql-firewall-open", &lists, Some(&lazy));
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(got, vec![("my-azure".into(), Severity::Low), ("my-world".into(), Severity::Critical)]);
+    // Public access off: rules admit nothing, so it is neither a finding
+    // nor a gap; the unvisited server is counted, never passed.
+    assert_eq!(notes(&rows), vec!["1 of 4 not checked — r fetches firewall rules".to_string()]);
+}
+
+#[test]
+fn flexible_server_transport_and_tls_read_the_warm_parameters() {
+    let lists = vec![
+        (V::PostgresServers, vec![pg("pg-plain", json!({})), pg("pg-strict", json!({})), pg("pg-unvisited", json!({}))]),
+        (V::MysqlServers, vec![mysql("my-old", json!({})), mysql("my-new", json!({}))]),
+    ];
+    let mut lazy = LazyStore::new(0);
+    let pid = |n: &str| id(&format!("Microsoft.DBforPostgreSQL/flexibleServers/{n}"));
+    let mid = |n: &str| id(&format!("Microsoft.DBforMySQL/flexibleServers/{n}"));
+    lazy.flex_parameters.apply(
+        pid("pg-plain"),
+        Ok(vec![param("require_secure_transport", "off"), param("ssl_min_protocol_version", "TLSv1.1")]),
+    );
+    lazy.flex_parameters.apply(
+        pid("pg-strict"),
+        Ok(vec![param("require_secure_transport", "on"), param("ssl_min_protocol_version", "TLSv1.2")]),
+    );
+    lazy.flex_parameters.apply(
+        mid("my-old"),
+        Ok(vec![param("require_secure_transport", "OFF"), param("tls_version", "TLSv1,TLSv1.1,TLSv1.2")]),
+    );
+    lazy.flex_parameters.apply(
+        mid("my-new"),
+        Ok(vec![param("require_secure_transport", "ON"), param("tls_version", "TLSv1.2,TLSv1.3")]),
+    );
+    let rows = audit("pg-insecure-transport", &lists, Some(&lazy));
+    assert_eq!(findings(&rows), vec![("pg-plain".into(), Severity::High)]);
+    assert_eq!(notes(&rows), vec!["1 of 3 not checked — r fetches server parameters".to_string()]);
+    assert_eq!(findings(&audit("pg-min-tls", &lists, Some(&lazy))), vec![("pg-plain".into(), Severity::Medium)]);
+    assert_eq!(findings(&audit("mysql-insecure-transport", &lists, Some(&lazy))), vec![("my-old".into(), Severity::High)]);
+    assert_eq!(findings(&audit("mysql-min-tls", &lists, Some(&lazy))), vec![("my-old".into(), Severity::Medium)]);
+    // Nothing warm: every server is "not checked", never passed.
+    assert_eq!(
+        notes(&audit("mysql-insecure-transport", &lists, None)),
+        vec!["2 of 2 not checked — r fetches server parameters".to_string()]
+    );
+}
+
+#[test]
+fn flexible_server_password_auth_without_an_entra_admin_is_low() {
+    let lists = vec![
+        (
+            V::PostgresServers,
+            vec![
+                pg("pg-password", json!({"authConfig": {"passwordAuth": "Enabled", "activeDirectoryAuth": "Disabled"}})),
+                pg("pg-both", json!({"authConfig": {"passwordAuth": "Enabled", "activeDirectoryAuth": "Enabled"}})),
+                pg("pg-entra", json!({"authConfig": {"passwordAuth": "Disabled", "activeDirectoryAuth": "Enabled"}})),
+            ],
+        ),
+        (V::MysqlServers, vec![mysql("my-noadmin", json!({})), mysql("my-admin", json!({}))]),
+    ];
+    let mut lazy = LazyStore::new(0);
+    lazy.flex_admins.apply(id("Microsoft.DBforPostgreSQL/flexibleServers/pg-both"), Ok(vec![]));
+    lazy.flex_admins.apply(id("Microsoft.DBforMySQL/flexibleServers/my-noadmin"), Ok(vec![]));
+    lazy.flex_admins.apply(
+        id("Microsoft.DBforMySQL/flexibleServers/my-admin"),
+        Ok(vec![json!({"properties": {"administratorType": "ActiveDirectory", "login": "dba", "sid": "s"}})]),
+    );
+    let mut got = findings(&audit("pg-password-no-entra", &lists, Some(&lazy)));
+    got.sort();
+    assert_eq!(got, vec![("pg-both".into(), Severity::Low), ("pg-password".into(), Severity::Low)]);
+    assert_eq!(findings(&audit("mysql-password-no-entra", &lists, Some(&lazy))), vec![("my-noadmin".into(), Severity::Low)]);
 }
 
 // ── Messaging ──

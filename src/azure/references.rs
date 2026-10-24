@@ -213,7 +213,16 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
     use JumpView::*;
     match target {
         NetworkSecurityGroups => &[Nics, Subnets],
-        Subnets => &[Nics, PrivateEndpoints, WebApps, ContainerAppEnvironments, EnterprisePolicies, NatGateways],
+        Subnets => &[
+            Nics,
+            PrivateEndpoints,
+            WebApps,
+            ContainerAppEnvironments,
+            EnterprisePolicies,
+            NatGateways,
+            PostgresServers,
+            MysqlServers,
+        ],
         VirtualNetworks => &[
             Nics,
             PrivateEndpoints,
@@ -222,8 +231,10 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             EnterprisePolicies,
             DnsResolvers,
             PrivateDnsZones,
+            PostgresServers,
+            MysqlServers,
         ],
-        Identities => &[VirtualMachines, Clusters, WebApps, ContainerApps, ContainerAppJobs, ServicePrincipals, ServiceBusNamespaces, EventHubNamespaces],
+        Identities => &[VirtualMachines, Clusters, WebApps, ContainerApps, ContainerAppJobs, ServicePrincipals, ServiceBusNamespaces, EventHubNamespaces, PostgresServers, MysqlServers],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
         PublicIps => &[Nics, LoadBalancers, NatGateways],
         Disks => &[VirtualMachines],
@@ -241,6 +252,8 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             SqlServers,
             CosmosAccounts,
             AiAccounts,
+            PostgresServers,
+            MysqlServers,
             RedisCaches,
             ManagedRedis,
             ServiceBusNamespaces,
@@ -248,6 +261,8 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
         ],
         StorageAccounts | Registries | SqlServers | CosmosAccounts | AiAccounts | RedisCaches | ManagedRedis
         | ServiceBusNamespaces | EventHubNamespaces => &[PrivateEndpoints],
+        PostgresServers | MysqlServers => &[PrivateEndpoints],
+        PrivateDnsZones => &[PostgresServers, MysqlServers],
         DnsResolvers => &[DnsForwardingRulesets],
         ServicePrincipals => &[AppRegistrations],
         AppRegistrations => &[ServicePrincipals],

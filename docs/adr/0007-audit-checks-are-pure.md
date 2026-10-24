@@ -24,7 +24,8 @@ the background: the same streaming list load visiting the tab does, run
 to completion off-screen and cached under the tab's own key, so visiting
 the tab afterwards is a cache hit with identical rows. It then fetches the
 per-resource lazy reads the checks use through the same `LazyMap`s the
-detail sections use (each SQL server's and Redis cache's firewall rules,
+detail sections use (each SQL server's and Redis cache's firewall rules, each
+PostgreSQL and MySQL server's firewall rules, parameters and Entra admins,
 each messaging namespace's network rule set, each site's config,
 the subscription's role assignments, and its Owner / User Access
 Administrator users' directory objects), capped at `AUDIT_LAZY_MAX` per

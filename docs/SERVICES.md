@@ -205,7 +205,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     (`Premium P1`) + shards + `VNet` when injected; Managed Redis SKU (+
     `no HA`); Service Bus `{tier}` (+ `· {n} MU` on Premium) and Event
     Hubs `{tier} · {n} TU` (PU, CU), both `· private` when public access
-    is off; All resources `→`/`·` and
+    is off; flexible server
+    `{version} · {sku} · {VNet|public|PE|public + PE|no access}`; All resources `→`/`·` and
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
@@ -228,7 +229,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     storage account, Key Vault, Cosmos account, load balancer, public IP,
     NAT gateway, container registry, Application Insights, Foundry /
     Cognitive Services account, Redis cache (the `all…` names, every
-    shard), Managed Redis, Service Bus and Event Hubs namespace
+    shard), Managed Redis, Service Bus and Event Hubs namespace,
+    PostgreSQL and MySQL flexible server
     (`curated_metrics` is the list). Any other
     ARM resource opens on the `a` picker (its metric definitions);
     `supports_metrics` drives the status-bar hint, so the hint and the
@@ -271,7 +273,13 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     **ACR** repositories, replications · `acr login` (never
     `--expose-token`). **Storage** network rules, containers with
     `--auth-mode login` (never the account key). **SQL server**
-    databases, firewall rules, Entra admin. **NSG** rules with defaults.
+    databases, firewall rules, Entra admin. **PostgreSQL / MySQL flexible
+    server** databases, firewall rules, Entra admins, `require_secure_transport`
+    (PostgreSQL: private endpoint connections) · `connect --interactive`
+    (the rdbms-connect extension; prompts for the password, never carries
+    one) · start when stopped, restart and stop when ready (`show`,
+    `start`, `stop`, `restart` take `--ids`; the child lists and
+    `connect` use names). **NSG** rules with defaults.
     **Subnet** its NSG, its route table. **Service principal / app
     registration** credential metadata, owners, federated credentials
     (never `credential reset`). **Power Platform policy** each injected
@@ -402,6 +410,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     the checks use through the sections' own maps (the subscription's role
     assignments, its Owner / User Access Administrator users' directory
     objects, each SQL server's and Redis cache's firewall rules, each
+    PostgreSQL and MySQL server's firewall rules, parameters and Entra
+    admins, each
     messaging namespace's network rule set, each site's `config/web`; at most 50 each), re-auditing as each lands; a
     failed source is one status error. A subscription switch drops what is
     in flight (the lazy epoch). A finding row is a list row like any
@@ -453,6 +463,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | App Service · Plans | — (Overview: SKU · tier, OS, workers of max, apps, zone redundancy, per-app and elastic scaling) | ladder, then `status` (`Ready` → Available) | — (apps list their plan) | `az appservice plan show` |
 | SQL · Servers | Security (Entra admin, Entra-only auth, SQL admin login, min TLS, TDE key service- or customer-managed, identity) · Databases ⧗ (user databases: SKU, status, max size, zone redundancy, backup redundancy, serverless auto-pause, elastic pool; system databases as a note) · Firewall ⧗ (IP rules; `AllowAllWindowsAzureIps` flagged) · Networking (public access, outbound restriction, IPv6, private endpoints) | `state` (`Ready` → Available; no `provisioningState` on servers) | private endpoints, user-assigned and primary identities | `az sql server show` |
 | Cosmos DB · Accounts | Replication (consistency, bounded-staleness limits, multi-region writes, automatic failover, write regions, every region by failover priority with zone redundancy) · Security (public access, network access all / selected / private only, IP and VNet rules, ACL bypass, key auth, metadata writes by key, min TLS, encryption service- or customer-managed, identity, private endpoints) · Backup (periodic interval, retention, redundancy; or the continuous tier; a mode migration in progress) · Databases ⧗ (on the path the API picks; names only, containers not listed) · (Overview: API from `kind` + `capabilities`, endpoint as text, capacity mode, free tier, analytical storage) | ladder only; `location` is a display name (`West US`), stored as `westus` so `R` matches | VNet rule subnets, private endpoints, user-assigned identities (the CMK key is a URL, shown in Security) | `az cosmosdb show` |
+| PostgreSQL & MySQL · PostgreSQL, MySQL (flexible servers; Single Server is retired and stays out) | Networking (how it is reached: VNet integration, public, private endpoints or none; public access; FQDN as text; delegated subnet and its VNet; private DNS zone, flagged when its name does not end in the FQDN's domain; private endpoints with approval status, flagged unless Approved; what a caller in another VNet needs) · Firewall ⧗ (IP rules; 0.0.0.0 "allow Azure services", the whole internet and ranges of 65,536+ addresses flagged; says when the rules do not apply: VNet-integrated, or public access off) · Security (auth: password / Entra / both on PostgreSQL; admin login, never the password; Entra admins ⧗, a service principal jumping to its Graph row, MySQL's Graph lookup identity; encryption service- or customer-managed with key, status and identity; managed identity) · Parameters ⧗ (`configurations`, one call; only `require_secure_transport` (off flagged), the TLS minimum / maximum, `password_encryption`, `pgbouncer.enabled`, `aad_auth_only`, `max_connections`, each with its default) · HA & backup (HA mode, state, standby zone; retention, interval, geo-redundant backup, earliest restore; replication role, replica capacity, source server; maintenance window) · Databases ⧗ (charset, collation; system databases as a note) · (Overview: version, SKU, storage size, tier and autogrow, IOPS, zone, FQDN, connectivity, admin login, created) | ladder, then `state` (`Ready` → Available, `Stopped` → Stopped, `Disabled` / `Inaccessible` → Unavailable, the rest Pending) | delegated subnet, its VNet, private DNS zone (DNS tab), private endpoints, source server, user-assigned and key identities, the system identity's service principal (Graph) | `az postgres flexible-server show` · `az mysql flexible-server show` |
 | Monitor · Workspaces | — (Overview: customer id, SKU and commitment tier, retention, daily cap and reset time, ingestion status, public ingestion and query, local auth, access mode, created) | ladder only | dedicated cluster (AKS clusters and App Insights components link here from their own Related) | `az monitor log-analytics workspace show` |
 | Monitor · App Insights | — (Overview: application type, kind, app id, ingestion mode, workspace, retention, sampling, public ingestion and query, local auth, IP masking, created; the instrumentation key, connection string and HockeyApp token are stripped from the JSON before the row keeps it) | ladder only | workspace (`WorkspaceResourceId`; none for a classic component). App Service apps cannot link here: the link is an app setting | `az monitor app-insights component show` (the `application-insights` CLI extension) |
 | Container Apps · Apps | Ingress (external / internal, FQDN as text, transport, ports, insecure HTTP flagged, client certificate mode, sticky sessions, IP restrictions as an allow- or deny-list, CORS, traffic split by revision and label, custom domains with their certificates) · Scale (min / max replicas, rules by kind with metadata and auth as trigger parameter → secret **name**) · Containers (init first; image, CPU / memory, probes, env var **names** with secret refs named, volume mounts) · Revisions ⧗ (active first: active, traffic, replicas, health, running state, created, last active, provisioning error) · Auth ⧗ (`authConfigs`: on / off, unauthenticated action, excluded paths, per provider the client id; Entra ID issuer, client secret setting **name**, audiences, allowed client apps and identities) · Identity (system principal; each user-assigned identity with client and principal id; lifecycle; registry pull identities) · Secrets (names, Key Vault references and the identity reading them; registries) · (Overview: environment, workload profile, running status, ingress, FQDN, revisions mode, latest and latest-ready revision, Dapr, outbound IPs). Secret and env var `value`s are stripped from the JSON before the row keeps it | ladder, then `runningStatus` (`Running`, `Ready` → Available, `Stopped` / `Suspended` → Stopped, `Progressing` → Pending); `location` is a display name, stored as `eastus` | environment, user-assigned identities, registry pull identities, Express outbound subnet | `az containerapp show` |
@@ -466,7 +477,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -508,6 +519,11 @@ has a fixture test there.
 | `redis-min-tls` | Redis caches | `minimumTlsVersion` below 1.2 | medium |
 | `redis-public-no-firewall` | Redis caches + Network's firewall rules ⧗ | public network access enabled, not VNet-injected, no firewall rules | medium |
 | `amr-min-tls` | Managed Redis | `minimumTlsVersion` below 1.2 | medium |
+| `pg-public-network` · `mysql-public-network` | PostgreSQL · MySQL servers | public network access enabled and not VNet-integrated (the firewall is then the only network control) | medium |
+| `pg-firewall-open` · `mysql-firewall-open` | the same + Firewall ⧗ (public servers only: other servers' rules admit nothing) | a rule 0.0.0.0–255.255.255.255 · 0.0.0.0–0.0.0.0 (Allow Azure services) | critical · low |
+| `pg-insecure-transport` · `mysql-insecure-transport` | the same + Parameters ⧗ | `require_secure_transport` off | high |
+| `pg-min-tls` · `mysql-min-tls` | the same + Parameters ⧗ | `ssl_min_protocol_version` (PostgreSQL) or any `tls_version` entry (MySQL) below 1.2 | medium |
+| `pg-password-no-entra` · `mysql-password-no-entra` | the same + Security's Entra admins ⧗ (PostgreSQL with Entra auth off needs none) | password auth on and no Entra admin | low |
 | `sb-local-auth` · `eh-local-auth` | Service Bus · Event Hubs namespaces | `disableLocalAuth` not true (SAS keys work) | medium |
 | `sb-min-tls` · `eh-min-tls` | Service Bus · Event Hubs namespaces | `minimumTlsVersion` below 1.2 | medium |
 | `sb-public-network` · `eh-public-network` | Service Bus · Event Hubs namespaces + Network's rule set ⧗ | public network access enabled and default action Allow, or Deny with no IP or VNet rule (not enforced) | medium |
@@ -577,6 +593,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Databases, Firewall | 1 each per server, on demand (no subscription-wide database list exists) | `{server}/databases` · `{server}/firewallRules` · `2025-01-01` |
 | Cosmos DB accounts | 1 | `/providers/Microsoft.DocumentDB/databaseAccounts` · `2026-03-15` |
 | Cosmos databases | 1 per account, on demand; the API picks the path (containers would be one call per database, so they are not listed) | `{account}/sqlDatabases` · `mongodbDatabases` · `cassandraKeyspaces` · `gremlinDatabases` · `tables` · `2026-03-15` |
+| PostgreSQL / MySQL flexible servers | 1 each | `/providers/Microsoft.DBforPostgreSQL/flexibleServers` · `2025-08-01` (`2026-10-01` is newer but only weeks old) · `/providers/Microsoft.DBforMySQL/flexibleServers` · `2024-12-30` |
+| Flexible server Databases, Firewall, Entra admins (Security), Parameters | 1 each per server, on demand | `{server}/databases` · `{server}/firewallRules` · `{server}/administrators` · `{server}/configurations` · the engine's version above |
 | Workspaces | 1 | `/providers/Microsoft.OperationalInsights/workspaces` · `2026-03-01` |
 | App Insights | 1 | `/providers/Microsoft.Insights/components` · `2020-02-02` (the newest stable that has components) |
 | Container apps | 1 | `/providers/Microsoft.App/containerApps` · `2026-07-01` |
@@ -634,6 +652,14 @@ it; that floor is #63.
   (or errors, which the section shows); `az servicebus namespace show`
   and `az eventhubs namespace show` take `--ids` (`id_part='name'` in the
   CLI's generated commands).
+
+- PostgreSQL & MySQL flexible servers (#28), built from azure-rest-api-specs
+  (PostgreSQL `2025-08-01`, MySQL `2024-12-30`) and the azure-cli sources,
+  without an Azure login. To check: both api-versions list; the MySQL
+  `privateDnsZoneResourceId` and PostgreSQL `privateDnsZoneArmResourceId`
+  names; that `configurations` comes back in one or two pages; that
+  `az postgres flexible-server firewall-rule list` takes `--server-name`
+  and MySQL's takes `--name` on the installed CLI; the metric names.
 - Power Platform enterprise policies (#77): built from the documented
   shape (azure-rest-api-specs `2020-10-30-preview`, the ARM template
   reference, Microsoft's `PowerPlatform-EnterprisePolicies` module), with

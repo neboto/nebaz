@@ -14,6 +14,7 @@ use crate::azure::services::access::{at_scope_filter, role_assignments_path, ACC
 use crate::azure::services::app_service::{site_config_path, WEB_API_VERSION};
 use crate::azure::services::directory::now_unix;
 use crate::azure::services::messaging::{api_version_for as messaging_api_version, messaging_child_path};
+use crate::azure::services::postgres_mysql::{api_version_for as flex_api_version, flexible_server_child_path};
 use crate::azure::services::redis::{redis_child_path, REDIS_API_VERSION};
 use crate::azure::services::sql::{server_child_path, SQL_API_VERSION};
 use crate::event::Event;
@@ -183,6 +184,7 @@ impl App {
     /// same `LazyMap` its detail section uses (present keys never
     /// refetch): the subscription's role assignments and its privileged
     /// users' directory objects, each cached SQL server's and Redis cache's firewall rules, each
+    /// PostgreSQL and MySQL server's firewall rules, parameters and Entra admins, each
     /// messaging namespace's network rule set,
     /// each cached site's config. Capped at `AUDIT_LAZY_MAX` per kind.
     fn trigger_audit_lazies(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -216,6 +218,18 @@ impl App {
             let fut = self.azure_clients.list_fetch(&redis_child_path(&id, "firewallRules"), REDIS_API_VERSION);
             self.trigger_lazy(|s| &mut s.redis_firewall_rules, id, event_tx, move || fut);
         }
+        // A flexible server's firewall rules, parameters (one list each, the
+        // TLS checks read two of them) and Entra admins.
+        for view in [JumpView::PostgresServers, JumpView::MysqlServers] {
+            for id in self.cached_ids(view, &sub) {
+                let fut = self.azure_clients.list_fetch(&flexible_server_child_path(&id, "firewallRules"), flex_api_version(&id));
+                self.trigger_lazy(|s| &mut s.flex_firewall_rules, id.clone(), event_tx, move || fut);
+                let fut = self.azure_clients.list_fetch(&flexible_server_child_path(&id, "configurations"), flex_api_version(&id));
+                self.trigger_lazy(|s| &mut s.flex_parameters, id.clone(), event_tx, move || fut);
+                let fut = self.azure_clients.list_fetch(&flexible_server_child_path(&id, "administrators"), flex_api_version(&id));
+                self.trigger_lazy(|s| &mut s.flex_admins, id, event_tx, move || fut);
+            }
+        }
         for view in [JumpView::ServiceBusNamespaces, JumpView::EventHubNamespaces] {
             for id in self.cached_ids(view, &sub) {
                 let fut = self
@@ -240,6 +254,9 @@ impl App {
                 + l.principals.loading_count()
                 + l.sql_firewall_rules.loading_count()
                 + l.redis_firewall_rules.loading_count()
+                + l.flex_firewall_rules.loading_count()
+                + l.flex_parameters.loading_count()
+                + l.flex_admins.loading_count()
                 + l.messaging_network_rules.loading_count()
                 + l.site_configs.loading_count()
                 > 0

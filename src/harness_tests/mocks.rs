@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
-    keyvault, messaging, monitor, network, network_dns, network_edge, network_private, power_platform, redis, sql, storage, subscriptions,
+    keyvault, messaging, monitor, network, network_dns, network_edge, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -398,6 +398,42 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             parse(
                 "CosmosAccountRow",
                 cosmos::CosmosAccountRow::from_json(&simple("Microsoft.DocumentDB/databaseAccounts/cosmos-1"), t),
+            ),
+        ),
+        m(
+            JumpView::PostgresServers,
+            "FlexibleServerRow (PostgreSQL)",
+            parse(
+                "FlexibleServerRow",
+                postgres_mysql::FlexibleServerRow::from_json(
+                    &body(
+                        &arm_id("Microsoft.DBforPostgreSQL/flexibleServers/pg-1"),
+                        l,
+                        json!({
+                            "state": "Ready", "version": "16",
+                            "network": {"publicNetworkAccess": "Disabled",
+                                "delegatedSubnetResourceId": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/snet-pg"),
+                                "privateDnsZoneArmResourceId": arm_id("Microsoft.Network/privateDnsZones/pg-1.private.example")},
+                            "authConfig": {"activeDirectoryAuth": "Enabled", "passwordAuth": "Enabled"}
+                        }),
+                    ),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::MysqlServers,
+            "FlexibleServerRow (MySQL)",
+            parse(
+                "FlexibleServerRow",
+                postgres_mysql::FlexibleServerRow::from_json(
+                    &body(
+                        &arm_id("Microsoft.DBforMySQL/flexibleServers/mysql-1"),
+                        l,
+                        json!({"state": "Ready", "version": "8.0.21", "network": {"publicNetworkAccess": "Enabled"}}),
+                    ),
+                    t,
+                ),
             ),
         ),
         m(

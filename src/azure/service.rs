@@ -41,6 +41,9 @@ pub enum ServiceType {
     /// Cosmos DB accounts; databases lazy, on the account's API path.
     /// Never keys or connection strings.
     Cosmos,
+    /// PostgreSQL and MySQL flexible servers; databases, firewall rules,
+    /// Entra admins and the TLS parameters lazy. Never a password.
+    PostgresMysql,
     /// Foundry / AI Services / Azure OpenAI accounts; deployments and
     /// projects as lazy sections. Metadata only, never keys.
     Foundry,
@@ -132,6 +135,9 @@ pub enum JumpView {
     SqlServers,
     // Cosmos DB
     CosmosAccounts,
+    // PostgreSQL & MySQL
+    PostgresServers,
+    MysqlServers,
     // Foundry
     /// Every `Microsoft.CognitiveServices` account, `kind` on the row.
     AiAccounts,
@@ -180,6 +186,7 @@ impl JumpView {
             WebApps | FunctionApps | AppServicePlans => ServiceType::AppService,
             SqlServers => ServiceType::Sql,
             CosmosAccounts => ServiceType::Cosmos,
+            PostgresServers | MysqlServers => ServiceType::PostgresMysql,
             AiAccounts => ServiceType::Foundry,
             LogWorkspaces | AppInsights => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
@@ -227,6 +234,8 @@ impl JumpView {
             AppServicePlans => "plans",
             SqlServers => "sql-servers",
             CosmosAccounts => "cosmos-accounts",
+            PostgresServers => "postgres-servers",
+            MysqlServers => "mysql-servers",
             AiAccounts => "ai-accounts",
             LogWorkspaces => "log-workspaces",
             AppInsights => "app-insights",
@@ -282,6 +291,8 @@ impl JumpView {
             AppServicePlans => "Plans",
             SqlServers => "Servers",
             CosmosAccounts => "Accounts",
+            PostgresServers => "PostgreSQL",
+            MysqlServers => "MySQL",
             AiAccounts => "Resources",
             LogWorkspaces => "Workspaces",
             AppInsights => "App Insights",
@@ -342,6 +353,8 @@ impl JumpView {
             ("microsoft.web", ["serverfarms"]) => JumpView::AppServicePlans,
             ("microsoft.sql", ["servers"]) => JumpView::SqlServers,
             ("microsoft.documentdb", ["databaseaccounts"]) => JumpView::CosmosAccounts,
+            ("microsoft.dbforpostgresql", ["flexibleservers"]) => JumpView::PostgresServers,
+            ("microsoft.dbformysql", ["flexibleservers"]) => JumpView::MysqlServers,
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
             ("microsoft.operationalinsights", ["workspaces"]) => JumpView::LogWorkspaces,
             ("microsoft.insights", ["components"]) => JumpView::AppInsights,
@@ -424,6 +437,7 @@ impl ServiceType {
             ServiceType::AppService,
             ServiceType::Sql,
             ServiceType::Cosmos,
+            ServiceType::PostgresMysql,
             ServiceType::Foundry,
             ServiceType::Monitor,
             ServiceType::PowerPlatform,
@@ -460,6 +474,7 @@ impl ServiceType {
             ServiceType::AppService => "Web",
             ServiceType::Sql => "Databases",
             ServiceType::Cosmos => "Databases",
+            ServiceType::PostgresMysql => "Databases",
             ServiceType::Foundry => "AI",
             ServiceType::Monitor => "Monitoring",
             ServiceType::PowerPlatform => "Management",
@@ -485,6 +500,7 @@ impl ServiceType {
             ServiceType::AppService => "App Service",
             ServiceType::Sql => "SQL",
             ServiceType::Cosmos => "Cosmos DB",
+            ServiceType::PostgresMysql => "PostgreSQL & MySQL",
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Platform",
@@ -511,6 +527,7 @@ impl ServiceType {
             ServiceType::AppService => "App Svc",
             ServiceType::Sql => "SQL",
             ServiceType::Cosmos => "Cosmos",
+            ServiceType::PostgresMysql => "PG/MySQL",
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Plat",
@@ -536,6 +553,7 @@ impl ServiceType {
             ServiceType::AppService => "Web & function apps, plans",
             ServiceType::Sql => "SQL servers & databases",
             ServiceType::Cosmos => "Cosmos DB accounts",
+            ServiceType::PostgresMysql => "PostgreSQL & MySQL flexible servers",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
             ServiceType::Monitor => "Log Analytics & App Insights",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
@@ -573,6 +591,7 @@ impl ServiceType {
             ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans],
             ServiceType::Sql => &[SqlServers],
             ServiceType::Cosmos => &[CosmosAccounts],
+            ServiceType::PostgresMysql => &[PostgresServers, MysqlServers],
             ServiceType::Foundry => &[AiAccounts],
             ServiceType::Monitor => &[LogWorkspaces, AppInsights],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
@@ -673,6 +692,10 @@ impl ServiceType {
             }
             "sql" | "sqlserver" | "sqlservers" | "azuresql" | "db" | "dbs" => (ServiceType::Sql, None),
             "cosmos" | "cosmosdb" | "documentdb" | "docdb" => (ServiceType::Cosmos, None),
+            "pg" | "postgres" | "postgresql" | "psql" | "flexibleserver" | "flexibleservers" => {
+                (ServiceType::PostgresMysql, None)
+            }
+            "mysql" | "mysqlserver" | "mysqlservers" => (ServiceType::PostgresMysql, Some(JumpView::MysqlServers)),
             "plan" | "plans" | "asp" | "serverfarm" | "serverfarms" => {
                 (ServiceType::AppService, Some(JumpView::AppServicePlans))
             }
@@ -727,6 +750,7 @@ impl ServiceType {
             ServiceType::AppService => "@app",
             ServiceType::Sql => "@sql",
             ServiceType::Cosmos => "@cosmos",
+            ServiceType::PostgresMysql => "@pg",
             ServiceType::Foundry => "@foundry",
             ServiceType::Monitor => "@monitor",
             ServiceType::PowerPlatform => "@pp",
@@ -741,12 +765,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -917,6 +941,19 @@ mod tests {
         );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.ContainerRegistry/registries/acrprod/webhooks/deploy")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod/databases/orders")), None);
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.DBforPostgreSQL/flexibleServers/pg-prod")),
+            Some(JumpView::PostgresServers)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("microsoft.dbformysql/FLEXIBLESERVERS/my-shop")), Some(JumpView::MysqlServers));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DBforPostgreSQL/flexibleServers/pg-prod/databases/orders")), None);
+        assert_eq!(
+            JumpView::landing_for_arm_id(&p("Microsoft.DBforPostgreSQL/servers/single")),
+            Some(JumpView::AllResources),
+            "Single Server is retired and not browsed"
+        );
+        assert_eq!(ServiceType::from_prefix("@pg"), Some((ServiceType::PostgresMysql, None)));
+        assert_eq!(ServiceType::from_prefix("@mysql"), Some((ServiceType::PostgresMysql, Some(JumpView::MysqlServers))));
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.ManagedIdentity/userAssignedIdentities/id-app")),
             Some(JumpView::Identities)

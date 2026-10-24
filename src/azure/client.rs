@@ -28,6 +28,7 @@ use crate::azure::services::monitor::MonitorService;
 use crate::azure::services::network_dns::DnsService;
 use crate::azure::services::power_platform::PowerPlatformService;
 use crate::azure::services::sql::SqlService;
+use crate::azure::services::postgres_mysql::FlexibleServersService;
 use crate::azure::services::identity::IdentityService;
 use crate::azure::services::keyvault::KeyVaultService;
 use crate::azure::services::network::NetworkService;
@@ -340,6 +341,7 @@ impl AzureClients {
             ServiceType::ContainerRegistry => Arc::new(ContainerRegistryService::new(scope)),
             ServiceType::AppService => Arc::new(AppServiceService::new(scope)),
             ServiceType::Sql => Arc::new(SqlService::new(scope)),
+            ServiceType::PostgresMysql => Arc::new(FlexibleServersService::new(scope)),
             ServiceType::Cosmos => Arc::new(CosmosService::new(scope)),
             ServiceType::Foundry => Arc::new(FoundryService::new(scope)),
             ServiceType::Monitor => Arc::new(MonitorService::new(scope)),

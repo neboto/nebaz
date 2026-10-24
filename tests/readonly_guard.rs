@@ -62,6 +62,10 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "azurecr.io",
     // Cosmos DB: the accounts' document endpoints.
     "documents.azure.com",
+    // PostgreSQL and MySQL flexible servers: the servers' own endpoints
+    // (a wire-protocol connection, not ARM); the FQDN is shown as text.
+    "postgres.database.azure.com",
+    "mysql.database.azure.com",
     // Container Apps: the apps themselves (the environment's default
     // domain).
     "azurecontainerapps.io",

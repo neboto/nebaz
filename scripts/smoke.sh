@@ -128,6 +128,11 @@ run redis-amr ok amr '[6.0]' \
   "1 Caches" \
   "cannot reach 127.0.0.1"
 
+# The PostgreSQL & MySQL tab loads through a routing prefix (MySQL).
+run mysql-tab ok mysql '[]' \
+  "PostgreSQL & MySQL flexible servers" \
+  "cannot reach 127.0.0.1"
+
 # The Container Apps tab loads through a routing prefix (environments).
 run aca-env ok acaenv '[]' \
   "Container apps, environments & jobs" \

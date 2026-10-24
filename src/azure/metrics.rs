@@ -201,6 +201,22 @@ const SQL_DATABASE: &[MetricSpec] = &[
     m("storage_percent", "Storage used", Max),
     m("connection_successful", "Connections", Total),
 ];
+const POSTGRES_FLEXIBLE: &[MetricSpec] = &[
+    m("cpu_percent", "CPU", Avg),
+    m("memory_percent", "Memory", Avg),
+    m("storage_percent", "Storage used", Max),
+    m("active_connections", "Connections", Avg),
+    m("connections_failed", "Failed connections", Total),
+    m("network_bytes_egress", "Network out", Total),
+];
+const MYSQL_FLEXIBLE: &[MetricSpec] = &[
+    m("cpu_percent", "CPU", Avg),
+    m("memory_percent", "Memory", Avg),
+    m("storage_percent", "Storage used", Max),
+    m("active_connections", "Connections", Avg),
+    m("aborted_connections", "Aborted connections", Total),
+    m("network_bytes_egress", "Network out", Total),
+];
 const STORAGE: &[MetricSpec] = &[
     m("Transactions", "Transactions", Total),
     m("Egress", "Egress", Total),
@@ -300,6 +316,8 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.web", ["sites"]) | ("microsoft.web", ["sites", "slots"]) => WEB_SITE,
         ("microsoft.web", ["serverfarms"]) => APP_SERVICE_PLAN,
         ("microsoft.sql", ["servers", "databases"]) => SQL_DATABASE,
+        ("microsoft.dbforpostgresql", ["flexibleservers"]) => POSTGRES_FLEXIBLE,
+        ("microsoft.dbformysql", ["flexibleservers"]) => MYSQL_FLEXIBLE,
         ("microsoft.storage", ["storageaccounts"]) => STORAGE,
         ("microsoft.keyvault", ["vaults"]) => KEY_VAULT,
         ("microsoft.documentdb", ["databaseaccounts"]) => COSMOS,
@@ -740,6 +758,8 @@ pub(crate) mod tests {
         assert!(names(VM_ID).contains(&"Percentage CPU"));
         let p = |t: &str| format!("/subscriptions/0000/resourceGroups/rg/providers/{}", t);
         assert!(names(&p("Microsoft.Sql/servers/s/databases/orders")).contains(&"cpu_percent"));
+        assert!(names(&p("Microsoft.DBforPostgreSQL/flexibleServers/pg")).contains(&"connections_failed"));
+        assert!(names(&p("Microsoft.DBforMySQL/flexibleServers/my")).contains(&"aborted_connections"));
         assert!(names(&p("microsoft.insights/components/ai")).contains(&"requests/failed"));
         assert!(names(&p("Microsoft.Web/sites/app/slots/staging")).contains(&"Http5xx"));
         assert!(names(&p("Microsoft.Cache/Redis/r")).contains(&"allserverLoad"));
@@ -752,7 +772,7 @@ pub(crate) mod tests {
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));
         assert!(is_arm_resource(&p("Microsoft.Network/virtualNetworks/v")));
         assert!(!is_arm_resource("/subscriptions/0000"));
-        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS] {
+        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS] {
             assert!((2..=6).contains(&set.len()));
         }
     }
