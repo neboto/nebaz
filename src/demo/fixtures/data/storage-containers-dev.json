@@ -1,0 +1,22 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Storage/storageAccounts/stcontosoordersdev/blobServices/default/containers/order-exports",
+      "name": "order-exports",
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "etag": "\"0x8DCE0F1E2D3C4B5\"",
+      "properties": {
+        "deleted": false,
+        "remainingRetentionDays": 0,
+        "defaultEncryptionScope": "$account-encryption-key",
+        "denyEncryptionScopeOverride": false,
+        "publicAccess": "None",
+        "leaseStatus": "Unlocked",
+        "leaseState": "Available",
+        "lastModifiedTime": "{{iso:now-3d}}",
+        "hasImmutabilityPolicy": false,
+        "hasLegalHold": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/topics/order-events/subscriptions/billing",
+      "name": "billing",
+      "type": "Microsoft.ServiceBus/Namespaces/Topics/Subscriptions",
+      "location": "westeurope",
+      "properties": {
+        "isClientAffine": false,
+        "lockDuration": "PT1M",
+        "requiresSession": false,
+        "defaultMessageTimeToLive": "P7D",
+        "deadLetteringOnFilterEvaluationExceptions": true,
+        "deadLetteringOnMessageExpiration": true,
+        "messageCount": 3,
+        "maxDeliveryCount": 10,
+        "status": "Active",
+        "enableBatchedOperations": true,
+        "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+        "createdAt": "2023-03-14T10:07:20.8100000Z",
+        "updatedAt": "2023-03-14T10:07:20.8100000Z",
+        "accessedAt": "{{iso:now-5m}}",
+        "countDetails": {
+          "activeMessageCount": 3,
+          "deadLetterMessageCount": 0,
+          "scheduledMessageCount": 0,
+          "transferMessageCount": 0,
+          "transferDeadLetterMessageCount": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventHub/namespaces/evh-orders-prod/authorizationRules/RootManageSharedAccessKey",
+      "name": "RootManageSharedAccessKey",
+      "type": "Microsoft.EventHub/Namespaces/AuthorizationRules",
+      "location": "westeurope",
+      "properties": { "rights": ["Listen", "Manage", "Send"] }
+    }
+  ]
+}

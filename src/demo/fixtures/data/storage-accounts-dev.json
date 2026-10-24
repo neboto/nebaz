@@ -1,0 +1,53 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Storage/storageAccounts/stcontosoordersdev",
+      "name": "stcontosoordersdev",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "westeurope",
+      "kind": "StorageV2",
+      "sku": { "name": "Standard_LRS", "tier": "Standard" },
+      "tags": { "env": "dev", "team": "platform", "owner": "alex.kim@contoso.com" },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "creationTime": "2024-01-09T15:02:11.5520000Z",
+        "primaryLocation": "westeurope",
+        "statusOfPrimary": "available",
+        "accessTier": "Hot",
+        "primaryEndpoints": {
+          "dfs": "https://stcontosoordersdev.dfs.core.windows.net/",
+          "web": "https://stcontosoordersdev.z6.web.core.windows.net/",
+          "blob": "https://stcontosoordersdev.blob.core.windows.net/",
+          "queue": "https://stcontosoordersdev.queue.core.windows.net/",
+          "table": "https://stcontosoordersdev.table.core.windows.net/",
+          "file": "https://stcontosoordersdev.file.core.windows.net/"
+        },
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": false,
+        "allowCrossTenantReplication": false,
+        "defaultToOAuthAuthentication": true,
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true,
+        "publicNetworkAccess": "Enabled",
+        "dnsEndpointType": "Standard",
+        "isHnsEnabled": false,
+        "largeFileSharesState": "Disabled",
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [ { "value": "203.0.113.24", "action": "Allow" } ],
+          "defaultAction": "Deny"
+        },
+        "privateEndpointConnections": [],
+        "encryption": {
+          "requireInfrastructureEncryption": false,
+          "keySource": "Microsoft.Storage",
+          "services": {
+            "file": { "keyType": "Account", "enabled": true, "lastEnabledTime": "2024-01-09T15:02:11.6770000Z" },
+            "blob": { "keyType": "Account", "enabled": true, "lastEnabledTime": "2024-01-09T15:02:11.6770000Z" }
+          }
+        }
+      }
+    }
+  ]
+}

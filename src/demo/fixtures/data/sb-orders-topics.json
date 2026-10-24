@@ -1,0 +1,35 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/topics/order-events",
+      "name": "order-events",
+      "type": "Microsoft.ServiceBus/Namespaces/Topics",
+      "location": "westeurope",
+      "properties": {
+        "maxMessageSizeInKilobytes": 256,
+        "defaultMessageTimeToLive": "P7D",
+        "maxSizeInMegabytes": 1024,
+        "requiresDuplicateDetection": false,
+        "duplicateDetectionHistoryTimeWindow": "PT10M",
+        "enableBatchedOperations": true,
+        "sizeInBytes": 262144,
+        "status": "Active",
+        "supportOrdering": true,
+        "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+        "enablePartitioning": false,
+        "enableExpress": false,
+        "subscriptionCount": 1,
+        "createdAt": "2023-03-14T10:06:58.3300000Z",
+        "updatedAt": "2023-03-14T10:06:58.3300000Z",
+        "accessedAt": "{{iso:now-5m}}",
+        "countDetails": {
+          "activeMessageCount": 0,
+          "deadLetterMessageCount": 0,
+          "scheduledMessageCount": 0,
+          "transferMessageCount": 0,
+          "transferDeadLetterMessageCount": 0
+        }
+      }
+    }
+  ]
+}

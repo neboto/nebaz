@@ -1,0 +1,28 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/databases/azure_maintenance",
+      "name": "azure_maintenance",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "properties": { "charset": "UTF8", "collation": "en_US.utf8" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/databases/azure_sys",
+      "name": "azure_sys",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "properties": { "charset": "UTF8", "collation": "en_US.utf8" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/databases/orders",
+      "name": "orders",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "properties": { "charset": "UTF8", "collation": "en_US.utf8" }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/databases/postgres",
+      "name": "postgres",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "properties": { "charset": "UTF8", "collation": "en_US.utf8" }
+    }
+  ]
+}

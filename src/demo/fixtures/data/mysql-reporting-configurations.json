@@ -1,0 +1,54 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/configurations/aad_auth_only",
+      "name": "aad_auth_only",
+      "type": "Microsoft.DBforMySQL/flexibleServers/configurations",
+      "properties": {
+        "value": "OFF", "description": "Allow only Azure Active Directory authentication.",
+        "defaultValue": "OFF", "dataType": "Enumeration", "allowedValues": "ON,OFF", "source": "system-default",
+        "isReadOnly": "False", "isConfigPendingRestart": "False", "isDynamicConfig": "True"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/configurations/max_connections",
+      "name": "max_connections",
+      "type": "Microsoft.DBforMySQL/flexibleServers/configurations",
+      "properties": {
+        "value": "341", "description": "The maximum permitted number of simultaneous client connections.",
+        "defaultValue": "341", "dataType": "Integer", "allowedValues": "10-1365", "source": "system-default",
+        "isReadOnly": "False", "isConfigPendingRestart": "False", "isDynamicConfig": "True"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/configurations/require_secure_transport",
+      "name": "require_secure_transport",
+      "type": "Microsoft.DBforMySQL/flexibleServers/configurations",
+      "properties": {
+        "value": "OFF", "description": "Whether client connections to the server are required to use some form of secure transport.",
+        "defaultValue": "ON", "dataType": "Enumeration", "allowedValues": "ON,OFF", "source": "user-override",
+        "isReadOnly": "False", "isConfigPendingRestart": "False", "isDynamicConfig": "True"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/configurations/time_zone",
+      "name": "time_zone",
+      "type": "Microsoft.DBforMySQL/flexibleServers/configurations",
+      "properties": {
+        "value": "+01:00", "description": "The server time zone.",
+        "defaultValue": "SYSTEM", "dataType": "String", "allowedValues": "[+|-][0]{0,1}[0-9]:[0-5][0-9]|[+|-][1][0-2]:[0-5][0-9]|SYSTEM", "source": "user-override",
+        "isReadOnly": "False", "isConfigPendingRestart": "False", "isDynamicConfig": "True"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DBforMySQL/flexibleServers/mysql-reporting-legacy/configurations/tls_version",
+      "name": "tls_version",
+      "type": "Microsoft.DBforMySQL/flexibleServers/configurations",
+      "properties": {
+        "value": "TLSv1.2", "description": "Which protocols the server permits for encrypted connections.",
+        "defaultValue": "TLSv1.2", "dataType": "Set", "allowedValues": "TLSv1.2,TLSv1.3", "source": "system-default",
+        "isReadOnly": "False", "isConfigPendingRestart": "False", "isDynamicConfig": "False"
+      }
+    }
+  ]
+}
