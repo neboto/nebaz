@@ -55,6 +55,7 @@ mod metrics_test;
 mod mouse_test;
 mod network_lens_test;
 mod refs_lens_test;
+mod service_strip_test;
 mod subscription_fanout_test;
 mod ownership_test;
 mod small_terminal_test;

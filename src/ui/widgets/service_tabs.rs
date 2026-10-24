@@ -129,27 +129,35 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
 
     let prefix_w: u16 = 1 + if app.banner_visible { 0 } else { 8 }; // " " + "nebaz │ "
 
-    // Reserve enough left space for at least the active chip + both markers;
-    // pick the widest badge set that still allows that.
+    // Pick the widest badge set that leaves the chips enough room: every
+    // chip, or, for a set without the hint and the update news (the first
+    // badges to go, before any chip hides), the active chip and both
+    // markers, with the chips scrolling.
+    let full_chips: u16 = labels
+        .iter()
+        .enumerate()
+        .map(|(i, l)| chip_width(l) + if i > 0 { SEP } else { 0 })
+        .sum();
     let min_left = prefix_w
         + MARKER_W * 2
         + labels
             .get(active_idx)
             .map(|l| chip_width(l))
             .unwrap_or(0);
+    const FIRST_WITHOUT_HINT: usize = 2;
     let right_parts = candidates
         .iter()
-        .find(|p| parts_width(p) + min_left <= area.width)
+        .enumerate()
+        .find(|(i, p)| {
+            parts_width(p) + prefix_w + full_chips <= area.width
+                || (*i >= FIRST_WITHOUT_HINT && parts_width(p) + min_left <= area.width)
+        })
+        .map(|(_, p)| p)
         .unwrap_or(&candidates[candidates.len() - 1]);
     let right_width = parts_width(right_parts);
     let left_avail = area.width.saturating_sub(right_width);
 
     // Window the chips into the space left of the badges.
-    let full_chips: u16 = labels
-        .iter()
-        .enumerate()
-        .map(|(i, l)| chip_width(l) + if i > 0 { SEP } else { 0 })
-        .sum();
     let (lo, hi) = if visible.is_empty() {
         (0usize, 0usize)
     } else if prefix_w + full_chips <= left_avail {
@@ -263,31 +271,36 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
 
 /// Pick the inclusive chip range `[lo, hi]` to show when the strip overflows:
 /// always include the active chip, then grow outward (right first, then left)
-/// while it fits. Marker columns are reserved up front. Same algorithm as
-/// `subtab_bar::visible_window`, over the pre-built chip labels.
+/// while it fits. A marker's two columns are reserved only on a side that
+/// still hides a chip, so a window that reaches an edge spends that space
+/// on a chip.
 fn visible_window(labels: &[String], active: usize, width: u16) -> (usize, usize) {
     let n = labels.len();
-    let budget = width.saturating_sub(MARKER_W * 2);
+    // Columns for the chips `lo..=hi`, their separators and the markers the
+    // window needs.
+    let cost = |lo: usize, hi: usize, chips: u16| -> u16 {
+        chips + if lo > 0 { MARKER_W } else { 0 } + if hi + 1 < n { MARKER_W } else { 0 }
+    };
 
     let mut lo = active;
     let mut hi = active;
-    let mut used = chip_width(&labels[active]).min(budget);
+    let mut used = chip_width(&labels[active]);
 
     loop {
         let mut grew = false;
         if hi + 1 < n {
-            let need = SEP + chip_width(&labels[hi + 1]);
-            if used + need <= budget {
+            let need = used + SEP + chip_width(&labels[hi + 1]);
+            if cost(lo, hi + 1, need) <= width {
                 hi += 1;
-                used += need;
+                used = need;
                 grew = true;
             }
         }
         if lo > 0 {
-            let need = SEP + chip_width(&labels[lo - 1]);
-            if used + need <= budget {
+            let need = used + SEP + chip_width(&labels[lo - 1]);
+            if cost(lo - 1, hi, need) <= width {
                 lo -= 1;
-                used += need;
+                used = need;
                 grew = true;
             }
         }
@@ -296,4 +309,30 @@ fn visible_window(labels: &[String], active: usize, width: u16) -> (usize, usize
         }
     }
     (lo, hi)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn labels(names: &[&str]) -> Vec<String> {
+        names.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn a_window_at_the_edge_spends_the_unused_marker_on_a_chip() {
+        let l = labels(&["VNet", "ACA", "Changes", "Audit"]);
+        // "‹ " + " Changes " + " │ " + " Audit " = 2 + 9 + 3 + 7 = 21: no
+        // right marker is needed with Audit last.
+        assert_eq!(visible_window(&l, 3, 21), (2, 3));
+        assert_eq!(visible_window(&l, 3, 20), (3, 3));
+        // From the left edge the same holds for the left marker.
+        assert_eq!(visible_window(&l, 0, 6 + 3 + 5 + 2), (0, 1));
+    }
+
+    #[test]
+    fn everything_fits_without_markers() {
+        let l = labels(&["VNet", "Audit"]);
+        assert_eq!(visible_window(&l, 1, 6 + 3 + 7), (0, 1));
+    }
 }

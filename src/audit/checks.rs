@@ -1728,9 +1728,16 @@ fn subscription_role_check(
         let kind = json::str_at(a, "/properties/principalType").unwrap_or_default();
         let pid = json::text(a, "/properties/principalId").to_lowercase();
         let principal = lazy.and_then(|l| l.principals.get(&pid));
+        // The name Graph resolved, else a loaded service principal row's,
+        // else the object id.
         let display = match principal {
             Some(Lazy::Loaded(v)) => graph::object_display(v),
-            _ => pid.clone(),
+            _ => input
+                .of::<ServicePrincipalRow>(V::ServicePrincipals)
+                .find(|s| s.base.object_id.eq_ignore_ascii_case(&pid))
+                .map(|s| s.base.name.clone())
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| pid.clone()),
         };
         let (sev, who) = if kind.eq_ignore_ascii_case("ServicePrincipal") {
             (sp, "service principal")

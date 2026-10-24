@@ -228,8 +228,7 @@ pub fn render_network_lens(app: &crate::app::App, area: Rect, frame: &mut Frame)
     app.mouse.pane_rows.borrow_mut().record_rows(chunks[2], top, st.lines.len());
 
     // ── Footer ──
-    let mut spans = vec![Span::raw(" ")];
-    for (k, d) in [
+    let mut footer = theme::hint_line(&[
         ("j/k", "select"),
         ("⏎", "go to NSG"),
         ("t", "direction"),
@@ -238,10 +237,8 @@ pub fn render_network_lens(app: &crate::app::App, area: Rect, frame: &mut Frame)
         ("r", "refetch"),
         ("Z", "width"),
         ("Esc", "close"),
-    ] {
-        spans.extend(theme::hint(k, d));
-    }
-    let footer = Line::from(spans);
+    ]);
+    footer.spans.insert(0, Span::raw(" "));
     let c = chunks[3];
     crate::app::record_hint_regions(app, &footer, 1, c.x, c.y, c.x + c.width);
     frame.render_widget(Paragraph::new(footer), c);
