@@ -1,0 +1,56 @@
+{
+  "name": "pe-kv-orders",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders",
+  "etag": "W/\"ab173155-4b26-5e70-9769-349bd234cef9\"",
+  "type": "Microsoft.Network/privateEndpoints",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "ab11b677-cff1-5a64-8c15-0344e46a0c3c",
+    "privateLinkServiceConnections": [
+      {
+        "name": "pe-kv-orders",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders/privateLinkServiceConnections/pe-kv-orders",
+        "etag": "W/\"be0dfdae-4542-5874-9ef0-d6b255c52f49\"",
+        "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod",
+          "groupIds": [
+            "vault"
+          ],
+          "privateLinkServiceConnectionState": {
+            "status": "Approved",
+            "description": "Auto-Approved",
+            "actionsRequired": "None"
+          }
+        }
+      }
+    ],
+    "manualPrivateLinkServiceConnections": [],
+    "customNetworkInterfaceName": "",
+    "subnet": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+    },
+    "ipConfigurations": [],
+    "networkInterfaces": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259"
+      }
+    ],
+    "customDnsConfigs": [
+      {
+        "fqdn": "kv-orders-prod.vault.azure.net",
+        "ipAddresses": [
+          "10.10.5.4"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventHub/namespaces/evh-orders-prod/networkRuleSets/default",
+  "name": "default",
+  "type": "Microsoft.EventHub/Namespaces/NetworkRuleSets",
+  "location": "West Europe",
+  "properties": {
+    "publicNetworkAccess": "Enabled",
+    "defaultAction": "Deny",
+    "virtualNetworkRules": [
+      {
+        "subnet": { "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca" },
+        "ignoreMissingVnetServiceEndpoint": false
+      }
+    ],
+    "ipRules": [],
+    "trustedServiceAccessEnabled": true
+  }
+}

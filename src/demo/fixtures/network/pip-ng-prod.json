@@ -1,0 +1,37 @@
+{
+  "name": "pip-ng-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ng-prod",
+  "etag": "W/\"7487c2fa-ddbb-568a-9485-295162c382d0\"",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "zones": [
+    "1",
+    "2",
+    "3"
+  ],
+  "type": "Microsoft.Network/publicIPAddresses",
+  "sku": {
+    "name": "Standard",
+    "tier": "Regional"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "b107927a-04bb-5f48-a80d-d10a813d04ed",
+    "ipAddress": "20.103.45.11",
+    "publicIPAddressVersion": "IPv4",
+    "publicIPAllocationMethod": "Static",
+    "idleTimeoutInMinutes": 4,
+    "ipTags": [],
+    "ddosSettings": {
+      "protectionMode": "VirtualNetworkInherited"
+    },
+    "natGateway": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/natGateways/ng-prod"
+    }
+  }
+}

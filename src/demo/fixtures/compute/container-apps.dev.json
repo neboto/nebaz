@@ -1,0 +1,128 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.App/containerapps/ca-orders-api-dev",
+      "name": "ca-orders-api-dev",
+      "type": "Microsoft.App/containerApps",
+      "location": "West Europe",
+      "tags": {
+        "env": "dev",
+        "team": "orders",
+        "owner": "orders-team@contoso.com"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-180d}}",
+        "lastModifiedBy": "edc89266-a363-4046-9c6e-e0629dfedbad",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-6d}}"
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "0b4e2c9a-7d3f-4a1e-b6c8-2f5d9e1a3c74",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "runningStatus": "Running",
+        "managedEnvironmentId": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.App/managedEnvironments/cae-orders-dev",
+        "environmentId": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.App/managedEnvironments/cae-orders-dev",
+        "workloadProfileName": "Consumption",
+        "outboundIpAddresses": [
+          "51.105.164.17",
+          "51.105.164.18"
+        ],
+        "latestRevisionName": "ca-orders-api-dev--v232rc1",
+        "latestReadyRevisionName": "ca-orders-api-dev--v232rc1",
+        "latestRevisionFqdn": "ca-orders-api-dev--v232rc1.happyhill-4f2d8c1a.westeurope.azurecontainerapps.io",
+        "configuration": {
+          "secrets": [],
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "fqdn": "ca-orders-api-dev.happyhill-4f2d8c1a.westeurope.azurecontainerapps.io",
+            "external": true,
+            "targetPort": 8080,
+            "exposedPort": 0,
+            "transport": "Auto",
+            "traffic": [
+              {
+                "weight": 100,
+                "latestRevision": true
+              }
+            ],
+            "allowInsecure": false,
+            "clientCertificateMode": "Ignore"
+          },
+          "registries": [
+            {
+              "server": "acrcontosoprod.azurecr.io",
+              "username": "",
+              "passwordSecretRef": "",
+              "identity": "system"
+            }
+          ],
+          "maxInactiveRevisions": 20
+        },
+        "template": {
+          "revisionSuffix": "v232rc1",
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-api:2.32.0-rc.1",
+              "imageType": "ContainerImage",
+              "name": "orders-api",
+              "env": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Development"
+                }
+              ],
+              "resources": {
+                "cpu": 0.5,
+                "memory": "1Gi"
+              },
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/healthz/live",
+                    "port": 8080,
+                    "scheme": "HTTP"
+                  },
+                  "initialDelaySeconds": 5,
+                  "periodSeconds": 10,
+                  "failureThreshold": 3
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/healthz/ready",
+                    "port": 8080,
+                    "scheme": "HTTP"
+                  },
+                  "initialDelaySeconds": 3,
+                  "periodSeconds": 5,
+                  "failureThreshold": 3
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 2,
+            "rules": [
+              {
+                "name": "http-scaler",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "10"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

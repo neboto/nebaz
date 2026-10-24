@@ -1,0 +1,234 @@
+{
+  "value": [
+    {
+      "name": "pe-kv-orders",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders",
+      "etag": "W/\"ab173155-4b26-5e70-9769-349bd234cef9\"",
+      "type": "Microsoft.Network/privateEndpoints",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "ab11b677-cff1-5a64-8c15-0344e46a0c3c",
+        "privateLinkServiceConnections": [
+          {
+            "name": "pe-kv-orders",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders/privateLinkServiceConnections/pe-kv-orders",
+            "etag": "W/\"be0dfdae-4542-5874-9ef0-d6b255c52f49\"",
+            "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod",
+              "groupIds": [
+                "vault"
+              ],
+              "privateLinkServiceConnectionState": {
+                "status": "Approved",
+                "description": "Auto-Approved",
+                "actionsRequired": "None"
+              }
+            }
+          }
+        ],
+        "manualPrivateLinkServiceConnections": [],
+        "customNetworkInterfaceName": "",
+        "subnet": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+        },
+        "ipConfigurations": [],
+        "networkInterfaces": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259"
+          }
+        ],
+        "customDnsConfigs": [
+          {
+            "fqdn": "kv-orders-prod.vault.azure.net",
+            "ipAddresses": [
+              "10.10.5.4"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "pe-sql-orders",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders",
+      "etag": "W/\"4b26e966-f6c3-55e1-ba32-120d9af24e08\"",
+      "type": "Microsoft.Network/privateEndpoints",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "4cb5154d-2026-586c-a146-93dbe66aa0ba",
+        "privateLinkServiceConnections": [
+          {
+            "name": "pe-sql-orders",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders/privateLinkServiceConnections/pe-sql-orders",
+            "etag": "W/\"da97aecf-49f2-5991-8bdc-8025e5520c56\"",
+            "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod",
+              "groupIds": [
+                "sqlServer"
+              ],
+              "privateLinkServiceConnectionState": {
+                "status": "Approved",
+                "description": "Auto-Approved",
+                "actionsRequired": "None"
+              }
+            }
+          }
+        ],
+        "manualPrivateLinkServiceConnections": [],
+        "customNetworkInterfaceName": "",
+        "subnet": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+        },
+        "ipConfigurations": [],
+        "networkInterfaces": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924"
+          }
+        ],
+        "customDnsConfigs": [
+          {
+            "fqdn": "sql-orders-prod.database.windows.net",
+            "ipAddresses": [
+              "10.10.5.5"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "pe-st-orders-blob",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob",
+      "etag": "W/\"099eb746-3685-5404-b14e-57cc81538784\"",
+      "type": "Microsoft.Network/privateEndpoints",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "8c9598e8-5597-5fd5-b603-2dd020c1bc87",
+        "privateLinkServiceConnections": [
+          {
+            "name": "pe-st-orders-blob",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-st-orders-blob/privateLinkServiceConnections/pe-st-orders-blob",
+            "etag": "W/\"db8abb78-5aa2-52ab-8f4f-6d4a5ed49ce8\"",
+            "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+              "groupIds": [
+                "blob"
+              ],
+              "privateLinkServiceConnectionState": {
+                "status": "Approved",
+                "description": "Auto-Approved",
+                "actionsRequired": "None"
+              }
+            }
+          }
+        ],
+        "manualPrivateLinkServiceConnections": [],
+        "customNetworkInterfaceName": "",
+        "subnet": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+        },
+        "ipConfigurations": [],
+        "networkInterfaces": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694"
+          }
+        ],
+        "customDnsConfigs": [
+          {
+            "fqdn": "stcontosoordersprod.blob.core.windows.net",
+            "ipAddresses": [
+              "10.10.5.6"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "pe-acr-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod",
+      "etag": "W/\"4e3faa86-f1f5-54ee-af38-ea97c14ca405\"",
+      "type": "Microsoft.Network/privateEndpoints",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "54c01ceb-5dee-5637-b26e-5a10200a5c9a",
+        "privateLinkServiceConnections": [
+          {
+            "name": "pe-acr-prod",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod/privateLinkServiceConnections/pe-acr-prod",
+            "etag": "W/\"ae46b4b3-ac18-5a7a-ba7e-3b67e82ebbe8\"",
+            "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod",
+              "groupIds": [
+                "registry"
+              ],
+              "privateLinkServiceConnectionState": {
+                "status": "Approved",
+                "description": "Auto-Approved",
+                "actionsRequired": "None"
+              }
+            }
+          }
+        ],
+        "manualPrivateLinkServiceConnections": [],
+        "customNetworkInterfaceName": "",
+        "subnet": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+        },
+        "ipConfigurations": [],
+        "networkInterfaces": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-acr-prod.nic.30881801-ecc6-51c3-9baf-1721f2aec348"
+          }
+        ],
+        "customDnsConfigs": [
+          {
+            "fqdn": "acrcontosoprod.westeurope.data.azurecr.io",
+            "ipAddresses": [
+              "10.10.5.7"
+            ]
+          },
+          {
+            "fqdn": "acrcontosoprod.azurecr.io",
+            "ipAddresses": [
+              "10.10.5.8"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

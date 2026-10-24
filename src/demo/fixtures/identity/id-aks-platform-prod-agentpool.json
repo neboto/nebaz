@@ -1,0 +1,21 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/MC_rg-platform-prod_aks-platform-prod_westeurope/providers/Microsoft.ManagedIdentity/userAssignedIdentities/aks-platform-prod-agentpool",
+  "name": "aks-platform-prod-agentpool",
+  "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+  "location": "westeurope",
+  "tags": {},
+  "properties": {
+    "isolationScope": "None",
+    "tenantId": "{{tenant}}",
+    "principalId": "37ec34fc-62c5-4180-a17f-0cccd5ed2e95",
+    "clientId": "e12c192b-685e-4570-b8f9-758cef84d4d0"
+  },
+  "systemData": {
+    "createdBy": "6dae42f8-4368-4678-94ff-3960e28e3630",
+    "createdByType": "Application",
+    "createdAt": "{{iso:now-301d}}",
+    "lastModifiedBy": "6dae42f8-4368-4678-94ff-3960e28e3630",
+    "lastModifiedByType": "Application",
+    "lastModifiedAt": "{{iso:now-301d}}"
+  }
+}

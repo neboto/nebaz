@@ -1,0 +1,35 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/redisEnterprise/amr-orders-sessions",
+      "name": "amr-orders-sessions",
+      "type": "Microsoft.Cache/redisEnterprise",
+      "location": "West Europe",
+      "kind": "v2",
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com" },
+      "sku": { "name": "Balanced_B5" },
+      "zones": ["1", "2", "3"],
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api": {
+            "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+            "clientId": "a486b752-7257-42ba-bc16-23a4e0381f56"
+          }
+        }
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceState": "Running",
+        "hostName": "amr-orders-sessions.westeurope.redis.azure.net",
+        "redisVersion": "7.4",
+        "minimumTlsVersion": "1.2",
+        "highAvailability": "Enabled",
+        "redundancyMode": "ZR",
+        "publicNetworkAccess": "Enabled",
+        "encryption": {},
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

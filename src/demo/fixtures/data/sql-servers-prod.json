@@ -1,0 +1,42 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod",
+      "name": "sql-orders-prod",
+      "type": "Microsoft.Sql/servers",
+      "location": "westeurope",
+      "kind": "v12.0",
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com", "costCenter": "CC-4410" },
+      "properties": {
+        "administratorLogin": "ordersadmin",
+        "version": "12.0",
+        "state": "Ready",
+        "fullyQualifiedDomainName": "sql-orders-prod.database.windows.net",
+        "privateEndpointConnections": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod/privateEndpointConnections/pe-sql-orders-7d3a1f0c-2e4b-4c6d-8f9a-0b1c2d3e4f5a",
+            "properties": {
+              "privateEndpoint": { "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders" },
+              "groupIds": ["sqlServer"],
+              "privateLinkServiceConnectionState": { "status": "Approved", "description": "Auto-approved", "actionsRequired": "None" },
+              "provisioningState": "Ready"
+            }
+          }
+        ],
+        "minimalTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled",
+        "administrators": {
+          "administratorType": "ActiveDirectory",
+          "principalType": "Group",
+          "login": "Contoso Platform Admins",
+          "sid": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+          "tenantId": "{{tenant}}",
+          "azureADOnlyAuthentication": false
+        },
+        "restrictOutboundNetworkAccess": "Disabled",
+        "isIPv6Enabled": "Disabled",
+        "externalGovernanceStatus": "Disabled"
+      }
+    }
+  ]
+}

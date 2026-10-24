@@ -1,0 +1,36 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/securityPolicies/sp-wafpafdcontoso",
+      "type": "Microsoft.Cdn/profiles/securitypolicies",
+      "name": "sp-wafpafdcontoso",
+      "properties": {
+        "parameters": {
+          "type": "WebApplicationFirewall",
+          "wafPolicy": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/wafpafdcontoso"
+          },
+          "associations": [
+            {
+              "domains": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/customDomains/www-contoso-demo-com",
+                  "isActive": true
+                },
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/afdEndpoints/contoso-web",
+                  "isActive": true
+                }
+              ],
+              "patternsToMatch": [
+                "/*"
+              ]
+            }
+          ]
+        },
+        "provisioningState": "Succeeded",
+        "deploymentStatus": "Succeeded"
+      }
+    }
+  ]
+}

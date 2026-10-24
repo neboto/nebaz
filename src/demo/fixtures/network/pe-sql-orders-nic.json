@@ -1,0 +1,61 @@
+{
+  "name": "pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924",
+  "etag": "W/\"03a5b291-8180-57f2-855d-6b89ef3b430f\"",
+  "type": "Microsoft.Network/networkInterfaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "kind": "Regular",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "fa6650a7-0fc5-56f6-89e9-54f4bfc47b48",
+    "ipConfigurations": [
+      {
+        "name": "privateEndpointIpConfig.ac1a7b85-30ea-5e4a-85ad-40262b9c74e9",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924/ipConfigurations/privateEndpointIpConfig.ac1a7b85-30ea-5e4a-85ad-40262b9c74e9",
+        "etag": "W/\"f93a5d85-0000-507d-89d8-54778a42e0b6\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.5.5",
+          "privateIPAllocationMethod": "Dynamic",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+          },
+          "primary": true,
+          "privateIPAddressVersion": "IPv4",
+          "privateLinkConnectionProperties": {
+            "groupId": "sqlServer",
+            "requiredMemberName": "sqlServer",
+            "fqdns": [
+              "sql-orders-prod.database.windows.net"
+            ]
+          }
+        }
+      }
+    ],
+    "dnsSettings": {
+      "dnsServers": [],
+      "appliedDnsServers": [],
+      "internalDomainNameSuffix": "3f77f4e378cf5a938f8851.ax.internal.cloudapp.net"
+    },
+    "enableAcceleratedNetworking": false,
+    "vnetEncryptionSupported": false,
+    "enableIPForwarding": false,
+    "disableTcpStateTracking": false,
+    "hostedWorkloads": [],
+    "tapConfigurations": [],
+    "nicType": "Standard",
+    "allowPort25Out": false,
+    "auxiliaryMode": "None",
+    "auxiliarySku": "None",
+    "privateEndpoint": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders"
+    }
+  }
+}

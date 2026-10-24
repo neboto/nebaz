@@ -1,0 +1,144 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/NS/@",
+      "name": "@",
+      "type": "Microsoft.Network/dnszones/NS",
+      "etag": "34a9b9f7-9497-5a4d-a122-ed973263d22a",
+      "properties": {
+        "TTL": 172800,
+        "fqdn": "contoso-demo.com.",
+        "provisioningState": "Succeeded",
+        "metadata": {},
+        "NSRecords": [
+          {
+            "nsdname": "ns1-03.azure-dns.com."
+          },
+          {
+            "nsdname": "ns2-03.azure-dns.net."
+          },
+          {
+            "nsdname": "ns3-03.azure-dns.org."
+          },
+          {
+            "nsdname": "ns4-03.azure-dns.info."
+          }
+        ],
+        "targetResource": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/SOA/@",
+      "name": "@",
+      "type": "Microsoft.Network/dnszones/SOA",
+      "etag": "c3064f5b-8762-5baa-bbf5-fd0c2791cb0e",
+      "properties": {
+        "TTL": 3600,
+        "fqdn": "contoso-demo.com.",
+        "provisioningState": "Succeeded",
+        "metadata": {},
+        "SOARecord": {
+          "email": "azuredns-hostmaster.microsoft.com",
+          "expireTime": 2419200,
+          "host": "ns1-03.azure-dns.com.",
+          "minimumTTL": 300,
+          "refreshTime": 3600,
+          "retryTime": 300,
+          "serialNumber": 1
+        },
+        "targetResource": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/MX/@",
+      "name": "@",
+      "type": "Microsoft.Network/dnszones/MX",
+      "etag": "8d98419e-3a30-5662-92a1-bbc6cb57c90b",
+      "properties": {
+        "TTL": 3600,
+        "fqdn": "contoso-demo.com.",
+        "provisioningState": "Succeeded",
+        "metadata": {},
+        "MXRecords": [
+          {
+            "exchange": "contosodemo-com.mail.protection.outlook.com",
+            "preference": 0
+          }
+        ],
+        "targetResource": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/TXT/@",
+      "name": "@",
+      "type": "Microsoft.Network/dnszones/TXT",
+      "etag": "28899e5b-4374-51d8-90f7-4463851b6a4e",
+      "properties": {
+        "TTL": 3600,
+        "fqdn": "contoso-demo.com.",
+        "provisioningState": "Succeeded",
+        "metadata": {},
+        "TXTRecords": [
+          {
+            "value": [
+              "v=spf1 include:spf.protection.outlook.com -all"
+            ]
+          }
+        ],
+        "targetResource": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/A/api",
+      "name": "api",
+      "type": "Microsoft.Network/dnszones/A",
+      "etag": "cd65f22b-25f8-5abe-b27c-1eb44e0ee668",
+      "properties": {
+        "TTL": 3600,
+        "fqdn": "api.contoso-demo.com.",
+        "provisioningState": "Succeeded",
+        "metadata": {},
+        "ARecords": [],
+        "targetResource": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/CNAME/www",
+      "name": "www",
+      "type": "Microsoft.Network/dnszones/CNAME",
+      "etag": "39825418-5783-58cb-8778-6e4443d6d539",
+      "properties": {
+        "TTL": 3600,
+        "fqdn": "www.contoso-demo.com.",
+        "provisioningState": "Succeeded",
+        "metadata": {},
+        "CNAMERecord": {
+          "cname": "contoso-web-c7d9e2f4a1b3.z01.azurefd.net"
+        },
+        "targetResource": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnszones/contoso-demo.com/TXT/_dnsauth.www",
+      "name": "_dnsauth.www",
+      "type": "Microsoft.Network/dnszones/TXT",
+      "etag": "1cb4cda9-5147-5859-8751-155c88f2bdce",
+      "properties": {
+        "TTL": 3600,
+        "fqdn": "_dnsauth.www.contoso-demo.com.",
+        "provisioningState": "Succeeded",
+        "metadata": {},
+        "TXTRecords": [
+          {
+            "value": [
+              "_9k2m4x7q1w8e3r6t5y0u2i4o7p1a3s"
+            ]
+          }
+        ],
+        "targetResource": {}
+      }
+    }
+  ]
+}

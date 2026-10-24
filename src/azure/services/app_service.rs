@@ -93,7 +93,9 @@ pub struct SiteRow {
 
 impl SiteRow {
     pub fn from_json(v: &Value, tenant: Option<&str>) -> Option<SiteRow> {
-        let base = ArmBase::from_json(v, tenant)?;
+        let mut base = ArmBase::from_json(v, tenant)?;
+        // Microsoft.Web answers the display name ("West Europe").
+        base.location = base.location.replace(' ', "");
         let p = "/properties";
         Some(SiteRow {
             kind: json::str_at(v, "/kind").unwrap_or_default().to_lowercase(),
@@ -431,7 +433,9 @@ pub struct PlanRow {
 
 impl PlanRow {
     pub fn from_json(v: &Value, tenant: Option<&str>) -> Option<PlanRow> {
-        let base = ArmBase::from_json(v, tenant)?;
+        let mut base = ArmBase::from_json(v, tenant)?;
+        // Microsoft.Web answers the display name ("West Europe").
+        base.location = base.location.replace(' ', "");
         let p = "/properties";
         Some(PlanRow {
             kind: json::str_at(v, "/kind").unwrap_or_default().to_lowercase(),
@@ -666,6 +670,13 @@ mod tests {
             assert_eq!(labels[labels.len() - 2], "Related");
             assert_eq!(labels.last(), Some(&"Tags"));
         }
+    }
+
+    #[test]
+    fn display_name_locations_match_the_location_filter() {
+        let mut v = site_json("app", "Running");
+        v["location"] = "West Europe".into();
+        assert_eq!(SiteRow::from_json(&v, None).unwrap().base.location, "westeurope");
     }
 
     #[test]

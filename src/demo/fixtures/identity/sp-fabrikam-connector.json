@@ -1,0 +1,56 @@
+{
+  "@odata.type": "#microsoft.graph.servicePrincipal",
+  "id": "80303294-4904-46c2-87a0-d8cb283aa2a9",
+  "deletedDateTime": null,
+  "accountEnabled": true,
+  "alternativeNames": [],
+  "appDisplayName": "Fabrikam Orders Connector",
+  "appDescription": "Fabrikam's Power Platform connector for the Contoso orders API.",
+  "appId": "600d5263-b150-479c-ab05-60929b2edcbd",
+  "applicationTemplateId": null,
+  "appOwnerOrganizationId": "5b888731-5714-47aa-9f0a-d158b563fcb6",
+  "appRoleAssignmentRequired": true,
+  "createdDateTime": "{{iso:now-143d}}",
+  "description": null,
+  "disabledByMicrosoftStatus": null,
+  "displayName": "Fabrikam Orders Connector",
+  "homepage": "https://www.fabrikam.com/connectors/orders",
+  "loginUrl": null,
+  "logoutUrl": null,
+  "notes": null,
+  "notificationEmailAddresses": [],
+  "preferredSingleSignOnMode": null,
+  "preferredTokenSigningKeyThumbprint": null,
+  "replyUrls": [
+    "https://global.consent.azure-apim.net/redirect"
+  ],
+  "servicePrincipalNames": [
+    "600d5263-b150-479c-ab05-60929b2edcbd",
+    "https://fabrikam.com/orders-connector"
+  ],
+  "servicePrincipalType": "Application",
+  "signInAudience": "AzureADMultipleOrgs",
+  "tags": [
+    "WindowsAzureActiveDirectoryIntegratedApp"
+  ],
+  "tokenEncryptionKeyId": null,
+  "info": {
+    "logoUrl": null,
+    "marketingUrl": null,
+    "privacyStatementUrl": "https://www.fabrikam.com/privacy",
+    "supportUrl": "https://www.fabrikam.com/support",
+    "termsOfServiceUrl": "https://www.fabrikam.com/terms"
+  },
+  "samlSingleSignOnSettings": null,
+  "addIns": [],
+  "appRoles": [],
+  "keyCredentials": [],
+  "oauth2PermissionScopes": [],
+  "passwordCredentials": [],
+  "resourceSpecificApplicationPermissions": [],
+  "verifiedPublisher": {
+    "displayName": "Fabrikam, Inc.",
+    "verifiedPublisherId": "6340127",
+    "addedDateTime": "2024-05-14T09:12:41Z"
+  }
+}

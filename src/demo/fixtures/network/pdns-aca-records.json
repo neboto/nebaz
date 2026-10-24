@@ -1,0 +1,56 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/SOA/@",
+      "name": "@",
+      "type": "Microsoft.Network/privateDnsZones/SOA",
+      "etag": "161122b6-33a1-5413-8d64-8d31511294c9",
+      "properties": {
+        "fqdn": "wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io.",
+        "ttl": 3600,
+        "isAutoRegistered": false,
+        "soaRecord": {
+          "email": "azureprivatedns-host.microsoft.com",
+          "expireTime": 2419200,
+          "host": "azureprivatedns.net",
+          "minimumTtl": 10,
+          "refreshTime": 3600,
+          "retryTime": 300,
+          "serialNumber": 1
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/A/*",
+      "name": "*",
+      "type": "Microsoft.Network/privateDnsZones/A",
+      "etag": "3a021838-4a8a-5adc-a065-18dff19119fa",
+      "properties": {
+        "fqdn": "*.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io.",
+        "ttl": 3600,
+        "isAutoRegistered": false,
+        "aRecords": [
+          {
+            "ipv4Address": "10.10.0.62"
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/A/@",
+      "name": "@",
+      "type": "Microsoft.Network/privateDnsZones/A",
+      "etag": "1a1a3673-ea36-56f8-ab4e-c9146615dc9b",
+      "properties": {
+        "fqdn": "wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io.",
+        "ttl": 3600,
+        "isAutoRegistered": false,
+        "aRecords": [
+          {
+            "ipv4Address": "10.10.0.62"
+          }
+        ]
+      }
+    }
+  ]
+}

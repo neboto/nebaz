@@ -1,0 +1,37 @@
+{
+  "name": "snet-aca",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca",
+  "etag": "W/\"84587e78-ff07-5b29-a94c-18c596218560\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.0.0/23",
+    "delegations": [
+      {
+        "name": "Microsoft.App.environments",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca/delegations/Microsoft.App.environments",
+        "etag": "W/\"a4bffc28-b859-5963-a392-bec3be1d286c\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "serviceName": "Microsoft.App/environments",
+          "actions": [
+            "Microsoft.Network/virtualNetworks/subnets/join/action",
+            "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"
+          ]
+        }
+      }
+    ],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "networkSecurityGroup": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-aca"
+    },
+    "routeTable": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress"
+    },
+    "natGateway": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/natGateways/ng-prod"
+    }
+  }
+}

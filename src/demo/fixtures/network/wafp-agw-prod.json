@@ -1,0 +1,90 @@
+{
+  "name": "wafp-agw-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/wafp-agw-prod",
+  "etag": "W/\"fdea26d9-ee29-52a2-96b0-01c83fbfb40f\"",
+  "type": "Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceState": "Enabled",
+    "policySettings": {
+      "state": "Enabled",
+      "mode": "Detection",
+      "requestBodyCheck": true,
+      "requestBodyEnforcement": true,
+      "requestBodyInspectLimitInKB": 128,
+      "maxRequestBodySizeInKb": 128,
+      "fileUploadEnforcement": true,
+      "fileUploadLimitInMb": 100,
+      "logScrubbing": {
+        "state": "Disabled",
+        "scrubbingRules": []
+      },
+      "jsChallengeCookieExpirationInMins": 30
+    },
+    "customRules": [
+      {
+        "name": "AllowCorpProbes",
+        "priority": 10,
+        "ruleType": "MatchRule",
+        "action": "Allow",
+        "state": "Enabled",
+        "matchConditions": [
+          {
+            "matchVariables": [
+              {
+                "variableName": "RemoteAddr"
+              }
+            ],
+            "operator": "IPMatch",
+            "negationConditon": false,
+            "matchValues": [
+              "192.168.0.0/16"
+            ],
+            "transforms": []
+          }
+        ],
+        "skippedManagedRuleSets": []
+      }
+    ],
+    "managedRules": {
+      "managedRuleSets": [
+        {
+          "ruleSetType": "Microsoft_DefaultRuleSet",
+          "ruleSetVersion": "2.1",
+          "ruleGroupOverrides": [
+            {
+              "ruleGroupName": "SQLI",
+              "rules": [
+                {
+                  "ruleId": "942440",
+                  "state": "Disabled",
+                  "action": "AnomalyScoring"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleSetType": "Microsoft_BotManagerRuleSet",
+          "ruleSetVersion": "1.1",
+          "ruleGroupOverrides": []
+        }
+      ],
+      "exclusions": []
+    },
+    "applicationGateways": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod"
+      }
+    ],
+    "httpListeners": [],
+    "pathBasedRules": []
+  }
+}

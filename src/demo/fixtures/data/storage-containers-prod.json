@@ -1,0 +1,59 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod/blobServices/default/containers/invoices",
+      "name": "invoices",
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "etag": "\"0x8DCF1A2B3C4D5E6\"",
+      "properties": {
+        "immutableStorageWithVersioning": { "enabled": false },
+        "deleted": false,
+        "remainingRetentionDays": 0,
+        "defaultEncryptionScope": "$account-encryption-key",
+        "denyEncryptionScopeOverride": false,
+        "publicAccess": "None",
+        "leaseStatus": "Unlocked",
+        "leaseState": "Available",
+        "lastModifiedTime": "{{iso:now-62d}}",
+        "hasImmutabilityPolicy": true,
+        "hasLegalHold": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod/blobServices/default/containers/order-exports",
+      "name": "order-exports",
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "etag": "\"0x8DCF1A2B3C4D5E7\"",
+      "properties": {
+        "deleted": false,
+        "remainingRetentionDays": 0,
+        "defaultEncryptionScope": "$account-encryption-key",
+        "denyEncryptionScopeOverride": false,
+        "publicAccess": "None",
+        "leaseStatus": "Unlocked",
+        "leaseState": "Available",
+        "lastModifiedTime": "{{iso:now-1d}}",
+        "hasImmutabilityPolicy": false,
+        "hasLegalHold": false
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod/blobServices/default/containers/product-images",
+      "name": "product-images",
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "etag": "\"0x8DCF1A2B3C4D5E8\"",
+      "properties": {
+        "deleted": false,
+        "remainingRetentionDays": 0,
+        "defaultEncryptionScope": "$account-encryption-key",
+        "denyEncryptionScopeOverride": false,
+        "publicAccess": "Blob",
+        "leaseStatus": "Unlocked",
+        "leaseState": "Available",
+        "lastModifiedTime": "{{iso:now-210d}}",
+        "hasImmutabilityPolicy": false,
+        "hasLegalHold": false
+      }
+    }
+  ]
+}

@@ -9,7 +9,9 @@
 //!    are built nowhere else; no HTTP client crate is a direct dependency.
 //! 2. No data-plane host string exists in non-test code under `src/` — Key
 //!    Vault values, blob bodies and model calls live behind those hosts,
-//!    never behind ARM. (Test fixtures may carry a `vaultUri`, as real ARM rows do.)
+//!    never behind ARM. (Test fixtures may carry a `vaultUri`, as real ARM rows do,
+//!    and the demo's fixture tables under `src/demo/fixtures/` may name a
+//!    resource such as the `privatelink.azurecr.io` private DNS zone.)
 //!    Microsoft Graph (ADR 0004) is allowed in `src/azure/graph.rs` only;
 //!    `getByIds` (a `POST`) and the secret-returning calls are forbidden
 //!    everywhere, and the Graph module never names a certificate's `key`.
@@ -462,7 +464,17 @@ fn no_data_plane_host_is_named_anywhere() {
     let mut problems = Vec::new();
     for path in rust_sources() {
         let file = fs::read_to_string(&path).unwrap();
-        problems.extend(host_problems(&rel(&path), &file));
+        let rel_path = rel(&path);
+        let found = host_problems(&rel_path, &file);
+        // The demo's fixture tables name ARM resources whose names are
+        // data-plane suffixes (a `privatelink.azurecr.io` private DNS zone):
+        // request-path patterns the canned transport matches (rule 6), never
+        // a host anything connects to. The Graph host rule still applies.
+        if rel_path.starts_with(DEMO_FIXTURES_DIR) {
+            problems.extend(found.into_iter().filter(|p| !p.contains("data-plane host")));
+        } else {
+            problems.extend(found);
+        }
     }
     assert!(
         problems.is_empty(),
@@ -792,6 +804,8 @@ fn the_non_azure_rules_catch_what_they_should() {
 }
 
 const DEMO_TRANSPORT_FILE: &str = "src/demo/mod.rs";
+/// The demo's fixture tables: request-path patterns, never hosts.
+const DEMO_FIXTURES_DIR: &str = "src/demo/fixtures/";
 /// What a canned transport has no business naming.
 const DEMO_FORBIDDEN: &[&str] = &[
     "std::net",

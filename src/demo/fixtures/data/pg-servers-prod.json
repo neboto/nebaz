@@ -1,0 +1,40 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod",
+      "name": "psql-orders-prod",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "location": "West Europe",
+      "tags": { "env": "prod", "team": "orders", "owner": "alex.kim@contoso.com", "costCenter": "CC-4410" },
+      "sku": { "name": "Standard_D4ds_v5", "tier": "GeneralPurpose" },
+      "systemData": { "createdAt": "2025-02-03T11:26:40.1880000Z" },
+      "properties": {
+        "replica": { "role": "Primary", "capacity": 5 },
+        "storage": { "iops": 500, "tier": "P10", "storageSizeGB": 128, "autoGrow": "Enabled", "type": "" },
+        "network": {
+          "publicNetworkAccess": "Disabled",
+          "delegatedSubnetResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-data",
+          "privateDnsZoneArmResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com"
+        },
+        "dataEncryption": { "type": "SystemManaged" },
+        "authConfig": { "activeDirectoryAuth": "Enabled", "passwordAuth": "Disabled", "tenantId": "{{tenant}}" },
+        "fullyQualifiedDomainName": "psql-orders-prod.postgres.database.azure.com",
+        "version": "16",
+        "minorVersion": "8",
+        "administratorLogin": "ordersadmin",
+        "state": "Ready",
+        "availabilityZone": "1",
+        "backup": {
+          "backupRetentionDays": 14,
+          "geoRedundantBackup": "Enabled",
+          "earliestRestoreDate": "{{iso:now-14d}}"
+        },
+        "highAvailability": { "mode": "ZoneRedundant", "state": "Healthy", "standbyAvailabilityZone": "2" },
+        "maintenanceWindow": { "customWindow": "Enabled", "dayOfWeek": 0, "startHour": 2, "startMinute": 0 },
+        "replicationRole": "Primary",
+        "replicaCapacity": 5,
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

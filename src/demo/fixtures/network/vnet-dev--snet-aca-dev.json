@@ -1,0 +1,31 @@
+{
+  "name": "snet-aca-dev",
+  "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-aca-dev",
+  "etag": "W/\"303c7b60-f408-574b-9d9c-4a4cb6edebe9\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.30.0.0/23",
+    "delegations": [
+      {
+        "name": "Microsoft.App.environments",
+        "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev/subnets/snet-aca-dev/delegations/Microsoft.App.environments",
+        "etag": "W/\"656e0b9e-eda1-56a6-97fb-32becf23cb53\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "serviceName": "Microsoft.App/environments",
+          "actions": [
+            "Microsoft.Network/virtualNetworks/subnets/join/action",
+            "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"
+          ]
+        }
+      }
+    ],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "networkSecurityGroup": {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/networkSecurityGroups/nsg-aca-dev"
+    }
+  }
+}

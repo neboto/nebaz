@@ -1,0 +1,86 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+  "name": "cae-orders-prod",
+  "type": "Microsoft.App/managedEnvironments",
+  "location": "West Europe",
+  "tags": {
+    "env": "prod",
+    "team": "orders",
+    "owner": "orders-team@contoso.com",
+    "costCenter": "CC-3020"
+  },
+  "systemData": {
+    "createdBy": "alex.kim@contoso.com",
+    "createdByType": "User",
+    "createdAt": "{{iso:now-300d}}",
+    "lastModifiedBy": "alex.kim@contoso.com",
+    "lastModifiedByType": "User",
+    "lastModifiedAt": "{{iso:now-12d}}"
+  },
+  "kind": null,
+  "properties": {
+    "provisioningState": "Succeeded",
+    "daprAIInstrumentationKey": null,
+    "daprAIConnectionString": null,
+    "vnetConfiguration": {
+      "internal": true,
+      "infrastructureSubnetId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca",
+      "dockerBridgeCidr": null,
+      "platformReservedCidr": null,
+      "platformReservedDnsIP": null
+    },
+    "defaultDomain": "wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+    "staticIp": "10.10.0.62",
+    "appLogsConfiguration": {
+      "destination": "log-analytics",
+      "logAnalyticsConfiguration": {
+        "customerId": "a5584474-4031-4fdf-9df6-93254d6c4c43",
+        "dynamicJsonColumns": false
+      }
+    },
+    "openTelemetryConfiguration": null,
+    "zoneRedundant": true,
+    "kedaConfiguration": {
+      "version": "2.17.2"
+    },
+    "daprConfiguration": {
+      "version": "1.13.6-msft.6"
+    },
+    "eventStreamEndpoint": "https://westeurope.azurecontainerapps.dev/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/managedEnvironments/cae-orders-prod/eventstream",
+    "customDomainConfiguration": {
+      "customDomainVerificationId": "8E2C5A7F1B4D9E3A6C0F2B5D8A1E4C7F9B3D6A0E2C5F8B1D4A7E0C3F6B9D2A5E",
+      "dnsSuffix": null,
+      "certificateKeyVaultProperties": null,
+      "subjectName": null,
+      "thumbprint": null,
+      "expirationDate": null
+    },
+    "workloadProfiles": [
+      {
+        "workloadProfileType": "Consumption",
+        "name": "Consumption",
+        "enableFips": false
+      },
+      {
+        "workloadProfileType": "D4",
+        "name": "D4",
+        "enableFips": false,
+        "minimumCount": 1,
+        "maximumCount": 3
+      }
+    ],
+    "infrastructureResourceGroup": "ME_cae-orders-prod_rg-orders-prod_westeurope",
+    "peerAuthentication": {
+      "mtls": {
+        "enabled": false
+      }
+    },
+    "peerTrafficConfiguration": {
+      "encryption": {
+        "enabled": true
+      }
+    },
+    "publicNetworkAccess": "Disabled",
+    "privateEndpointConnections": []
+  }
+}

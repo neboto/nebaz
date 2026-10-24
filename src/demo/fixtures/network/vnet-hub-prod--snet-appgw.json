@@ -1,0 +1,21 @@
+{
+  "name": "snet-appgw",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-appgw",
+  "etag": "W/\"c24ee212-20a9-51fe-83a1-78985e29d040\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.6.0/24",
+    "delegations": [],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "networkSecurityGroup": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-appgw-prod"
+    },
+    "ipConfigurations": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod/gatewayIPConfigurations/appGatewayIpConfig"
+      }
+    ]
+  }
+}

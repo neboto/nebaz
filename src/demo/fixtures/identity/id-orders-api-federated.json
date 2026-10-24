@@ -1,0 +1,24 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api/federatedIdentityCredentials/aks-orders-migrations",
+      "name": "aks-orders-migrations",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials",
+      "properties": {
+        "issuer": "https://westeurope.oic.prod-aks.azure.com/{{tenant}}/c538f35b-30ad-4740-ab3f-ccea45bc048a/",
+        "subject": "system:serviceaccount:orders:orders-migrations",
+        "audiences": [
+          "api://AzureADTokenExchange"
+        ]
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-96d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-96d}}"
+      }
+    }
+  ]
+}

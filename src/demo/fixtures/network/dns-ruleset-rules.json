@@ -1,0 +1,24 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsForwardingRulesets/dnsfrs-onprem/forwardingRules/corp-contoso-com",
+      "name": "corp-contoso-com",
+      "type": "Microsoft.Network/dnsForwardingRulesets/forwardingRules",
+      "etag": "\"ca41dea1-dcdf-5f1c-9ea9-558caeb2500e\"",
+      "properties": {
+        "domainName": "corp.contoso.com.",
+        "targetDnsServers": [
+          {
+            "ipAddress": "192.168.10.4",
+            "port": 53
+          }
+        ],
+        "metadata": {
+          "owner": "network-ops"
+        },
+        "forwardingRuleState": "Enabled",
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

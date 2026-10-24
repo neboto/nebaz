@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/virtualNetworkLinks/link-vnet-hub-prod",
+      "name": "link-vnet-hub-prod",
+      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+      "etag": "\"f132d44a-7b6b-5603-9a2c-f6635a38658a\"",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "registrationEnabled": false,
+        "resolutionPolicy": "Default",
+        "virtualNetwork": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+        },
+        "virtualNetworkLinkState": "Completed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net/virtualNetworkLinks/link-vnet-hub-prod",
+      "name": "link-vnet-hub-prod",
+      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+      "etag": "\"2774c945-2e39-5cd4-bf26-e7b65101fbbc\"",
+      "location": "global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "registrationEnabled": false,
+        "resolutionPolicy": "Default",
+        "virtualNetwork": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+        },
+        "virtualNetworkLinkState": "Completed"
+      }
+    }
+  ]
+}

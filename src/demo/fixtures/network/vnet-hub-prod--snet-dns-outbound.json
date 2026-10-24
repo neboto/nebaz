@@ -1,0 +1,28 @@
+{
+  "name": "snet-dns-outbound",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-dns-outbound",
+  "etag": "W/\"85f69ee0-1cd5-54af-96d3-5b5a2a32dd84\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.10.0/28",
+    "delegations": [
+      {
+        "name": "Microsoft.Network.dnsResolvers",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-dns-outbound/delegations/Microsoft.Network.dnsResolvers",
+        "etag": "W/\"697ef8c2-513f-5b26-ac1d-3ad2c2648ee3\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "serviceName": "Microsoft.Network/dnsResolvers",
+          "actions": [
+            "Microsoft.Network/virtualNetworks/subnets/join/action",
+            "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"
+          ]
+        }
+      }
+    ],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled"
+  }
+}

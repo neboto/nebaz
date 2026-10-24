@@ -1,0 +1,46 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod/agentPools/system",
+  "name": "system",
+  "type": "Microsoft.ContainerService/managedClusters/agentPools",
+  "properties": {
+    "count": 3,
+    "vmSize": "Standard_D4s_v5",
+    "osDiskSizeGB": 128,
+    "osDiskType": "Managed",
+    "kubeletDiskType": "OS",
+    "maxPods": 110,
+    "type": "VirtualMachineScaleSets",
+    "availabilityZones": [
+      "1",
+      "2",
+      "3"
+    ],
+    "enableAutoScaling": false,
+    "scaleDownMode": "Delete",
+    "provisioningState": "Succeeded",
+    "powerState": {
+      "code": "Running"
+    },
+    "orchestratorVersion": "1.28.9",
+    "currentOrchestratorVersion": "1.28.9",
+    "enableNodePublicIP": false,
+    "nodeLabels": {
+      "pool": "system"
+    },
+    "mode": "System",
+    "osType": "Linux",
+    "osSKU": "Ubuntu",
+    "nodeImageVersion": "AKSUbuntu-2204gen2containerd-202407.29.0",
+    "upgradeSettings": {
+      "maxSurge": "10%"
+    },
+    "enableFIPS": false,
+    "securityProfile": {
+      "enableVTPM": false,
+      "enableSecureBoot": false
+    },
+    "nodeTaints": [
+      "CriticalAddonsOnly=true:NoSchedule"
+    ]
+  }
+}

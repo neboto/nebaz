@@ -1,0 +1,21 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.App/containerapps/ca-orders-api-dev/revisions/ca-orders-api-dev--v232rc1",
+      "name": "ca-orders-api-dev--v232rc1",
+      "type": "Microsoft.App/containerApps/revisions",
+      "properties": {
+        "createdTime": "{{iso:now-6d}}",
+        "lastActiveTime": "{{iso:now-2h}}",
+        "fqdn": "ca-orders-api-dev--v232rc1.happyhill-4f2d8c1a.westeurope.azurecontainerapps.io",
+        "template": null,
+        "active": true,
+        "replicas": 0,
+        "trafficWeight": 100,
+        "healthState": "Healthy",
+        "provisioningState": "Provisioned",
+        "runningState": "ScaledToZero"
+      }
+    }
+  ]
+}

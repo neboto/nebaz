@@ -1,0 +1,175 @@
+{
+  "value": [
+    {
+      "name": "vm-jump-01",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "alex.kim@contoso.com",
+        "purpose": "bastion"
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "6a0f3e1c-9b52-4d7e-8c34-1f2e5d6a7b80",
+        "tenantId": "{{tenant}}"
+      },
+      "zones": [
+        "1"
+      ],
+      "properties": {
+        "vmId": "f97dc33f-b6ee-48ce-8ec9-13c05b1e1b48",
+        "hardwareProfile": {
+          "vmSize": "Standard_B2s"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-jammy",
+            "sku": "22_04-lts-gen2",
+            "version": "latest",
+            "exactVersion": "22.04.202409260"
+          },
+          "osDisk": {
+            "osType": "Linux",
+            "name": "vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS",
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68"
+            },
+            "deleteOption": "Delete",
+            "diskSizeGB": 30
+          },
+          "dataDisks": [],
+          "diskControllerType": "SCSI"
+        },
+        "osProfile": {
+          "computerName": "vm-jump-01",
+          "adminUsername": "azureuser",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "provisionVMAgent": true,
+            "patchSettings": {
+              "patchMode": "ImageDefault",
+              "assessmentMode": "ImageDefault"
+            }
+          },
+          "secrets": [],
+          "allowExtensionOperations": true,
+          "requireGuestProvisionSignal": true
+        },
+        "securityProfile": {
+          "uefiSettings": {
+            "secureBootEnabled": true,
+            "vTpmEnabled": true
+          },
+          "securityType": "TrustedLaunch"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-jump-01",
+              "properties": {
+                "primary": true,
+                "deleteOption": "Detach"
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true
+          }
+        },
+        "priority": "Regular",
+        "provisioningState": "Succeeded",
+        "timeCreated": "{{iso:now-212d}}"
+      },
+      "resources": [
+        {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/extensions/AzureMonitorLinuxAgent"
+        }
+      ]
+    },
+    {
+      "name": "vm-legacy-app-01",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-ops@contoso.com",
+        "costCenter": "CC-4410",
+        "decommission": "pending"
+      },
+      "properties": {
+        "vmId": "8c59713d-cfba-4f66-9668-b140a31d295f",
+        "hardwareProfile": {
+          "vmSize": "Standard_D4s_v3"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter",
+            "version": "latest",
+            "exactVersion": "17763.6532.241101"
+          },
+          "osDisk": {
+            "osType": "Windows",
+            "name": "vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS",
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13"
+            },
+            "deleteOption": "Detach",
+            "diskSizeGB": 127
+          },
+          "dataDisks": [],
+          "diskControllerType": "SCSI"
+        },
+        "osProfile": {
+          "computerName": "LEGACYAPP01",
+          "adminUsername": "contosoadmin",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true,
+            "patchSettings": {
+              "patchMode": "AutomaticByOS",
+              "assessmentMode": "ImageDefault"
+            }
+          },
+          "secrets": [],
+          "allowExtensionOperations": true,
+          "requireGuestProvisionSignal": true
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-app-01",
+              "properties": {
+                "primary": true
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true
+          }
+        },
+        "licenseType": "Windows_Server",
+        "priority": "Regular",
+        "provisioningState": "Succeeded",
+        "timeCreated": "{{iso:now-1460d}}"
+      }
+    }
+  ]
+}

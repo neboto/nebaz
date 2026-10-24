@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/administrators/e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+      "name": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/administrators",
+      "properties": {
+        "principalType": "Group",
+        "principalName": "Contoso Platform Admins",
+        "objectId": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+        "tenantId": "{{tenant}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod/administrators/535edf48-335f-4761-b6ed-e0613ed690b3",
+      "name": "535edf48-335f-4761-b6ed-e0613ed690b3",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/administrators",
+      "properties": {
+        "principalType": "ServicePrincipal",
+        "principalName": "id-orders-api",
+        "objectId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+        "tenantId": "{{tenant}}"
+      }
+    }
+  ]
+}

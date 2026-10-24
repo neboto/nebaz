@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolverPolicies/dnssp-hub-prod/virtualNetworkLinks/link-vnet-hub-prod",
+      "name": "link-vnet-hub-prod",
+      "type": "Microsoft.Network/dnsResolverPolicies/virtualNetworkLinks",
+      "etag": "\"62d2cbda-51d8-5d61-8dce-3e88c9ca1bb0\"",
+      "properties": {
+        "virtualNetwork": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+        },
+        "metadata": {},
+        "provisioningState": "Succeeded"
+      },
+      "location": "westeurope",
+      "tags": {}
+    }
+  ]
+}

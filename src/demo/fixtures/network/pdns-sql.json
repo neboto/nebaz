@@ -1,0 +1,23 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net",
+  "name": "privatelink.database.windows.net",
+  "type": "Microsoft.Network/privateDnsZones",
+  "etag": "d0744421-13eb-5c0c-ae06-004f740421c5",
+  "location": "global",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "internalId": "bc02f83f-8edb-525a-99b6-f8b69eb3a640",
+    "maxNumberOfRecordSets": 25000,
+    "numberOfRecordSets": 2,
+    "maxNumberOfVirtualNetworkLinks": 1000,
+    "numberOfVirtualNetworkLinks": 1,
+    "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+    "numberOfVirtualNetworkLinksWithRegistration": 0
+  }
+}

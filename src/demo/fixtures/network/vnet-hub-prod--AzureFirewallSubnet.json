@@ -1,0 +1,13 @@
+{
+  "name": "AzureFirewallSubnet",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureFirewallSubnet",
+  "etag": "W/\"f144f56b-84d9-5000-b9fd-ab5d5eccc27e\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.9.0/26",
+    "delegations": [],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled"
+  }
+}

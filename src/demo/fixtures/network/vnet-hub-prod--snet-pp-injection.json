@@ -1,0 +1,30 @@
+{
+  "name": "snet-pp-injection",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pp-injection",
+  "etag": "W/\"6812883c-1908-57a2-82e2-ca93e79a78a8\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.4.0/24",
+    "delegations": [
+      {
+        "name": "Microsoft.PowerPlatform.enterprisePolicies",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pp-injection/delegations/Microsoft.PowerPlatform.enterprisePolicies",
+        "etag": "W/\"a60d901c-ed8b-5c87-8401-e1d182ef78c0\"",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "serviceName": "Microsoft.PowerPlatform/enterprisePolicies",
+          "actions": [
+            "Microsoft.Network/virtualNetworks/subnets/join/action"
+          ]
+        }
+      }
+    ],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "networkSecurityGroup": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-pp-injection"
+    }
+  }
+}

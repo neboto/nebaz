@@ -15,18 +15,10 @@ fn demo_cli(args: &[&str]) -> Cli {
 
 /// Sub-tabs (by `ls` prefix) the demo has no rows for yet.
 const EMPTY_YET: &[&str] = &[
-    "vm", "disk", "nic", "storage", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe",
-    "dns", "dnsz", "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "id", "sp", "appreg", "aks", "pool", "acr",
-    "app", "func", "plan", "sql", "cosmos", "pg", "mysql", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
-    "acajob", "redis", "amr", "sb", "eh",
 ];
 
 /// Sub-tabs whose demo rows still open with a `⚠` line somewhere.
 const WARNS_YET: &[&str] = &[
-    "vm", "disk", "nic", "storage", "vnet", "subnet", "nsg", "pip", "lb", "rt", "nat", "pe",
-    "dns", "dnsz", "dnsr", "dnsfr", "dnsp", "agw", "afd", "waf", "kv", "id", "sp", "appreg", "aks", "pool", "acr",
-    "app", "func", "plan", "sql", "cosmos", "pg", "mysql", "foundry", "monitor", "appi", "pp", "aca", "acaenv",
-    "acajob", "redis", "amr", "sb", "eh",
 ];
 
 /// `⚠` lines that are planted findings (`docs/DEMO.md`), not missing
@@ -35,7 +27,12 @@ const WARNS_YET: &[&str] = &[
 const PLANTED: &[(&str, &str)] = &[
     ("/registries/acrcontosoprod", "a shared username and password"),
     ("/containerApps/ca-orders-worker", "ca-orders-worker--v119"),
+    ("/containerApps/ca-orders-worker", "MANIFEST_UNKNOWN"),
     ("/flexibleServers/mysql-reporting-legacy", "require_secure_transport"),
+    ("/flexibleServers/mysql-reporting-legacy", "allows every Azure service"),
+    // All resources lists SQL databases, as ARM does; nebaz browses them
+    // only as a section of their server, so `get` refuses the bare id.
+    ("/providers/Microsoft.Sql/servers/sql-orders-prod/databases/", "not a type nebaz lists"),
     ("/Redis/redis-orders-cache", "6379"),
     ("/namespaces/sb-orders-prod", "dead"),
     // core: failed operations in the Activity sections of contoso-prod (the
@@ -56,6 +53,36 @@ fn planted(id: &str, line: &str) -> bool {
 const AUDIT_EXPECTED: &[&str] = &[
     // core: github-actions-deploy holds User Access Administrator on the subscription.
     "sub-privileged-guest-or-sp",
+    // compute
+    "aks-public-api",
+    "aks-local-accounts",
+    "acr-admin-user",
+    "app-https-only",
+    "app-min-tls",
+    "app-ftps",
+    // data
+    "storage-blob-public-access",
+    "storage-min-tls",
+    "storage-public-network",
+    "storage-shared-key",
+    "kv-public-network",
+    "kv-purge-protection",
+    "sql-firewall-open",
+    "sql-public-network",
+    "cosmos-local-auth",
+    "cosmos-public-network",
+    "redis-non-ssl-port",
+    "mysql-insecure-transport",
+    "mysql-public-network",
+    "mysql-firewall-open",
+    "mysql-password-no-entra",
+    "sb-local-auth",
+    "sb-public-network",
+    // identity
+    "appreg-credential-expiry",
+    // network
+    "nsg-open-internet",
+    "subnet-pp-no-nsg",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).
@@ -115,6 +142,7 @@ async fn every_demo_row_opens_without_a_warning() {
                 Ok(out) => lines.extend(
                     out.lines().filter(|l| l.contains('⚠') && !planted(id, l)).map(|l| format!("{id}: {l}")),
                 ),
+                Err(f) if planted(id, f.message()) => {}
                 Err(f) => lines.push(format!("{id}: get failed: {}", f.message())),
             }
         }
@@ -142,4 +170,56 @@ async fn the_demo_audit_finds_every_planted_check() {
     let found: Vec<&str> = v["findings"].as_array().into_iter().flatten().filter_map(|f| f["check"].as_str()).collect();
     let missing: Vec<&&str> = AUDIT_EXPECTED.iter().filter(|c| !found.contains(c)).collect();
     assert!(missing.is_empty(), "the demo audit no longer finds {missing:?} (found {found:?})");
+}
+
+/// The `N` lens on the story's two NSG findings, from the demo fixtures
+/// alone (nothing warm, so every subnet, NIC and NSG is a GET): Power
+/// Platform's subnet meets `DenyAllOutbound` 4000, which shadows the
+/// default VNet allow, and the jump box's NIC is open to SSH from the
+/// internet through its subnet's NSG.
+#[tokio::test]
+async fn the_network_lens_finds_the_story_in_the_demo() {
+    use crate::azure::nsg_eval::{build_lines, resolve, Dir, Known, RuleView, Seed};
+    let fetch = |path: String| async move {
+        let r = crate::demo::respond(&path, "api-version=2025-09-01", 0);
+        match r.status {
+            200 => serde_json::from_str::<Value>(&r.body).map_err(|e| e.to_string()),
+            s => Err(format!("{s} {}", r.body)),
+        }
+    };
+    let rg = |name: &str| format!("/subscriptions/{}/resourceGroups/{name}/providers/Microsoft.Network", crate::demo::PROD);
+    let rule = |views: &[RuleView], name: &str| views.iter().find(|r| r.name == name).cloned();
+
+    let subnet = format!("{}/virtualNetworks/vnet-hub-prod/subnets/snet-pp-injection", rg("rg-network-prod"));
+    let r = resolve(Seed { subnets: vec![subnet], ..Default::default() }, Known::default(), fetch).await;
+    assert!(r.warnings.is_empty(), "{:?}", r.warnings);
+    let views: Vec<RuleView> = build_lines(&r, &[Dir::Outbound]).into_iter().filter_map(|l| l.rule).collect();
+    let deny = rule(&views, "DenyAllOutbound").expect("the lockdown rule");
+    assert!(!deny.allow && deny.priority == "4000" && deny.nsg_name == "nsg-pp-injection", "{deny:?}");
+    let vnet = rule(&views, "AllowVnetOutBound").expect("the default rule");
+    assert_eq!(vnet.shadowed_by.as_deref(), Some("4000 DenyAllOutbound"));
+
+    let nic = format!("{}/networkInterfaces/nic-vm-jump-01", rg("rg-legacy-prod"));
+    let r = resolve(Seed { nics: vec![nic], ..Default::default() }, Known::default(), fetch).await;
+    assert!(r.warnings.is_empty(), "{:?}", r.warnings);
+    let views: Vec<RuleView> = build_lines(&r, &[Dir::Inbound]).into_iter().filter_map(|l| l.rule).collect();
+    let ssh = rule(&views, "AllowSSHInbound").expect("the vendor's SSH rule");
+    assert!(ssh.allow && ssh.open_to_internet && ssh.nsg_name == "nsg-jump-prod", "{ssh:?}");
+}
+
+/// The demo's `appi-orders` carries an instrumentation key and connection
+/// string, as a real ARM `GET` does; the row (and so the `e` view) must not.
+#[test]
+fn demo_app_insights_credentials_are_stripped() {
+    use crate::azure::resource::Resource;
+    use crate::azure::services::monitor::ComponentRow;
+    let path = format!(
+        "/subscriptions/{}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders",
+        crate::demo::PROD
+    );
+    let reply = crate::demo::respond(&path, "api-version=2020-02-02", 1_790_000_000);
+    assert!(reply.body.contains("InstrumentationKey") && reply.body.contains("ConnectionString"), "the fixture keeps them");
+    let v: Value = serde_json::from_str(&reply.body).expect("JSON");
+    let raw = ComponentRow::from_json(&v, None).expect("parses").raw_content().unwrap_or_default();
+    assert!(!raw.contains("InstrumentationKey") && !raw.contains("ConnectionString"), "{raw}");
 }

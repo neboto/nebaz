@@ -1,0 +1,22 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/redisEnterprise/amr-orders-sessions/databases/default",
+      "name": "default",
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceState": "Running",
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "clusteringPolicy": "OSSCluster",
+        "evictionPolicy": "VolatileLRU",
+        "persistence": { "aofEnabled": false, "rdbEnabled": true, "rdbFrequency": "6h" },
+        "modules": [],
+        "redisVersion": "7.4",
+        "deferUpgrade": "NotDeferred",
+        "accessKeysAuthentication": "Disabled"
+      }
+    }
+  ]
+}

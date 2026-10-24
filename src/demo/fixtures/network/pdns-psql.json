@@ -1,0 +1,23 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/psql-orders-prod.private.postgres.database.azure.com",
+  "name": "psql-orders-prod.private.postgres.database.azure.com",
+  "type": "Microsoft.Network/privateDnsZones",
+  "etag": "a691487d-cbf2-510e-8ecd-f68051c3bc7e",
+  "location": "global",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "internalId": "a705ae40-6e2e-58bc-af85-21f482111549",
+    "maxNumberOfRecordSets": 25000,
+    "numberOfRecordSets": 2,
+    "maxNumberOfVirtualNetworkLinks": 1000,
+    "numberOfVirtualNetworkLinks": 1,
+    "maxNumberOfVirtualNetworkLinksWithRegistration": 100,
+    "numberOfVirtualNetworkLinksWithRegistration": 0
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "pe-sql-orders",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders",
+  "etag": "W/\"4b26e966-f6c3-55e1-ba32-120d9af24e08\"",
+  "type": "Microsoft.Network/privateEndpoints",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "4cb5154d-2026-586c-a146-93dbe66aa0ba",
+    "privateLinkServiceConnections": [
+      {
+        "name": "pe-sql-orders",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-sql-orders/privateLinkServiceConnections/pe-sql-orders",
+        "etag": "W/\"da97aecf-49f2-5991-8bdc-8025e5520c56\"",
+        "type": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateLinkServiceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod",
+          "groupIds": [
+            "sqlServer"
+          ],
+          "privateLinkServiceConnectionState": {
+            "status": "Approved",
+            "description": "Auto-Approved",
+            "actionsRequired": "None"
+          }
+        }
+      }
+    ],
+    "manualPrivateLinkServiceConnections": [],
+    "customNetworkInterfaceName": "",
+    "subnet": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pe"
+    },
+    "ipConfigurations": [],
+    "networkInterfaces": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924"
+      }
+    ],
+    "customDnsConfigs": [
+      {
+        "fqdn": "sql-orders-prod.database.windows.net",
+        "ipAddresses": [
+          "10.10.5.5"
+        ]
+      }
+    ]
+  }
+}
