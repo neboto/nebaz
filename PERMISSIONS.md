@@ -185,6 +185,14 @@ each one backs are in the catalog table
   Firewall sections: `Microsoft.Sql/servers/databases/read`,
   `Microsoft.Sql/servers/firewallRules/read`. Metadata only: nebaz never
   connects to a database (the server endpoints are on the guard's list).
+- **Redis**: `Microsoft.Cache/redis/read` (Azure Cache for Redis),
+  `Microsoft.Cache/redisEnterprise/read` (Managed Redis); the lazy
+  sections: `Microsoft.Cache/redis/firewallRules/read`,
+  `Microsoft.Cache/redis/linkedServers/read`,
+  `Microsoft.Cache/redisEnterprise/databases/read`. Access keys are the
+  `listKeys` `POST` on both types, never sent (`az redis list-keys` and
+  `az redisenterprise database list-keys` are named forbidden); the
+  caches' own hosts are on the guard's list.
 - **Cosmos DB**: `Microsoft.DocumentDB/databaseAccounts/read`; the lazy
   Databases section, one of (the account's API picks):
   `Microsoft.DocumentDB/databaseAccounts/sqlDatabases/read`,

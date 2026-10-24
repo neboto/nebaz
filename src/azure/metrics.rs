@@ -251,6 +251,23 @@ const COGNITIVE: &[MetricSpec] = &[
     m("Latency", "Latency", Avg),
 ];
 
+/// Azure Cache for Redis: the `all…` names aggregate every shard, so a
+/// clustered cache reads as one.
+const REDIS_CACHE: &[MetricSpec] = &[
+    m("allserverLoad", "Server load", Max),
+    m("allusedmemorypercentage", "Memory used", Max),
+    m("allconnectedclients", "Connected clients", Max),
+    m("allcachehits", "Cache hits", Total),
+    m("allcachemisses", "Cache misses", Total),
+];
+const MANAGED_REDIS: &[MetricSpec] = &[
+    m("serverLoad", "Server load", Max),
+    m("usedmemorypercentage", "Memory used", Max),
+    m("connectedclients", "Connected clients", Max),
+    m("operationsPerSecond", "Operations/s", Max),
+    m("cachemisses", "Cache misses/s", Avg),
+];
+
 /// The default set for an ARM id, by its provider and type chain; empty
 /// for a type with none (the `a` picker still lists what it has).
 pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
@@ -274,6 +291,8 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.containerregistry", ["registries"]) => REGISTRY,
         ("microsoft.insights", ["components"]) => APP_INSIGHTS,
         ("microsoft.cognitiveservices", ["accounts"]) => COGNITIVE,
+        ("microsoft.cache", ["redis"]) => REDIS_CACHE,
+        ("microsoft.cache", ["redisenterprise"]) => MANAGED_REDIS,
         _ => &[],
     }
 }
@@ -703,12 +722,14 @@ pub(crate) mod tests {
         assert!(names(&p("Microsoft.Sql/servers/s/databases/orders")).contains(&"cpu_percent"));
         assert!(names(&p("microsoft.insights/components/ai")).contains(&"requests/failed"));
         assert!(names(&p("Microsoft.Web/sites/app/slots/staging")).contains(&"Http5xx"));
+        assert!(names(&p("Microsoft.Cache/Redis/r")).contains(&"allserverLoad"));
+        assert!(names(&p("Microsoft.Cache/redisEnterprise/amr")).contains(&"usedmemorypercentage"));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));
         assert!(is_arm_resource(&p("Microsoft.Network/virtualNetworks/v")));
         assert!(!is_arm_resource("/subscriptions/0000"));
-        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP] {
+        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS] {
             assert!((2..=6).contains(&set.len()));
         }
     }

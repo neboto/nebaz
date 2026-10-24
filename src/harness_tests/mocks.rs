@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
-    keyvault, monitor, network, network_dns, network_edge, network_private, power_platform, sql, storage, subscriptions,
+    keyvault, monitor, network, network_dns, network_edge, network_private, power_platform, redis, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -506,6 +506,57 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "configuration": {"triggerType": "Schedule", "replicaTimeout": 600,
                                 "scheduleTriggerConfig": {"cronExpression": "0 2 * * *", "parallelism": 1}},
                             "template": {"containers": [{"name": "run", "image": "example/job:1"}]}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::RedisCaches,
+            "RedisCacheRow",
+            parse(
+                "RedisCacheRow",
+                redis::RedisCacheRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Cache/Redis/redis-1"),
+                        "name": "redis-1",
+                        "location": "East US",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "sku": {"name": "Premium", "family": "P", "capacity": 1},
+                            "enableNonSslPort": false,
+                            "minimumTlsVersion": "1.2",
+                            "publicNetworkAccess": "Disabled",
+                            "accessKeys": {"primaryKey": "mock-redis-key"},
+                            "redisConfiguration": {"aad-enabled": "true",
+                                "rdb-storage-connection-string": "AccountKey=mock-redis-key"},
+                            "privateEndpointConnections": [{"properties": {
+                                "privateEndpoint": {"id": arm_id("Microsoft.Network/privateEndpoints/pe-redis")},
+                                "privateLinkServiceConnectionState": {"status": "Approved"}}}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ManagedRedis,
+            "ManagedRedisRow",
+            parse(
+                "ManagedRedisRow",
+                redis::ManagedRedisRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Cache/redisEnterprise/amr-1"),
+                        "name": "amr-1",
+                        "location": "East US",
+                        "sku": {"name": "Balanced_B1"},
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "resourceState": "Running",
+                            "highAvailability": "Enabled",
+                            "publicNetworkAccess": "Disabled",
+                            "minimumTlsVersion": "1.2"
                         }
                     }),
                     t,

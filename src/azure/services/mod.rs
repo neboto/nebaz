@@ -25,6 +25,7 @@ pub mod network_dns;
 pub mod network_edge;
 pub mod network_private;
 pub mod power_platform;
+pub mod redis;
 pub mod sql;
 pub mod storage;
 pub mod subscriptions;
@@ -80,7 +81,18 @@ pub fn overview_rows(r: &dyn Resource) -> Vec<(String, String)> {
 
 /// The Related body: the row's labelled ARM ids, Enter jumps.
 pub fn related_rows(r: &dyn Resource) -> Vec<(String, String)> {
+    related_rows_with(r, Vec::new())
+}
+
+/// [`related_rows`] plus links a lazy fetch found (a cache's linked
+/// geo-replicas), deduplicated by id, before the managed-by line.
+pub fn related_rows_with(r: &dyn Resource, extra: Vec<(String, String)>) -> Vec<(String, String)> {
     let mut lines = r.related();
+    for (label, id) in extra {
+        if !lines.iter().any(|(_, existing)| existing.eq_ignore_ascii_case(&id)) {
+            lines.push((label, id));
+        }
+    }
     // ARM's `managedBy`, for every type that does not link it itself: the
     // ownership ribbon names it, this line is how `⏎` gets there.
     if let Some(m) = crate::azure::ownership::managed_by_of(r).filter(|m| m.starts_with("/subscriptions/")) {
