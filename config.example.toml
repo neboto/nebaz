@@ -56,6 +56,14 @@
 # continuation rows instead of clipped at the pane edge. `Ctrl-W` toggles it.
 # detail_wrap = true
 
+# The ownership ribbon on the detail pane's top border: owner-ish tags,
+# ARM's managedBy, IaC hints, and the deployment that last touched the
+# resource (one lazy read of its group's deployments when the pane is
+# focused). Tag keys are tried in order, case-insensitively; a trailing `:`
+# makes a key prefix. Setting the list replaces the default.
+# ownership_ribbon = true
+# ownership_tags = ["owner", "team", "CreatedBy", "cost-center", "azd-env-name", "hidden-link:"]
+
 # ── Caching ──────────────────────────────────────────────────────────────────
 
 # Base cache freshness in seconds (default 300). `r` invalidates and reloads

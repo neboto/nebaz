@@ -147,8 +147,21 @@ _Avoid_: inventory, Resource Graph (a POST query nebaz does not use)
 The detail section every type carries listing the ARM ids the row points at
 (its subscription and resource group first, then its own links); Enter on a
 line jumps to that resource. It is the app's only jump mechanism besides
-the network lens.
-_Avoid_: references, referenced-by (the reverse lens, not in the first release)
+the lenses.
+_Avoid_: references, referenced-by (the reverse lens, below)
+
+**Referenced-by lens**:
+The `U` view of the loaded rows whose Related links (or ARM-id tags) point
+at the selected resource: the Related section reversed, over the warm list
+caches only, with the cold lists named rather than fetched (`L` loads the
+likely ones).
+_Avoid_: dependencies (it only knows links some loaded row declares)
+
+**Ownership ribbon**:
+The dim line on the detail pane's top border saying who owns the resource:
+ARM's `managedBy`, IaC hints and owner-ish tags (zero calls), and the
+deployment that last touched it (one lazy read of the group's deployments).
+_Avoid_: owner (a tag value, one of the ribbon's parts)
 
 **Network lens**:
 The `N` view of the NSG rules that apply to a NIC, a subnet or an NSG (a
@@ -169,8 +182,17 @@ _Avoid_: read-only mode (it is not a mode; there is no other one)
 **Guard**:
 The test that fails the build when the source could break the read-only
 guarantee: another request builder, a data-plane host, a mutating `az`
-command, a non-read permission in the permissions doc.
+command outside the command catalogue, a destructive or secret-revealing
+one anywhere, a non-read permission in the permissions doc.
 _Avoid_: linter, allowlist script (neboto's name for its Python version)
+
+**Command catalogue**:
+The `az` commands `C` offers for a row (`src/azure/cli_actions.rs`), in
+three **tiers**: **Inspect** (reads), **Connect** (opens a session or
+configures a local tool, changes nothing in Azure) and **Change**
+(start / stop / restart / scale). Copied to the clipboard, never run; the
+one file the guard lets spell a Connect or Change verb (ADR 0005).
+_Avoid_: actions (nebaz performs none), CLI actions
 
 ### Detail loading
 

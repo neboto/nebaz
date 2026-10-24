@@ -206,6 +206,12 @@ pub struct LazyStore {
     pub aca_revisions: LazyMap<Vec<serde_json::Value>>,
     /// `GET {app}/authConfigs`, keyed by app id. Secret setting names only.
     pub aca_auth_configs: LazyMap<Vec<serde_json::Value>>,
+
+    // ── Ownership ribbon (every type) ────────────────────────────────────
+    /// `GET {group}/providers/Microsoft.Resources/deployments` (and the
+    /// operations of its newest unfinished ones), keyed by the lowercased
+    /// group id: the deployment that last touched a row.
+    pub rg_deployments: LazyMap<crate::azure::ownership::RgDeployments>,
 }
 
 impl LazyStore {

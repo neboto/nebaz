@@ -29,6 +29,7 @@ pub fn render_message_log(app: &App, frame: &mut Frame) {
     );
     let inner = block.inner(area);
     frame.render_widget(block, area);
+    app.mouse.popup.borrow_mut().record_area(area);
 
     let total = app.message_history.len();
     if total == 0 {
@@ -46,6 +47,7 @@ pub fn render_message_log(app: &App, frame: &mut Frame) {
     let height = inner.height as usize;
     let selected = app.message_history_selected.min(total - 1);
     let offset = selected.saturating_sub(height.saturating_sub(1));
+    app.mouse.popup.borrow_mut().record_list(area, inner, offset, total);
 
     // Right-aligned relative-age column width ("12m ago" = 7).
     const AGE_W: usize = 8;

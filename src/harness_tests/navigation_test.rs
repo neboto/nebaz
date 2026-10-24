@@ -219,7 +219,7 @@ async fn the_location_filter_hides_and_shows_rows() {
 }
 
 /// `y` copies the selected row's ARM id from the list, the cursor line's
-/// value from the pane; `C` copies the row's `az` command.
+/// value from the pane; `C` `⏎` copies the row's `az` command.
 #[tokio::test]
 async fn copy_puts_the_expected_text_on_the_clipboard() {
     let mut h = Harness::new().await;
@@ -231,7 +231,9 @@ async fn copy_puts_the_expected_text_on_the_clipboard() {
     assert_eq!(h.app.clipboard.last(), Some(id.as_str()));
     assert!(h.app.success_message.as_deref().is_some_and(|m| m.starts_with("Copied")));
 
+    // `C` opens the command picker on the read command; `⏎` copies it.
     h.press(KeyCode::Char('C')).await;
+    h.press(KeyCode::Enter).await;
     let command = h.app.get_selected_resource().unwrap().cli_command().unwrap();
     assert!(command.ends_with(&id), "{command}");
     assert_eq!(h.app.clipboard.last(), Some(command.as_str()));

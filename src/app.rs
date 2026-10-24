@@ -105,7 +105,7 @@ use crate::search::query_parser::{parse_query, rg_filter_admits, split_rg_filter
 use crate::ui::widgets::location_selector::{EndpointState, LocationSelectorState};
 use crate::ui::widgets::service_selector::ServiceSelectorState;
 use crate::ui::widgets::subscription_selector::SubscriptionSelectorState;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::Rect;
 use ratatui::widgets::ListState;
 use std::cell::{Cell, RefCell};
@@ -118,9 +118,19 @@ use tokio::sync::mpsc;
 mod all_search;
 /// The metrics view (`m`): open, fetch, keys.
 mod metrics;
+mod command_picker;
 mod network_lens;
+/// The "referenced by" lens (`U`): the reverse index, keys, `L`.
+mod refs_lens;
+/// The ownership ribbon (#48): what it says, the deployments trigger.
+mod ownership;
+mod timeline;
 /// `X` / `Ctrl-X`: the export wait and the writes.
 mod export;
+/// The mouse: click targets, double-click, drag, right-click back.
+mod mouse;
+pub use mouse::{record_hint_regions, ClickAction, ClickRegion, MouseState, PopupHits};
+pub use all_search::all_search_label;
 /// The list pane's visual selection (`V`, `Ctrl-A`, drag) and its verbs.
 mod list_visual;
 
@@ -136,26 +146,6 @@ fn point_in(area: Rect, col: u16, row: u16) -> bool {
         && col < area.x.saturating_add(area.width)
         && row >= area.y
         && row < area.y.saturating_add(area.height)
-}
-
-/// What a click on a recorded tab-bar region should do. `Service` switches the
-/// active service; `Key` replays a keypress through `handle_key` so a sub-tab
-/// click reuses the exact per-service view/toggle logic the keyboard uses.
-#[derive(Debug, Clone, Copy)]
-pub enum ClickAction {
-    Service(ServiceType),
-    Key(char),
-    /// A detail-pane section tab: focus the detail pane (if needed) and replay
-    /// the section's number key, so the click reuses the keyboard section logic.
-    DetailSection(char),
-}
-
-/// A clickable region in the service/sub-tab bars, recorded each frame by the
-/// (read-only) tab widgets so `handle_mouse` can map a click to an action.
-#[derive(Debug, Clone, Copy)]
-pub struct ClickRegion {
-    pub rect: Rect,
-    pub action: ClickAction,
 }
 
 /// Controls how the main content area is split between list and details.
@@ -482,6 +472,12 @@ pub struct App {
     /// continue on hanging-indent rows instead of clipping at the pane
     /// edge. Render-only: the cursor, `y` and `V` stay on logical rows.
     pub detail_wrap: bool,
+    /// The ownership ribbon on the detail pane (config `ownership_ribbon`).
+    pub ownership_ribbon: bool,
+    /// The tag keys it reads (config `ownership_tags`).
+    pub ownership_tags: Vec<String>,
+    /// The selected row's `managedBy`, parsed once per row.
+    managed_by_memo: RefCell<Option<(String, Option<String>)>>,
     /// First half of a `[[` / `]]` group-jump chord in the detail pane.
     pending_bracket: Option<char>,
     /// `H` / `L` from the detail pane: focus the new sub-tab's first row
@@ -561,18 +557,33 @@ pub struct App {
 
     /// Network access lens (`N`, #50): owns the detail pane while open.
     pub network_lens: Option<crate::ui::widgets::network_lens::NetworkLensState>,
+    /// The `C` command picker (#47): `Some` while open.
+    pub command_picker: Option<crate::ui::widgets::command_picker::CommandPickerState>,
     /// Bumped per lens fetch; a result for an older one is dropped.
     network_lens_generation: u64,
+    /// "Referenced by" lens (`U`, #49): owns the detail pane while open.
+    pub refs_lens: Option<crate::ui::widgets::refs_lens::RefsLensState>,
+    /// The reverse index behind `U`, reused while the caches hold.
+    refs_index: Option<refs_lens::RefsIndex>,
     /// Azure Monitor metrics view (`m`, #51): owns the detail pane while open.
     pub metrics: Option<crate::ui::widgets::metrics_overlay::MetricsState>,
     /// Bumped per metrics fetch; a result for an older one is dropped.
     metrics_generation: u64,
     /// The last window the view used: sticky across opens.
     metrics_window: crate::azure::metrics::MetricWindow,
+    /// Change timeline (`W`, #52): owns the detail pane while open.
+    pub timeline: Option<crate::ui::widgets::timeline_lens::TimelineLensState>,
+    /// Bumped per timeline fetch; a source's answer for an older one is dropped.
+    timeline_generation: u64,
+    /// The timeline's window and `a` mode: sticky across opens.
+    timeline_window: crate::azure::timeline::LensWindow,
+    timeline_include_all: bool,
 
     // Mouse hit-testing, recorded by the read-only widgets each frame.
     click_regions: RefCell<Vec<ClickRegion>>,
     list_area: Cell<Rect>,
+    /// The rest of the mouse's hit targets and gesture state (`app/mouse.rs`).
+    pub mouse: MouseState,
 }
 
 impl App {
@@ -664,6 +675,11 @@ impl App {
             detail_search_active: false,
             detail_search_query: String::new(),
             detail_wrap: config.detail_wrap.unwrap_or(false),
+            ownership_ribbon: config.ownership_ribbon.unwrap_or(true),
+            ownership_tags: config.ownership_tags.clone().unwrap_or_else(|| {
+                crate::azure::ownership::DEFAULT_OWNERSHIP_TAGS.iter().map(|s| s.to_string()).collect()
+            }),
+            managed_by_memo: RefCell::new(None),
             pending_bracket: None,
             pending_detail_focus: false,
             detail_section_idx: 0,
@@ -711,11 +727,19 @@ impl App {
             editor_requested: false,
             network_lens: None,
             network_lens_generation: 0,
+            refs_lens: None,
+            refs_index: None,
             metrics: None,
             metrics_generation: 0,
             metrics_window: Default::default(),
+            command_picker: None,
+            timeline: None,
+            timeline_generation: 0,
+            timeline_window: Default::default(),
+            timeline_include_all: false,
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
+            mouse: MouseState::default(),
             config,
         };
         if let Some(w) = app.config.load_warning.take() {
@@ -904,7 +928,9 @@ impl App {
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
+        self.refs_lens = None;
         self.metrics = None;
+        self.timeline = None;
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
             self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
@@ -1408,7 +1434,9 @@ impl App {
         self.flat_triggered_for = None;
         self.supersede_loads();
         self.network_lens = None;
+        self.refs_lens = None;
         self.metrics = None;
+        self.timeline = None;
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
         Ok(())
@@ -2401,6 +2429,12 @@ impl App {
         if let Some(st) = &self.metrics {
             return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
         }
+        if let Some(st) = &self.refs_lens {
+            return crate::editor::spawn_editor_with_content(&st.as_text(), ".txt");
+        }
+        if let Some(st) = &self.timeline {
+            return crate::editor::spawn_editor_with_content(&st.editor_text(), ".txt");
+        }
         let Some(resource) = self.get_selected_resource() else {
             return Ok(());
         };
@@ -2854,6 +2888,7 @@ impl App {
             || self.bookmarks_visible
             || self.message_history_visible
             || self.macro_picker_visible
+            || self.command_picker.is_some()
     }
 
     /// Recording (classify the key just dispatched by diffing state) and
@@ -3140,65 +3175,6 @@ impl App {
         self.resolve_pending_detail_focus(event_tx);
     }
 
-    fn handle_mouse(&mut self, mouse: MouseEvent, event_tx: &mpsc::UnboundedSender<Event>) {
-        // A click or scroll leaves the network lens first: it belongs to
-        // the row it was opened on.
-        if self.network_lens.is_some() && !matches!(mouse.kind, MouseEventKind::Moved) {
-            self.network_lens = None;
-        }
-        if self.metrics.is_some() && !matches!(mouse.kind, MouseEventKind::Moved) {
-            self.metrics = None;
-        }
-        match mouse.kind {
-            MouseEventKind::Down(_) => {
-                let hit = self
-                    .click_regions
-                    .borrow()
-                    .iter()
-                    .find(|r| point_in(r.rect, mouse.column, mouse.row))
-                    .map(|r| r.action);
-                match hit {
-                    Some(ClickAction::Service(s)) => self.switch_service(s),
-                    Some(ClickAction::Key(c)) => {
-                        self.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE), event_tx)
-                    }
-                    Some(ClickAction::DetailSection(c)) => {
-                        if self.selected_index.is_some() {
-                            self.details_focused = true;
-                            if let Some(idx) = crate::sections::index_for_key(c) {
-                                self.set_detail_section(idx, event_tx);
-                            }
-                        }
-                    }
-                    None => {
-                        let list = self.list_area.get();
-                        if point_in(list, mouse.column, mouse.row) {
-                            let offset = self.resource_list_state.borrow().offset();
-                            let row = (mouse.row - list.y).saturating_sub(1) as usize + offset;
-                            if row < self.filtered_resources.len() {
-                                self.list_visual_anchor = None;
-                                self.select(Some(row));
-                                self.leave_detail_pane();
-                            }
-                        }
-                    }
-                }
-            }
-            // A left-drag over the list rows selects them (from the row
-            // the press landed on).
-            MouseEventKind::Drag(crossterm::event::MouseButton::Left) => {
-                let list = self.list_area.get();
-                if !self.details_focused && point_in(list, mouse.column, mouse.row) && mouse.row > list.y {
-                    let offset = self.resource_list_state.borrow().offset();
-                    self.list_drag_to((mouse.row - list.y - 1) as usize + offset);
-                }
-            }
-            MouseEventKind::ScrollDown => self.move_selection(1),
-            MouseEventKind::ScrollUp => self.move_selection(-1),
-            _ => {}
-        }
-    }
-
     fn move_selection(&mut self, delta: isize) {
         if self.filtered_resources.is_empty() {
             return;
@@ -3285,6 +3261,10 @@ impl App {
             self.handle_macro_picker_key(key);
             return;
         }
+        if self.command_picker.is_some() {
+            self.handle_command_picker_key(key);
+            return;
+        }
 
         // Search input.
         if self.search_active {
@@ -3344,9 +3324,18 @@ impl App {
             self.handle_network_lens_key(key, event_tx);
             return;
         }
-        // So does the metrics view.
+        // So do the referenced-by lens and the metrics view.
+        if self.refs_lens.is_some() {
+            self.handle_refs_lens_key(key, event_tx);
+            return;
+        }
         if self.metrics.is_some() {
             self.handle_metrics_key(key, event_tx);
+            return;
+        }
+        // And the change timeline.
+        if self.timeline.is_some() {
+            self.handle_timeline_key(key, event_tx);
             return;
         }
 
@@ -3619,7 +3608,9 @@ impl App {
             }
             KeyCode::Char('P') => self.open_subscription_picker(),
             KeyCode::Char('N') => self.open_network_lens(_event_tx),
+            KeyCode::Char('U') => self.open_refs_lens(_event_tx),
             KeyCode::Char('m') => self.open_metrics(_event_tx),
+            KeyCode::Char('W') => self.open_timeline(_event_tx),
             KeyCode::Char('b') => self.banner_visible = !self.banner_visible,
             KeyCode::Char('e') => {
                 if self.selected_index.is_some() {
@@ -3631,15 +3622,9 @@ impl App {
                     self.copy_to_clipboard(&id, "resource id");
                 }
             }
-            KeyCode::Char('C') => {
-                // Copied verbatim: `--ids` carries the subscription, and the
-                // commands without `--ids` carry `--subscription` themselves.
-                let cmd = self.get_selected_resource().and_then(|r| r.cli_command());
-                match cmd {
-                    Some(cmd) => self.copy_to_clipboard(&cmd, "az command"),
-                    None => self.error_message = Some("No CLI command for this resource".into()),
-                }
-            }
+            // Copied verbatim, never run: `--ids` carries the subscription,
+            // and the commands without `--ids` carry `--subscription`.
+            KeyCode::Char('C') => self.open_command_picker(),
             KeyCode::Char('O') => {
                 let url = self.get_selected_resource().and_then(|r| r.portal_url());
                 match url {

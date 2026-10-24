@@ -28,6 +28,9 @@ pub struct ResourceCache {
     /// Per-service TTL overrides from config (`cache_ttls`). Checked before
     /// the built-in defaults in `effective_ttl`.
     ttl_overrides: HashMap<ServiceType, Duration>,
+    /// Bumped by every write (insert, invalidate): whatever is derived
+    /// from the entries (the `U` reverse index) is stale when it moves.
+    generation: u64,
 }
 
 struct CacheEntry {
@@ -41,6 +44,7 @@ impl ResourceCache {
             entries: HashMap::new(),
             ttl,
             ttl_overrides,
+            generation: 0,
         }
     }
 
@@ -90,6 +94,7 @@ impl ResourceCache {
         resources: Vec<Box<dyn Resource>>,
     ) {
         let key = Self::key(&service, subscription, variant.as_deref());
+        self.generation += 1;
         self.entries.insert(
             key,
             CacheEntry {
@@ -133,6 +138,12 @@ impl ResourceCache {
 
     pub fn invalidate(&mut self, service: &ServiceType, subscription: &str, variant: Option<&str>) {
         let key = Self::key(service, subscription, variant);
+        self.generation += 1;
         self.entries.remove(&key);
+    }
+
+    /// The write generation (see the field).
+    pub fn generation(&self) -> u64 {
+        self.generation
     }
 }

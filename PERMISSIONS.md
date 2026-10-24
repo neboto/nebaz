@@ -11,7 +11,9 @@ Resource Manager (ARM), or to Microsoft Graph for directory objects
    CI) if the source gains another request builder, an HTTP client crate,
    a data-plane host, a Graph host outside `src/azure/graph.rs`, Graph's
    `getByIds` (a `POST`) or a Graph `$select`, a mutating `az`
-   command, or a non-read action in this file.
+   command outside the `C` catalogue (ADR 0005: copied, never run), a
+   destructive or secret-revealing `az` command anywhere, or a non-read
+   action in this file.
 3. **RBAC** — the role below is a pure `*/read` footprint, so the
    subscription itself cannot be changed through nebaz even if the first
    two layers failed.
@@ -121,6 +123,13 @@ each one backs are in the catalog table
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:
   they return names and attributes only. Certificates are not listed.
+- **Referenced by** (`U`): no action of its own. It reads the list caches
+  already loaded; its `L` key runs the ordinary list loads of the lists it
+  names, with those lists' actions above.
+- **Ownership ribbon** (every type): `Microsoft.Resources/deployments/read`,
+  `Microsoft.Resources/deployments/operations/read` (the resource group's
+  deployments and, for the newest unfinished ones, their operations).
+  Without them the ribbon says `⚠ deployments: …` and keeps the rest.
 - **Access** (every type, and an identity's Can do):
   `Microsoft.Authorization/roleAssignments/read`,
   `Microsoft.Authorization/roleDefinitions/read`. Principal names come
@@ -133,6 +142,13 @@ each one backs are in the catalog table
   and, for the all-metrics picker, `Microsoft.Insights/metricDefinitions/read`.
   Both are control-plane `GET`s on the resource's own id (platform
   metrics only; no log query); a 403 is a line in the view, never fatal.
+- **Change timeline** (`W`, any ARM row): the Activity log action
+  above, `Microsoft.AlertsManagement/alerts/read` (fired alerts),
+  `Microsoft.ResourceHealth/availabilityStatuses/read` (the health
+  history) and `Microsoft.Resources/deployments/read` (the group's
+  deployments: their state, what they deployed and their error; nebaz
+  never shows a deployment's parameters or outputs). Each source that
+  is denied is a note in the view.
 - **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
   Environments and their policy links are in the Power Platform admin
   API, not ARM: nebaz never calls it, and its hosts are on the guard's
@@ -204,7 +220,18 @@ nebaz runs two `az` commands itself, both reads of the CLI's own state:
   `azure_identity` to mint the ARM token (and, for directory reads, the
   Graph token) for the current tenant.
 
-`C` copies an `az … show` / `az … list` command to the clipboard for you to
-run; nebaz never executes it. `az keyvault secret show` and `key show` are
+`C` copies an `az` command to the clipboard for you to run; nebaz never
+executes it. The picker (#47, ADR 0005) offers **Inspect** commands
+(reads), **Connect** commands (`ssh vm`, `aks get-credentials`,
+`containerapp exec`, `acr login`) and **Change** commands (start, stop,
+restart, deallocate, scale), the last under a `⚠ changes Azure` heading.
+A pasted command runs under **your** `az login` with **your** roles, not
+under the `Reader` role above: Connect and Change commands need more
+(a VM login role, a VM's start action, …),
+and nebaz grants none of it. Nothing destructive (delete, purge, remove,
+reset, regenerate, run-command, update, …) and nothing that prints a
+credential (`--admin`, `--expose-token`, account keys, connection
+strings, `acr credential`) is ever offered; the guard refuses them even
+in the catalogue. `az keyvault secret show` and `key show` are
 never generated (the guard names them forbidden); the vault sections name
 `az keyvault secret list` / `key list`, which return names only.

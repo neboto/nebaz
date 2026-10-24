@@ -1,11 +1,15 @@
 pub mod arm;
 pub mod auth;
 pub mod cache;
+pub mod cli_actions;
 pub mod client;
 pub mod graph;
 pub mod location;
 pub mod metrics;
 pub mod nsg_eval;
+pub mod references;
+pub mod ownership;
 pub mod resource;
+pub mod timeline;
 pub mod service;
 pub mod services;

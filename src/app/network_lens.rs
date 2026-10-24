@@ -66,6 +66,7 @@ impl App {
         let title = format!("{} · {}", r.resource_type(), r.name());
         // The direction toggle is sticky across opens.
         let direction = self.network_lens.as_ref().map(|s| s.direction).unwrap_or_default();
+        self.refs_lens = None;
         self.network_lens = Some(NetworkLensState::open(title, seed.clone(), direction));
         self.details_focused = true;
         let known = self.lens_known();
