@@ -1,0 +1,49 @@
+{
+  "@odata.type": "#microsoft.graph.servicePrincipal",
+  "id": "2163cbd0-48ad-4c52-bb85-c34c6c4809cf",
+  "deletedDateTime": null,
+  "accountEnabled": true,
+  "alternativeNames": [
+    "isExplicit=False",
+    "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod/projects/orders-assistant"
+  ],
+  "appDisplayName": null,
+  "appDescription": null,
+  "appId": "05bac95b-e64c-4bd3-af4c-4b3baf097c09",
+  "applicationTemplateId": null,
+  "appOwnerOrganizationId": null,
+  "appRoleAssignmentRequired": false,
+  "createdDateTime": null,
+  "description": null,
+  "disabledByMicrosoftStatus": null,
+  "displayName": "ai-contoso-prod/projects/orders-assistant",
+  "homepage": null,
+  "loginUrl": null,
+  "logoutUrl": null,
+  "notes": null,
+  "notificationEmailAddresses": [],
+  "preferredSingleSignOnMode": null,
+  "preferredTokenSigningKeyThumbprint": null,
+  "replyUrls": [],
+  "servicePrincipalNames": [
+    "05bac95b-e64c-4bd3-af4c-4b3baf097c09",
+    "https://identity.azure.net/2163cbd0-48ad-4c52-bb85-c34c6c4809cf="
+  ],
+  "servicePrincipalType": "ManagedIdentity",
+  "signInAudience": null,
+  "tags": [],
+  "tokenEncryptionKeyId": null,
+  "info": null,
+  "samlSingleSignOnSettings": null,
+  "addIns": [],
+  "appRoles": [],
+  "keyCredentials": [],
+  "oauth2PermissionScopes": [],
+  "passwordCredentials": [],
+  "resourceSpecificApplicationPermissions": [],
+  "verifiedPublisher": {
+    "displayName": null,
+    "verifiedPublisherId": null,
+    "addedDateTime": null
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "@odata.type": "#microsoft.graph.servicePrincipal",
+  "id": "37ec34fc-62c5-4180-a17f-0cccd5ed2e95",
+  "deletedDateTime": null,
+  "accountEnabled": true,
+  "alternativeNames": [
+    "isExplicit=True",
+    "/subscriptions/{{prod}}/resourceGroups/MC_rg-platform-prod_aks-platform-prod_westeurope/providers/Microsoft.ManagedIdentity/userAssignedIdentities/aks-platform-prod-agentpool"
+  ],
+  "appDisplayName": null,
+  "appDescription": null,
+  "appId": "e12c192b-685e-4570-b8f9-758cef84d4d0",
+  "applicationTemplateId": null,
+  "appOwnerOrganizationId": null,
+  "appRoleAssignmentRequired": false,
+  "createdDateTime": null,
+  "description": null,
+  "disabledByMicrosoftStatus": null,
+  "displayName": "aks-platform-prod-agentpool",
+  "homepage": null,
+  "loginUrl": null,
+  "logoutUrl": null,
+  "notes": null,
+  "notificationEmailAddresses": [],
+  "preferredSingleSignOnMode": null,
+  "preferredTokenSigningKeyThumbprint": null,
+  "replyUrls": [],
+  "servicePrincipalNames": [
+    "e12c192b-685e-4570-b8f9-758cef84d4d0",
+    "https://identity.azure.net/37ec34fc-62c5-4180-a17f-0cccd5ed2e95="
+  ],
+  "servicePrincipalType": "ManagedIdentity",
+  "signInAudience": null,
+  "tags": [],
+  "tokenEncryptionKeyId": null,
+  "info": null,
+  "samlSingleSignOnSettings": null,
+  "addIns": [],
+  "appRoles": [],
+  "keyCredentials": [],
+  "oauth2PermissionScopes": [],
+  "passwordCredentials": [],
+  "resourceSpecificApplicationPermissions": [],
+  "verifiedPublisher": {
+    "displayName": null,
+    "verifiedPublisherId": null,
+    "addedDateTime": null
+  }
+}

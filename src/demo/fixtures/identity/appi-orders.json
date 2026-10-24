@@ -1,0 +1,35 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders",
+  "name": "appi-orders",
+  "type": "microsoft.insights/components",
+  "location": "westeurope",
+  "kind": "web",
+  "tags": {
+    "env": "prod",
+    "team": "orders",
+    "owner": "orders-team@contoso.com"
+  },
+  "etag": "\"2d00f3a1-0000-0d00-0000-66f1a2b40000\"",
+  "properties": {
+    "ApplicationId": "appi-orders",
+    "AppId": "14787084-56d5-4051-a5f1-105a1aadf4ed",
+    "Application_Type": "web",
+    "Flow_Type": "Bluefield",
+    "Request_Source": "rest",
+    "InstrumentationKey": "0000dead-beef-4000-8000-000000000001",
+    "ConnectionString": "InstrumentationKey=0000dead-beef-4000-8000-000000000001;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=14787084-56d5-4051-a5f1-105a1aadf4ed",
+    "Name": "appi-orders",
+    "CreationDate": "{{iso:now-212d}}",
+    "TenantId": "{{prod}}",
+    "provisioningState": "Succeeded",
+    "SamplingPercentage": null,
+    "RetentionInDays": 90,
+    "WorkspaceResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/law-contoso-prod",
+    "IngestionMode": "LogAnalytics",
+    "publicNetworkAccessForIngestion": "Enabled",
+    "publicNetworkAccessForQuery": "Enabled",
+    "DisableLocalAuth": false,
+    "DisableIpMasking": false,
+    "Ver": "v2"
+  }
+}

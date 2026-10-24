@@ -124,11 +124,23 @@ Directory objects (Graph object ids; `appId` where it has one):
 | its service principal | `47302d33-ba06-4194-bc89-bec920f2a564` | `7b985643-85cc-4880-8e95-9dac694b9dfc` |
 | service principal `Fabrikam Orders Connector` (multi-tenant, owned by the Fabrikam tenant) | `80303294-4904-46c2-87a0-d8cb283aa2a9` | `600d5263-b150-479c-ab05-60929b2edcbd` |
 | user-assigned identity `id-orders-api` (principal) | `535edf48-335f-4761-b6ed-e0613ed690b3` | client id `a486b752-7257-42ba-bc16-23a4e0381f56` |
-| `ca-orders-worker`'s system-assigned identity | `51b687b3-bdb3-4408-b436-500e659cc8cb` | |
-| `aks-platform-prod`'s kubelet identity `aks-platform-prod-agentpool` | `37ec34fc-62c5-4180-a17f-0cccd5ed2e95` | |
+| `ca-orders-worker`'s system-assigned identity | `51b687b3-bdb3-4408-b436-500e659cc8cb` | `8587b0bc-6107-463b-a8d3-278472a07067` |
+| `aks-platform-prod`'s kubelet identity `aks-platform-prod-agentpool` (user-assigned, in `MC_rg-platform-prod_aks-platform-prod_westeurope`) | `37ec34fc-62c5-4180-a17f-0cccd5ed2e95` | client id `e12c192b-685e-4570-b8f9-758cef84d4d0` |
+| `ai-contoso-prod`'s system-assigned identity | `1f342012-a634-4ddc-8970-f178395ab2e5` | `f7e9cf30-122a-4b27-a009-e51ffcb17c73` |
+| Foundry project `orders-assistant`'s system-assigned identity | `2163cbd0-48ad-4c52-bb85-c34c6c4809cf` | `05bac95b-e64c-4bd3-af4c-4b3baf097c09` |
+| service principal `Microsoft Graph` (first-party, in the Contoso tenant) | `0fa66fc7-cbb8-497a-84a2-8c6dc97ef59a` | `00000003-0000-0000-c000-000000000000` |
 | group `Contoso Platform Admins` | `e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d` | |
 
 A new object id: any fresh `uuid4`, added to this table.
+
+In the directory: `github-actions-deploy` has two GitHub Actions federated
+credentials (`repo:contoso/orders-platform:environment:production` and
+`…:pull_request`) and owner alex; `orders-api-client` requests delegated
+Microsoft Graph scopes, which its service principal holds by admin consent.
+`id-orders-api` federates `system:serviceaccount:orders:orders-migrations`
+from `aks-platform-prod`'s OIDC issuer. The Fabrikam connector is not owned
+by Contoso, so the `sp` list (managed identities + this tenant's apps) does
+not show it; it resolves by object id and app id.
 
 ## Resources
 
