@@ -2,7 +2,9 @@
 
 nebaz is **read-only**: every request it sends is an HTTP `GET` to Azure
 Resource Manager (ARM), or to Microsoft Graph for directory objects
-(ADR 0004), nothing else. Three layers hold that promise:
+(ADR 0004), nothing else; the one exception is not to Azure at all, the
+daily update check (see [Update check](#update-check)). Three layers hold
+that promise:
 
 1. **Runtime** — the one request constructor in `src/azure/arm.rs` only
    builds `GET`s, and the pipeline's `ReadOnlyPolicy` refuses any other
@@ -10,7 +12,8 @@ Resource Manager (ARM), or to Microsoft Graph for directory objects
 2. **Guard test** — `tests/readonly_guard.rs` fails `cargo test` (and so
    CI) if the source gains another request builder, an HTTP client crate,
    a data-plane host, a Graph host outside `src/azure/graph.rs`, Graph's
-   `getByIds` (a `POST`) or a Graph `$select`, a mutating `az`
+   `getByIds` (a `POST`) or a Graph `$select`, a non-Azure host or a
+   tokenless GET outside the update check, a mutating `az`
    command outside the `C` catalogue (ADR 0005: copied, never run), a
    destructive or secret-revealing `az` command anywhere, or a non-read
    action in this file.
@@ -269,6 +272,19 @@ each one backs are in the catalog table
   Access list, and the Graph directory reads (app registrations, service
   principals, principal names). A denied one leaves its checks "not
   checked". `nebaz audit` makes the same calls.
+
+## Update check
+
+The only request nebaz makes that isn't to Azure (ADR 0008): once a day,
+an anonymous `GET https://api.github.com/repos/neboto/nebaz/releases/latest`
+to show a dim `↑ vX.Y.Z` chip when a newer release is out. It goes through
+the same `azure_core` pipeline and `ReadOnlyPolicy` as every ARM call, with
+**no** token (the pipeline has no bearer policy), a 3 s timeout and no
+retries; a failure is silent. The answer is cached in
+`~/.cache/nebaz/update-check.json`. It needs no Azure permission. Turn it
+off with `update_check = false` in the config, `--no-update-check`, or
+`NEBAZ_NO_UPDATE_CHECK=1`; it never runs with `CI` set or for the headless
+subcommands.
 
 ## Local commands
 

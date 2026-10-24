@@ -155,6 +155,9 @@ pub(crate) use headless::ListShaping;
 /// The `P` fan-out over config `subscriptions` (#62).
 mod subscription_fanout;
 
+/// Keycast (`--show-keys`, #43): the view a key can change, the tick.
+mod keycast;
+
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
 
 /// Whether a screen cell (`col`, `row`) falls inside `area`.
@@ -616,6 +619,15 @@ pub struct App {
     list_area: Cell<Rect>,
     /// The rest of the mouse's hit targets and gesture state (`app/mouse.rs`).
     pub mouse: MouseState,
+    /// Keycast (`--show-keys`, config `show_keys`): the keys just pressed
+    /// and what they did, for recordings (`src/keycast.rs`). `None` = off.
+    pub keycast: Option<crate::keycast::Keycast>,
+    /// Whether the once-a-day release check may run (config `update_check`
+    /// after `--no-update-check`; the env and `CI` are checked at spawn).
+    pub update_check_enabled: bool,
+    /// A newer release than this build (`update_check.rs`): the strip's
+    /// dim `↑ vX.Y.Z` chip and the splash's tip line.
+    pub update_available: Option<String>,
 }
 
 impl App {
@@ -777,6 +789,9 @@ impl App {
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             mouse: MouseState::default(),
+            keycast: config.show_keys.unwrap_or(false).then(crate::keycast::Keycast::default),
+            update_check_enabled: config.update_check.unwrap_or(true),
+            update_available: None,
             config,
         };
         if let Some(w) = app.config.load_warning.take() {
@@ -971,6 +986,37 @@ impl App {
             display_name: entry.as_ref().map(|e| e.name.clone()),
             tenant_id: entry.map(|e| e.tenant_id),
         });
+    }
+
+    /// Once-a-day "is there a newer release?" check (`update_check.rs`,
+    /// ADR 0008). The cached answer shows at once; a stale cache refetches
+    /// in a task that reports through `Event::UpdateAvailable`. Called only
+    /// from the TUI's startup in `main`, so tests and headless runs never
+    /// touch the network or the state file. A failed request is dropped
+    /// silently: it would be noise for everyone offline or behind a proxy.
+    /// Returns whether a fetch was spawned.
+    pub fn spawn_update_check(&mut self, event_tx: &mpsc::UnboundedSender<Event>) -> bool {
+        use crate::update_check as uc;
+        if !uc::enabled(Some(self.update_check_enabled)) {
+            return false;
+        }
+        let state = uc::load();
+        self.update_available = state.announce(uc::current_version());
+        if !state.is_stale(uc::now_secs()) {
+            return false;
+        }
+        let tx = event_tx.clone();
+        tokio::spawn(async move {
+            let Ok(latest) = uc::fetch_latest().await else {
+                return;
+            };
+            let state = uc::UpdateState { checked_at: uc::now_secs(), latest: Some(latest) };
+            uc::save(&state);
+            if let Some(v) = state.announce(uc::current_version()) {
+                let _ = tx.send(Event::UpdateAvailable(v));
+            }
+        });
+        true
     }
 
     /// `R` on the auth line: re-read the account list, then reload the
@@ -3285,6 +3331,7 @@ impl App {
             Event::Mouse(mouse) => self.handle_mouse(mouse, event_tx),
             Event::Resize => {}
             Event::Tick => self.tick_count = self.tick_count.wrapping_add(1),
+            Event::UpdateAvailable(latest) => self.update_available = Some(latest),
 
             Event::LoadStream { generation, event } => {
                 if generation != self.list_load.generation() {
@@ -3462,6 +3509,15 @@ impl App {
                     was_modal,
                     query,
                 });
+            }
+        }
+
+        // Keycast snapshot (pre-dispatch, see `keycast_tick`). Mouse
+        // gestures come through here too, as the key they replay.
+        if self.keycast.is_some() {
+            let before = self.keycast_view();
+            if let Some(kc) = self.keycast.as_mut() {
+                kc.note(key, before, std::time::Instant::now());
             }
         }
 

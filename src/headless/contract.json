@@ -7,8 +7,10 @@
       "--location",
       "--macro",
       "--no-banner",
+      "--no-update-check",
       "--output",
       "--service",
+      "--show-keys",
       "--subscription",
       "--theme",
       "--watch"

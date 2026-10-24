@@ -109,7 +109,10 @@ Platform policies, expiring app credentials, guest or service-principal
 Owners, and more) computed from what is already loaded, with zero API
 calls; a check whose data is not loaded says "not checked", and `r` there
 loads it in the background; `nebaz audit --fail-on high` runs it headless
-([ADR 0007](docs/adr/0007-audit-checks-are-pure.md)). Verified against a live tenant:
+([ADR 0007](docs/adr/0007-audit-checks-are-pure.md)).
+For recordings and demos, `--show-keys` (config `show_keys`) names each key
+in a corner box as it's pressed, with what it did (`W  change timeline`);
+typed search and filter text never shows. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in
@@ -279,6 +282,14 @@ The promise is held at three layers, not by convention
    request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, PostgreSQL and MySQL servers, container registries, Cosmos DB, container apps, Redis caches, Service Bus and Event Hubs namespaces, log queries),
    a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
+
+**The one non-Azure request.** Once a day nebaz asks GitHub for its latest
+release (an anonymous `GET` of `api.github.com/repos/neboto/nebaz/releases/latest`,
+no token, 3 s timeout, failures silent) and shows a dim `↑ vX.Y.Z` chip
+when it is newer than your build. It is the only request that isn't to
+Azure, it goes through the same GET-only pipeline, and the guard allows it
+from one file. Turn it off with `update_check = false`,
+`--no-update-check` or `NEBAZ_NO_UPDATE_CHECK=1` (ADR 0008).
 
 Key Vault is the case people ask about: nebaz lists secret and key
 **names** through ARM's control-plane actions, which never return a value,

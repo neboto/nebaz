@@ -43,6 +43,7 @@ mod command_picker_test;
 mod changes_test;
 mod audit_test;
 mod directory_test;
+mod keycast_test;
 mod list_ux_test;
 mod export_test;
 mod list_visual_test;
@@ -58,6 +59,7 @@ mod subscription_fanout_test;
 mod ownership_test;
 mod small_terminal_test;
 mod timeline_test;
+mod update_check_test;
 mod wiring_test;
 
 /// The CLI's default subscription in the fixture account list.
@@ -155,6 +157,7 @@ impl Harness {
                 self.app.load_resources_async(&self.tx);
             }
             self.app.macro_tick(&self.tx);
+            self.app.keycast_tick();
             self.app.flat_tick(&self.tx);
             self.app.export_tick(&self.tx);
             self.app.ownership_tick(&self.tx);

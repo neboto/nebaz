@@ -63,6 +63,15 @@ pub struct Cli {
     /// catppuccin-mocha, catppuccin-latte.
     #[arg(long, value_name = "THEME")]
     pub theme: Option<String>,
+
+    /// Show each key as it's pressed, and what it did, in a corner box
+    /// (for screen recordings and demos; typed text is never shown).
+    #[arg(long)]
+    pub show_keys: bool,
+    /// Skip this run's once-a-day check for a newer nebaz release (config
+    /// `update_check = false` turns it off for good).
+    #[arg(long)]
+    pub no_update_check: bool,
 }
 
 /// The one-shot subcommands. Each makes the same read-only calls the TUI
@@ -230,6 +239,12 @@ impl Cli {
         if self.theme.is_some() {
             config.theme = self.theme.clone();
         }
+        if self.show_keys {
+            config.show_keys = Some(true);
+        }
+        if self.no_update_check {
+            config.update_check = Some(false);
+        }
     }
 }
 
@@ -250,7 +265,30 @@ mod tests {
             watch: false,
             macro_name: None,
             theme: None,
+            show_keys: false,
+            no_update_check: false,
         }
+    }
+
+    #[test]
+    fn show_keys_flag_overlays_config() {
+        let mut cfg = Config::default();
+        Cli { show_keys: true, ..empty() }.apply_to(&mut cfg);
+        assert_eq!(cfg.show_keys, Some(true));
+        // Absent flag leaves a config-file `show_keys = false` untouched.
+        let mut cfg = Config { show_keys: Some(false), ..Config::default() };
+        empty().apply_to(&mut cfg);
+        assert_eq!(cfg.show_keys, Some(false));
+    }
+
+    #[test]
+    fn no_update_check_flag_overlays_config() {
+        let mut cfg = Config::default();
+        Cli { no_update_check: true, ..empty() }.apply_to(&mut cfg);
+        assert_eq!(cfg.update_check, Some(false));
+        let mut cfg = Config::default();
+        empty().apply_to(&mut cfg);
+        assert_eq!(cfg.update_check, None, "absent flag: on by default");
     }
 
     #[test]

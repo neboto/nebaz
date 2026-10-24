@@ -4,9 +4,10 @@
 //! management endpoint (ticket 01: no management-plane crate exists).
 //!
 //! **Read-only guarantee** (ticket 07, `PERMISSIONS.md`). Every request
-//! this crate sends is built by [`ArmClient::get_request`] or
-//! [`ArmClient::get_link`] — the only places `Method::` appears — and the
-//! pipeline carries [`ReadOnlyPolicy`], which refuses any request whose
+//! this crate sends is built by [`ArmClient::get_request`],
+//! [`ArmClient::get_link`] or [`anonymous_get`] (the update check's one
+//! non-Azure `GET`, ADR 0008) — the only places `Method::` appears — and
+//! every pipeline carries [`ReadOnlyPolicy`], which refuses any request whose
 //! method is not `GET` before it leaves the process. `tests/readonly_guard.rs`
 //! checks the source for both facts (and for `az` command verbs and
 //! data-plane hosts) under `cargo test`.
@@ -425,6 +426,39 @@ pub fn split_page_at(body: Value, next_key: &str) -> (Vec<Value>, Option<String>
         _ => Vec::new(),
     };
     (value, next)
+}
+
+/// The one request nebaz sends that is not to Azure (ADR 0008): the daily
+/// update check's anonymous `GET` of the latest GitHub release
+/// (`src/update_check.rs`, the only caller the read-only guard allows).
+///
+/// The same transport as every Azure call (`azure_core`'s pipeline, no new
+/// HTTP crate), carrying [`ReadOnlyPolicy`] and the same `User-Agent`
+/// (GitHub refuses a request without one), but **no bearer policy**: no
+/// Azure token can reach another host. No retries, `timeout` overall, and
+/// `https` only. A non-2xx status is an error (the pipeline's success
+/// check), as on the ARM flavour.
+pub async fn anonymous_get(url: &str, headers: &[Header], timeout: std::time::Duration) -> Result<Value> {
+    let url = Url::parse(url).map_err(|e| Error::Azure(format!("bad URL {:?}: {}", url, e)))?;
+    if url.scheme() != "https" {
+        return Err(Error::Azure(format!("refused a plain-http request to {}", url)));
+    }
+    let options = ClientOptions {
+        retry: RetryOptions::none(),
+        ..client_options()
+    };
+    let pipeline = build_pipeline(options, vec![Arc::new(ReadOnlyPolicy)]);
+    let mut request = Request::new(url, Method::Get);
+    for (name, value) in headers {
+        request.insert_header(*name, value.clone());
+    }
+    let send = async {
+        let response = pipeline.send(&Context::new(), &mut request, None).await?;
+        Ok::<Value, Error>(response.into_body().json::<Value>()?)
+    };
+    tokio::time::timeout(timeout, send)
+        .await
+        .map_err(|_| Error::Azure(format!("no answer within {}s", timeout.as_secs())))?
 }
 
 /// Normalise the configured endpoint: must be `https` (the bearer policy

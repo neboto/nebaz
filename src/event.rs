@@ -124,6 +124,10 @@ pub enum Event {
     /// new per-fetch `*Loaded` variants for lazy sections.
     Lazy(crate::lazy::LazyApply),
 
+    /// The daily update check found a release newer than this build
+    /// (`update_check.rs`): its version, without the `v`.
+    UpdateAvailable(String),
+
     // Application events
     Tick,
 }

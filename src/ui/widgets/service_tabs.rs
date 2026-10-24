@@ -58,6 +58,13 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
         (None, None) => (String::new(), String::new()),
     };
     let hint_text = " S: services  @: prefix ";
+    // A newer release (`update_check.rs`): dim, so it reads as news rather
+    // than a warning; the first badge to go when the strip is narrow.
+    let update_text = match &app.update_available {
+        Some(v) => format!(" ↑ v{} ", v),
+        None => String::new(),
+    };
+    let update_style = Style::default().fg(theme::text_dim());
 
     let endpoint_style = Style::default()
         .fg(Color::Black)
@@ -70,8 +77,11 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
 
     // Candidate badge sets, widest first. The last (endpoint + short
     // subscription) is the floor — identity info survives any terminal width.
-    let build = |hint: bool, sub_long: bool| {
+    let build = |update: bool, hint: bool, sub_long: bool| {
         let mut parts: Vec<(String, Style)> = Vec::new();
+        if update && !update_text.is_empty() {
+            parts.push((update_text.clone(), update_style));
+        }
         if !endpoint_text.is_empty() {
             parts.push((endpoint_text.clone(), endpoint_style));
         }
@@ -84,7 +94,12 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
         }
         parts
     };
-    let candidates = [build(true, true), build(false, true), build(false, false)];
+    let candidates = [
+        build(true, true, true),
+        build(false, true, true),
+        build(false, false, true),
+        build(false, false, false),
+    ];
     let parts_width = |parts: &[(String, Style)]| -> u16 {
         parts
             .iter()
