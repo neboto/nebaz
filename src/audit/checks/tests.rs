@@ -867,6 +867,38 @@ fn contributor_on_the_subscription_for_a_guest_or_sp_is_its_own_lower_check() {
     assert_eq!(privileged, vec![(sp.to_string(), Severity::High)], "UAA stays in the privileged check");
 }
 
+/// An SP Graph hasn't resolved is named from the loaded Service
+/// principals list when it is there; otherwise it keeps its object id.
+#[test]
+fn an_sp_assignment_takes_its_name_from_the_loaded_sp_list() {
+    let named = "00000000-0000-0000-0000-0000000000c1";
+    let resolved = "00000000-0000-0000-0000-0000000000c2";
+    let unknown = "00000000-0000-0000-0000-0000000000c3";
+    let items = vec![
+        assignment(named, "ServicePrincipal", USER_ACCESS_ADMIN_ROLE),
+        assignment(resolved, "ServicePrincipal", USER_ACCESS_ADMIN_ROLE),
+        assignment(unknown, "ServicePrincipal", USER_ACCESS_ADMIN_ROLE),
+    ];
+    let mut lazy = LazyStore::new(0);
+    lazy.role_assignments.apply(format!("/subscriptions/{SUB}"), Ok(items));
+    lazy.principals.apply(resolved.into(), Ok(json!({"@odata.type": "#microsoft.graph.servicePrincipal", "displayName": "From Graph"})));
+    let sp = |oid: &str, name: &str| {
+        let v = json!({"id": oid, "appId": oid, "displayName": name, "servicePrincipalType": "Application"});
+        boxed(directory::ServicePrincipalRow::from_json(&v, Some("t"), NOW))
+    };
+    let lists = vec![(V::ServicePrincipals, vec![sp(named, "deploy-bot"), sp(resolved, "list name")])];
+    let mut got = findings(&audit("sub-privileged-guest-or-sp", &lists, Some(&lazy)));
+    got.sort();
+    assert_eq!(
+        got,
+        vec![
+            (unknown.to_string(), Severity::High),
+            ("From Graph".to_string(), Severity::High),
+            ("deploy-bot".to_string(), Severity::High),
+        ]
+    );
+}
+
 #[test]
 fn without_the_access_list_the_access_check_says_how_to_get_it() {
     let rows = audit("sub-privileged-guest-or-sp", &[], None);

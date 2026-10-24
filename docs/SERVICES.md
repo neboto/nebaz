@@ -577,7 +577,7 @@ has a fixture test there.
 | `pp-policy-unhealthy` | Enterprise policies | `healthStatus` not Healthy | medium |
 | `appreg-credential-expiry` | App registrations | a secret or certificate expired · expiring within 30 days | medium · low |
 | `sp-credential-expiry` | Service principals (managed identities skipped) | the same | medium · low |
-| `sub-privileged-guest-or-sp` | the subscription's Access ⧗ (+ principals ⧗) | Owner or User Access Administrator at or above the subscription (assigned on it or a management group, not a resource group) held by a guest user (`userType` Guest or `#EXT#`) · a service principal | critical · high |
+| `sub-privileged-guest-or-sp` | the subscription's Access ⧗ (+ principals ⧗; a service principal is named from them, else from the cached Service principals list, else by object id) | Owner or User Access Administrator at or above the subscription (assigned on it or a management group, not a resource group) held by a guest user (`userType` Guest or `#EXT#`) · a service principal | critical · high |
 | `sub-contributor-guest-or-sp` | the same | Contributor at or above the subscription held by a guest user · a service principal (a separate check: Contributor cannot grant access, so one severity lower) | high · medium |
 
 ## API calls per view

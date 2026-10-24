@@ -1541,6 +1541,10 @@ impl App {
         self.list_sort = ListSort::Default;
         self.list_state_filter = None;
         self.search_query.clear();
+        // The cursor is a position in the old list: a new list starts at
+        // its top. A history restore or a jump re-selects by id afterwards.
+        self.filtered_resources.clear();
+        self.select(None);
     }
 
     fn switch_location(&mut self, location: Location) {

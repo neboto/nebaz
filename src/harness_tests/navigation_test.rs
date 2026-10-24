@@ -246,3 +246,33 @@ async fn copy_puts_the_expected_text_on_the_clipboard() {
     h.press(KeyCode::Char('y')).await;
     assert_eq!(h.app.clipboard.last(), Some(nic.as_str()));
 }
+
+/// A switch to another sub-tab lands on its top row, even when that list is
+/// served from the cache: the old list's row index never carries over
+/// (opening `@audit` from row 1 once landed on audit row 1). `⌫` still
+/// puts the cursor back where it was.
+#[tokio::test]
+async fn a_sub_tab_switch_lands_on_the_top_row_and_back_restores() {
+    let mut h = Harness::new().await;
+    h.open(JumpView::VirtualMachines).await;
+    h.land(vec![vm("vm-a", "westeurope"), vm("vm-b", "westeurope"), vm("vm-c", "westeurope")]).await;
+    h.press(KeyCode::Tab).await;
+    assert_eq!(h.app.current_view, JumpView::Disks);
+    h.land(vec![disk("disk-a", "westeurope"), disk("disk-b", "westeurope"), disk("disk-c", "westeurope")]).await;
+    h.press(KeyCode::Char('j')).await;
+    assert_eq!(h.app.selected_index, Some(1));
+    let disk_b = h.selected_id().unwrap();
+    assert!(disk_b.ends_with("/disk-b"), "{disk_b}");
+
+    // Back to the cached VM list: its top row, not row 1.
+    h.press(KeyCode::Char('1')).await;
+    assert_eq!(h.app.current_view, JumpView::VirtualMachines);
+    assert!(!h.app.loading, "served from the cache");
+    assert_eq!(h.app.selected_index, Some(0));
+    assert!(h.selected_id().unwrap().ends_with("/vm-a"));
+
+    // History restores the row it left.
+    h.press(KeyCode::Backspace).await;
+    assert_eq!(h.app.current_view, JumpView::Disks);
+    assert_eq!(h.selected_id().as_deref(), Some(disk_b.as_str()));
+}

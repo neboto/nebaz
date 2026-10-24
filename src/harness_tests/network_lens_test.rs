@@ -81,7 +81,8 @@ async fn n_on_a_subnet_shows_its_nsg_with_the_default_rules_and_jumps_to_the_nsg
     assert!(texts.iter().any(|t| t.contains("allow-pp-https")), "{texts:#?}");
     assert!(texts.iter().any(|t| t.contains("DenyAllInBound") && t.contains("(default)")), "{texts:#?}");
     let screen = h.render();
-    for s in ["NETWORK ACCESS", "not Azure's effective view", "aca-nsg", "DenyAllInBound", "(default)"] {
+    // The footer reads like every other hint bar, ` · ` between hints.
+    for s in ["NETWORK ACCESS", "not Azure's effective view", "aca-nsg", "DenyAllInBound", "(default)", "select  ·  ⏎ go to NSG"] {
         assert!(screen.contains(s), "{s:?} missing:\n{screen}");
     }
 
