@@ -105,7 +105,10 @@ Platform policies, expiring app credentials, guest or service-principal
 Owners, and more) computed from what is already loaded, with zero API
 calls; a check whose data is not loaded says "not checked", and `r` there
 loads it in the background; `nebaz audit --fail-on high` runs it headless
-([ADR 0007](docs/adr/0007-audit-checks-are-pure.md)). Verified against a live tenant:
+([ADR 0007](docs/adr/0007-audit-checks-are-pure.md)).
+For recordings and demos, `--show-keys` (config `show_keys`) names each key
+in a corner box as it's pressed, with what it did (`W  change timeline`);
+typed search and filter text never shows. Verified against a live tenant:
 VM power state on the row, and the copied `az` commands (Key Vault and
 AKS use the name form, since those `show` commands take no `--ids`).
 What `v0.1.0` is, and what must be true before it is tagged, is in

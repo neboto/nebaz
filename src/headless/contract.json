@@ -9,6 +9,7 @@
       "--no-banner",
       "--output",
       "--service",
+      "--show-keys",
       "--subscription",
       "--theme",
       "--watch"

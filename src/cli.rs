@@ -63,6 +63,11 @@ pub struct Cli {
     /// catppuccin-mocha, catppuccin-latte.
     #[arg(long, value_name = "THEME")]
     pub theme: Option<String>,
+
+    /// Show each key as it's pressed, and what it did, in a corner box
+    /// (for screen recordings and demos; typed text is never shown).
+    #[arg(long)]
+    pub show_keys: bool,
 }
 
 /// The one-shot subcommands. Each makes the same read-only calls the TUI
@@ -230,6 +235,9 @@ impl Cli {
         if self.theme.is_some() {
             config.theme = self.theme.clone();
         }
+        if self.show_keys {
+            config.show_keys = Some(true);
+        }
     }
 }
 
@@ -250,7 +258,19 @@ mod tests {
             watch: false,
             macro_name: None,
             theme: None,
+            show_keys: false,
         }
+    }
+
+    #[test]
+    fn show_keys_flag_overlays_config() {
+        let mut cfg = Config::default();
+        Cli { show_keys: true, ..empty() }.apply_to(&mut cfg);
+        assert_eq!(cfg.show_keys, Some(true));
+        // Absent flag leaves a config-file `show_keys = false` untouched.
+        let mut cfg = Config { show_keys: Some(false), ..Config::default() };
+        empty().apply_to(&mut cfg);
+        assert_eq!(cfg.show_keys, Some(false));
     }
 
     #[test]
