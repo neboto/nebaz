@@ -33,7 +33,10 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
     app.clear_click_regions();
 
     // ── Right side: badge parts in priority order ─────────────────────────
+    // Demo mode (#45) takes the endpoint badge's slot and style: it is the
+    // one thing a screenshot must never be mistaken for.
     let endpoint_text = match app.azure_clients.current_endpoint() {
+        _ if app.azure_clients.is_demo() => " DEMO · made-up data ".to_string(),
         Some(ep) => {
             // Strip the scheme for a compact `⚙ localhost:4566` badge.
             let host = ep

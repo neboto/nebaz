@@ -27,6 +27,12 @@
 //!    reason: its host and its one URL live in `src/update_check.rs` only,
 //!    the ARM client's tokenless `anonymous_get` is called from there only,
 //!    and that function carries `ReadOnlyPolicy` and no bearer policy.
+//! 6. Demo mode (`--demo`, #45) swaps the network for `src/demo`'s
+//!    transport, which answers from bodies embedded at build time: it is
+//!    the only `HttpClient` implementation, it lives in `src/demo/mod.rs`,
+//!    `arm.rs` installs it only for the demo credential source, and nothing
+//!    under `src/demo` opens a socket, builds a real HTTP client or spawns
+//!    a process.
 //!
 //! There is deliberately no API-path allowlist here: the paths are
 //! documentation in `PERMISSIONS.md`, kept in sync by the PR template.
@@ -783,4 +789,46 @@ fn the_non_azure_rules_catch_what_they_should() {
         non_azure_problems("src/x.rs", "fn f() {}\n#[cfg(test)]\nmod t { const U: &str = \"https://api.github.com/x\"; }\n").is_empty(),
         "test code is exempt"
     );
+}
+
+const DEMO_TRANSPORT_FILE: &str = "src/demo/mod.rs";
+/// What a canned transport has no business naming.
+const DEMO_FORBIDDEN: &[&str] = &[
+    "std::net",
+    "tokio::net",
+    "new_http_client",
+    "process::Command",
+    "TcpStream",
+    "UdpSocket",
+];
+
+#[test]
+fn the_demo_transport_is_canned_and_demo_only() {
+    let mut problems = Vec::new();
+    for path in rust_sources() {
+        let r = rel(&path);
+        let file = without_line_comments(&fs::read_to_string(&path).unwrap());
+        let scan = non_test_part(&file);
+        if scan.contains("impl HttpClient for") && r != DEMO_TRANSPORT_FILE {
+            problems.push(format!("{r}: an HttpClient outside {DEMO_TRANSPORT_FILE}"));
+        }
+        if scan.contains("DemoTransport") && r != DEMO_TRANSPORT_FILE && r != ARM_FILE {
+            problems.push(format!("{r}: names the demo transport; only {ARM_FILE} installs it"));
+        }
+        if r.starts_with("src/demo/") {
+            for needle in DEMO_FORBIDDEN {
+                if scan.contains(needle) {
+                    problems.push(format!("{r}: names `{needle}`; the demo answers from embedded bodies only"));
+                }
+            }
+        }
+    }
+    let arm = without_line_comments(&fs::read_to_string(root().join(ARM_FILE)).unwrap());
+    let at = arm.find("DemoTransport").expect("arm.rs installs the demo transport");
+    let arm_line = arm[..at].rfind("CredentialSource::Demo").map(|d| arm[d..at].lines().count());
+    assert!(
+        arm_line.is_some_and(|n| n <= 4),
+        "{ARM_FILE}: the demo transport must sit inside the `CredentialSource::Demo` arm"
+    );
+    assert!(problems.is_empty(), "read-only guard (demo mode):\n  {}", problems.join("\n  "));
 }

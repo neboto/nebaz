@@ -19,11 +19,12 @@ Azure sibling of neboto (`neboto/neboto-tui`, the AWS one) and was built by
 | What a service actually renders today | the service file itself; it is the reference |
 | The ARM actions per service, the one role to assign | [`PERMISSIONS.md`](PERMISSIONS.md) |
 | The project's own vocabulary (subscription, location, ARM id, Lazy, LazyStore, epoch, state ladder, Related section, guard…) | [`CONTEXT.md`](CONTEXT.md) |
-| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands, 0006 `@changes` fetches, 0007 audit checks are pure |
+| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands, 0006 `@changes` fetches, 0007 audit checks are pure, 0008 the update check |
 | What `v0.1.0` is and is not | [`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md) |
 | What is not built yet, and what is parked | [GitHub issues](https://github.com/neboto/nebaz/issues) (`gh issue list`); the parity roadmap is #55 |
 | What came from neboto and what changed | [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md) |
 | How a release is cut, how users install | [`docs/RELEASING.md`](docs/RELEASING.md) |
+| Demo mode (`--demo`): the story, the ids, how to add a fixture | [`docs/DEMO.md`](docs/DEMO.md) |
 
 Prefer a grep the reader can run over a count they have to trust.
 
@@ -38,6 +39,7 @@ NEBAZ_BLESS=1 cargo test contract   # record an addition to the headless output 
 cargo test --test readonly_guard    # just the guard
 cargo clippy --all-targets -- -D warnings   # CI fails on any warning
 scripts/smoke.sh                    # offline pty run with a fake az (manual, not a CI gate)
+cargo run -- --demo                 # the made-up offline tenant (docs/DEMO.md); NEBAZ_DEMO_TRACE=<file> logs what answered each request
 ```
 
 ## Architecture
@@ -190,6 +192,9 @@ verbatim where the concept is unchanged.
 7. Docs: the row in `docs/SERVICES.md` (catalog **and** call table), the
    action in `PERMISSIONS.md`, the build line in `README.md`. The
    read-only guard will tell you if the `az` verb or the path is wrong.
+8. Demo fixtures (`docs/DEMO.md`): rows for the new sub-tab in the area
+   that owns it; `src/headless/demo_tests.rs` fails until it lists rows
+   and opens them without a `⚠`.
 
 ## Conventions & gotchas
 
