@@ -1,0 +1,150 @@
+{
+  "value": [
+    {
+      "properties": {
+        "essentials": {
+          "severity": "Sev1",
+          "signalType": "Metric",
+          "alertState": "New",
+          "monitorCondition": "Fired",
+          "monitorService": "Platform",
+          "targetResource": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api",
+          "targetResourceName": "ca-orders-api",
+          "targetResourceGroup": "rg-orders-prod",
+          "targetResourceType": "Microsoft.App/containerApps",
+          "sourceCreatedId": "8fcbb22e-a5dd-53ec-9130-6a2d8c7fcd7c",
+          "smartGroupId": "68b7b4b5-4bc8-5fa5-b836-d5d2a9dc0b3a",
+          "smartGroupingReason": "",
+          "alertRule": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/metricAlerts/orders-api-requests-dropped",
+          "startDateTime": "{{iso:now-6600s}}",
+          "lastModifiedDateTime": "{{iso:now-6570s}}",
+          "lastModifiedUserName": "System",
+          "actionStatus": {
+            "isSuppressed": false
+          },
+          "description": "Requests to ca-orders-api fell below 200 per 15 minutes (normally ~25,000)."
+        }
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.AlertsManagement/alerts/e6627c82-bc03-5314-ade6-481e66639252",
+      "type": "Microsoft.AlertsManagement/alerts",
+      "name": "orders-api-requests-dropped"
+    },
+    {
+      "properties": {
+        "essentials": {
+          "severity": "Sev3",
+          "signalType": "Log",
+          "alertState": "New",
+          "monitorCondition": "Fired",
+          "monitorService": "ActivityLog Administrative",
+          "targetResource": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-pp-injection",
+          "targetResourceName": "nsg-pp-injection",
+          "targetResourceGroup": "rg-network-prod",
+          "targetResourceType": "Microsoft.Network/networkSecurityGroups",
+          "sourceCreatedId": "39ebd89d-fcfc-5ee0-9e06-d5e3bd79b4e1",
+          "smartGroupId": "0da7c2e1-f377-5fe7-a0d4-f75f4f90643f",
+          "smartGroupingReason": "",
+          "alertRule": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Insights/activityLogAlerts/nsg-change-rg-network-prod",
+          "startDateTime": "{{iso:now-7740s}}",
+          "lastModifiedDateTime": "{{iso:now-7710s}}",
+          "lastModifiedUserName": "System",
+          "actionStatus": {
+            "isSuppressed": false
+          },
+          "description": "A security rule changed on an NSG in rg-network-prod."
+        }
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.AlertsManagement/alerts/a4a2f7a9-1f7a-52fe-934d-b21789d78262",
+      "type": "Microsoft.AlertsManagement/alerts",
+      "name": "nsg-change-rg-network-prod"
+    },
+    {
+      "properties": {
+        "essentials": {
+          "severity": "Sev3",
+          "signalType": "Log",
+          "alertState": "Closed",
+          "monitorCondition": "Fired",
+          "monitorService": "ActivityLog Administrative",
+          "targetResource": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-jump-prod",
+          "targetResourceName": "nsg-jump-prod",
+          "targetResourceGroup": "rg-network-prod",
+          "targetResourceType": "Microsoft.Network/networkSecurityGroups",
+          "sourceCreatedId": "c46cb809-7130-5e81-9a94-5ad628405ab2",
+          "smartGroupId": "b5eb6344-de8a-584c-b96a-cd65ffbe061e",
+          "smartGroupingReason": "",
+          "alertRule": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Insights/activityLogAlerts/nsg-change-rg-network-prod",
+          "startDateTime": "{{iso:now-268800s}}",
+          "lastModifiedDateTime": "{{iso:now-268770s}}",
+          "lastModifiedUserName": "System",
+          "actionStatus": {
+            "isSuppressed": false
+          },
+          "description": "A security rule changed on an NSG in rg-network-prod."
+        }
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.AlertsManagement/alerts/a6362290-f7dc-55c9-9336-194e94e5c35d",
+      "type": "Microsoft.AlertsManagement/alerts",
+      "name": "nsg-change-rg-network-prod"
+    },
+    {
+      "properties": {
+        "essentials": {
+          "severity": "Sev2",
+          "signalType": "Metric",
+          "alertState": "Closed",
+          "monitorCondition": "Resolved",
+          "monitorService": "Platform",
+          "targetResource": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod",
+          "targetResourceName": "aks-platform-prod",
+          "targetResourceGroup": "rg-platform-prod",
+          "targetResourceType": "Microsoft.ContainerService/managedClusters",
+          "sourceCreatedId": "84ec3f19-60b3-5ac4-9062-494f1551fadf",
+          "smartGroupId": "20a77d05-4703-5aca-83f1-75376cc4e293",
+          "smartGroupingReason": "",
+          "alertRule": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Insights/metricAlerts/aks-node-cpu-high",
+          "startDateTime": "{{iso:now-198000s}}",
+          "lastModifiedDateTime": "{{iso:now-195600s}}",
+          "lastModifiedUserName": "System",
+          "actionStatus": {
+            "isSuppressed": false
+          },
+          "description": "Node CPU above 85% for 10 minutes.",
+          "monitorConditionResolvedDateTime": "{{iso:now-195600s}}"
+        }
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.AlertsManagement/alerts/662e91cf-88e5-5556-8767-620762709bf5",
+      "type": "Microsoft.AlertsManagement/alerts",
+      "name": "aks-node-cpu-high"
+    },
+    {
+      "properties": {
+        "essentials": {
+          "severity": "Sev2",
+          "signalType": "Metric",
+          "alertState": "New",
+          "monitorCondition": "Fired",
+          "monitorService": "Platform",
+          "targetResource": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export",
+          "targetResourceName": "caj-nightly-export",
+          "targetResourceGroup": "rg-orders-prod",
+          "targetResourceType": "Microsoft.App/jobs",
+          "sourceCreatedId": "676d02ad-9845-5da4-ba80-3f2903b5ea00",
+          "smartGroupId": "c9a7f6f6-28e6-5055-8473-2aea2cf141de",
+          "smartGroupingReason": "",
+          "alertRule": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/metricAlerts/caj-nightly-export-failed",
+          "startDateTime": "{{iso:now-50760s}}",
+          "lastModifiedDateTime": "{{iso:now-50730s}}",
+          "lastModifiedUserName": "System",
+          "actionStatus": {
+            "isSuppressed": false
+          },
+          "description": "caj-nightly-export: an execution failed."
+        }
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.AlertsManagement/alerts/38efb7f3-37e4-563e-8159-719767943463",
+      "type": "Microsoft.AlertsManagement/alerts",
+      "name": "caj-nightly-export-failed"
+    }
+  ]
+}

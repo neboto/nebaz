@@ -1,0 +1,102 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod",
+      "name": "rg-network-prod",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform@contoso.com",
+        "costCenter": "CC-4100"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod",
+      "name": "rg-orders-prod",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders@contoso.com",
+        "costCenter": "CC-4200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod",
+      "name": "rg-platform-prod",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform@contoso.com",
+        "costCenter": "CC-4100"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod",
+      "name": "rg-legacy-prod",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy@contoso.com",
+        "decommission": "2026-Q4"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod",
+      "name": "rg-ai-prod",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "data",
+        "owner": "data@contoso.com",
+        "costCenter": "CC-4300"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/MC_rg-platform-prod_aks-platform-prod_westeurope",
+      "name": "MC_rg-platform-prod_aks-platform-prod_westeurope",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "managedBy": "/subscriptions/{{prod}}/resourcegroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod",
+      "tags": {
+        "aks-managed-cluster-name": "aks-platform-prod",
+        "aks-managed-cluster-rg": "rg-platform-prod"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/NetworkWatcherRG",
+      "name": "NetworkWatcherRG",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

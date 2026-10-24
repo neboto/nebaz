@@ -1,0 +1,41 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Insights/activityLogAlerts/nsg-change-rg-network-prod",
+      "name": "nsg-change-rg-network-prod",
+      "type": "Microsoft.Insights/ActivityLogAlerts",
+      "location": "Global",
+      "tags": {
+        "env": "prod",
+        "team": "platform"
+      },
+      "properties": {
+        "scopes": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-network-prod"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "Administrative"
+            },
+            {
+              "field": "operationName",
+              "equals": "Microsoft.Network/networkSecurityGroups/securityRules/write"
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Insights/actionGroups/ag-platform-oncall",
+              "webhookProperties": {}
+            }
+          ]
+        },
+        "enabled": true,
+        "description": "A security rule changed on an NSG in rg-network-prod."
+      }
+    }
+  ]
+}

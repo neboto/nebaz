@@ -1,0 +1,60 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Resources/deployments/sub-baseline-20260610",
+      "name": "sub-baseline-20260610",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "location": "westeurope",
+      "properties": {
+        "templateHash": "692972530192704860",
+        "parameters": {
+          "owner": {
+            "type": "String",
+            "value": "platform@contoso.com"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-11750400s}}",
+        "duration": "PT48.2S",
+        "correlationId": "40e4e626-51d1-59ac-b360-da218743be06",
+        "providers": [
+          {
+            "namespace": "Microsoft.Resources",
+            "resourceTypes": [
+              {
+                "resourceType": "resourceGroups",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    }
+  ]
+}

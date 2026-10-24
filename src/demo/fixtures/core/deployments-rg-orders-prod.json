@@ -1,0 +1,312 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deployments/orders-worker-v119",
+      "name": "orders-worker-v119",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "336697330250974464",
+        "parameters": {
+          "containerAppName": {
+            "type": "String",
+            "value": "ca-orders-worker"
+          },
+          "imageTag": {
+            "type": "String",
+            "value": "1.19.0"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Failed",
+        "timestamp": "{{iso:now-1440s}}",
+        "duration": "PT1M10.4128863S",
+        "correlationId": "fc147850-5cb5-5490-af68-c3cb1d4dd6f8",
+        "providers": [
+          {
+            "namespace": "Microsoft.App",
+            "resourceTypes": [
+              {
+                "resourceType": "containerApps",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [],
+        "validationLevel": "Template",
+        "error": {
+          "code": "DeploymentFailed",
+          "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
+          "details": [
+            {
+              "code": "ContainerAppOperationError",
+              "message": "Failed to provision revision for container app 'ca-orders-worker'. Error details: The following field(s) are either invalid or missing. Field 'template.containers.orders-worker.image' is invalid with details: 'Invalid value: \"acrcontosoprod.azurecr.io/orders-worker:1.19.0\": GET https:: MANIFEST_UNKNOWN: manifest tagged by \"1.19.0\" is not known; map[Tag:1.19.0]';."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deployments/orders-api-v231",
+      "name": "orders-api-v231",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "56546341558617445",
+        "parameters": {
+          "containerAppName": {
+            "type": "String",
+            "value": "ca-orders-api"
+          },
+          "imageTag": {
+            "type": "String",
+            "value": "2.31.0"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-280800s}}",
+        "duration": "PT1M35.0331764S",
+        "correlationId": "4e193f7c-6aad-5e18-bb1d-c7220010caf0",
+        "providers": [
+          {
+            "namespace": "Microsoft.App",
+            "resourceTypes": [
+              {
+                "resourceType": "containerApps",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deployments/orders-worker-v118",
+      "name": "orders-worker-v118",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "652702167776273876",
+        "parameters": {
+          "containerAppName": {
+            "type": "String",
+            "value": "ca-orders-worker"
+          },
+          "imageTag": {
+            "type": "String",
+            "value": "1.18.2"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-363600s}}",
+        "duration": "PT1M28.7718212S",
+        "correlationId": "4bf58bda-d698-5ef2-96de-a84960cbc67e",
+        "providers": [
+          {
+            "namespace": "Microsoft.App",
+            "resourceTypes": [
+              {
+                "resourceType": "containerApps",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deployments/orders-jobs-20261001",
+      "name": "orders-jobs-20261001",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "764668096573977955",
+        "parameters": {
+          "jobName": {
+            "type": "String",
+            "value": "caj-nightly-export"
+          },
+          "cron": {
+            "type": "String",
+            "value": "0 2 * * *"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-2001600s}}",
+        "duration": "PT50.112S",
+        "correlationId": "ff46639f-a2c9-5175-a8fb-91ef18a698bd",
+        "providers": [
+          {
+            "namespace": "Microsoft.App",
+            "resourceTypes": [
+              {
+                "resourceType": "jobs",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deployments/orders-platform-20260912",
+      "name": "orders-platform-20260912",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "781266986362742258",
+        "parameters": {
+          "environment": {
+            "type": "String",
+            "value": "prod"
+          },
+          "location": {
+            "type": "String",
+            "value": "westeurope"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-3628800s}}",
+        "duration": "PT14M2.5521374S",
+        "correlationId": "78fba57d-9ed4-54aa-99af-af812c5619d4",
+        "providers": [
+          {
+            "namespace": "Microsoft.App",
+            "resourceTypes": [
+              {
+                "resourceType": "managedEnvironments",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          },
+          {
+            "namespace": "Microsoft.KeyVault",
+            "resourceTypes": [
+              {
+                "resourceType": "vaults",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          },
+          {
+            "namespace": "Microsoft.Sql",
+            "resourceTypes": [
+              {
+                "resourceType": "servers",
+                "locations": [
+                  "westeurope"
+                ]
+              },
+              {
+                "resourceType": "servers/databases",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod/databases/sqldb-orders"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/Redis/redis-orders-cache"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventHub/namespaces/evh-orders-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/metricAlerts/orders-api-requests-dropped"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/actionGroups/ag-orders-oncall"
+          }
+        ],
+        "validationLevel": "Template",
+        "templateLink": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-orders-platform/versions/1.4.0",
+          "contentVersion": "1.0.0.0"
+        },
+        "outputs": {}
+      }
+    }
+  ]
+}

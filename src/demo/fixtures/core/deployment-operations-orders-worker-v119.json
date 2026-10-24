@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deployments/orders-worker-v119/operations/4948202f-dad1-59b2-90c7-cad8077bae3e",
+      "operationId": "4948202f-dad1-59b2-90c7-cad8077bae3e",
+      "properties": {
+        "provisioningOperation": "Create",
+        "provisioningState": "Failed",
+        "timestamp": "{{iso:now-1440s}}",
+        "duration": "PT1M2.81S",
+        "trackingId": "4f9c22db-5026-535f-9cab-955420468a2e",
+        "serviceRequestId": "0806e54a-f273-5f10-8a42-95a0c752f27c",
+        "statusCode": "BadRequest",
+        "statusMessage": {
+          "status": "Failed",
+          "error": {
+            "code": "ContainerAppOperationError",
+            "message": "Failed to provision revision for container app 'ca-orders-worker'. Error details: The following field(s) are either invalid or missing. Field 'template.containers.orders-worker.image' is invalid with details: 'Invalid value: \"acrcontosoprod.azurecr.io/orders-worker:1.19.0\": GET https:: MANIFEST_UNKNOWN: manifest tagged by \"1.19.0\" is not known; map[Tag:1.19.0]';."
+          }
+        },
+        "targetResource": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker",
+          "resourceType": "Microsoft.App/containerApps",
+          "resourceName": "ca-orders-worker"
+        }
+      }
+    }
+  ]
+}

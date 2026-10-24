@@ -1,0 +1,27 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev",
+      "name": "rg-dev",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "dev",
+        "team": "platform",
+        "owner": "platform@contoso.com"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/NetworkWatcherRG",
+      "name": "NetworkWatcherRG",
+      "type": "Microsoft.Resources/resourceGroups",
+      "location": "westeurope",
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

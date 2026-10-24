@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/deployments/aks-batch-nodepool-scale/operations/544d9c7b-9900-5757-bfff-4edf10fdb6e5",
+      "operationId": "544d9c7b-9900-5757-bfff-4edf10fdb6e5",
+      "properties": {
+        "provisioningOperation": "Create",
+        "provisioningState": "Failed",
+        "timestamp": "{{iso:now-522000s}}",
+        "duration": "PT4M51.3S",
+        "trackingId": "69990c59-0623-5084-961e-2554c37482e3",
+        "serviceRequestId": "aaa664a4-b046-58a8-9e60-2af1a6ee2f9a",
+        "statusCode": "Conflict",
+        "statusMessage": {
+          "status": "Failed",
+          "error": {
+            "code": "QuotaExceeded",
+            "message": "Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Location: westeurope, Current Limit: 100, Current Usage: 96, Additional Required: 32. Submit a request for Quota increase at https://aka.ms/ProdportalCRP/#blade/Microsoft_Azure_Capacity/UsageAndQuota.ReactView/Parameters/ before retrying."
+          }
+        },
+        "targetResource": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod/agentPools/batch",
+          "resourceType": "Microsoft.ContainerService/managedClusters/agentPools",
+          "resourceName": "batch"
+        }
+      }
+    }
+  ]
+}

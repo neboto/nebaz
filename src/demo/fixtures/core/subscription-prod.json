@@ -1,0 +1,19 @@
+{
+  "id": "/subscriptions/{{prod}}",
+  "authorizationSource": "RoleBased",
+  "managedByTenants": [],
+  "tags": {
+    "env": "prod",
+    "costCenter": "CC-4100",
+    "owner": "platform@contoso.com"
+  },
+  "subscriptionId": "{{prod}}",
+  "tenantId": "{{tenant}}",
+  "displayName": "contoso-prod",
+  "state": "Enabled",
+  "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+  }
+}

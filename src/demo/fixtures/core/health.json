@@ -1,0 +1,148 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker/providers/Microsoft.ResourceHealth/availabilityStatuses/current",
+      "name": "current",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Degraded",
+        "title": "Degraded",
+        "summary": "The latest revision of this container app (ca-orders-worker--v119) failed to provision; ca-orders-worker--v118 is still serving.",
+        "reasonType": "Unplanned",
+        "context": "Customer Initiated",
+        "category": "Unplanned",
+        "reasonChronicity": "Persistent",
+        "detailedStatus": "Revision provisioning failed: the image could not be pulled.",
+        "occuredTime": "{{iso:now-1320s}}",
+        "reportedTime": "{{iso:now-1225s}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker/providers/Microsoft.ResourceHealth/availabilityStatuses/e0a00823-65d9-5604-8f93-e924cc2fbc8f",
+      "name": "e0a00823-65d9-5604-8f93-e924cc2fbc8f",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Available",
+        "title": "Available",
+        "summary": "There aren't any known Azure platform problems affecting this resource.",
+        "reasonType": "",
+        "context": "",
+        "category": "",
+        "reasonChronicity": "Persistent",
+        "detailedStatus": "",
+        "occuredTime": "{{iso:now-5270400s}}",
+        "reportedTime": "{{iso:now-5270305s}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01/providers/Microsoft.ResourceHealth/availabilityStatuses/current",
+      "name": "current",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Unavailable",
+        "title": "Stopped and deallocated",
+        "summary": "This virtual machine is stopped and deallocated as requested by an authorized user or process.",
+        "reasonType": "Customer Initiated",
+        "context": "Customer Initiated",
+        "category": "Not Applicable",
+        "reasonChronicity": "Persistent",
+        "detailedStatus": "",
+        "occuredTime": "{{iso:now-3466680s}}",
+        "reportedTime": "{{iso:now-3466585s}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01/providers/Microsoft.ResourceHealth/availabilityStatuses/193a3ade-42f4-54cd-93bf-32fea6664b2c",
+      "name": "193a3ade-42f4-54cd-93bf-32fea6664b2c",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Available",
+        "title": "Available",
+        "summary": "There aren't any known Azure platform problems affecting this resource.",
+        "reasonType": "",
+        "context": "",
+        "category": "",
+        "reasonChronicity": "Persistent",
+        "detailedStatus": "",
+        "occuredTime": "{{iso:now-32832000s}}",
+        "reportedTime": "{{iso:now-32831905s}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.ResourceHealth/availabilityStatuses/current",
+      "name": "current",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Available",
+        "title": "Available",
+        "summary": "There aren't any known Azure platform problems affecting this resource.",
+        "reasonType": "",
+        "context": "",
+        "category": "",
+        "reasonChronicity": "Persistent",
+        "detailedStatus": "",
+        "occuredTime": "{{iso:now-445680s}}",
+        "reportedTime": "{{iso:now-445585s}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.ResourceHealth/availabilityStatuses/1d5209f1-a499-5707-9da2-5d11b3de36d3",
+      "name": "1d5209f1-a499-5707-9da2-5d11b3de36d3",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Unavailable",
+        "title": "Rebooted by Azure",
+        "summary": "We're sorry, your virtual machine isn't available because an unexpected event occurred on the host. The virtual machine was redeployed to a healthy host.",
+        "reasonType": "Unplanned",
+        "context": "Platform Initiated",
+        "category": "Unplanned",
+        "reasonChronicity": "Transient",
+        "detailedStatus": "",
+        "occuredTime": "{{iso:now-446400s}}",
+        "reportedTime": "{{iso:now-446305s}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.ResourceHealth/availabilityStatuses/1ddbcb95-7be3-513d-8e73-d9621d28a2bd",
+      "name": "1ddbcb95-7be3-513d-8e73-d9621d28a2bd",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Available",
+        "title": "Available",
+        "summary": "There aren't any known Azure platform problems affecting this resource.",
+        "reasonType": "",
+        "context": "",
+        "category": "",
+        "reasonChronicity": "Persistent",
+        "detailedStatus": "",
+        "occuredTime": "{{iso:now-17280000s}}",
+        "reportedTime": "{{iso:now-17279905s}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api/providers/Microsoft.ResourceHealth/availabilityStatuses/current",
+      "name": "current",
+      "type": "Microsoft.ResourceHealth/AvailabilityStatuses",
+      "location": "westeurope",
+      "properties": {
+        "availabilityState": "Available",
+        "title": "Available",
+        "summary": "There aren't any known Azure platform problems affecting this resource.",
+        "reasonType": "",
+        "context": "",
+        "category": "",
+        "reasonChronicity": "Persistent",
+        "detailedStatus": "",
+        "occuredTime": "{{iso:now-1641600s}}",
+        "reportedTime": "{{iso:now-1641505s}}"
+      }
+    }
+  ]
+}
