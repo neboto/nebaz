@@ -1,0 +1,55 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-api/revisions/ca-orders-api--v231",
+      "name": "ca-orders-api--v231",
+      "type": "Microsoft.App/containerApps/revisions",
+      "properties": {
+        "createdTime": "{{iso:now-3d}}",
+        "lastActiveTime": "{{iso:now-1m}}",
+        "fqdn": "ca-orders-api--v231.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+        "template": null,
+        "active": true,
+        "replicas": 3,
+        "healthState": "Healthy",
+        "provisioningState": "Provisioned",
+        "runningState": "Running",
+        "trafficWeight": 100
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-api/revisions/ca-orders-api--v230",
+      "name": "ca-orders-api--v230",
+      "type": "Microsoft.App/containerApps/revisions",
+      "properties": {
+        "createdTime": "{{iso:now-10d}}",
+        "lastActiveTime": "{{iso:now-10d}}",
+        "fqdn": "ca-orders-api--v230.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+        "template": null,
+        "active": false,
+        "replicas": 0,
+        "healthState": "None",
+        "provisioningState": "Provisioned",
+        "runningState": "Stopped",
+        "trafficWeight": 0
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-api/revisions/ca-orders-api--v229",
+      "name": "ca-orders-api--v229",
+      "type": "Microsoft.App/containerApps/revisions",
+      "properties": {
+        "createdTime": "{{iso:now-17d}}",
+        "lastActiveTime": "{{iso:now-17d}}",
+        "fqdn": "ca-orders-api--v229.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+        "template": null,
+        "active": false,
+        "replicas": 0,
+        "healthState": "None",
+        "provisioningState": "Provisioned",
+        "runningState": "Stopped",
+        "trafficWeight": 0
+      }
+    }
+  ]
+}

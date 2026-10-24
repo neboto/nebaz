@@ -1,0 +1,36 @@
+{
+  "value": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries/replications",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod/replications/westeurope",
+      "name": "westeurope",
+      "location": "westeurope",
+      "tags": {},
+      "properties": {
+        "provisioningState": "Succeeded",
+        "status": {
+          "displayStatus": "Ready",
+          "timestamp": "{{iso:now-90d}}"
+        },
+        "regionEndpointEnabled": true,
+        "zoneRedundancy": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries/replications",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod/replications/northeurope",
+      "name": "northeurope",
+      "location": "northeurope",
+      "tags": {},
+      "properties": {
+        "provisioningState": "Succeeded",
+        "status": {
+          "displayStatus": "Ready",
+          "timestamp": "{{iso:now-90d}}"
+        },
+        "regionEndpointEnabled": true,
+        "zoneRedundancy": "Disabled"
+      }
+    }
+  ]
+}

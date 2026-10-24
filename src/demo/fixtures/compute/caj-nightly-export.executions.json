@@ -1,0 +1,92 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export/executions/caj-nightly-export-q7k2m9x",
+      "name": "caj-nightly-export-q7k2m9x",
+      "type": "Microsoft.App/jobs/executions",
+      "properties": {
+        "status": "Failed",
+        "startTime": "{{iso:now-6h}}",
+        "endTime": "{{iso:now-356m}}",
+        "template": {
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-export:1.4.2",
+              "name": "orders-export",
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2Gi"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export/executions/caj-nightly-export-b3n8t1v",
+      "name": "caj-nightly-export-b3n8t1v",
+      "type": "Microsoft.App/jobs/executions",
+      "properties": {
+        "status": "Succeeded",
+        "startTime": "{{iso:now-30h}}",
+        "endTime": "{{iso:now-1763m}}",
+        "template": {
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-export:1.4.2",
+              "name": "orders-export",
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2Gi"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export/executions/caj-nightly-export-h5w2c6r",
+      "name": "caj-nightly-export-h5w2c6r",
+      "type": "Microsoft.App/jobs/executions",
+      "properties": {
+        "status": "Succeeded",
+        "startTime": "{{iso:now-54h}}",
+        "endTime": "{{iso:now-3205m}}",
+        "template": {
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-export:1.4.2",
+              "name": "orders-export",
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2Gi"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export/executions/caj-nightly-export-z9d4f1p",
+      "name": "caj-nightly-export-z9d4f1p",
+      "type": "Microsoft.App/jobs/executions",
+      "properties": {
+        "status": "Succeeded",
+        "startTime": "{{iso:now-78h}}",
+        "endTime": "{{iso:now-4644m}}",
+        "template": {
+          "containers": [
+            {
+              "image": "acrcontosoprod.azurecr.io/orders-export:1.4.2",
+              "name": "orders-export",
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2Gi"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

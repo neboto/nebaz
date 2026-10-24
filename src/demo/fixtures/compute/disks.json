@@ -1,0 +1,112 @@
+{
+  "value": [
+    {
+      "name": "vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68",
+      "type": "Microsoft.Compute/disks",
+      "location": "westeurope",
+      "tags": {},
+      "sku": {
+        "name": "Premium_LRS",
+        "tier": "Premium"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "FromImage",
+          "imageReference": {
+            "id": "/Subscriptions/{{prod}}/Providers/Microsoft.Compute/Locations/westeurope/Publishers/canonical/ArtifactTypes/VMImage/Offers/0001-com-ubuntu-server-jammy/Skus/22_04-lts-gen2/Versions/22.04.202409260"
+          }
+        },
+        "diskSizeGB": 30,
+        "diskIOPSReadWrite": 120,
+        "diskMBpsReadWrite": 25,
+        "encryption": {
+          "type": "EncryptionAtRestWithPlatformKey"
+        },
+        "networkAccessPolicy": "AllowAll",
+        "publicNetworkAccess": "Enabled",
+        "timeCreated": "{{iso:now-212d}}",
+        "provisioningState": "Succeeded",
+        "diskState": "Attached",
+        "diskSizeBytes": 32212254720,
+        "uniqueId": "2b6f0e8d-4a1c-4e3b-9d75-c8a2f1e09b34",
+        "tier": "P4",
+        "osType": "Linux",
+        "hyperVGeneration": "V2"
+      },
+      "managedBy": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01"
+    },
+    {
+      "name": "vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+      "type": "Microsoft.Compute/disks",
+      "location": "westeurope",
+      "tags": {},
+      "sku": {
+        "name": "Premium_LRS",
+        "tier": "Premium"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "FromImage",
+          "imageReference": {
+            "id": "/Subscriptions/{{prod}}/Providers/Microsoft.Compute/Locations/westeurope/Publishers/MicrosoftWindowsServer/ArtifactTypes/VMImage/Offers/WindowsServer/Skus/2019-Datacenter/Versions/17763.6532.241101"
+          }
+        },
+        "diskSizeGB": 127,
+        "diskIOPSReadWrite": 500,
+        "diskMBpsReadWrite": 100,
+        "encryption": {
+          "type": "EncryptionAtRestWithPlatformKey"
+        },
+        "networkAccessPolicy": "AllowAll",
+        "publicNetworkAccess": "Enabled",
+        "timeCreated": "{{iso:now-1460d}}",
+        "provisioningState": "Succeeded",
+        "diskState": "Reserved",
+        "diskSizeBytes": 136365211648,
+        "uniqueId": "7c3d9a2e-1f4b-4c8d-a6e0-5b9f2d3c7e81",
+        "tier": "P10",
+        "osType": "Windows",
+        "hyperVGeneration": "V1"
+      },
+      "managedBy": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01"
+    },
+    {
+      "name": "disk-legacy-data-01",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/disk-legacy-data-01",
+      "type": "Microsoft.Compute/disks",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-ops@contoso.com",
+        "costCenter": "CC-4410"
+      },
+      "sku": {
+        "name": "Premium_LRS",
+        "tier": "Premium"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "Empty"
+        },
+        "diskSizeGB": 1024,
+        "diskIOPSReadWrite": 5000,
+        "diskMBpsReadWrite": 200,
+        "encryption": {
+          "type": "EncryptionAtRestWithPlatformKey"
+        },
+        "networkAccessPolicy": "AllowAll",
+        "publicNetworkAccess": "Enabled",
+        "timeCreated": "{{iso:now-1100d}}",
+        "provisioningState": "Succeeded",
+        "diskState": "Unattached",
+        "diskSizeBytes": 1099511627776,
+        "uniqueId": "e4a7c1b9-3d5f-4a2e-8b6c-0f1d9e3a5c72",
+        "tier": "P30",
+        "lastOwnershipUpdateTime": "{{iso:now-40d}}"
+      }
+    }
+  ]
+}

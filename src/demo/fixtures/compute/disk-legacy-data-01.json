@@ -1,0 +1,36 @@
+{
+  "name": "disk-legacy-data-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/disk-legacy-data-01",
+  "type": "Microsoft.Compute/disks",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-ops@contoso.com",
+    "costCenter": "CC-4410"
+  },
+  "sku": {
+    "name": "Premium_LRS",
+    "tier": "Premium"
+  },
+  "properties": {
+    "creationData": {
+      "createOption": "Empty"
+    },
+    "diskSizeGB": 1024,
+    "diskIOPSReadWrite": 5000,
+    "diskMBpsReadWrite": 200,
+    "encryption": {
+      "type": "EncryptionAtRestWithPlatformKey"
+    },
+    "networkAccessPolicy": "AllowAll",
+    "publicNetworkAccess": "Enabled",
+    "timeCreated": "{{iso:now-1100d}}",
+    "provisioningState": "Succeeded",
+    "diskState": "Unattached",
+    "diskSizeBytes": 1099511627776,
+    "uniqueId": "e4a7c1b9-3d5f-4a2e-8b6c-0f1d9e3a5c72",
+    "tier": "P30",
+    "lastOwnershipUpdateTime": "{{iso:now-40d}}"
+  }
+}

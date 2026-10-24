@@ -1,0 +1,44 @@
+{
+  "computerName": "LEGACYAPP01",
+  "osName": "Windows Server 2019 Datacenter",
+  "osVersion": "10.0.17763.6532",
+  "hyperVGeneration": "V1",
+  "vmAgent": {
+    "vmAgentVersion": "Unknown",
+    "statuses": [
+      {
+        "code": "ProvisioningState/Unavailable",
+        "level": "Warning",
+        "displayStatus": "Not Ready",
+        "message": "VM status blob is found but not yet populated.",
+        "time": "{{iso:now-40d}}"
+      }
+    ]
+  },
+  "disks": [
+    {
+      "name": "vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13",
+      "statuses": [
+        {
+          "code": "ProvisioningState/succeeded",
+          "level": "Info",
+          "displayStatus": "Provisioning succeeded",
+          "time": "{{iso:now-40d}}"
+        }
+      ]
+    }
+  ],
+  "statuses": [
+    {
+      "code": "ProvisioningState/succeeded",
+      "level": "Info",
+      "displayStatus": "Provisioning succeeded",
+      "time": "{{iso:now-40d}}"
+    },
+    {
+      "code": "PowerState/deallocated",
+      "level": "Info",
+      "displayStatus": "VM deallocated"
+    }
+  ]
+}
