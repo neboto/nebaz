@@ -1012,8 +1012,10 @@ mod tests {
     fn keys_and_storage_connection_strings_never_reach_the_row() {
         let row = RedisCacheRow::from_json(&cache_json(), None).unwrap();
         let all = everything(&row, None, None) + &row.search_text() + &row.base.raw;
-        for secret in ["pk-SECRET", "sk-SECRET", "rdb-SECRET", "aof-SECRET", "AccountKey"] {
-            assert!(!all.contains(secret), "{secret} leaked");
+        // The failure message names the fixture slot, never the value, so a
+        // failing run doesn't print secret-shaped text (CodeQL rust/cleartext-logging).
+        for (slot, secret) in ["pk-SECRET", "sk-SECRET", "rdb-SECRET", "aof-SECRET", "AccountKey"].iter().enumerate() {
+            assert!(!all.contains(secret), "fixture secret #{slot} leaked");
         }
         // What is not a secret stays in the raw view.
         assert!(row.base.raw.contains("maxmemory-policy"));
