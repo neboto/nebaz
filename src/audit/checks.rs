@@ -20,10 +20,13 @@ use crate::azure::resource::{name_of_id, Resource};
 use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::app_service::SiteRow;
+use crate::azure::services::compute::DiskRow;
 use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, JobRow, Workload};
 use crate::azure::services::container_registry::RegistryRow;
 use crate::azure::services::cosmos::CosmosAccountRow;
 use crate::azure::services::directory::{AppRegistrationRow, DirectoryBase, Expiry, ServicePrincipalRow};
+use crate::azure::services::edge::{WafKind, WafPolicyRow};
+use crate::azure::services::foundry::FoundryRow;
 use crate::azure::services::json;
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, Namespace, ServiceBusRow};
@@ -57,9 +60,12 @@ const SERVICE_BUS: &[V] = &[V::ServiceBusNamespaces];
 const EVENT_HUBS: &[V] = &[V::EventHubNamespaces];
 const PG: &[V] = &[V::PostgresServers];
 const MYSQL: &[V] = &[V::MysqlServers];
+const FOUNDRY: &[V] = &[V::AiAccounts];
+const WAFS: &[V] = &[V::WafPolicies];
+const DISKS: &[V] = &[V::Disks];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 51] = [
+pub static CHECKS: [Check; 56] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -76,6 +82,14 @@ pub static CHECKS: [Check; 51] = [
         fix: "Associate an NSG with the subnet (Microsoft's guidance for Power Platform VNet support) and allow only the destinations the environments need.",
         sources: &[SUBNETS],
         run: subnet_pp_no_nsg,
+    },
+    Check {
+        id: "waf-not-blocking",
+        title: "WAF policy in Detection mode or disabled",
+        why: "In Detection mode the WAF logs a matched attack and lets it through; disabled, it does nothing. Either way the gateway or Front Door it is attached to is unprotected while the policy reads as present.",
+        fix: "Review the WAF logs for false positives, add exclusions for them, then switch the policy to Prevention (Policy settings → Prevention mode) and make sure its state is Enabled.",
+        sources: &[WAFS],
+        run: waf_not_blocking,
     },
     // ── Storage ──
     Check {
@@ -448,6 +462,32 @@ pub static CHECKS: [Check; 51] = [
         sources: &[MYSQL],
         run: mysql_password_no_entra,
     },
+    // ── Foundry ──
+    Check {
+        id: "foundry-public-network",
+        title: "Foundry / AI Services account open to all networks",
+        why: "Public network access is enabled and the network ACL's default action is Allow, so the account's endpoint (models, agents, keys) answers from any IP; only the key or token stands in the way.",
+        fix: "Set the network default action to Deny with the IP ranges and VNets that need it, or disable public network access and use a private endpoint (Networking → Firewalls and virtual networks).",
+        sources: &[FOUNDRY],
+        run: foundry_public_network,
+    },
+    Check {
+        id: "foundry-local-auth",
+        title: "Foundry / AI Services account allows key auth",
+        why: "With disableLocalAuth off, the account's two API keys grant full use of every deployment, bypass Entra ID and RBAC, and leave no identity in the logs.",
+        fix: "Move callers to Entra ID (a managed identity with Cognitive Services OpenAI User or Azure AI User), then set disableLocalAuth to true on the account.",
+        sources: &[FOUNDRY],
+        run: foundry_local_auth,
+    },
+    // ── Compute ──
+    Check {
+        id: "disk-unattached",
+        title: "Managed disk unattached",
+        why: "An unattached disk bills at its full provisioned size and still holds whatever the VM it came from wrote, outside any VM's controls. Not a weakness on its own: hygiene, so info, below the default --fail-on.",
+        fix: "Snapshot it if the data may be needed, then delete it; or attach it to the VM that should own it.",
+        sources: &[DISKS],
+        run: disk_unattached,
+    },
     // ── Power Platform ──
     Check {
         id: "pp-policy-unhealthy",
@@ -482,6 +522,14 @@ pub static CHECKS: [Check; 51] = [
         fix: "Replace the assignment with a narrower role (Contributor or a custom role), scoped to the resource group that needs it; use PIM for standing admin access.",
         sources: &[],
         run: sub_privileged_guest_or_sp,
+    },
+    Check {
+        id: "sub-contributor-guest-or-sp",
+        title: "Contributor on the subscription held by a guest or service principal",
+        why: "Contributor at subscription scope can change or delete every resource and read most of their keys and connection strings, though it cannot grant access. Held by a guest, that sits with another tenant's account lifecycle; held by a service principal, with whoever holds its credential.",
+        fix: "Scope the assignment to the resource groups the principal works in, or replace it with the narrower built-in roles it needs; use PIM for standing access.",
+        sources: &[],
+        run: sub_contributor_guest_or_sp,
     },
 ];
 
@@ -694,6 +742,38 @@ fn subnet_pp_no_nsg(check: &'static Check, input: &AuditInput, out: &mut Vec<Aud
                 ]),
             );
         }
+    }
+}
+
+/// An attached WAF policy that does not block: Detection mode, or its
+/// state off. An unattached policy protects nothing either way: skipped.
+fn waf_not_blocking(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for w in input.of::<WafPolicyRow>(V::WafPolicies) {
+        if w.associations.is_empty() {
+            continue;
+        }
+        let reason = if w.enabled == Some(false) {
+            "policy disabled".to_string()
+        } else if eq(w.mode.as_deref(), "Detection") {
+            "Detection mode (logs, does not block)".to_string()
+        } else {
+            continue;
+        };
+        let kind = match w.kind {
+            WafKind::AppGateway => "App Gateway",
+            WafKind::FrontDoor => "Front Door",
+        };
+        let mut evidence = vec![
+            format!("kind: {}", kind),
+            format!("policySettings.mode: {}", json::opt(w.mode.clone())),
+            format!("policySettings state: {}", match w.enabled {
+                Some(true) => "Enabled",
+                Some(false) => "Disabled",
+                None => "-",
+            }),
+        ];
+        evidence.extend(w.associations.iter().map(|a| format!("attached to: {}", a)));
+        out.push(AuditFinding::about(check, Severity::Medium, w, reason).with_evidence(evidence));
     }
 }
 
@@ -1452,6 +1532,55 @@ fn aca_secrets_not_kv(check: &'static Check, input: &AuditInput, out: &mut Vec<A
     }
 }
 
+// ── Foundry ───────────────────────────────────────────────────────────
+
+fn foundry_public_network(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for a in input.of::<FoundryRow>(V::AiAccounts) {
+        if public_enabled(a.public_network_access.as_deref()) && !eq(a.acl_default_action.as_deref(), "Deny") {
+            out.push(
+                AuditFinding::about(check, Severity::Medium, a, "public network access, default action Allow").with_evidence(
+                    vec![
+                        format!("publicNetworkAccess: {}", a.public_network_access.as_deref().unwrap_or("(default: Enabled)")),
+                        format!("networkAcls.defaultAction: {}", json::opt(a.acl_default_action.clone())),
+                        format!("private endpoints: {}", a.private_endpoint_ids.len()),
+                    ],
+                ),
+            );
+        }
+    }
+}
+
+fn foundry_local_auth(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for a in input.of::<FoundryRow>(V::AiAccounts) {
+        if a.disable_local_auth != Some(true) {
+            let v = a.disable_local_auth.map(|b| b.to_string()).unwrap_or_else(|| "(unset: false)".into());
+            out.push(
+                AuditFinding::about(check, Severity::Medium, a, "API keys (local auth) enabled")
+                    .with_evidence(vec![format!("disableLocalAuth: {}", v)]),
+            );
+        }
+    }
+}
+
+// ── Compute ───────────────────────────────────────────────────────────
+
+fn disk_unattached(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for d in input.of::<DiskRow>(V::Disks) {
+        if !eq(d.disk_state.as_deref(), "Unattached") {
+            continue;
+        }
+        let size = d.size_gb.map(|g| format!("{} GiB", g)).unwrap_or_else(|| "-".into());
+        let mut evidence = vec![
+            "diskState: Unattached".into(),
+            format!("size: {} · sku: {}", size, json::opt(d.sku.clone())),
+        ];
+        if let Some(t) = json::str_at(&raw(d), "/properties/LastOwnershipUpdateTime") {
+            evidence.push(format!("last owner change: {}", json::time(Some(t))));
+        }
+        out.push(AuditFinding::about(check, Severity::Info, d, format!("unattached, {}", size)).with_evidence(evidence));
+    }
+}
+
 // ── Power Platform ────────────────────────────────────────────────────
 
 fn pp_policy_unhealthy(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
@@ -1511,6 +1640,7 @@ fn sp_credential_expiry(check: &'static Check, input: &AuditInput, out: &mut Vec
 /// Built-in role definition GUIDs (the same in every tenant).
 pub(crate) const OWNER_ROLE: &str = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635";
 pub(crate) const USER_ACCESS_ADMIN_ROLE: &str = "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9";
+pub(crate) const CONTRIBUTOR_ROLE: &str = "b24988ac-6180-42a0-ab88-20f7382dd24c";
 
 /// The role an assignment grants, when it is Owner or User Access
 /// Administrator.
@@ -1525,6 +1655,23 @@ pub(crate) fn privileged_role(a: &Value) -> Option<&'static str> {
     }
 }
 
+/// The role an assignment grants, when it is Contributor: write on
+/// everything, no access management.
+pub(crate) fn broad_write_role(a: &Value) -> Option<&'static str> {
+    let def = json::str_at(a, "/properties/roleDefinitionId")?.to_lowercase();
+    def.ends_with(CONTRIBUTOR_ROLE).then_some("Contributor")
+}
+
+/// Whether an assignment applies to the whole subscription: made at it or
+/// above it (a management group, the root). An assignment on a resource
+/// group or resource is narrower, and one on another subscription is not
+/// this one's.
+fn at_or_above(a: &Value, subscription_scope: &str) -> bool {
+    let at = json::text(a, "/properties/scope");
+    let at = at.trim_end_matches('/');
+    at.eq_ignore_ascii_case(subscription_scope) || !at.to_lowercase().starts_with("/subscriptions/")
+}
+
 /// Whether a directory user object is a guest: `userType` when Graph
 /// returned it, else the `#EXT#` marker in the UPN.
 fn is_guest(v: &Value) -> bool {
@@ -1532,7 +1679,17 @@ fn is_guest(v: &Value) -> bool {
         || json::str_at(v, "/userPrincipalName").is_some_and(|u| u.contains("#EXT#"))
 }
 
-fn sub_privileged_guest_or_sp(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+/// A subscription Access check: the roles `role` names, at or above the
+/// subscription, held by a guest user (`guest`) or a service principal
+/// (`sp`). `what` names the roles in the unresolved-users note.
+fn subscription_role_check(
+    check: &'static Check,
+    input: &AuditInput,
+    out: &mut Vec<AuditFinding>,
+    role_of: fn(&Value) -> Option<&'static str>,
+    (guest, sp): (Severity, Severity),
+    what: &str,
+) {
     let scope = input.subscription_scope();
     let lazy = input.lazy();
     let assignments = match lazy.and_then(|l| l.role_assignments.get(&scope)) {
@@ -1564,7 +1721,10 @@ fn sub_privileged_guest_or_sp(check: &'static Check, input: &AuditInput, out: &m
     };
     let mut unresolved = 0usize;
     for a in assignments {
-        let Some(role) = privileged_role(a) else { continue };
+        let Some(role) = role_of(a) else { continue };
+        if !at_or_above(a, &scope) {
+            continue;
+        }
         let kind = json::str_at(a, "/properties/principalType").unwrap_or_default();
         let pid = json::text(a, "/properties/principalId").to_lowercase();
         let principal = lazy.and_then(|l| l.principals.get(&pid));
@@ -1573,10 +1733,10 @@ fn sub_privileged_guest_or_sp(check: &'static Check, input: &AuditInput, out: &m
             _ => pid.clone(),
         };
         let (sev, who) = if kind.eq_ignore_ascii_case("ServicePrincipal") {
-            (Severity::High, "service principal")
+            (sp, "service principal")
         } else if kind.eq_ignore_ascii_case("User") {
             match principal {
-                Some(Lazy::Loaded(v)) if is_guest(v) => (Severity::Critical, "guest user"),
+                Some(Lazy::Loaded(v)) if is_guest(v) => (guest, "guest user"),
                 Some(Lazy::Loaded(_)) => continue,
                 _ => {
                     unresolved += 1;
@@ -1612,21 +1772,47 @@ fn sub_privileged_guest_or_sp(check: &'static Check, input: &AuditInput, out: &m
     if unresolved > 0 {
         out.push(AuditFinding::note(
             check,
-            format!("{} privileged user(s) not resolved — r looks them up", unresolved),
+            format!("{} {} user(s) not resolved — r looks them up", unresolved, what),
             format!(
-                "{} Owner / User Access Administrator user(s) aren't resolved in Microsoft Graph yet, so whether they are guests is unknown. Press r here, or open the subscription's Access section.",
-                unresolved
+                "{} user(s) holding {} aren't resolved in Microsoft Graph yet, so whether they are guests is unknown. Press r here, or open the subscription's Access section.",
+                unresolved, what
             ),
         ));
     }
 }
 
-/// The privileged User principals of a loaded Access list, lowercased: the
-/// object ids `r` resolves through Graph for the guest test.
+fn sub_privileged_guest_or_sp(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    subscription_role_check(
+        check,
+        input,
+        out,
+        privileged_role,
+        (Severity::Critical, Severity::High),
+        "privileged",
+    );
+}
+
+/// Contributor is a notch below Owner / User Access Administrator: it
+/// cannot grant access, so it is its own check one severity lower.
+fn sub_contributor_guest_or_sp(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    subscription_role_check(
+        check,
+        input,
+        out,
+        broad_write_role,
+        (Severity::High, Severity::Medium),
+        "Contributor",
+    );
+}
+
+/// The User principals of a loaded Access list holding a role an Access
+/// check grades (Owner, User Access Administrator, Contributor),
+/// lowercased: the object ids `r` resolves through Graph for the guest
+/// test.
 pub fn privileged_user_ids(items: &[Value]) -> Vec<String> {
     let mut out = Vec::new();
     for a in items {
-        if privileged_role(a).is_none() {
+        if privileged_role(a).or_else(|| broad_write_role(a)).is_none() {
             continue;
         }
         if !json::str_at(a, "/properties/principalType").is_some_and(|k| k.eq_ignore_ascii_case("User")) {

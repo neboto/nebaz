@@ -251,7 +251,8 @@ each one backs are in the catalog table
   `Microsoft.App/managedEnvironments/read`, `Microsoft.App/jobs/read`; the
   lazy Revisions and Auth sections:
   `Microsoft.App/containerApps/revisions/read`,
-  `Microsoft.App/containerApps/authConfigs/read`. Secret values
+  `Microsoft.App/containerApps/authConfigs/read`; a job's Executions:
+  `Microsoft.App/jobs/executions/read`. Secret values
   (`listSecrets`) are a `POST` nebaz never sends; secret and env var values
   a `GET` body does carry, and an environment's shared keys and connection
   strings, are stripped before the row keeps the JSON. The apps' own

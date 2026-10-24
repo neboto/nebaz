@@ -35,6 +35,8 @@ const PLANTED: &[(&str, &str)] = &[
     ("/providers/Microsoft.Sql/servers/sql-orders-prod/databases/", "not a type nebaz lists"),
     ("/Redis/redis-orders-cache", "6379"),
     ("/namespaces/sb-orders-prod", "dead"),
+    // compute: caj-nightly-export's last execution failed (its Executions section).
+    ("/jobs/caj-nightly-export", "caj-nightly-export-q7k2m9x"),
     // core: failed operations in the Activity sections of contoso-prod (the
     // v119 rollout, the batch pool's quota, the guest's denied VM start).
     (crate::demo::PROD, "⚠ Failed | Create Deployment"),
@@ -51,8 +53,10 @@ fn planted(id: &str, line: &str) -> bool {
 /// Audit checks the demo's data must trip (`nebaz --demo audit`), each a
 /// planted finding. Each area appends its own.
 const AUDIT_EXPECTED: &[&str] = &[
-    // core: github-actions-deploy holds User Access Administrator on the subscription.
+    // core: github-actions-deploy holds User Access Administrator and
+    // Contributor on the subscription.
     "sub-privileged-guest-or-sp",
+    "sub-contributor-guest-or-sp",
     // compute
     "aks-public-api",
     "aks-local-accounts",
@@ -60,6 +64,7 @@ const AUDIT_EXPECTED: &[&str] = &[
     "app-https-only",
     "app-min-tls",
     "app-ftps",
+    "disk-unattached",
     // data
     "storage-blob-public-access",
     "storage-min-tls",
@@ -80,9 +85,12 @@ const AUDIT_EXPECTED: &[&str] = &[
     "sb-public-network",
     // identity
     "appreg-credential-expiry",
+    "foundry-public-network",
+    "foundry-local-auth",
     // network
     "nsg-open-internet",
     "subnet-pp-no-nsg",
+    "waf-not-blocking",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).

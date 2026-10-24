@@ -28,7 +28,7 @@ detail sections use (each SQL server's and Redis cache's firewall rules, each
 PostgreSQL and MySQL server's firewall rules, parameters and Entra admins,
 each messaging namespace's network rule set, each site's config,
 the subscription's role assignments, and its Owner / User Access
-Administrator users' directory objects), capped at `AUDIT_LAZY_MAX` per
+Administrator / Contributor users' directory objects), capped at `AUDIT_LAZY_MAX` per
 kind. Each result re-audits as it lands, through the apply-closure event,
 so the lazy epoch drops anything from before a subscription switch.
 
