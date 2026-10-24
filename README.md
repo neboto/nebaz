@@ -10,7 +10,7 @@ Built in Rust with [Ratatui](https://ratatui.rs/).
 
 <p align="center">
   <img src="demo/nebaz.gif" width="100%"
-       alt="nebaz demo: browsing Container Apps, following links across services, and the @audit findings in a made-up Azure tenant">
+       alt="nebaz demo: a container app's failed revision, then @changes finds a new NSG deny rule, the change timeline puts it next to the alert, the network access lens shows it blocking the Power Platform subnet, and @audit lists the findings">
 </p>
 
 <p align="center"><em>Recorded with <code>nebaz --demo</code>. Nothing on screen is a real tenant.</em></p>
@@ -70,12 +70,16 @@ Each clip is one workflow against `nebaz --demo`. Click for full size.
 
 <table>
   <tr>
-    <td width="50%"><a href="demo/scenes/power-platform-outage.gif"><img src="demo/scenes/power-platform-outage.gif" alt="Tracking down a Power Platform outage: @changes, the change timeline, then the network access lens"></a><br><b>Why can't Power Platform reach the API?</b> <code>@changes</code> shows a new NSG rule, <kbd>W</kbd> puts it next to the alert, and <kbd>N</kbd> shows it denying the injected subnet's traffic.</td>
-    <td width="50%"><a href="demo/scenes/audit.gif"><img src="demo/scenes/audit.gif" alt="The @audit findings, then opening one"></a><br><b>Audit.</b> <code>@audit</code> lists what is wrong across the subscription; <kbd>Enter</kbd> opens the resource.</td>
+    <td width="50%"><a href="demo/scenes/power-platform-outage.gif"><img src="demo/scenes/power-platform-outage.gif" alt="Tracking down a Power Platform outage: @changes, the change timeline, then the network access lens"></a><br><b>Why can't Power Platform reach the API?</b> <code>@changes</code> shows a new NSG rule, <kbd>W</kbd> puts it next to the alert, and <kbd>N</kbd> shows it shadowing the default allow for the injected subnet.</td>
+    <td width="50%"><a href="demo/scenes/audit.gif"><img src="demo/scenes/audit.gif" alt="The @audit findings, then opening the open SSH rule and its change timeline"></a><br><b>Audit.</b> <code>@audit</code> lists what is wrong, worst first; <kbd>Enter</kbd> opens the NSG with SSH open to the internet and <kbd>W</kbd> shows the vendor's guest account added it.</td>
   </tr>
   <tr>
-    <td width="50%"><a href="demo/scenes/identities.gif"><img src="demo/scenes/identities.gif" alt="Service principals, an app registration with an expiring secret, and the subscription's Access section"></a><br><b>Who can do what.</b> Service principals, an app registration whose secret expires in six days, and the role assignments on the subscription.</td>
-    <td width="50%"><a href="demo/scenes/dns.gif"><img src="demo/scenes/dns.gif" alt="Private DNS zones and their virtual network links"></a><br><b>Private DNS.</b> Zones, their records and VNet links, and the private endpoint zone nobody linked.</td>
+    <td width="50%"><a href="demo/scenes/identities.gif"><img src="demo/scenes/identities.gif" alt="An app registration with expired and expiring secrets, a service principal's roles, and the subscription's Access section"></a><br><b>Who can do what.</b> An app registration with one secret expired and one expiring in six days, and a deploy service principal holding User Access Administrator on the subscription.</td>
+    <td width="50%"><a href="demo/scenes/dns.gif"><img src="demo/scenes/dns.gif" alt="Private DNS zones, their records and VNet links"></a><br><b>Private DNS.</b> A private-link zone with records but no VNet link, so nothing resolves it, and which networks each zone is linked to.</td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="demo/scenes/follow-links.gif"><img src="demo/scenes/follow-links.gif" alt="From an application gateway backend to the container app, its environment and subnet, then the network access lens"></a><br><b>Follow the links.</b> <kbd>Enter</kbd> from an application gateway's backend to the container app, its environment and its subnet, then <kbd>N</kbd> for what may reach it.</td>
+    <td width="50%"></td>
   </tr>
 </table>
 
