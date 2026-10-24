@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
-    keyvault, monitor, network, network_dns, network_edge, network_private, power_platform, redis, sql, storage, subscriptions,
+    keyvault, messaging, monitor, network, network_dns, network_edge, network_private, power_platform, redis, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -557,6 +557,58 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "highAvailability": "Enabled",
                             "publicNetworkAccess": "Disabled",
                             "minimumTlsVersion": "1.2"
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ServiceBusNamespaces,
+            "ServiceBusRow",
+            parse(
+                "ServiceBusRow",
+                messaging::ServiceBusRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.ServiceBus/namespaces/sb-1"),
+                        "name": "sb-1",
+                        "location": "East US",
+                        "sku": {"name": "Premium", "tier": "Premium", "capacity": 1},
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "status": "Active",
+                            "publicNetworkAccess": "Disabled",
+                            "disableLocalAuth": true,
+                            "minimumTlsVersion": "1.2",
+                            "privateEndpointConnections": [{"properties": {
+                                "privateEndpoint": {"id": arm_id("Microsoft.Network/privateEndpoints/pe-sb-1")},
+                                "privateLinkServiceConnectionState": {"status": "Approved"}
+                            }}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::EventHubNamespaces,
+            "EventHubsRow",
+            parse(
+                "EventHubsRow",
+                messaging::EventHubsRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.EventHub/namespaces/eh-1"),
+                        "name": "eh-1",
+                        "location": "East US",
+                        "sku": {"name": "Standard", "tier": "Standard", "capacity": 1},
+                        "identity": {"type": "UserAssigned", "userAssignedIdentities": {
+                            arm_id("Microsoft.ManagedIdentity/userAssignedIdentities/id-1"): {"clientId": "c-1", "principalId": "p-1"}
+                        }},
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "status": "Active",
+                            "kafkaEnabled": true,
+                            "publicNetworkAccess": "Enabled"
                         }
                     }),
                     t,

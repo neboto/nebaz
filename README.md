@@ -45,9 +45,11 @@ account, Azure OpenAI included; model deployments and projects lazy, never
 keys), Monitor (Log Analytics workspaces and App Insights components,
 metadata only; AKS links to its workspace), Container Apps
 (apps, environments and jobs; revisions and auth settings lazy, secret and
-env var names only, never values), and Redis (Azure Cache for Redis with
+env var names only, never values), Redis (Azure Cache for Redis with
 its network posture, firewall rules and geo-replication lazy, and Managed
-Redis with databases lazy; never access keys). Every row has an **Access**
+Redis with databases lazy; never access keys), and Messaging (Service Bus
+and Event Hubs namespaces; the firewall, queues, topics, event hubs and
+access policy names lazy, never keys). Every row has an **Access**
 section (the role assignments that apply to it, principals named through
 Microsoft Graph, inherited ones jumping to where they were made; an
 identity also shows what it can do), an
@@ -173,6 +175,7 @@ cargo run -- -s law    # Log Analytics workspaces (-s appi for App Insights)
 cargo run -- -s pp     # Power Platform enterprise policies; a delegated subnet's Related links back
 cargo run -- -s redis  # Redis caches (3 Network: VNet, private endpoints, firewall); -s amr for Managed Redis (4 Databases)
 cargo run -- -s aca    # container apps (2 Ingress); -s acaenv for environments (2 Network), -s acajob for jobs
+cargo run -- -s sb     # Service Bus namespaces (2 Network: firewall, private endpoints, private DNS; 4 Queues); -s eh for Event Hubs
 cargo test             # all tests, including the read-only guard
 cargo test --test readonly_guard   # just the guard (see "Why read-only")
 cargo clippy --all-targets -- -D warnings   # lint; CI fails on any warning
@@ -253,7 +256,7 @@ The promise is held at three layers, not by convention
 1. the single request constructor only builds `GET`s, and a pipeline policy
    refuses any other method at runtime;
 2. `tests/readonly_guard.rs` fails `cargo test` if the source gains another
-   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, container registries, Cosmos DB, container apps, Redis caches, log queries),
+   request builder, an HTTP client crate, a data-plane host (vault, blob, AI model endpoints, App Service sites, SQL servers, container registries, Cosmos DB, container apps, Redis caches, Service Bus and Event Hubs namespaces, log queries),
    a mutating `az` command, or a non-read action in `PERMISSIONS.md`;
 3. `Reader` grants nothing a write could use.
 

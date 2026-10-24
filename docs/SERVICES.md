@@ -203,7 +203,9 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     count (+ `private` for a legacy private zone); private DNS zone
     record sets · VNet links; DNS resolver `vnet {name}`; Redis cache SKU
     (`Premium P1`) + shards + `VNet` when injected; Managed Redis SKU (+
-    `no HA`); All resources `→`/`·` and
+    `no HA`); Service Bus `{tier}` (+ `· {n} MU` on Premium) and Event
+    Hubs `{tier} · {n} TU` (PU, CU), both `· private` when public access
+    is off; All resources `→`/`·` and
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
@@ -226,7 +228,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     storage account, Key Vault, Cosmos account, load balancer, public IP,
     NAT gateway, container registry, Application Insights, Foundry /
     Cognitive Services account, Redis cache (the `all…` names, every
-    shard), Managed Redis (`curated_metrics` is the list). Any other
+    shard), Managed Redis, Service Bus and Event Hubs namespace
+    (`curated_metrics` is the list). Any other
     ARM resource opens on the `a` picker (its metric definitions);
     `supports_metrics` drives the status-bar hint, so the hint and the
     default set cannot drift. One call per aggregation (2–3 per open, no
@@ -274,7 +277,12 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     (never `credential reset`). **Power Platform policy** each injected
     subnet. **Redis cache** firewall rules, server links, patch schedule,
     Entra access-policy assignments (name form; never `list-keys`);
-    **Managed Redis** databases (`redisenterprise` extension). A list visual selection (#39) merged into one `--ids a b c` command
+    **Managed Redis** databases (`redisenterprise` extension).
+    **Service Bus / Event Hubs namespace** queues and topics, or
+    event hubs; network rule set, private endpoint connections, access
+    policies (names and rights; `authorization-rule keys` is forbidden by
+    the guard), all in the name form (`--namespace-name` has no
+    `id_part` on `list`). A list visual selection (#39) merged into one `--ids a b c` command
     (neboto's batch mode) is not built yet: `C` acts on the cursor row.
 21. **Referenced by** (`U`, #49, `src/azure/references.rs`, keys and the
     cache walk in `src/app/refs_lens.rs`, drawn by
@@ -422,11 +430,13 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Container Apps · Jobs | Trigger (manual, schedule with cron, or event with KEDA rules; parallelism, completions, replica timeout, retry limit) · Containers · Identity · Secrets (as Apps) · (Overview: environment, workload profile, running state, trigger, outbound IPs) | ladder only | environment, user-assigned identities, registry pull identities | `az containerapp job show` |
 | Redis · Caches | Security (non-SSL port flagged, min TLS (1.0 / 1.1 flagged), Entra auth, access-key auth, `authnotrequired` flagged, public access, identity) · Network ⧗ (public access, VNet injection subnet with static IP (classic Premium), ports, host name as text, private endpoints with their connection status (not Approved flagged), VNet injection together with private endpoints flagged; then the firewall rules ⧗, an empty list flagged when public access is on and nothing else fences it) · Geo-replication ⧗ (linked servers: each linked cache, role, location, state; no call when the list body names none) · (Overview: SKU and family/capacity, shards, replicas per primary, Redis version, zones, host name and ports as text, update channel, max memory policy, persistence) | ladder only (caches report no runtime state); a `Disabled` provisioning state is Unavailable | subnet, private endpoints, user-assigned identities; ⧗ (Related fires Geo-replication's fetch) the linked caches | `az redis show` |
 | Redis · Managed Redis | Security (min TLS, encryption service- or customer-managed with the key identity, public access, identity) · Network (public access, host name as text, private endpoints with status; no firewall or VNet injection exists) · Databases ⧗ (port, client protocol (`Plaintext` flagged), access-key auth, clustering and eviction policy, persistence, modules, Redis version, state, geo-replication group with each linked cluster jumpable) · (Overview: kind, SKU, capacity, high availability, redundancy, zones, Redis version, resource state, host name) | ladder, then `resourceState` (`Running` → Available, `Disabled` / `…Failed` → Unavailable, else Pending) | private endpoints, user-assigned identities, the CMK identity | `az redisenterprise show` (the `redisenterprise` CLI extension) |
+| Messaging · Service Bus | Network ⧗ (effective access in one line; public network access; from the rule set: default action, trusted services, IP rules, VNet rules with each subnet jumpable and whether the service endpoint is required; private endpoints jumpable with connection state; the endpoint host as text, the `privatelink.` zone a private caller must resolve through; IP address type, min TLS, local auth; the tier's limits: VNet rules and private endpoints are Premium only. Deny with no IP or VNet rule is flagged: the service does not enforce it) · Security (local auth, min TLS, Microsoft- or customer-managed keys with the reading identity, infrastructure encryption, identity system / user-assigned) · Queues ⧗ (active, dead-lettered, scheduled and transfer counts from `countDetails`, size, lock duration, max deliveries, sessions, duplicate detection, TTL, partitioning, forwarding) · Topics ⧗ (subscription count, size, TTL, ordering, partitioning) · Access policies ⧗ (names and rights; never keys) · (Overview: status, SKU and messaging units, partitions, zone redundancy, endpoint, geo-replication) | ladder, then `status` (`Active` → available, `Disabled` → stopped) | private endpoints, user-assigned identities, a CMK identity, VNet rule subnets (once the rule set loads) | `az servicebus namespace show` |
+| Messaging · Event Hubs | Network ⧗ · Security · Access policies ⧗ (as Service Bus; Basic has no firewall, VNet rules or private endpoints) · Event hubs ⧗ (partitions, retention and cleanup policy, status, capture on / off with format, window, destination storage account jumpable or Data Lake, container, identity) · (Overview: SKU, throughput / processing / capacity units, auto-inflate maximum, Kafka, dedicated cluster, zone redundancy) | ladder, then `status` | as Service Bus, plus the dedicated cluster and each capture storage account (once Event hubs loads) | `az eventhubs namespace show` |
 | Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless); `location` is a Power Platform geography, so the row passes every `R` filter like `global` | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @changes @activity @deploys @health` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -499,6 +509,10 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Redis Firewall, Geo-replication | 1 each per cache, on demand (linked servers only when the list body names one) | `{cache}/firewallRules` · `{cache}/linkedServers` · `2024-11-01` |
 | Managed Redis | 1 | `/providers/Microsoft.Cache/redisEnterprise` · `2026-09-01` |
 | Managed Redis Databases | 1 per cluster, on demand | `{cluster}/databases` · `2026-09-01` |
+| Service Bus namespaces | 1 | `/providers/Microsoft.ServiceBus/namespaces` · `2026-01-01` |
+| Event Hubs namespaces | 1 | `/providers/Microsoft.EventHub/namespaces` · `2026-01-01` |
+| Network (firewall), Access policies | 1 each per namespace, on demand (Related fires the rule set too; a policy's keys are the `listKeys` POST, never sent) | `{ns}/networkRuleSets/default` · `{ns}/authorizationRules` · `2026-01-01` |
+| Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
 | Enterprise policies | 1 (every kind; `kind` on the row) | `/providers/Microsoft.PowerPlatform/enterprisePolicies` · `2020-10-30-preview` (the only version in the specs; not yet tried live) |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
@@ -533,6 +547,15 @@ it; that floor is #63.
   list body; `az redis show` and `az redisenterprise show` take `--ids`
   (both names carry `id_part='name'` in azure-cli and the extension).
 
+- Messaging (#27), built without an Azure login from the
+  `2026-01-01` specs (the newest stable for both providers on
+  2026-10-24; `2024-01-01` is the previous). To check: the api-version
+  is accepted; the list `location` is a display name (stored without
+  spaces); queue `countDetails` arrive on the ARM list body; the
+  `networkRuleSets/default` GET answers for a Basic or Standard namespace
+  (or errors, which the section shows); `az servicebus namespace show`
+  and `az eventhubs namespace show` take `--ids` (`id_part='name'` in the
+  CLI's generated commands).
 - Power Platform enterprise policies (#77): built from the documented
   shape (azure-rest-api-specs `2020-10-30-preview`, the ARM template
   reference, Microsoft's `PowerPlatform-EnterprisePolicies` module), with

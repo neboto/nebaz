@@ -57,6 +57,9 @@ pub enum ServiceType {
     /// firewall rules, geo-replication links and databases lazy. Never a
     /// key (`listKeys` is a POST).
     Redis,
+    /// Service Bus and Event Hubs namespaces; queues, topics, event hubs,
+    /// the network rule set and access policy names lazy. Never a key.
+    Messaging,
     /// What changed recently, subscription-wide (#61, ADR 0006): the
     /// Activity Log's changes, deployments and health transitions over a
     /// `[` / `]` window. A service that fetches, not a view over caches.
@@ -142,6 +145,9 @@ pub enum JumpView {
     RedisCaches,
     /// Azure Managed Redis (`Microsoft.Cache/redisEnterprise`).
     ManagedRedis,
+    // Messaging
+    ServiceBusNamespaces,
+    EventHubNamespaces,
     // Changes: one list per window; the sub-tabs filter it by source.
     ChangesAll,
     ChangesActivity,
@@ -172,6 +178,7 @@ impl JumpView {
             EnterprisePolicies => ServiceType::PowerPlatform,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
+            ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
         }
     }
@@ -221,6 +228,8 @@ impl JumpView {
             ContainerAppJobs => "container-app-jobs",
             RedisCaches => "redis-caches",
             ManagedRedis => "managed-redis",
+            ServiceBusNamespaces => "servicebus-namespaces",
+            EventHubNamespaces => "eventhub-namespaces",
             ChangesAll => "changes",
             ChangesActivity => "changes-activity",
             ChangesDeployments => "changes-deployments",
@@ -273,6 +282,8 @@ impl JumpView {
             ContainerAppJobs => "Jobs",
             RedisCaches => "Caches",
             ManagedRedis => "Managed Redis",
+            ServiceBusNamespaces => "Service Bus",
+            EventHubNamespaces => "Event Hubs",
             ChangesAll => "All",
             ChangesActivity => "Activity",
             ChangesDeployments => "Deployments",
@@ -330,6 +341,8 @@ impl JumpView {
             ("microsoft.app", ["jobs"]) => JumpView::ContainerAppJobs,
             ("microsoft.cache", ["redis"]) => JumpView::RedisCaches,
             ("microsoft.cache", ["redisenterprise"]) => JumpView::ManagedRedis,
+            ("microsoft.servicebus", ["namespaces"]) => JumpView::ServiceBusNamespaces,
+            ("microsoft.eventhub", ["namespaces"]) => JumpView::EventHubNamespaces,
             _ => return None,
         })
     }
@@ -404,13 +417,14 @@ impl ServiceType {
             ServiceType::PowerPlatform,
             ServiceType::ContainerApps,
             ServiceType::Redis,
+            ServiceType::Messaging,
             ServiceType::Changes,
         ]
     }
 
     /// Ordered picker categories. Every `category()` value must appear here.
     pub const CATEGORIES: &'static [&'static str] =
-        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "Web", "Databases", "AI", "Monitoring"];
+        &["Management", "Compute", "Storage", "Networking", "Security", "Containers", "Web", "Databases", "Integration", "AI", "Monitoring"];
 
     pub fn category(&self) -> &'static str {
         match self {
@@ -431,6 +445,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Management",
             ServiceType::ContainerApps => "Containers",
             ServiceType::Redis => "Databases",
+            ServiceType::Messaging => "Integration",
             ServiceType::Changes => "Monitoring",
         }
     }
@@ -454,6 +469,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Power Platform",
             ServiceType::ContainerApps => "Container Apps",
             ServiceType::Redis => "Redis",
+            ServiceType::Messaging => "Messaging",
             ServiceType::Changes => "Changes",
         }
     }
@@ -478,6 +494,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Power Plat",
             ServiceType::ContainerApps => "ACA",
             ServiceType::Redis => "Redis",
+            ServiceType::Messaging => "Messaging",
             ServiceType::Changes => "Changes",
         }
     }
@@ -501,6 +518,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::ContainerApps => "Container apps, environments & jobs",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
+            ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
             ServiceType::Changes => "What changed recently, subscription-wide",
         }
     }
@@ -536,6 +554,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
+            ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
         }
     }
@@ -654,6 +673,8 @@ impl ServiceType {
             }
             "redis" | "cache" | "caches" | "rediscache" | "azurecache" => (ServiceType::Redis, None),
             "amr" | "managedredis" | "redisenterprise" => (ServiceType::Redis, Some(JumpView::ManagedRedis)),
+            "sb" | "servicebus" | "messaging" | "msg" => (ServiceType::Messaging, None),
+            "eh" | "eventhub" | "eventhubs" | "kafka" => (ServiceType::Messaging, Some(JumpView::EventHubNamespaces)),
             _ => return None,
         };
         Some((service, view))
@@ -685,6 +706,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "@pp",
             ServiceType::ContainerApps => "@aca",
             ServiceType::Redis => "@redis",
+            ServiceType::Messaging => "@sb",
             ServiceType::Changes => "@changes",
         }
     }
@@ -692,12 +714,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@sp", "@appreg", "@pool", "@func", "@plan", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@changes"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -918,6 +940,15 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/Redis/redis-prod")), Some(JumpView::RedisCaches));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/redisEnterprise/amr-prod")), Some(JumpView::ManagedRedis));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/redisEnterprise/amr-prod/databases/default")), None);
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.ServiceBus/namespaces/sb")),
+            Some(JumpView::ServiceBusNamespaces)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("microsoft.eventhub/NAMESPACES/eh")), Some(JumpView::EventHubNamespaces));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.ServiceBus/namespaces/sb/queues/orders")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.EventHub/namespaces/eh/eventhubs/telemetry")), None);
+        // A dedicated Event Hubs cluster is not browsed: All resources.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.EventHub/clusters/c")), Some(JumpView::AllResources));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/containerApps/api/revisions/api--v1")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.App/managedEnvironments/cae/certificates/c")), None);
         assert_eq!(JumpView::for_arm_id("garbage"), None);

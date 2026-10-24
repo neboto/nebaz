@@ -35,6 +35,7 @@ use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, Jo
 use crate::azure::services::container_registry::RegistryRow;
 use crate::azure::services::directory::{AppRegistrationRow, ServicePrincipalRow};
 use crate::azure::services::keyvault::VaultRow;
+use crate::azure::services::messaging::{EventHubsRow, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SubnetRow};
 use crate::azure::services::power_platform::EnterprisePolicyRow;
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
@@ -215,6 +216,10 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         app_registration_actions(&app.base.app_id)
     } else if let Some(p) = any.downcast_ref::<EnterprisePolicyRow>() {
         power_platform_actions(p)
+    } else if let Some(sb) = any.downcast_ref::<ServiceBusRow>() {
+        servicebus_actions(sb)
+    } else if let Some(eh) = any.downcast_ref::<EventHubsRow>() {
+        eventhubs_actions(eh)
     } else {
         None
     };
@@ -542,6 +547,35 @@ fn power_platform_actions(p: &EnterprisePolicyRow) -> Option<Vec<CliAction>> {
     Some(subnets)
 }
 
+// ── Messaging ────────────────────────────────────────────────────────
+
+/// Reads only: a namespace has nothing to start or stop. The entity,
+/// rule-set and policy listings declare `--namespace-name` without an
+/// `id_part`, so they take the name form. Never `authorization-rule keys`
+/// (the guard forbids it): policy names and rights only.
+fn servicebus_actions(sb: &ServiceBusRow) -> Option<Vec<CliAction>> {
+    let a = format!("--namespace-name {} {}", shell_quote(&sb.base.name), rg_sub(&sb.base.id)?);
+    Some(vec![
+        inspect(format!("az servicebus queue list {}", a)).note("message counts per queue, from ARM (no data plane)"),
+        inspect(format!("az servicebus topic list {}", a)),
+        inspect(format!("az servicebus namespace network-rule-set list {}", a))
+            .note("default action, trusted services, IP and VNet rules (the Network section)"),
+        inspect(format!("az servicebus namespace private-endpoint-connection list {}", a)),
+        inspect(format!("az servicebus namespace authorization-rule list {}", a)).note("names and rights; never the keys"),
+    ])
+}
+
+fn eventhubs_actions(eh: &EventHubsRow) -> Option<Vec<CliAction>> {
+    let a = format!("--namespace-name {} {}", shell_quote(&eh.base.name), rg_sub(&eh.base.id)?);
+    Some(vec![
+        inspect(format!("az eventhubs eventhub list {}", a)).note("partitions, retention and capture per hub"),
+        inspect(format!("az eventhubs namespace network-rule-set list {}", a))
+            .note("default action, trusted services, IP and VNet rules (the Network section)"),
+        inspect(format!("az eventhubs namespace private-endpoint-connection list {}", a)),
+        inspect(format!("az eventhubs namespace authorization-rule list {}", a)).note("names and rights; never the keys"),
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -747,6 +781,21 @@ mod tests {
         assert_eq!(a[0].command, format!("az resource show --ids {}", p.id()));
         let subnets = a.iter().filter(|x| x.label.starts_with("network vnet subnet show")).count();
         assert_eq!(subnets, policy.networks.iter().filter(|n| n.subnet.is_some()).count());
+    }
+
+    #[test]
+    fn messaging_namespaces_offer_reads_in_the_name_form_and_never_keys() {
+        for label in ["ServiceBusRow", "EventHubsRow"] {
+            let r = mock(label);
+            let a = actions_for(r.as_ref());
+            assert!(a[0].command.contains("namespace show --ids "), "{label}: {}", a[0].command);
+            assert!(a.iter().all(|x| x.tier == CliTier::Inspect), "{label}: reads only");
+            assert!(a.iter().all(|x| !x.command.contains(" keys")), "{label}: never a key listing");
+        }
+        let sb = actions_for(mock("ServiceBusRow").as_ref());
+        assert!(find(&sb, "servicebus queue list").command.contains("--namespace-name sb-1 -g "));
+        let eh = actions_for(mock("EventHubsRow").as_ref());
+        assert!(find(&eh, "eventhubs namespace network-rule-set list").command.contains("--subscription"));
     }
 
     #[test]

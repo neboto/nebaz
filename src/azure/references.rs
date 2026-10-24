@@ -223,7 +223,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             DnsResolvers,
             PrivateDnsZones,
         ],
-        Identities => &[VirtualMachines, Clusters, WebApps, ContainerApps, ContainerAppJobs, ServicePrincipals],
+        Identities => &[VirtualMachines, Clusters, WebApps, ContainerApps, ContainerAppJobs, ServicePrincipals, ServiceBusNamespaces, EventHubNamespaces],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
         PublicIps => &[Nics, LoadBalancers, NatGateways],
         Disks => &[VirtualMachines],
@@ -243,10 +243,11 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             AiAccounts,
             RedisCaches,
             ManagedRedis,
+            ServiceBusNamespaces,
+            EventHubNamespaces,
         ],
-        StorageAccounts | Registries | SqlServers | CosmosAccounts | AiAccounts | RedisCaches | ManagedRedis => {
-            &[PrivateEndpoints]
-        }
+        StorageAccounts | Registries | SqlServers | CosmosAccounts | AiAccounts | RedisCaches | ManagedRedis
+        | ServiceBusNamespaces | EventHubNamespaces => &[PrivateEndpoints],
         DnsResolvers => &[DnsForwardingRulesets],
         ServicePrincipals => &[AppRegistrations],
         AppRegistrations => &[ServicePrincipals],

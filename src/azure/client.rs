@@ -19,6 +19,7 @@ use crate::azure::services::changes::{ChangesService, ChangesWindow};
 use crate::azure::services::compute::ComputeService;
 use crate::azure::services::container_apps::ContainerAppsService;
 use crate::azure::services::redis::RedisService;
+use crate::azure::services::messaging::MessagingService;
 use crate::azure::services::app_service::AppServiceService;
 use crate::azure::services::foundry::FoundryService;
 use crate::azure::services::container_registry::ContainerRegistryService;
@@ -345,6 +346,7 @@ impl AzureClients {
             ServiceType::PowerPlatform => Arc::new(PowerPlatformService::new(scope)),
             ServiceType::ContainerApps => Arc::new(ContainerAppsService::new(scope)),
             ServiceType::Redis => Arc::new(RedisService::new(scope)),
+            ServiceType::Messaging => Arc::new(MessagingService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Changes => Arc::new(ChangesService::new(scope, graph, ChangesWindow::default())),
         }

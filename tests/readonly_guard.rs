@@ -67,6 +67,11 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "redis.cache.chinacloudapi.cn",
     "redis.azure.net",
     "redisenterprise.cache.azure.net",
+    // Service Bus and Event Hubs: both providers' namespaces (AMQP,
+    // Kafka, HTTPS) live on the same suffix, public and sovereign.
+    "servicebus.windows.net",
+    "servicebus.usgovcloudapi.net",
+    "servicebus.chinacloudapi.cn",
     // Monitor: log queries and App Insights data.
     "api.loganalytics.io",
     "api.applicationinsights.io",
@@ -201,6 +206,16 @@ const AZ_FORBIDDEN: &[&str] = &[
     // show` print values (the ARM side is the `listSecrets` POST).
     "containerapp secret",
     "containerapp job secret",
+    // Service Bus and Event Hubs shared access keys and connection strings
+    // (`authorization-rule keys list`, the ARM side is the `listKeys`
+    // POST), at every level a policy can sit, and the geo-DR alias's.
+    "servicebus namespace authorization-rule keys",
+    "servicebus queue authorization-rule keys",
+    "servicebus topic authorization-rule keys",
+    "servicebus georecovery-alias authorization-rule keys",
+    "eventhubs namespace authorization-rule keys",
+    "eventhubs eventhub authorization-rule keys",
+    "eventhubs georecovery-alias authorization-rule keys",
     // Registry admin password, storage account keys, SAS tokens and
     // connection strings, publishing profiles (deployment passwords).
     "acr credential",
@@ -590,6 +605,8 @@ fn the_az_rules_catch_what_they_should() {
         "az redis list-keys -n {}",
         "az redisenterprise database list-keys --cluster-name {}",
         "az redis flush -n {}",
+        "az servicebus namespace authorization-rule keys list --namespace-name {} -n RootManageSharedAccessKey",
+        "az eventhubs eventhub authorization-rule keys list --eventhub-name {}",
     ] {
         let line = format!("let c = \"{}\";", cmd);
         assert_eq!(count(CLI_CATALOGUE_FILE, &line), 1, "{cmd} must be refused in the catalogue");
