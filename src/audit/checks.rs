@@ -26,6 +26,7 @@ use crate::azure::services::cosmos::CosmosAccountRow;
 use crate::azure::services::directory::{AppRegistrationRow, DirectoryBase, Expiry, ServicePrincipalRow};
 use crate::azure::services::json;
 use crate::azure::services::keyvault::VaultRow;
+use crate::azure::services::messaging::{EventHubsRow, Namespace, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SecurityRule, SubnetRow, VnetRow};
 use crate::azure::services::power_platform::{EnterprisePolicyRow, POWER_PLATFORM_DELEGATION};
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
@@ -51,9 +52,11 @@ const APP_REGS: &[V] = &[V::AppRegistrations];
 const SPS: &[V] = &[V::ServicePrincipals];
 const REDIS: &[V] = &[V::RedisCaches];
 const AMR: &[V] = &[V::ManagedRedis];
+const SERVICE_BUS: &[V] = &[V::ServiceBusNamespaces];
+const EVENT_HUBS: &[V] = &[V::EventHubNamespaces];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 35] = [
+pub static CHECKS: [Check; 41] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -311,6 +314,55 @@ pub static CHECKS: [Check; 35] = [
         fix: "Set the cluster's minimum TLS version to 1.2.",
         sources: &[AMR],
         run: amr_min_tls,
+    },
+    // ── Messaging ──
+    Check {
+        id: "sb-local-auth",
+        title: "Service Bus namespace allows SAS key auth",
+        why: "With local auth on, a shared access key (a connection string) grants send, listen or manage to whoever holds it, with no identity in the logs and no expiry until someone rotates it. Entra ID with RBAC names every caller.",
+        fix: "Move clients to Entra ID (a managed identity with the Data Sender / Receiver role), then set disableLocalAuth to true on the namespace.",
+        sources: &[SERVICE_BUS],
+        run: sb_local_auth,
+    },
+    Check {
+        id: "sb-min-tls",
+        title: "Service Bus namespace allows TLS below 1.2",
+        why: "TLS 1.0 and 1.1 have known weaknesses and are being retired across Azure; a minimum below 1.2 lets a client negotiate them.",
+        fix: "Set the namespace's minimum TLS version to 1.2.",
+        sources: &[SERVICE_BUS],
+        run: sb_min_tls,
+    },
+    Check {
+        id: "sb-public-network",
+        title: "Service Bus namespace reachable from every network",
+        why: "With public network access on and the firewall's default action Allow (or Deny with no rule, which Azure does not enforce), any address on the internet can connect; only the key or token stands in the way.",
+        fix: "Turn off public network access and use private endpoints, or set the default action to Deny with IP or VNet rules for the callers that need it (Premium for Service Bus VNet rules).",
+        sources: &[SERVICE_BUS],
+        run: sb_public_network,
+    },
+    Check {
+        id: "eh-local-auth",
+        title: "Event Hubs namespace allows SAS key auth",
+        why: "With local auth on, a shared access key (a connection string) grants send, listen or manage to whoever holds it, with no identity in the logs and no expiry until someone rotates it. Entra ID with RBAC names every caller.",
+        fix: "Move clients to Entra ID (a managed identity with the Data Sender / Receiver role), then set disableLocalAuth to true on the namespace.",
+        sources: &[EVENT_HUBS],
+        run: eh_local_auth,
+    },
+    Check {
+        id: "eh-min-tls",
+        title: "Event Hubs namespace allows TLS below 1.2",
+        why: "TLS 1.0 and 1.1 have known weaknesses and are being retired across Azure; a minimum below 1.2 lets a client negotiate them.",
+        fix: "Set the namespace's minimum TLS version to 1.2.",
+        sources: &[EVENT_HUBS],
+        run: eh_min_tls,
+    },
+    Check {
+        id: "eh-public-network",
+        title: "Event Hubs namespace reachable from every network",
+        why: "With public network access on and the firewall's default action Allow (or Deny with no rule, which Azure does not enforce), any address on the internet can connect; only the key or token stands in the way.",
+        fix: "Turn off public network access and use private endpoints, or set the default action to Deny with IP or VNet rules for the callers that need it (Premium for Service Bus VNet rules).",
+        sources: &[EVENT_HUBS],
+        run: eh_public_network,
     },
     // ── Power Platform ──
     Check {
@@ -925,6 +977,104 @@ fn amr_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFin
             );
         }
     }
+}
+
+// ── Messaging ───────────────────────────────────────────────────────
+
+/// The namespaces of one kind: the row and its shared namespace fields.
+fn namespaces<'a>(input: &AuditInput<'a>, view: V) -> Vec<(&'a dyn Resource, &'a Namespace)> {
+    match view {
+        V::ServiceBusNamespaces => input.of::<ServiceBusRow>(view).map(|r| (r as &dyn Resource, &r.ns)).collect(),
+        _ => input.of::<EventHubsRow>(view).map(|r| (r as &dyn Resource, &r.ns)).collect(),
+    }
+}
+
+fn ns_local_auth(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    for (r, ns) in namespaces(input, view) {
+        if ns.disable_local_auth != Some(true) {
+            let v = ns.disable_local_auth.map(|b| b.to_string()).unwrap_or_else(|| "(unset: false)".into());
+            out.push(
+                AuditFinding::about(check, Severity::Medium, r, "SAS keys (local auth) enabled")
+                    .with_evidence(vec![format!("disableLocalAuth: {}", v)]),
+            );
+        }
+    }
+}
+
+fn ns_min_tls(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    for (r, ns) in namespaces(input, view) {
+        if let Some(tls) = ns.min_tls.as_deref().filter(|t| tls_below_1_2(t)) {
+            out.push(
+                AuditFinding::about(check, Severity::Medium, r, format!("minimumTlsVersion {}", tls))
+                    .with_evidence(vec![format!("minimumTlsVersion: {}", tls)]),
+            );
+        }
+    }
+}
+
+/// Public, and the warm Network section's rule set lets every network in:
+/// default action Allow (or unset), or Deny with no IP or VNet rule, which
+/// Azure does not enforce. A namespace whose rule set isn't loaded is
+/// counted in the note, never passed.
+fn ns_public_network(check: &'static Check, input: &AuditInput, view: V, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for (r, ns) in namespaces(input, view) {
+        if !public_enabled(ns.public_network_access.as_deref()) {
+            continue;
+        }
+        let Some(set) = gaps.see(r.name(), input.lazy().and_then(|l| l.messaging_network_rules.get(r.id()))) else {
+            continue;
+        };
+        let pna = json::str_at(set, "/properties/publicNetworkAccess").or_else(|| ns.public_network_access.clone());
+        if !public_enabled(pna.as_deref()) {
+            continue;
+        }
+        let action = json::str_at(set, "/properties/defaultAction");
+        let ip = json::arr(set, "/properties/ipRules").len();
+        let vnet = json::arr(set, "/properties/virtualNetworkRules").len();
+        let open = match action.as_deref() {
+            Some(a) if a.eq_ignore_ascii_case("deny") => ip == 0 && vnet == 0,
+            _ => true,
+        };
+        if open {
+            let reason = if eq(action.as_deref(), "deny") {
+                "default action Deny with no rules (not enforced)"
+            } else {
+                "public network access, default action Allow"
+            };
+            out.push(AuditFinding::about(check, Severity::Medium, r, reason).with_evidence(vec![
+                format!("publicNetworkAccess: {}", pna.as_deref().unwrap_or("(default: Enabled)")),
+                format!("defaultAction: {}", action.as_deref().unwrap_or("(unset)")),
+                format!("IP rules: {} · VNet rules: {}", ip, vnet),
+                format!("private endpoints: {}", ns.private_endpoints.len()),
+            ]));
+        }
+    }
+    gaps.note(check, "network rule sets", "Network", out);
+}
+
+fn sb_local_auth(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    ns_local_auth(check, input, V::ServiceBusNamespaces, out)
+}
+
+fn sb_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    ns_min_tls(check, input, V::ServiceBusNamespaces, out)
+}
+
+fn sb_public_network(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    ns_public_network(check, input, V::ServiceBusNamespaces, out)
+}
+
+fn eh_local_auth(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    ns_local_auth(check, input, V::EventHubNamespaces, out)
+}
+
+fn eh_min_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    ns_min_tls(check, input, V::EventHubNamespaces, out)
+}
+
+fn eh_public_network(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    ns_public_network(check, input, V::EventHubNamespaces, out)
 }
 
 // ── Container Apps ────────────────────────────────────────────────────

@@ -5,8 +5,8 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, container_apps, container_registry, cosmos, directory, keyvault, network, power_platform, redis,
-    sql, storage,
+    aks, app_service, container_apps, container_registry, cosmos, directory, keyvault, messaging, network, power_platform,
+    redis, sql, storage,
 };
 use crate::lazy::LazyStore;
 use serde_json::json;
@@ -387,6 +387,66 @@ fn a_public_redis_cache_with_no_firewall_rules_reads_the_warm_network_section() 
     // Private and VNet-injected caches need no rules; the unvisited one is
     // counted, never passed.
     assert_eq!(notes(&rows), vec!["1 of 3 not checked — r fetches firewall rules".to_string()]);
+}
+
+// ── Messaging ──
+
+fn service_bus(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(messaging::ServiceBusRow::from_json(&body(&format!("Microsoft.ServiceBus/namespaces/{name}"), props), None))
+}
+
+fn event_hubs(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(messaging::EventHubsRow::from_json(&body(&format!("Microsoft.EventHub/namespaces/{name}"), props), None))
+}
+
+#[test]
+fn messaging_local_auth_and_tls_read_the_namespace() {
+    let sb = vec![(
+        V::ServiceBusNamespaces,
+        vec![
+            service_bus("sb-keys", json!({"minimumTlsVersion": "1.0"})),
+            service_bus("sb-entra", json!({"disableLocalAuth": true, "minimumTlsVersion": "1.2"})),
+        ],
+    )];
+    assert_eq!(findings(&audit("sb-local-auth", &sb, None)), vec![("sb-keys".into(), Severity::Medium)]);
+    assert_eq!(findings(&audit("sb-min-tls", &sb, None)), vec![("sb-keys".into(), Severity::Medium)]);
+    let eh = vec![(
+        V::EventHubNamespaces,
+        vec![
+            event_hubs("eh-keys", json!({"disableLocalAuth": false, "minimumTlsVersion": "1.1"})),
+            event_hubs("eh-entra", json!({"disableLocalAuth": true, "minimumTlsVersion": "1.2"})),
+        ],
+    )];
+    assert_eq!(findings(&audit("eh-local-auth", &eh, None)), vec![("eh-keys".into(), Severity::Medium)]);
+    assert_eq!(findings(&audit("eh-min-tls", &eh, None)), vec![("eh-keys".into(), Severity::Medium)]);
+    // Event Hubs not cached: its checks say so.
+    assert_eq!(notes(&audit("eh-local-auth", &sb, None)), vec!["not checked — load @sb Event Hubs".to_string()]);
+}
+
+#[test]
+fn a_messaging_namespace_open_to_every_network_reads_the_warm_rule_set() {
+    let lists = vec![(
+        V::ServiceBusNamespaces,
+        vec![
+            service_bus("sb-allow", json!({"publicNetworkAccess": "Enabled"})),
+            service_bus("sb-deny-empty", json!({})),
+            service_bus("sb-fenced", json!({})),
+            service_bus("sb-private", json!({"publicNetworkAccess": "Disabled"})),
+            service_bus("sb-unvisited", json!({})),
+        ],
+    )];
+    let rules = |action: &str, ips: Value| json!({"properties": {"defaultAction": action, "ipRules": ips, "virtualNetworkRules": []}});
+    let mut lazy = LazyStore::new(0);
+    let ns = |n: &str| id(&format!("Microsoft.ServiceBus/namespaces/{n}"));
+    lazy.messaging_network_rules.apply(ns("sb-allow"), Ok(rules("Allow", json!([]))));
+    lazy.messaging_network_rules.apply(ns("sb-deny-empty"), Ok(rules("Deny", json!([]))));
+    lazy.messaging_network_rules.apply(ns("sb-fenced"), Ok(rules("Deny", json!([{"ipMask": "203.0.113.0/24"}]))));
+    let rows = audit("sb-public-network", &lists, Some(&lazy));
+    assert_eq!(
+        findings(&rows),
+        vec![("sb-allow".into(), Severity::Medium), ("sb-deny-empty".into(), Severity::Medium)]
+    );
+    assert_eq!(notes(&rows), vec!["1 of 4 not checked — r fetches network rule sets".to_string()]);
 }
 
 // ── Container Apps and Power Platform ──

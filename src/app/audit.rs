@@ -13,6 +13,7 @@ use crate::azure::service::{JumpView, ServiceType};
 use crate::azure::services::access::{at_scope_filter, role_assignments_path, ACCESS_API_VERSION};
 use crate::azure::services::app_service::{site_config_path, WEB_API_VERSION};
 use crate::azure::services::directory::now_unix;
+use crate::azure::services::messaging::{api_version_for as messaging_api_version, messaging_child_path};
 use crate::azure::services::redis::{redis_child_path, REDIS_API_VERSION};
 use crate::azure::services::sql::{server_child_path, SQL_API_VERSION};
 use crate::event::Event;
@@ -181,7 +182,8 @@ impl App {
     /// The per-resource reads behind the lazy-fed checks, each through the
     /// same `LazyMap` its detail section uses (present keys never
     /// refetch): the subscription's role assignments and its privileged
-    /// users' directory objects, each cached SQL server's and Redis cache's firewall rules,
+    /// users' directory objects, each cached SQL server's and Redis cache's firewall rules, each
+    /// messaging namespace's network rule set,
     /// each cached site's config. Capped at `AUDIT_LAZY_MAX` per kind.
     fn trigger_audit_lazies(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         let sub = self.subscription_key();
@@ -214,6 +216,14 @@ impl App {
             let fut = self.azure_clients.list_fetch(&redis_child_path(&id, "firewallRules"), REDIS_API_VERSION);
             self.trigger_lazy(|s| &mut s.redis_firewall_rules, id, event_tx, move || fut);
         }
+        for view in [JumpView::ServiceBusNamespaces, JumpView::EventHubNamespaces] {
+            for id in self.cached_ids(view, &sub) {
+                let fut = self
+                    .azure_clients
+                    .get_fetch(&messaging_child_path(&id, "networkRuleSets/default"), messaging_api_version(&id));
+                self.trigger_lazy(|s| &mut s.messaging_network_rules, id, event_tx, move || fut);
+            }
+        }
         for id in self.cached_ids(JumpView::WebApps, &sub) {
             let fut = self.azure_clients.get_fetch(&site_config_path(&id), WEB_API_VERSION);
             self.trigger_lazy(|s| &mut s.site_configs, id, event_tx, move || fut);
@@ -230,6 +240,7 @@ impl App {
                 + l.principals.loading_count()
                 + l.sql_firewall_rules.loading_count()
                 + l.redis_firewall_rules.loading_count()
+                + l.messaging_network_rules.loading_count()
                 + l.site_configs.loading_count()
                 > 0
     }

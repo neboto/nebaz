@@ -99,7 +99,8 @@ Azure's own changes as noise (`a`); `nebaz changes --since 6h` prints it.
 **`@audit`** lists security findings
 (world-open NSG rules, public storage and vaults, SQL firewalls open to the
 internet, AKS API servers without IP ranges, plain-HTTP apps, open
-Container Apps ingress, plain-text or open Redis caches, unhealthy Power
+Container Apps ingress, plain-text or open Redis caches, Service Bus and
+Event Hubs namespaces with SAS keys or no firewall, unhealthy Power
 Platform policies, expiring app credentials, guest or service-principal
 Owners, and more) computed from what is already loaded, with zero API
 calls; a check whose data is not loaded says "not checked", and `r` there

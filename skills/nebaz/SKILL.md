@@ -81,9 +81,10 @@ after 10 pages (it says how far back it got), is a warning on stderr.
 ## `audit` — security findings
 
 `audit` loads the lists its checks read (NSGs, VNets, storage, Key Vault,
-SQL, Cosmos, AKS, ACR, App Service, Container Apps, Redis, Power Platform,
-app registrations, service principals), the capped per-resource reads a
-few need (SQL and Redis firewall rules, site configs, the subscription's
+SQL, Cosmos, AKS, ACR, App Service, Container Apps, Redis, Service Bus,
+Event Hubs, Power Platform, app registrations, service principals), the
+capped per-resource reads a few need (SQL and Redis firewall rules,
+messaging network rule sets, site configs, the subscription's
 role assignments; at most 50 each), and prints the **findings**, worst
 first: severity, check, resource id, reason, evidence and remediation as
 text. Checks are pure over what was fetched; nothing is changed.

@@ -248,7 +248,8 @@ each one backs are in the catalog table
   reads listed above for Network, Storage, Key Vault, SQL (servers and
   firewall rules), Cosmos DB, AKS, Container Registry, App Service (sites
   and `config/web`), Container Apps, Redis (caches, Managed Redis and cache
-  firewall rules), Power Platform, the subscription's
+  firewall rules), Service Bus and Event Hubs (namespaces and their
+  network rule sets), Power Platform, the subscription's
   Access list, and the Graph directory reads (app registrations, service
   principals, principal names). A denied one leaves its checks "not
   checked". `nebaz audit` makes the same calls.

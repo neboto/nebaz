@@ -25,7 +25,7 @@ to completion off-screen and cached under the tab's own key, so visiting
 the tab afterwards is a cache hit with identical rows. It then fetches the
 per-resource lazy reads the checks use through the same `LazyMap`s the
 detail sections use (each SQL server's and Redis cache's firewall rules,
-each site's config,
+each messaging namespace's network rule set, each site's config,
 the subscription's role assignments, and its Owner / User Access
 Administrator users' directory objects), capped at `AUDIT_LAZY_MAX` per
 kind. Each result re-audits as it lands, through the apply-closure event,

@@ -402,7 +402,7 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     the checks use through the sections' own maps (the subscription's role
     assignments, its Owner / User Access Administrator users' directory
     objects, each SQL server's and Redis cache's firewall rules, each
-    site's `config/web`; at most 50 each), re-auditing as each lands; a
+    messaging namespace's network rule set, each site's `config/web`; at most 50 each), re-auditing as each lands; a
     failed source is one status error. A subscription switch drops what is
     in flight (the lazy epoch). A finding row is a list row like any
     other: a click selects it, a double-click is Enter. Headless: `nebaz
@@ -508,6 +508,9 @@ has a fixture test there.
 | `redis-min-tls` | Redis caches | `minimumTlsVersion` below 1.2 | medium |
 | `redis-public-no-firewall` | Redis caches + Network's firewall rules ⧗ | public network access enabled, not VNet-injected, no firewall rules | medium |
 | `amr-min-tls` | Managed Redis | `minimumTlsVersion` below 1.2 | medium |
+| `sb-local-auth` · `eh-local-auth` | Service Bus · Event Hubs namespaces | `disableLocalAuth` not true (SAS keys work) | medium |
+| `sb-min-tls` · `eh-min-tls` | Service Bus · Event Hubs namespaces | `minimumTlsVersion` below 1.2 | medium |
+| `sb-public-network` · `eh-public-network` | Service Bus · Event Hubs namespaces + Network's rule set ⧗ | public network access enabled and default action Allow, or Deny with no IP or VNet rule (not enforced) | medium |
 | `pp-policy-unhealthy` | Enterprise policies | `healthStatus` not Healthy | medium |
 | `appreg-credential-expiry` | App registrations | a secret or certificate expired · expiring within 30 days | medium · low |
 | `sp-credential-expiry` | Service principals (managed identities skipped) | the same | medium · low |
@@ -551,7 +554,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Change timeline (`W`, rule 23) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
 | `@changes` (rule 24) | per window, on load and `r`: the Activity Log (≤10 pages), Resource Health (≤20 pages), then 1 per group with a deployment in the window (≤20); Graph: ≤50 caller lookups (2 when an id is an app id) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{window start}'` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` (or `/subscriptions/{sub}/providers/Microsoft.Resources/deployments`) · `2025-04-01`; Graph `/v1.0/directoryObjects/{id}`, `/v1.0/servicePrincipals(appId='{id}')` |
-| `@audit` (rule 25) | 0 on open (the warm caches only). `r`: each uncached source list once (the rows above), then at most 50 each of SQL Firewall, Redis firewall rules, App Configuration and Access principal names, plus the subscription's Access list. `nebaz audit` makes the same calls | the paths of the rows above |
+| `@audit` (rule 25) | 0 on open (the warm caches only). `r`: each uncached source list once (the rows above), then at most 50 each of SQL Firewall, Redis firewall rules, Service Bus and Event Hubs network rule sets, App Configuration and Access principal names, plus the subscription's Access list. `nebaz audit` makes the same calls | the paths of the rows above |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
 | Ownership ribbon (rule 22) | 0 for tags and `managedBy`; with the pane focused, 1 per resource group per subscription visit, plus 1 per not-succeeded deployment among the newest 3 | `{group}/providers/Microsoft.Resources/deployments?$top=100` · `{group}/providers/Microsoft.Resources/deployments/{name}/operations` · `2025-04-01` |
