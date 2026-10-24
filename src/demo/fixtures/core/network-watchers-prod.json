@@ -1,0 +1,24 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/NetworkWatcher_westeurope",
+      "name": "NetworkWatcher_westeurope",
+      "type": "Microsoft.Network/networkWatchers",
+      "location": "westeurope",
+      "etag": "W/\"3f61261d-54ff-5255-a92d-0c1e718728ab\"",
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/NetworkWatcher_northeurope",
+      "name": "NetworkWatcher_northeurope",
+      "type": "Microsoft.Network/networkWatchers",
+      "location": "northeurope",
+      "etag": "W/\"9dc6beeb-986e-5f8d-b07f-001d270a276e\"",
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

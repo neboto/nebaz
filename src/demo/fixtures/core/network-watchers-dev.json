@@ -1,0 +1,14 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/NetworkWatcher_westeurope",
+      "name": "NetworkWatcher_westeurope",
+      "type": "Microsoft.Network/networkWatchers",
+      "location": "westeurope",
+      "etag": "W/\"ca367b39-8e62-5256-a02c-b035fc0d56bf\"",
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

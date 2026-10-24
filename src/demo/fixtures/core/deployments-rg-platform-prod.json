@@ -1,0 +1,149 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/deployments/aks-batch-nodepool-scale",
+      "name": "aks-batch-nodepool-scale",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "421271045651289473",
+        "parameters": {
+          "clusterName": {
+            "type": "String",
+            "value": "aks-platform-prod"
+          },
+          "poolName": {
+            "type": "String",
+            "value": "batch"
+          },
+          "nodeCount": {
+            "type": "String",
+            "value": "4"
+          },
+          "vmSize": {
+            "type": "String",
+            "value": "Standard_D8s_v5"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Failed",
+        "timestamp": "{{iso:now-522000s}}",
+        "duration": "PT4M58.04S",
+        "correlationId": "81893e13-d5c0-5465-b97d-6feee3709cb6",
+        "providers": [
+          {
+            "namespace": "Microsoft.ContainerService",
+            "resourceTypes": [
+              {
+                "resourceType": "managedClusters/agentPools",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [],
+        "validationLevel": "Template",
+        "error": {
+          "code": "DeploymentFailed",
+          "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
+          "details": [
+            {
+              "code": "QuotaExceeded",
+              "message": "Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Location: westeurope, Current Limit: 100, Current Usage: 96, Additional Required: 32. Submit a request for Quota increase at https://aka.ms/ProdportalCRP/#blade/Microsoft_Azure_Capacity/UsageAndQuota.ReactView/Parameters/ before retrying."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/deployments/platform-core-20260715",
+      "name": "platform-core-20260715",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "366765176540611918",
+        "parameters": {
+          "kubernetesVersion": {
+            "type": "String",
+            "value": "1.28.9"
+          },
+          "acrSku": {
+            "type": "String",
+            "value": "Premium"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-8726400s}}",
+        "duration": "PT21M7.913S",
+        "correlationId": "efba4bd8-19e8-5b42-87ef-ff319e3da365",
+        "providers": [
+          {
+            "namespace": "Microsoft.ContainerService",
+            "resourceTypes": [
+              {
+                "resourceType": "managedClusters",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          },
+          {
+            "namespace": "Microsoft.ContainerRegistry",
+            "resourceTypes": [
+              {
+                "resourceType": "registries",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/law-contoso-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/wafp-agw-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/frontdoorWebApplicationFirewallPolicies/wafpafdcontoso"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.PowerPlatform/enterprisePolicies/ep-pp-network-injection"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Insights/metricAlerts/aks-node-cpu-high"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Insights/actionGroups/ag-platform-oncall"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    }
+  ]
+}

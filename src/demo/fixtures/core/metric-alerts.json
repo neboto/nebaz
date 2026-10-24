@@ -1,0 +1,136 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/metricAlerts/orders-api-requests-dropped",
+      "name": "orders-api-requests-dropped",
+      "type": "Microsoft.Insights/metricAlerts",
+      "location": "global",
+      "tags": {
+        "env": "prod"
+      },
+      "properties": {
+        "description": "Requests to ca-orders-api fell below 200 per 15 minutes (normally ~25,000).",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "threshold": 200,
+              "name": "Metric1",
+              "metricNamespace": "Microsoft.App/containerApps",
+              "metricName": "Requests",
+              "operator": "LessThan",
+              "timeAggregation": "Total",
+              "criterionType": "StaticThresholdCriterion",
+              "dimensions": [],
+              "skipMetricValidation": false
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "autoMitigate": true,
+        "targetResourceType": "Microsoft.App/containerApps",
+        "targetResourceRegion": "westeurope",
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/actionGroups/ag-orders-oncall",
+            "webHookProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/metricAlerts/caj-nightly-export-failed",
+      "name": "caj-nightly-export-failed",
+      "type": "Microsoft.Insights/metricAlerts",
+      "location": "global",
+      "tags": {
+        "env": "prod"
+      },
+      "properties": {
+        "description": "caj-nightly-export: an execution failed.",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/jobs/caj-nightly-export"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT1H",
+        "criteria": {
+          "allOf": [
+            {
+              "threshold": 0,
+              "name": "Metric1",
+              "metricNamespace": "Microsoft.App/jobs",
+              "metricName": "JobExecutionCount",
+              "operator": "GreaterThan",
+              "timeAggregation": "Total",
+              "criterionType": "StaticThresholdCriterion",
+              "dimensions": [],
+              "skipMetricValidation": false
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "autoMitigate": true,
+        "targetResourceType": "Microsoft.App/jobs",
+        "targetResourceRegion": "westeurope",
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/actionGroups/ag-orders-oncall",
+            "webHookProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Insights/metricAlerts/aks-node-cpu-high",
+      "name": "aks-node-cpu-high",
+      "type": "Microsoft.Insights/metricAlerts",
+      "location": "global",
+      "tags": {
+        "env": "prod"
+      },
+      "properties": {
+        "description": "Node CPU above 85% for 10 minutes.",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT10M",
+        "criteria": {
+          "allOf": [
+            {
+              "threshold": 85,
+              "name": "Metric1",
+              "metricNamespace": "Microsoft.ContainerService/managedClusters",
+              "metricName": "node_cpu_usage_percentage",
+              "operator": "GreaterThan",
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion",
+              "dimensions": [],
+              "skipMetricValidation": false
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "autoMitigate": true,
+        "targetResourceType": "Microsoft.ContainerService/managedClusters",
+        "targetResourceRegion": "westeurope",
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Insights/actionGroups/ag-platform-oncall",
+            "webHookProperties": {}
+          }
+        ]
+      }
+    }
+  ]
+}

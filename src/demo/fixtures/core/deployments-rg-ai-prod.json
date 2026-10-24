@@ -1,0 +1,57 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Resources/deployments/ai-foundry-20260905",
+      "name": "ai-foundry-20260905",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "158274731016439043",
+        "parameters": {
+          "accountName": {
+            "type": "String",
+            "value": "ai-contoso-prod"
+          },
+          "modelName": {
+            "type": "String",
+            "value": "gpt-4o"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-4233600s}}",
+        "duration": "PT3M12.6S",
+        "correlationId": "d312dc4a-f0fd-5c21-b05a-42e8ba5a5354",
+        "providers": [
+          {
+            "namespace": "Microsoft.CognitiveServices",
+            "resourceTypes": [
+              {
+                "resourceType": "accounts",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod/projects/orders-assistant"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod/deployments/gpt-4o"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    }
+  ]
+}

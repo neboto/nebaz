@@ -1,0 +1,19 @@
+{
+  "id": "/subscriptions/{{dev}}",
+  "authorizationSource": "RoleBased",
+  "managedByTenants": [],
+  "tags": {
+    "env": "dev",
+    "costCenter": "CC-4100",
+    "owner": "platform@contoso.com"
+  },
+  "subscriptionId": "{{dev}}",
+  "tenantId": "{{tenant}}",
+  "displayName": "contoso-dev",
+  "state": "Enabled",
+  "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "MSDNDevTest_2014-09-01",
+    "spendingLimit": "Off"
+  }
+}

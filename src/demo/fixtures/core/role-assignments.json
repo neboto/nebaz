@@ -1,0 +1,346 @@
+{
+  "value": [
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "principalId": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "principalType": "User",
+        "scope": "/subscriptions/{{prod}}",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-35596800s}}",
+        "updatedOn": "{{iso:now-35596800s}}",
+        "createdBy": null,
+        "updatedBy": null,
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleAssignments/b1347d96-aa34-58ed-9433-dcfaa78610d2",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "b1347d96-aa34-58ed-9433-dcfaa78610d2"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7",
+        "principalId": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+        "principalType": "Group",
+        "scope": "/subscriptions/{{prod}}",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-35424000s}}",
+        "updatedOn": "{{iso:now-35424000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleAssignments/547e2078-062c-5594-9662-ca0a5668edef",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "547e2078-062c-5594-9662-ca0a5668edef"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "principalId": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+        "principalType": "Group",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-25920000s}}",
+        "updatedOn": "{{iso:now-25920000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Authorization/roleAssignments/4e0b5702-c8fb-5d57-b5e7-98e58395af58",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "4e0b5702-c8fb-5d57-b5e7-98e58395af58"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "principalId": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+        "principalType": "Group",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-25920000s}}",
+        "updatedOn": "{{iso:now-25920000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Authorization/roleAssignments/97fbde1c-a141-571c-a0ae-9f0c0dc9a73b",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "97fbde1c-a141-571c-a0ae-9f0c0dc9a73b"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c",
+        "principalId": "f5233913-f487-4d23-b621-98c7511347d1",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-94440s}}",
+        "updatedOn": "{{iso:now-94440s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": "GitHub Actions: deploy the orders platform"
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleAssignments/ef875f19-4879-5137-b459-dfd37d4cd1d7",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "ef875f19-4879-5137-b459-dfd37d4cd1d7"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9",
+        "principalId": "f5233913-f487-4d23-b621-98c7511347d1",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-94320s}}",
+        "updatedOn": "{{iso:now-94320s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": "GitHub Actions: Bicep assigns AcrPull to app identities"
+      },
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleAssignments/d90719b7-998d-502b-8e28-a5e680c00805",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "d90719b7-998d-502b-8e28-a5e680c00805"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c",
+        "principalId": "e37ad877-49b0-4f5a-b333-31c5f278f12f",
+        "principalType": "User",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-5270400s}}",
+        "updatedOn": "{{iso:now-5270400s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": "Fabrikam: Power Platform connector rollout"
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Authorization/roleAssignments/be53360a-064e-5fbc-9ce2-ec32932cf1e9",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "be53360a-064e-5fbc-9ce2-ec32932cf1e9"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7",
+        "principalId": "e37ad877-49b0-4f5a-b333-31c5f278f12f",
+        "principalType": "User",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-jump-prod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-270000s}}",
+        "updatedOn": "{{iso:now-270000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": "temp vendor access"
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-jump-prod/providers/Microsoft.Authorization/roleAssignments/a8f9d96b-8229-5841-a0e1-5971ae6ee16b",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "a8f9d96b-8229-5841-a0e1-5971ae6ee16b"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d",
+        "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-8208000s}}",
+        "updatedOn": "{{iso:now-8208000s}}",
+        "createdBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "updatedBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod/providers/Microsoft.Authorization/roleAssignments/f8059577-be1b-507e-ac8d-98dcd3871d3d",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "f8059577-be1b-507e-ac8d-98dcd3871d3d"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/4633458b-17de-408a-b874-0445c86b69e6",
+        "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-8208000s}}",
+        "updatedOn": "{{iso:now-8208000s}}",
+        "createdBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "updatedBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod/providers/Microsoft.Authorization/roleAssignments/4658d95f-e95c-543b-93d2-64f437f5700c",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "4658d95f-e95c-543b-93d2-64f437f5700c"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d",
+        "principalId": "51b687b3-bdb3-4408-b436-500e659cc8cb",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-8208000s}}",
+        "updatedOn": "{{iso:now-8208000s}}",
+        "createdBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "updatedBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod/providers/Microsoft.Authorization/roleAssignments/23841449-6776-5c90-93ab-d497c6ae9cea",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "23841449-6776-5c90-93ab-d497c6ae9cea"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/4f6d3b9b-027b-4f4c-9142-0e5a2a2247e0",
+        "principalId": "51b687b3-bdb3-4408-b436-500e659cc8cb",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-8208000s}}",
+        "updatedOn": "{{iso:now-8208000s}}",
+        "createdBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "updatedBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/providers/Microsoft.Authorization/roleAssignments/881795a9-db81-5e2b-bcc7-3adce8c70f41",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "881795a9-db81-5e2b-bcc7-3adce8c70f41"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/69a216fc-b8fb-44d8-bc22-1f3c2cd27a39",
+        "principalId": "535edf48-335f-4761-b6ed-e0613ed690b3",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-8208000s}}",
+        "updatedOn": "{{iso:now-8208000s}}",
+        "createdBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "updatedBy": "f5233913-f487-4d23-b621-98c7511347d1",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/providers/Microsoft.Authorization/roleAssignments/969f083a-e3d8-57af-9275-cf252aa53060",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "969f083a-e3d8-57af-9275-cf252aa53060"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d",
+        "principalId": "37ec34fc-62c5-4180-a17f-0cccd5ed2e95",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-17280000s}}",
+        "updatedOn": "{{iso:now-17280000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod/providers/Microsoft.Authorization/roleAssignments/71460539-7431-569b-8b06-d20246d015bc",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "71460539-7431-569b-8b06-d20246d015bc"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/roleDefinitions/43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+        "principalId": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+        "principalType": "Group",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-12960000s}}",
+        "updatedOn": "{{iso:now-12960000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders/providers/Microsoft.Authorization/roleAssignments/279421e1-df8e-588b-824d-0112822cd772",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "279421e1-df8e-588b-824d-0112822cd772"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{dev}}/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "principalId": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "principalType": "User",
+        "scope": "/subscriptions/{{dev}}",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-35596800s}}",
+        "updatedOn": "{{iso:now-35596800s}}",
+        "createdBy": null,
+        "updatedBy": null,
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{dev}}/providers/Microsoft.Authorization/roleAssignments/04a95978-ed20-5e9c-87bf-5c0a74ad9604",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "04a95978-ed20-5e9c-87bf-5c0a74ad9604"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{dev}}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c",
+        "principalId": "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d",
+        "principalType": "Group",
+        "scope": "/subscriptions/{{dev}}",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-34560000s}}",
+        "updatedOn": "{{iso:now-34560000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{dev}}/providers/Microsoft.Authorization/roleAssignments/8372597e-003b-5ff0-bf85-e001a6c35c79",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "8372597e-003b-5ff0-bf85-e001a6c35c79"
+    },
+    {
+      "properties": {
+        "roleDefinitionId": "/subscriptions/{{dev}}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c",
+        "principalId": "f5233913-f487-4d23-b621-98c7511347d1",
+        "principalType": "ServicePrincipal",
+        "scope": "/subscriptions/{{dev}}",
+        "condition": null,
+        "conditionVersion": null,
+        "createdOn": "{{iso:now-32832000s}}",
+        "updatedOn": "{{iso:now-32832000s}}",
+        "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "updatedBy": "8851538f-3984-4858-a0fd-773a4f49a810",
+        "delegatedManagedIdentityResourceId": null,
+        "description": null
+      },
+      "id": "/subscriptions/{{dev}}/providers/Microsoft.Authorization/roleAssignments/db3969ff-b2b5-54b4-bbfb-778757284ba9",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "db3969ff-b2b5-54b4-bbfb-778757284ba9"
+    }
+  ]
+}

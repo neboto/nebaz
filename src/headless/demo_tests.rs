@@ -15,12 +15,74 @@ fn demo_cli(args: &[&str]) -> Cli {
 
 /// Sub-tabs (by `ls` prefix) the demo has no rows for yet.
 const EMPTY_YET: &[&str] = &[
-    "rg", "all", "changes", "activity", "deploys", "health",
 ];
 
 /// Sub-tabs whose demo rows still open with a `⚠` line somewhere.
 const WARNS_YET: &[&str] = &[
-    "sub", "rg", "all", "acr", "mysql", "aca", "redis", "sb", "changes", "activity", "deploys", "health",
+];
+
+/// `⚠` lines that are planted findings (`docs/DEMO.md`), not missing
+/// fixtures: `(ARM id substring, line substring)`, both case-insensitive.
+/// The warning test skips these lines; any other `⚠` still counts.
+const PLANTED: &[(&str, &str)] = &[
+    ("/registries/acrcontosoprod", "a shared username and password"),
+    ("/containerApps/ca-orders-worker", "ca-orders-worker--v119"),
+    ("/containerApps/ca-orders-worker", "MANIFEST_UNKNOWN"),
+    ("/flexibleServers/mysql-reporting-legacy", "require_secure_transport"),
+    ("/flexibleServers/mysql-reporting-legacy", "allows every Azure service"),
+    // All resources lists SQL databases, as ARM does; nebaz browses them
+    // only as a section of their server, so `get` refuses the bare id.
+    ("/providers/Microsoft.Sql/servers/sql-orders-prod/databases/", "not a type nebaz lists"),
+    ("/Redis/redis-orders-cache", "6379"),
+    ("/namespaces/sb-orders-prod", "dead"),
+    // core: failed operations in the Activity sections of contoso-prod (the
+    // v119 rollout, the batch pool's quota, the guest's denied VM start).
+    (crate::demo::PROD, "⚠ Failed | Create Deployment"),
+    (crate::demo::PROD, "⚠ Failed | Create or Update Container App"),
+    (crate::demo::PROD, "⚠ Failed | Create or Update Agent Pool"),
+    (crate::demo::PROD, "⚠ Failed | Start Virtual Machine"),
+];
+
+fn planted(id: &str, line: &str) -> bool {
+    let (id, line) = (id.to_lowercase(), line.to_lowercase());
+    PLANTED.iter().any(|(i, l)| id.contains(&i.to_lowercase()) && line.contains(&l.to_lowercase()))
+}
+
+/// Audit checks the demo's data must trip (`nebaz --demo audit`), each a
+/// planted finding. Each area appends its own.
+const AUDIT_EXPECTED: &[&str] = &[
+    // core: github-actions-deploy holds User Access Administrator on the subscription.
+    "sub-privileged-guest-or-sp",
+    // compute
+    "aks-public-api",
+    "aks-local-accounts",
+    "acr-admin-user",
+    "app-https-only",
+    "app-min-tls",
+    "app-ftps",
+    // data
+    "storage-blob-public-access",
+    "storage-min-tls",
+    "storage-public-network",
+    "storage-shared-key",
+    "kv-public-network",
+    "kv-purge-protection",
+    "sql-firewall-open",
+    "sql-public-network",
+    "cosmos-local-auth",
+    "cosmos-public-network",
+    "redis-non-ssl-port",
+    "mysql-insecure-transport",
+    "mysql-public-network",
+    "mysql-firewall-open",
+    "mysql-password-no-entra",
+    "sb-local-auth",
+    "sb-public-network",
+    // identity
+    "appreg-credential-expiry",
+    // network
+    "nsg-open-internet",
+    "subnet-pp-no-nsg",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).
@@ -77,7 +139,10 @@ async fn every_demo_row_opens_without_a_warning() {
             let cli = demo_cli(&["get", id, "--in", &p, "-o", "md"]);
             let Some(Command::Get(args)) = &cli.command else { unreachable!() };
             match get(&cli, args, OutputFormat::Md).await {
-                Ok(out) => lines.extend(out.lines().filter(|l| l.contains('⚠')).map(|l| format!("{id}: {l}"))),
+                Ok(out) => lines.extend(
+                    out.lines().filter(|l| l.contains('⚠') && !planted(id, l)).map(|l| format!("{id}: {l}")),
+                ),
+                Err(f) if planted(id, f.message()) => {}
                 Err(f) => lines.push(format!("{id}: get failed: {}", f.message())),
             }
         }
@@ -94,6 +159,17 @@ async fn every_demo_row_opens_without_a_warning() {
         clean_but_listed.is_empty(),
         "these open clean now; take them out of WARNS_YET: {clean_but_listed:?}"
     );
+}
+
+#[tokio::test]
+async fn the_demo_audit_finds_every_planted_check() {
+    let cli = demo_cli(&["audit", "--fail-on", "never"]);
+    let Some(Command::Audit(args)) = &cli.command else { unreachable!() };
+    let (out, _) = audit(&cli, args, OutputFormat::Json).await.unwrap_or_else(|f| panic!("audit: {}", f.message()));
+    let v: Value = serde_json::from_str(&out).expect("audit prints JSON");
+    let found: Vec<&str> = v["findings"].as_array().into_iter().flatten().filter_map(|f| f["check"].as_str()).collect();
+    let missing: Vec<&&str> = AUDIT_EXPECTED.iter().filter(|c| !found.contains(c)).collect();
+    assert!(missing.is_empty(), "the demo audit no longer finds {missing:?} (found {found:?})");
 }
 
 /// The `N` lens on the story's two NSG findings, from the demo fixtures

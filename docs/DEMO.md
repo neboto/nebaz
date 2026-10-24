@@ -93,9 +93,9 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `mysql-reporting-legacy`: public access, `require_secure_transport` OFF | `@audit` |
 | `sb-orders-prod` queue `orders` has 1,284 dead-lettered messages; local auth on | Messaging |
 | `ai-contoso-prod` (Foundry): public network and key auth on | `@audit` |
-| `github-actions-deploy` has Contributor on the **subscription** (granted yesterday by alex) | Access, `@changes` |
+| `github-actions-deploy` has Contributor and User Access Administrator on the **subscription** (both granted yesterday by alex; UAA so its Bicep can assign AcrPull) | Access, `@changes`, `@audit` |
 | App registration `orders-api-client`: one client secret expires in 6 days, one expired last month, no owners | `@appreg` |
-| The Fabrikam guest has Contributor on `rg-orders-prod` | Access |
+| The Fabrikam guest has Contributor on `rg-orders-prod` and Network Contributor on `nsg-jump-prod` (granted 3 days ago, just before the SSH rule) | Access |
 | `caj-nightly-export`'s last execution failed | Jobs |
 | `vnet-hub-prod` peers with `vnet-dev` in **contoso-dev** (a cross-subscription jump) | Related |
 | `snet-pp-injection-dr`, Power Platform's failover subnet in `vnet-pp-dr`, has no NSG | `@audit` |
@@ -214,6 +214,11 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 
 **`rg-ai-prod`** (team data)
 - `ai-contoso-prod` (Foundry / `AIServices`, public network on, key auth on) with project `orders-assistant` and deployment `gpt-4o`
+
+**Core's own** (no service browses these; All resources lists them)
+- Groups `MC_rg-platform-prod_aks-platform-prod_westeurope` (managed by the cluster) and `NetworkWatcherRG` (`NetworkWatcher_westeurope`, `NetworkWatcher_northeurope`; dev has its own)
+- Alert rules: metric alerts `orders-api-requests-dropped` and `caj-nightly-export-failed` (rg-orders-prod), `aks-node-cpu-high` (rg-platform-prod); activity log alert `nsg-change-rg-network-prod` (rg-network-prod, fires on any security-rule write); action groups `ag-orders-oncall`, `ag-platform-oncall`
+- Deployments: rg-orders-prod `orders-worker-v119` (failed, 25m ago), `orders-api-v231`, `orders-worker-v118`, `orders-jobs-20261001`, `orders-platform-20260912` (from template spec `ts-orders-platform` 1.4.0); rg-network-prod `hub-network-20260801`; rg-platform-prod `aks-batch-nodepool-scale` (failed, QuotaExceeded, 6 days ago), `platform-core-20260715`; rg-ai-prod `ai-foundry-20260905`; the subscription's `sub-baseline-20260610`; rg-dev `dev-env-20261020`
 
 ### contoso-dev
 

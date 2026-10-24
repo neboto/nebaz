@@ -1,0 +1,68 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/actionGroups/ag-orders-oncall",
+      "name": "ag-orders-oncall",
+      "type": "Microsoft.Insights/ActionGroups",
+      "location": "Global",
+      "tags": {
+        "env": "prod",
+        "team": "orders"
+      },
+      "properties": {
+        "groupShortName": "orders-oncl",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "orders-oncl",
+            "emailAddress": "orders-oncall@contoso.com",
+            "useCommonAlertSchema": true,
+            "status": "Enabled"
+          }
+        ],
+        "smsReceivers": [],
+        "webhookReceivers": [],
+        "eventHubReceivers": [],
+        "itsmReceivers": [],
+        "azureAppPushReceivers": [],
+        "automationRunbookReceivers": [],
+        "voiceReceivers": [],
+        "logicAppReceivers": [],
+        "azureFunctionReceivers": [],
+        "armRoleReceivers": []
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Insights/actionGroups/ag-platform-oncall",
+      "name": "ag-platform-oncall",
+      "type": "Microsoft.Insights/ActionGroups",
+      "location": "Global",
+      "tags": {
+        "env": "prod",
+        "team": "platform"
+      },
+      "properties": {
+        "groupShortName": "plat-oncall",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "plat-oncall",
+            "emailAddress": "platform-oncall@contoso.com",
+            "useCommonAlertSchema": true,
+            "status": "Enabled"
+          }
+        ],
+        "smsReceivers": [],
+        "webhookReceivers": [],
+        "eventHubReceivers": [],
+        "itsmReceivers": [],
+        "azureAppPushReceivers": [],
+        "automationRunbookReceivers": [],
+        "voiceReceivers": [],
+        "logicAppReceivers": [],
+        "azureFunctionReceivers": [],
+        "armRoleReceivers": []
+      }
+    }
+  ]
+}

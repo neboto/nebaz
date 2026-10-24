@@ -1,0 +1,59 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Resources/deployments/dev-env-20261020",
+      "name": "dev-env-20261020",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "162371800651928925",
+        "parameters": {
+          "environment": {
+            "type": "String",
+            "value": "dev"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-352800s}}",
+        "duration": "PT2M20.7S",
+        "correlationId": "28353d0b-e851-5e9d-a5a8-c7a48fc60ebd",
+        "providers": [
+          {
+            "namespace": "Microsoft.App",
+            "resourceTypes": [
+              {
+                "resourceType": "containerApps",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev"
+          },
+          {
+            "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.App/managedEnvironments/cae-orders-dev"
+          },
+          {
+            "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.App/containerApps/ca-orders-api-dev"
+          },
+          {
+            "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.KeyVault/vaults/kv-orders-dev"
+          },
+          {
+            "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Storage/storageAccounts/stcontosoordersdev"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    }
+  ]
+}

@@ -1,0 +1,530 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/locations/westeurope",
+      "name": "westeurope",
+      "type": "Region",
+      "displayName": "West Europe",
+      "regionalDisplayName": "(Europe) West Europe",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "Europe",
+        "geographyGroup": "Europe",
+        "longitude": "4.9",
+        "latitude": "52.3667",
+        "physicalLocation": "Netherlands",
+        "pairedRegion": [
+          {
+            "name": "northeurope",
+            "id": "/subscriptions/{{prod}}/locations/northeurope"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "westeurope-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "westeurope-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "westeurope-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/northeurope",
+      "name": "northeurope",
+      "type": "Region",
+      "displayName": "North Europe",
+      "regionalDisplayName": "(Europe) North Europe",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "Europe",
+        "geographyGroup": "Europe",
+        "longitude": "-6.2597",
+        "latitude": "53.3478",
+        "physicalLocation": "Ireland",
+        "pairedRegion": [
+          {
+            "name": "westeurope",
+            "id": "/subscriptions/{{prod}}/locations/westeurope"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "northeurope-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "northeurope-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "northeurope-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/swedencentral",
+      "name": "swedencentral",
+      "type": "Region",
+      "displayName": "Sweden Central",
+      "regionalDisplayName": "(Europe) Sweden Central",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "Sweden",
+        "geographyGroup": "Europe",
+        "longitude": "17.14127",
+        "latitude": "60.67488",
+        "physicalLocation": "Gävle",
+        "pairedRegion": [
+          {
+            "name": "swedensouth",
+            "id": "/subscriptions/{{prod}}/locations/swedensouth"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "swedencentral-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "swedencentral-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "swedencentral-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/germanywestcentral",
+      "name": "germanywestcentral",
+      "type": "Region",
+      "displayName": "Germany West Central",
+      "regionalDisplayName": "(Europe) Germany West Central",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "Germany",
+        "geographyGroup": "Europe",
+        "longitude": "8.682127",
+        "latitude": "50.110924",
+        "physicalLocation": "Frankfurt",
+        "pairedRegion": [
+          {
+            "name": "germanynorth",
+            "id": "/subscriptions/{{prod}}/locations/germanynorth"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "germanywestcentral-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "germanywestcentral-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "germanywestcentral-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/francecentral",
+      "name": "francecentral",
+      "type": "Region",
+      "displayName": "France Central",
+      "regionalDisplayName": "(Europe) France Central",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "France",
+        "geographyGroup": "Europe",
+        "longitude": "2.373",
+        "latitude": "46.3772",
+        "physicalLocation": "Paris",
+        "pairedRegion": [
+          {
+            "name": "francesouth",
+            "id": "/subscriptions/{{prod}}/locations/francesouth"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "francecentral-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "francecentral-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "francecentral-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/uksouth",
+      "name": "uksouth",
+      "type": "Region",
+      "displayName": "UK South",
+      "regionalDisplayName": "(Europe) UK South",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "United Kingdom",
+        "geographyGroup": "Europe",
+        "longitude": "-0.799",
+        "latitude": "50.941",
+        "physicalLocation": "London",
+        "pairedRegion": [
+          {
+            "name": "ukwest",
+            "id": "/subscriptions/{{prod}}/locations/ukwest"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "uksouth-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "uksouth-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "uksouth-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/ukwest",
+      "name": "ukwest",
+      "type": "Region",
+      "displayName": "UK West",
+      "regionalDisplayName": "(Europe) UK West",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Other",
+        "geography": "United Kingdom",
+        "geographyGroup": "Europe",
+        "longitude": "-3.084",
+        "latitude": "53.427",
+        "physicalLocation": "Cardiff",
+        "pairedRegion": [
+          {
+            "name": "uksouth",
+            "id": "/subscriptions/{{prod}}/locations/uksouth"
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/eastus",
+      "name": "eastus",
+      "type": "Region",
+      "displayName": "East US",
+      "regionalDisplayName": "(US) East US",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "United States",
+        "geographyGroup": "US",
+        "longitude": "-79.8164",
+        "latitude": "37.3719",
+        "physicalLocation": "Virginia",
+        "pairedRegion": [
+          {
+            "name": "westus",
+            "id": "/subscriptions/{{prod}}/locations/westus"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "eastus-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "eastus-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "eastus-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/eastus2",
+      "name": "eastus2",
+      "type": "Region",
+      "displayName": "East US 2",
+      "regionalDisplayName": "(US) East US 2",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "United States",
+        "geographyGroup": "US",
+        "longitude": "-78.3889",
+        "latitude": "36.6681",
+        "physicalLocation": "Virginia",
+        "pairedRegion": [
+          {
+            "name": "centralus",
+            "id": "/subscriptions/{{prod}}/locations/centralus"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "eastus2-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "eastus2-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "eastus2-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/westus2",
+      "name": "westus2",
+      "type": "Region",
+      "displayName": "West US 2",
+      "regionalDisplayName": "(US) West US 2",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "United States",
+        "geographyGroup": "US",
+        "longitude": "-119.852",
+        "latitude": "47.233",
+        "physicalLocation": "Washington",
+        "pairedRegion": [
+          {
+            "name": "westcentralus",
+            "id": "/subscriptions/{{prod}}/locations/westcentralus"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "westus2-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "westus2-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "westus2-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/centralus",
+      "name": "centralus",
+      "type": "Region",
+      "displayName": "Central US",
+      "regionalDisplayName": "(US) Central US",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "United States",
+        "geographyGroup": "US",
+        "longitude": "-93.6208",
+        "latitude": "41.5908",
+        "physicalLocation": "Iowa",
+        "pairedRegion": [
+          {
+            "name": "eastus2",
+            "id": "/subscriptions/{{prod}}/locations/eastus2"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "centralus-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "centralus-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "centralus-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/southeastasia",
+      "name": "southeastasia",
+      "type": "Region",
+      "displayName": "Southeast Asia",
+      "regionalDisplayName": "(Asia Pacific) Southeast Asia",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "Asia Pacific",
+        "geographyGroup": "Asia Pacific",
+        "longitude": "103.833",
+        "latitude": "1.283",
+        "physicalLocation": "Singapore",
+        "pairedRegion": [
+          {
+            "name": "eastasia",
+            "id": "/subscriptions/{{prod}}/locations/eastasia"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "southeastasia-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "southeastasia-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "southeastasia-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/australiaeast",
+      "name": "australiaeast",
+      "type": "Region",
+      "displayName": "Australia East",
+      "regionalDisplayName": "(Asia Pacific) Australia East",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "Australia",
+        "geographyGroup": "Asia Pacific",
+        "longitude": "151.2094",
+        "latitude": "-33.86",
+        "physicalLocation": "New South Wales",
+        "pairedRegion": [
+          {
+            "name": "australiasoutheast",
+            "id": "/subscriptions/{{prod}}/locations/australiasoutheast"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "australiaeast-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "australiaeast-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "australiaeast-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/japaneast",
+      "name": "japaneast",
+      "type": "Region",
+      "displayName": "Japan East",
+      "regionalDisplayName": "(Asia Pacific) Japan East",
+      "metadata": {
+        "regionType": "Physical",
+        "regionCategory": "Recommended",
+        "geography": "Japan",
+        "geographyGroup": "Asia Pacific",
+        "longitude": "139.77",
+        "latitude": "35.68",
+        "physicalLocation": "Tokyo, Saitama",
+        "pairedRegion": [
+          {
+            "name": "japanwest",
+            "id": "/subscriptions/{{prod}}/locations/japanwest"
+          }
+        ]
+      },
+      "availabilityZoneMappings": [
+        {
+          "logicalZone": "1",
+          "physicalZone": "japaneast-az1"
+        },
+        {
+          "logicalZone": "2",
+          "physicalZone": "japaneast-az2"
+        },
+        {
+          "logicalZone": "3",
+          "physicalZone": "japaneast-az3"
+        }
+      ]
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/europe",
+      "name": "europe",
+      "type": "Region",
+      "displayName": "Europe",
+      "regionalDisplayName": "Europe",
+      "metadata": {
+        "regionType": "Logical",
+        "regionCategory": "Other",
+        "geographyGroup": "Europe"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/unitedstates",
+      "name": "unitedstates",
+      "type": "Region",
+      "displayName": "United States",
+      "regionalDisplayName": "United States",
+      "metadata": {
+        "regionType": "Logical",
+        "regionCategory": "Other",
+        "geographyGroup": "US"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/locations/asiapacific",
+      "name": "asiapacific",
+      "type": "Region",
+      "displayName": "Asia Pacific",
+      "regionalDisplayName": "Asia Pacific",
+      "metadata": {
+        "regionType": "Logical",
+        "regionCategory": "Other",
+        "geographyGroup": "Asia Pacific"
+      }
+    }
+  ]
+}

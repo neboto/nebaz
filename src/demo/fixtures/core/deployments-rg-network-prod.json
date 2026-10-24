@@ -1,0 +1,102 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Resources/deployments/hub-network-20260801",
+      "name": "hub-network-20260801",
+      "type": "Microsoft.Resources/deployments",
+      "tags": {
+        "source": "github-actions"
+      },
+      "properties": {
+        "templateHash": "636486473135871259",
+        "parameters": {
+          "hubAddressSpace": {
+            "type": "String",
+            "value": "10.10.0.0/16"
+          },
+          "drAddressSpace": {
+            "type": "String",
+            "value": "10.20.0.0/16"
+          }
+        },
+        "mode": "Incremental",
+        "provisioningState": "Succeeded",
+        "timestamp": "{{iso:now-7257600s}}",
+        "duration": "PT6M41.2209S",
+        "correlationId": "5682b04f-cfcb-568b-b69c-45b2367b25c5",
+        "providers": [
+          {
+            "namespace": "Microsoft.Network",
+            "resourceTypes": [
+              {
+                "resourceType": "virtualNetworks",
+                "locations": [
+                  "westeurope"
+                ]
+              },
+              {
+                "resourceType": "networkSecurityGroups",
+                "locations": [
+                  "westeurope"
+                ]
+              },
+              {
+                "resourceType": "natGateways",
+                "locations": [
+                  "westeurope"
+                ]
+              }
+            ]
+          }
+        ],
+        "dependencies": [],
+        "outputResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-aca"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-pp-injection"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-jump-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ng-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/natGateways/ng-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/dnsResolvers/dnspr-hub-prod"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Insights/activityLogAlerts/nsg-change-rg-network-prod"
+          }
+        ],
+        "validationLevel": "Template",
+        "outputs": {}
+      }
+    }
+  ]
+}

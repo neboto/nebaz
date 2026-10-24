@@ -1510,7 +1510,7 @@ fn sp_credential_expiry(check: &'static Check, input: &AuditInput, out: &mut Vec
 
 /// Built-in role definition GUIDs (the same in every tenant).
 pub(crate) const OWNER_ROLE: &str = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635";
-pub(crate) const USER_ACCESS_ADMIN_ROLE: &str = "18d7d88d-4d8f-4c43-8eb6-b8f9ecb4e6ef";
+pub(crate) const USER_ACCESS_ADMIN_ROLE: &str = "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9";
 
 /// The role an assignment grants, when it is Owner or User Access
 /// Administrator.
