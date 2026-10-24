@@ -12,6 +12,7 @@ mod error;
 mod event;
 mod export;
 mod headless;
+mod keycast;
 mod lazy;
 mod macros;
 mod search;
@@ -31,7 +32,7 @@ use tui::Tui;
 use ui::layout::AppLayout;
 use ui::theme;
 use ui::widgets::{
-    banner, command_picker, details_pane, help_overlay, jump_list, location_selector, macro_picker,
+    banner, command_picker, details_pane, help_overlay, jump_list, keycast_box, location_selector, macro_picker,
     message_log, resource_list, search_bar, service_selector, service_tabs, splash,
     subscription_selector, subtab_bar,
 };
@@ -145,6 +146,9 @@ async fn run(cli: cli::Cli) -> Result<()> {
 
         // Macro recording / playback, before the draw so the chips are current.
         app.macro_tick(&event_tx);
+        // Keycast (`--show-keys`): name the key just dispatched by what it
+        // changed. After the macro pass, so a replayed step shows too.
+        app.keycast_tick();
         // Flat detail view: fire the lazy sections once per focused
         // resource and keep the tab bar on the section under the cursor.
         app.flat_tick(&event_tx);
@@ -272,6 +276,8 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     if app.command_picker.is_some() {
         command_picker::render_command_picker(app, frame);
     }
+    // Last, so a recording sees the key above whatever it opened.
+    keycast_box::render_keycast(app, layout.status_area, frame);
 }
 
 /// Trim a `theme::hint_line` to `max_width` cells on a `  ·  ` boundary, so

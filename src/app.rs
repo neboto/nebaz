@@ -151,6 +151,9 @@ pub(crate) use headless::ListShaping;
 /// The `P` fan-out over config `subscriptions` (#62).
 mod subscription_fanout;
 
+/// Keycast (`--show-keys`, #43): the view a key can change, the tick.
+mod keycast;
+
 // ── Supporting types (ported by hand from neboto's app.rs) ──────────────
 
 /// Whether a screen cell (`col`, `row`) falls inside `area`.
@@ -612,6 +615,9 @@ pub struct App {
     list_area: Cell<Rect>,
     /// The rest of the mouse's hit targets and gesture state (`app/mouse.rs`).
     pub mouse: MouseState,
+    /// Keycast (`--show-keys`, config `show_keys`): the keys just pressed
+    /// and what they did, for recordings (`src/keycast.rs`). `None` = off.
+    pub keycast: Option<crate::keycast::Keycast>,
 }
 
 impl App {
@@ -773,6 +779,7 @@ impl App {
             click_regions: RefCell::new(Vec::new()),
             list_area: Cell::new(Rect::default()),
             mouse: MouseState::default(),
+            keycast: config.show_keys.unwrap_or(false).then(crate::keycast::Keycast::default),
             config,
         };
         if let Some(w) = app.config.load_warning.take() {
@@ -3409,6 +3416,15 @@ impl App {
                     was_modal,
                     query,
                 });
+            }
+        }
+
+        // Keycast snapshot (pre-dispatch, see `keycast_tick`). Mouse
+        // gestures come through here too, as the key they replay.
+        if self.keycast.is_some() {
+            let before = self.keycast_view();
+            if let Some(kc) = self.keycast.as_mut() {
+                kc.note(key, before, std::time::Instant::now());
             }
         }
 

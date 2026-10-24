@@ -3,6 +3,7 @@ pub mod command_picker;
 pub mod details_pane;
 pub mod help_overlay;
 pub mod jump_list;
+pub mod keycast_box;
 pub mod location_selector;
 pub mod macro_picker;
 pub mod metrics_overlay;
