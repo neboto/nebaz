@@ -189,6 +189,11 @@
     "acr": [
       "registries (acr)"
     ],
+    "agw": [
+      "app-gateways (agw)",
+      "front-door-profiles (afd)",
+      "waf-policies (waf)"
+    ],
     "aks": [
       "clusters (aks)",
       "node-pools (pool)"
@@ -325,6 +330,18 @@
       "Related",
       "Tags"
     ],
+    "Application gateway": [
+      "Overview",
+      "Frontends",
+      "Listeners",
+      "Rules",
+      "Backends",
+      "WAF",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Container Apps environment": [
       "Overview",
       "Network",
@@ -443,6 +460,17 @@
       "Security",
       "Event hubs",
       "Access policies",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Front Door profile": [
+      "Overview",
+      "Endpoints",
+      "Origins",
+      "Domains",
+      "Security",
       "Access",
       "Activity",
       "Related",
@@ -698,6 +726,17 @@
       "Overview",
       "Subnets",
       "Peerings",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "WAF policy": [
+      "Overview",
+      "Settings",
+      "Managed rules",
+      "Custom rules",
+      "Associations",
       "Access",
       "Activity",
       "Related",

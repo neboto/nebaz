@@ -25,6 +25,7 @@ use super::{App, LayoutMode, NavLocation, PAGE_STEP};
 use crate::azure::references::{likely_referrers, ReverseIndex};
 use crate::azure::resource::Resource;
 use crate::azure::service::{JumpView, ServiceType};
+use crate::azure::services::edge::{derived_links, BackendTargets, TargetLists};
 use crate::event::Event;
 use crate::lazy::LazyApply;
 use crate::ui::widgets::refs_lens::{RefsCoverage, RefsLensState};
@@ -50,6 +51,8 @@ struct Stamp {
     subscription: String,
     warm: usize,
     on_screen: Option<(JumpView, usize)>,
+    /// Front Door topologies loaded: each adds origin links.
+    topologies: usize,
 }
 
 impl App {
@@ -103,6 +106,7 @@ impl App {
             subscription: self.subscription_key(),
             warm,
             on_screen: self.refs_on_screen().map(|v| (v, self.resources.len())),
+            topologies: self.lazy.afd_topology.iter().filter(|(_, v)| matches!(v, crate::lazy::Lazy::Loaded(_))).count(),
         }
     }
 
@@ -113,7 +117,19 @@ impl App {
         if self.refs_index.as_ref().is_some_and(|i| i.stamp == stamp) {
             return;
         }
-        let index = ReverseIndex::build(lists);
+        // A gateway backend or a Front Door origin matched to a warm row
+        // (a Container App, an environment, a site, a private endpoint)
+        // is a reference too: the same matching the Backends section does.
+        let find = |view: JumpView| lists.iter().find(|(v, _)| *v == view).map(|(_, l)| *l);
+        let targets = BackendTargets::from_lists(TargetLists {
+            container_apps: find(JumpView::ContainerApps),
+            environments: find(JumpView::ContainerAppEnvironments),
+            sites: find(JumpView::WebApps),
+            private_endpoints: find(JumpView::PrivateEndpoints),
+            public_ips: find(JumpView::PublicIps),
+        });
+        let topologies = &self.lazy.afd_topology;
+        let index = ReverseIndex::build_with(lists, |r| derived_links(r, &targets, topologies));
         self.refs_index = Some(RefsIndex { stamp, index, warm, cold });
     }
 

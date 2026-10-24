@@ -7,8 +7,8 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, foundry, identity,
-    keyvault, messaging, monitor, network, network_dns, network_edge, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
+    aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, foundry,
+    identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -645,6 +645,77 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "status": "Active",
                             "kafkaEnabled": true,
                             "publicNetworkAccess": "Enabled"
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::AppGateways,
+            "AppGatewayRow",
+            parse(
+                "AppGatewayRow",
+                edge::AppGatewayRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/applicationGateways/agw-1"),
+                        "name": "agw-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "operationalState": "Running",
+                            "sku": {"name": "WAF_v2", "tier": "WAF_v2", "capacity": 2},
+                            "gatewayIPConfigurations": [{"name": "gw", "properties": {
+                                "subnet": {"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/snet-agw")}}}],
+                            "frontendIPConfigurations": [{"name": "fe", "properties": {
+                                "publicIPAddress": {"id": arm_id("Microsoft.Network/publicIPAddresses/pip-agw")}}}],
+                            "frontendPorts": [{"name": "p80", "properties": {"port": 80}}],
+                            "httpListeners": [{"name": "l-1", "properties": {"protocol": "Http",
+                                "frontendIPConfiguration": {"id": arm_id("Microsoft.Network/applicationGateways/agw-1/frontendIPConfigurations/fe")},
+                                "frontendPort": {"id": arm_id("Microsoft.Network/applicationGateways/agw-1/frontendPorts/p80")}}}],
+                            "backendAddressPools": [{"name": "pool-1", "properties": {"backendAddresses": [{"ipAddress": "10.0.0.4"}]}}],
+                            "requestRoutingRules": [{"name": "r-1", "properties": {"ruleType": "Basic", "priority": 100,
+                                "httpListener": {"id": arm_id("Microsoft.Network/applicationGateways/agw-1/httpListeners/l-1")},
+                                "backendAddressPool": {"id": arm_id("Microsoft.Network/applicationGateways/agw-1/backendAddressPools/pool-1")}}}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::FrontDoorProfiles,
+            "FrontDoorProfileRow",
+            parse(
+                "FrontDoorProfileRow",
+                edge::FrontDoorProfileRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Cdn/profiles/afd-1"),
+                        "name": "afd-1",
+                        "location": "Global",
+                        "sku": {"name": "Premium_AzureFrontDoor"},
+                        "properties": {"provisioningState": "Succeeded", "resourceState": "Active", "frontDoorId": "fd-1"}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::WafPolicies,
+            "WafPolicyRow",
+            parse(
+                "WafPolicyRow",
+                edge::WafPolicyRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/waf-1"),
+                        "name": "waf-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "resourceState": "Enabled",
+                            "policySettings": {"state": "Enabled", "mode": "Prevention"},
+                            "managedRules": {"managedRuleSets": [{"ruleSetType": "OWASP", "ruleSetVersion": "3.2"}]},
+                            "applicationGateways": [{"id": arm_id("Microsoft.Network/applicationGateways/agw-1")}]
                         }
                     }),
                     t,

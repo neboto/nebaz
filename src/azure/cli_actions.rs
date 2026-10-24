@@ -34,6 +34,7 @@ use crate::azure::services::compute::{NicRow, VmRow};
 use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, JobRow};
 use crate::azure::services::container_registry::RegistryRow;
 use crate::azure::services::directory::{AppRegistrationRow, ServicePrincipalRow};
+use crate::azure::services::edge::{AppGatewayRow, FrontDoorProfileRow, WafKind, WafPolicyRow};
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SubnetRow};
@@ -223,6 +224,12 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         servicebus_actions(sb)
     } else if let Some(eh) = any.downcast_ref::<EventHubsRow>() {
         eventhubs_actions(eh)
+    } else if let Some(g) = any.downcast_ref::<AppGatewayRow>() {
+        app_gateway_actions(g)
+    } else if let Some(w) = any.downcast_ref::<WafPolicyRow>() {
+        waf_policy_actions(w)
+    } else if let Some(p) = any.downcast_ref::<FrontDoorProfileRow>() {
+        front_door_actions(p)
     } else {
         None
     };
@@ -634,6 +641,58 @@ fn eventhubs_actions(eh: &EventHubsRow) -> Option<Vec<CliAction>> {
     ])
 }
 
+// ── Edge ─────────────────────────────────────────────────────────────
+
+/// `application-gateway` takes `--ids` (`id_part='name'`); its
+/// sub-resource `list` commands declare `--gateway-name` without one, so
+/// they take the name form. Backend health is the one way to see whether
+/// the backends answer: a POST (`…/backendhealth`), not in `Reader`, which
+/// nebaz never sends; copied for the user to run. Never `ssl-cert`.
+fn app_gateway_actions(g: &AppGatewayRow) -> Option<Vec<CliAction>> {
+    let id = &g.base.id;
+    let i = ids(id);
+    let gw = format!("--gateway-name {} {}", shell_quote(&g.base.name), rg_sub(id)?);
+    Some(vec![
+        inspect(format!("az network application-gateway show-backend-health {}", i))
+            .note("a POST action (backend health): not in the Reader role, can take a minute; nebaz never sends it"),
+        inspect(format!("az network application-gateway http-listener list {}", gw)),
+        inspect(format!("az network application-gateway rule list {}", gw)),
+        inspect(format!("az network application-gateway address-pool list {}", gw)),
+        inspect(format!("az network application-gateway http-settings list {}", gw)),
+        inspect(format!("az network application-gateway probe list {}", gw)),
+        change(format!("az network application-gateway stop {}", i)).note("stops the gateway: every listener goes dark until start"),
+        change(format!("az network application-gateway start {}", i)),
+    ])
+}
+
+/// The policy rule listings declare `--policy-name` without an `id_part`:
+/// the name form. Front Door's are the `front-door` CLI extension's.
+fn waf_policy_actions(w: &WafPolicyRow) -> Option<Vec<CliAction>> {
+    let a = format!("--policy-name {} {}", shell_quote(&w.base.name), rg_sub(&w.base.id)?);
+    Some(match w.kind {
+        // The managed rule sets and settings have no listing of their own:
+        // `show` (the read command) carries them.
+        WafKind::AppGateway => vec![inspect(format!("az network application-gateway waf-policy custom-rule list {}", a))],
+        WafKind::FrontDoor => vec![
+            inspect(format!("az network front-door waf-policy rule list {}", a)).note("the front-door CLI extension"),
+            inspect(format!("az network front-door waf-policy managed-rules list {}", a)).note("the front-door CLI extension"),
+        ],
+    })
+}
+
+/// The `afd` child listings declare `--profile-name` without an
+/// `id_part`: the name form (the `cdn` CLI extension). Never `afd secret`
+/// or a purge.
+fn front_door_actions(p: &FrontDoorProfileRow) -> Option<Vec<CliAction>> {
+    let a = format!("--profile-name {} {}", shell_quote(&p.base.name), rg_sub(&p.base.id)?);
+    Some(vec![
+        inspect(format!("az afd endpoint list {}", a)),
+        inspect(format!("az afd origin-group list {}", a)),
+        inspect(format!("az afd custom-domain list {}", a)).note("validation state per domain"),
+        inspect(format!("az afd security-policy list {}", a)).note("which WAF policy covers which domain"),
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -878,6 +937,23 @@ mod tests {
         assert!(find(&a, "mysql flexible-server firewall-rule list").command.contains("--name mysql-1 -g"));
         assert!(find(&a, "mysql flexible-server ad-admin list").command.contains("--server-name mysql-1"));
         assert_eq!(find(&a, "mysql flexible-server stop").command, format!("az mysql flexible-server stop --ids {}", my.id()));
+    }
+
+    #[test]
+    fn edge_rows_offer_reads_and_only_start_stop_on_a_gateway() {
+        let g = actions_for(mock("AppGatewayRow").as_ref());
+        assert!(g[0].command.starts_with("az network application-gateway show --ids "));
+        assert!(find(&g, "network application-gateway show-backend-health").command.contains("--ids "));
+        assert!(find(&g, "network application-gateway http-listener list").command.contains("--gateway-name agw-1 -g "));
+        assert_eq!(g.iter().filter(|x| x.tier == CliTier::Change).count(), 2);
+        assert!(g.iter().all(|x| !x.command.contains("ssl-cert")), "never a certificate listing");
+        for label in ["WafPolicyRow", "FrontDoorProfileRow"] {
+            let a = actions_for(mock(label).as_ref());
+            assert!(a.iter().all(|x| x.tier == CliTier::Inspect), "{label}: reads only");
+            assert!(a.iter().all(|x| !x.command.contains("secret") && !x.command.contains("purge")), "{label}");
+        }
+        let p = actions_for(mock("FrontDoorProfileRow").as_ref());
+        assert!(find(&p, "afd origin-group list").command.contains("--profile-name afd-1 -g "));
     }
 
     #[test]

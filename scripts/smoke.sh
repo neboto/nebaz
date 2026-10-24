@@ -143,6 +143,13 @@ run messaging-eh ok eh '[6.0]' \
   "Service Bus & Event Hubs namespaces" \
   "cannot reach 127.0.0.1"
 
+# The Edge tab loads through a routing prefix (WAF policies: two lists,
+# both failing is the one error).
+run edge-waf ok waf '[]' \
+  "App gateways, Front Door & WAF policies" \
+  "3 WAF policies" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

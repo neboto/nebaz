@@ -51,6 +51,11 @@ use crate::azure::services::network_dns::{
     DnsPolicyRow, DnsResolverDetailSection, DnsResolverRow, DnsRulesetDetailSection, DnsRulesetRow,
     DnsTopology, DnsZoneDetailSection, DnsZoneRow, DNS_API_VERSION, DNS_RECORDS_MAX, DNS_RESOLVER_API_VERSION,
 };
+use crate::azure::services::edge::{
+    app_gateway_section_lines, fetch_afd_topology, front_door_section_lines, waf_policy_section_lines,
+    AppGatewayDetailSection, AppGatewayRow, BackendTargets, FrontDoorDetailSection, FrontDoorProfileRow, TargetLists,
+    WafPolicyDetailSection, WafPolicyRow,
+};
 use crate::azure::services::network_private::{
     private_dns_zone_section_lines, private_endpoint_section_lines, zone_child_path, PrivateDnsZoneDetailSection,
     PrivateDnsZoneRow, PrivateEndpointDetailSection, PrivateEndpointRow, PRIVATE_DNS_API_VERSION,
@@ -1914,6 +1919,42 @@ impl App {
         });
     }
 
+    /// On-enter hook for a Front Door profile's Endpoints, Origins,
+    /// Domains, Security and Related: one topology read per profile.
+    pub fn trigger_afd_topology(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        app.trigger_selected(
+            |s| &mut s.afd_topology,
+            event_tx,
+            |c, id| {
+                let arm = c.arm_for_path(id);
+                let id = id.to_string();
+                async move { fetch_afd_topology(arm?, id).await }
+            },
+        );
+    }
+
+    /// The warm lists of an ARM id's subscription a gateway backend or a
+    /// Front Door origin is matched against (never a call).
+    pub(crate) fn backend_targets(&self, id: &str) -> BackendTargets {
+        let Some(sub) = subscription_of(id) else {
+            return BackendTargets::default();
+        };
+        let get = |view: JumpView| self.cache.get_ref(&view.service(), sub, Some(view.as_str()));
+        BackendTargets::from_lists(TargetLists {
+            container_apps: get(JumpView::ContainerApps),
+            environments: get(JumpView::ContainerAppEnvironments),
+            sites: get(JumpView::WebApps),
+            private_endpoints: get(JumpView::PrivateEndpoints),
+            public_ips: get(JumpView::PublicIps),
+        })
+    }
+
+    /// The warm WAF policies list of an ARM id's subscription.
+    fn warm_waf_policies(&self, id: &str) -> Option<&[Box<dyn Resource>]> {
+        let sub = subscription_of(id)?;
+        self.cache.get_ref(&ServiceType::Edge, sub, Some(JumpView::WafPolicies.as_str()))
+    }
+
     /// The loaded (or loading) DNS topology of an ARM id's subscription.
     fn dns_topology_for(&self, id: &str) -> Option<&crate::lazy::Lazy<DnsTopology>> {
         subscription_id_of(id).and_then(|k| self.lazy.dns_topology.get(&k))
@@ -2788,6 +2829,28 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<RouteTableRow>() {
             return Some(route_table_section_lines(r, RouteTableDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<AppGatewayRow>() {
+            let targets = self.backend_targets(r.id());
+            return Some(app_gateway_section_lines(
+                r,
+                AppGatewayDetailSection::from_index(idx),
+                &targets,
+                self.warm_waf_policies(r.id()),
+            ));
+        }
+        if let Some(r) = any.downcast_ref::<WafPolicyRow>() {
+            return Some(waf_policy_section_lines(r, WafPolicyDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<FrontDoorProfileRow>() {
+            let targets = self.backend_targets(r.id());
+            return Some(front_door_section_lines(
+                r,
+                FrontDoorDetailSection::from_index(idx),
+                self.lazy.afd_topology.get(r.id()),
+                &targets,
+                self.warm_waf_policies(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<NatGatewayRow>() {
             return Some(nat_gateway_section_lines(r, NatGatewayDetailSection::from_index(idx)));

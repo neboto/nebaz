@@ -58,3 +58,22 @@ async fn main_screen_and_overlays_render_at_small_sizes() {
         }
     }
 }
+
+/// The Edge tab at 80×24 (#31): its three sub-tabs and every section of
+/// each row draw, and the sub-tab bar names the one on screen.
+#[tokio::test]
+async fn the_edge_tab_fits_80_by_24() {
+    let mut h = Harness::sized(80, 24).await;
+    for view in [JumpView::AppGateways, JumpView::FrontDoorProfiles, JumpView::WafPolicies] {
+        let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
+        h.install(mock).await;
+        let screen = h.render();
+        assert!(screen.contains(view.label()), "{view:?}:\n{screen}");
+        h.press(KeyCode::Enter).await;
+        for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] {
+            h.press(KeyCode::Char(c)).await;
+            h.render();
+        }
+        h.press(KeyCode::Esc).await;
+    }
+}

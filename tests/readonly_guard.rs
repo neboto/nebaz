@@ -81,6 +81,11 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "servicebus.windows.net",
     "servicebus.usgovcloudapi.net",
     "servicebus.chinacloudapi.cn",
+    // Front Door (#31): the endpoints' own hosts (Standard / Premium, the
+    // US government cloud) and the classic CDN / Front Door edge.
+    "azurefd.net",
+    "azurefd.us",
+    "azureedge.net",
     // Monitor: log queries and App Insights data.
     "api.loganalytics.io",
     "api.applicationinsights.io",
@@ -159,6 +164,9 @@ const AZ_READ_VERBS: &[&str] = &[
     "list-effective-nsg",
     "show-effective-route-table",
     "list-instances",
+    // An application gateway's backend health: a read, but a POST action
+    // outside `Reader`; the catalogue copies it, nebaz never sends it.
+    "show-backend-health",
 ];
 
 /// The `C` command catalogue (ADR 0005, #47): the one file that may hold
@@ -257,7 +265,13 @@ const AZ_FORBIDDEN: &[&str] = &[
     // print the keys under a list verb.
     "redis list-keys",
     "redisenterprise database list-keys",
+    // A gateway certificate (`data` is the PFX, beside its `password`) and
+    // Front Door secrets (certificate and URL-signing key references).
+    "network application-gateway ssl-cert",
+    "network application-gateway root-cert",
+    "afd secret",
 ];
+
 
 /// `az` mentions that are not commands. Each needs a reason.
 const AZ_ALLOW: &[(&str, &str)] = &[
@@ -635,6 +649,9 @@ fn the_az_rules_catch_what_they_should() {
         "az redis flush -n {}",
         "az servicebus namespace authorization-rule keys list --namespace-name {} -n RootManageSharedAccessKey",
         "az eventhubs eventhub authorization-rule keys list --eventhub-name {}",
+        "az network application-gateway ssl-cert list --gateway-name {}",
+        "az afd secret list --profile-name {}",
+        "az afd endpoint purge --ids {}",
     ] {
         let line = format!("let c = \"{}\";", cmd);
         assert_eq!(count(CLI_CATALOGUE_FILE, &line), 1, "{cmd} must be refused in the catalogue");
@@ -666,11 +683,12 @@ fn permissions_doc_grants_only_read_actions() {
 }
 
 /// ARM reads that are POSTs (a NIC's effective NSG rules and routes;
-/// `listKeys`, the access keys of Redis, Cosmos DB, storage and AI accounts):
+/// `listKeys`, the access keys of Redis, Cosmos DB, storage and AI accounts;
+/// an application gateway's `backendhealth`):
 /// `ReadOnlyPolicy` would refuse them at runtime anyway; the guard keeps
 /// them out of `src/`. The network lens (#50) computes NSG access
 /// client-side from GETs instead.
-const POST_ONLY_READS: &[&str] = &["effectivenetworksecuritygroups", "effectiveroutetable", "listkeys"];
+const POST_ONLY_READS: &[&str] = &["effectivenetworksecuritygroups", "effectiveroutetable", "listkeys", "backendhealth"];
 
 #[test]
 fn no_post_only_read_is_requested() {
