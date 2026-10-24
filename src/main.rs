@@ -442,6 +442,9 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
             if app.supports_timeline() {
                 hints.push(("W", "changes"));
             }
+            if app.current_service == Some(crate::azure::service::ServiceType::Changes) {
+                hints.push(("[/]", "window"));
+            }
             if app.noise_in_view {
                 hints.push(("a", if app.hide_noise { "show all" } else { "hide noise" }));
             }

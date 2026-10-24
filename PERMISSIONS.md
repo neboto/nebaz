@@ -59,7 +59,9 @@ The Graph calls (all `GET`, all under `/v1.0`):
   `applications/{id}/federatedIdentityCredentials`,
   `servicePrincipals/{id}/appRoleAssignments`,
   `servicePrincipals/{id}/oauth2PermissionGrants`: lazy sections;
-- `servicePrincipals(appId='{appId}')`: an app registration's APIs, named.
+- `servicePrincipals(appId='{appId}')`: an app registration's APIs, named,
+  and (with `directoryObjects/{id}`) an `@changes` caller's kind: at most
+  50 per load.
 
 A credential's value is never shown: Graph returns no `secretText` to a
 `GET`, nebaz never `$select`s (so a certificate's `key` stays null), and
@@ -149,6 +151,13 @@ each one backs are in the catalog table
   deployments: their state, what they deployed and their error; nebaz
   never shows a deployment's parameters or outputs). Each source that
   is denied is a note in the view.
+- **Changes** (`@changes`, subscription-wide): the Activity log action
+  above, `Microsoft.ResourceHealth/availabilityStatuses/read` and
+  `Microsoft.Resources/deployments/read` at subscription scope. Callers
+  are classified through Graph (`directoryObjects/{id}`, then
+  `servicePrincipals(appId='{id}')`), with directory read as above;
+  without it, callers stay unclassified. Resource Graph's
+  `resourcechanges` is a `POST` and is never sent.
 - **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
   Environments and their policy links are in the Power Platform admin
   API, not ARM: nebaz never calls it, and its hosts are on the guard's

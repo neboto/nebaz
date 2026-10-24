@@ -60,8 +60,14 @@ async fn split_pane_sections_follow_the_descriptor() {
 
         let labels = h.section_labels();
         let n = labels.len();
-        assert!(n >= 5, "{label}: no descriptor, or a short one: {labels:?}");
         assert_eq!(labels[0], "Overview", "{label}: Overview first");
+        // An `@changes` row is an event, not a resource (SERVICES.md rule
+        // 24): Overview and Related (what it happened to), nothing else.
+        if h.app.get_selected_resource().is_some_and(|r| r.id().starts_with("change:")) {
+            assert_eq!(labels, ["Overview", "Related"], "{label}: an event's sections");
+            continue;
+        }
+        assert!(n >= 5, "{label}: no descriptor, or a short one: {labels:?}");
         // A directory row (Graph, no ARM id) has no ARM scope for Access or
         // Activity (SERVICES.md rule 13): its tail is Related, Tags.
         let directory = h.app.get_selected_resource().is_some_and(|r| crate::azure::graph::is_row_id(r.id()));

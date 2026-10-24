@@ -205,7 +205,7 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
-    a warm cache entry (tenant-scoped Graph lists included), with the
+    a warm cache entry (tenant-scoped Graph lists included; never `@changes`, whose rows are events), with the
     same `rg:` / `tag:` tokens, location filter and noise toggle as any
     list. It **never fetches**: a list not loaded this session (or past
     its TTL) is not searched, the title counts the warm lists and the
@@ -340,7 +340,33 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     copies the row, `l` goes to what the row is about, `f` cycles one
     source; the counts row carries the ownership ribbon (rule 22). Never a deployment's parameters or outputs, an event's
     `properties` or the caller's claims. Any ARM row has one (a directory
-    row does not).
+    row does not), and an `@changes` row opens on what it happened to.
+
+24. **`@changes`** (#61, ADR 0006, `src/azure/services/changes.rs`):
+    what changed recently, subscription-wide, newest first, over a `[` /
+    `]` window (15m, 1h, 6h, 24h, 7d; the chips on the sub-tab row). A
+    service that fetches, not a view over caches: one list **per window**
+    (the cache variant is `changes-{window}`), and the sub-tabs All /
+    Activity / Deployments / Health filter it without a call. Sources,
+    concurrent, each streamed when done: the subscription's **Activity
+    Log** (rule 12's query, no scope term) kept to the changes (rule 23),
+    at most 10 pages, past which a warning says how far back it got; the
+    **deployments** of the groups the log saw a
+    `Microsoft.Resources/deployments` operation in (at most 20 groups, 200
+    deployments each; there is no subscription-wide deployment list);
+    **Resource Health**, every resource's current status whose transition
+    is in the window (at most 20 pages). A failing source is a warning;
+    only the Activity Log and health both failing is the list's error.
+    **Noise** (`a`): an Activity row whose caller is not a person: a
+    service name or none, or an id Microsoft Graph says is a managed
+    identity or an app a Microsoft tenant owns (object id, then app id; at
+    most 50 lookups; without directory read, ids stay unclassified and a
+    warning says so). The tenant's own apps are not noise. A row is an
+    event (`change:…` id): Overview (named fields) and Related (what it
+    happened to); its `az` command lists the operation's events
+    (`--correlation-id`) or shows the deployment. Headless: `nebaz changes
+    --since 6h [--source activity|deployments|health]`. Never Resource
+    Graph `resourcechanges` (a POST).
 
 ## The catalog
 
@@ -352,6 +378,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Service · sub-tab | Sections between Overview and Related | State | Related (after Subscription, Resource group) | `az` |
 |---|---|---|---|---|
 | Subscriptions · Subscriptions | Details ⧗ · Locations ⧗ · Tags (from Details) | subscription state; noise unless `Enabled` | — (root) | `az account show --subscription {id}` |
+| Changes · All / Activity / Deployments / Health (rule 24) | — (an event: Overview is its named fields, then Related; no Access, Activity or Tags) | `failed` on a failed operation or deployment, an unavailable or degraded transition; else none; noise per rule 22 | what it happened to; a deployment's group and what it deployed; an alert's rule | `az monitor activity-log list --correlation-id {c} --subscription {sub}` · `az deployment group show -g {rg} -n {name} --subscription {sub}` · none for health |
 | Subscriptions · All resources | — (Overview: type, kind, SKU, identity, managed by, created, changed, and whether nebaz browses the type) | ladder on the expanded `provisioningState` | `Open in {Service › Sub-tab}` when browsed (Enter on the list row does the same), `managedBy` | `az resource show --ids` |
 | Subscriptions · Resource Groups | — | stateless when `Succeeded` | `managedBy` id when set | `az group show -n {name} --subscription {sub}` |
 | Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) | power state | each NIC, OS and data disks, availability set, user-assigned identities | `az vm show` |
@@ -392,7 +419,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @foundry @monitor @law @appi @pp @aca @acaenv @acajob @changes @activity @deploys @health` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## API calls per view
@@ -432,6 +459,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Change timeline (`W`, rule 23) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
+| `@changes` (rule 24) | per window, on load and `r`: the Activity Log (≤10 pages), Resource Health (≤20 pages), then 1 per group with a deployment in the window (≤20); Graph: ≤50 caller lookups (2 when an id is an app id) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{window start}'` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` (or `/subscriptions/{sub}/providers/Microsoft.Resources/deployments`) · `2025-04-01`; Graph `/v1.0/directoryObjects/{id}`, `/v1.0/servicePrincipals(appId='{id}')` |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
 | Ownership ribbon (rule 22) | 0 for tags and `managedBy`; with the pane focused, 1 per resource group per subscription visit, plus 1 per not-succeeded deployment among the newest 3 | `{group}/providers/Microsoft.Resources/deployments?$top=100` · `{group}/providers/Microsoft.Resources/deployments/{name}/operations` · `2025-04-01` |

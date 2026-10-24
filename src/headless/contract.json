@@ -24,6 +24,13 @@
       "--in",
       "--section",
       "--wait"
+    ],
+    "changes": [
+      "--filter",
+      "--hide-noise",
+      "--limit",
+      "--since",
+      "--source"
     ]
   },
   "exit_codes": {
@@ -121,6 +128,12 @@
       "function-apps (func)",
       "plans (plan)"
     ],
+    "changes": [
+      "changes (changes)",
+      "changes-activity (activity)",
+      "changes-deployments (deploys)",
+      "changes-health (health)"
+    ],
     "cosmos": [
       "cosmos-accounts (cosmos)"
     ],
@@ -187,6 +200,10 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Activity Log": [
+      "Overview",
+      "Related"
     ],
     "App Registration": [
       "Overview",
@@ -313,6 +330,10 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Deployment": [
+      "Overview",
+      "Related"
     ],
     "Disk": [
       "Overview",
@@ -449,6 +470,10 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Resource Health": [
+      "Overview",
+      "Related"
     ],
     "Route Table": [
       "Overview",

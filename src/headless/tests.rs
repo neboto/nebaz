@@ -74,6 +74,28 @@ fn get_takes_several_ids_and_repeated_sections() {
     assert_eq!(err.exit_code(), 2);
 }
 
+#[tokio::test]
+async fn changes_takes_a_window_and_a_source_and_refuses_others_before_any_call() {
+    let cli = parse(&["changes", "--since", "6h", "--source", "health", "--hide-noise", "--limit", "5"]);
+    let Some(Command::Changes(args)) = &cli.command else { panic!("a changes command") };
+    assert_eq!(args.since, "6h");
+    assert_eq!(args.source.as_deref(), Some("health"));
+    assert!(args.hide_noise);
+    let Some(Command::Changes(args)) = parse(&["changes"]).command else { panic!("changes") };
+    assert_eq!(args.since, "1h", "the default window");
+
+    for (bad, says) in [
+        (&["changes", "--since", "2h"][..], "15m, 1h, 6h, 24h, 7d"),
+        (&["changes", "--source", "alerts"][..], "activity, deployments, health"),
+    ] {
+        let cli = parse(bad);
+        let Some(Command::Changes(args)) = &cli.command else { panic!("changes") };
+        let err = changes(&cli, args, OutputFormat::Json).await.unwrap_err();
+        assert_eq!(err.code(), 2, "a usage error");
+        assert!(err.message().contains(says), "{}", err.message());
+    }
+}
+
 #[test]
 fn targets_resolve_like_the_search_prefixes() {
     let ok = |t: &str| resolve_list(t).unwrap_or_else(|f| panic!("{t}: {}", f.message()));

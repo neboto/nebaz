@@ -67,8 +67,8 @@ pub struct Cli {
 
 /// The one-shot subcommands. Each makes the same read-only calls the TUI
 /// makes and prints the result; nothing here can change a subscription.
-/// Later headless forms (`audit`, #60; `changes`, #61) are new variants
-/// here and new arms in `headless::run`.
+/// Later headless forms (`audit`, #60) are new variants here and new arms
+/// in `headless::run`.
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// List every service: its prefix, name, and sub-tabs with their
@@ -80,6 +80,32 @@ pub enum Command {
     /// Show resources' full detail: every detail-pane section, lazy ones
     /// fetched.
     Get(GetArgs),
+    /// What changed recently, subscription-wide (`@changes`), newest
+    /// first: Activity Log changes, deployments, health transitions.
+    Changes(ChangesArgs),
+}
+
+#[derive(Debug, clap::Args)]
+pub struct ChangesArgs {
+    /// How far back: 15m, 1h, 6h, 24h or 7d (also spelled 1d, 60m, 1w).
+    #[arg(long, value_name = "WINDOW", default_value = "1h")]
+    pub since: String,
+
+    /// One source only: activity, deployments or health (default all).
+    #[arg(long, value_name = "SOURCE")]
+    pub source: Option<String>,
+
+    /// Filter like the TUI search (fuzzy text, `rg:NAME`), e.g. 'rg:prod'.
+    #[arg(short = 'f', long, value_name = "QUERY")]
+    pub filter: Option<String>,
+
+    /// Drop noise: changes made by managed identities and Azure itself.
+    #[arg(long)]
+    pub hide_noise: bool,
+
+    /// Print at most N rows.
+    #[arg(long, value_name = "N")]
+    pub limit: Option<usize>,
 }
 
 #[derive(Debug, clap::Args)]
@@ -99,8 +125,8 @@ pub struct LsArgs {
     #[arg(long, value_name = "STATE")]
     pub state: Option<String>,
 
-    /// Drop noise rows (today: subscriptions that are not Enabled), the
-    /// TUI's `a`.
+    /// Drop noise rows (subscriptions that are not Enabled, `@changes`
+    /// made by managed identities and Azure itself), the TUI's `a`.
     #[arg(long)]
     pub hide_noise: bool,
 

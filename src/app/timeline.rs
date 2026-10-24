@@ -22,9 +22,12 @@ use tokio::sync::mpsc;
 
 type SourceResult = std::result::Result<Vec<Value>, String>;
 
-/// The ARM id the timeline of `r` is about: the row's own id when it is an
-/// ARM id (a directory row has none).
+/// The ARM id the timeline of `r` is about: an `@changes` row's target,
+/// else the row's own id when it is an ARM id (a directory row has none).
 pub fn timeline_target(r: &dyn Resource) -> Option<String> {
+    if let Some(target) = crate::azure::services::changes::target_of(r) {
+        return Some(target);
+    }
     r.id().starts_with("/subscriptions/").then(|| r.id().to_string())
 }
 
