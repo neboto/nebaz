@@ -37,3 +37,6 @@ Thumbs.db
 nebaz-*.json
 nebaz-*.csv
 nebaz-*.md
+
+# Raw VHS takes, before demo/render.sh puts them over the backdrop
+/demo/.raw/

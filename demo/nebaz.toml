@@ -2,9 +2,15 @@
 # NEBAZ_CONFIG so the machine's real ~/.config/nebaz/config.toml never leaks
 # into a take; `--demo` pins the tenant, subscription and data.
 show_banner = false
-theme = "catppuccin-mocha"
+theme = "dracula"
 ownership_ribbon = true
 detail_flat = false
 detail_wrap = false
 # No request to GitHub, so no `↑ vX.Y.Z` chip in a take.
 update_check = false
+
+# The accent muted to a steel teal so it sits on the backdrop
+# (demo/render.sh). Last: a table claims every key below it.
+[theme_colors]
+brand = "#4a9fc4"
+accent = "#4a9fc4"

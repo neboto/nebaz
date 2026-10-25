@@ -46,6 +46,10 @@ pub struct Palette {
     pub selection_bg_dim: Color,
     /// Selection bar text — paired with the selection backgrounds.
     pub selection_fg: Color,
+    /// Text on a filled chip (the active tab on `brand`, the endpoint badge
+    /// on `warning`). RGB, never ANSI black: terminals that draw bold as
+    /// bright turn bold ANSI black into a grey that vanishes on the chip.
+    pub chip_fg: Color,
 }
 
 /// `0xrrggbb` → `Color::Rgb` — keeps the preset tables readable.
@@ -87,6 +91,7 @@ impl Palette {
             selection_bg: Color::Rgb(38, 68, 110),
             selection_bg_dim: Color::Rgb(55, 55, 55),
             selection_fg: Color::White,
+            chip_fg: rgb(0x000000),
         }
     }
 
@@ -108,6 +113,7 @@ impl Palette {
             selection_bg: Color::Rgb(190, 210, 240),
             selection_bg_dim: Color::Rgb(222, 222, 222),
             selection_fg: Color::Black,
+            chip_fg: rgb(0x000000),
         }
     }
 
@@ -128,6 +134,7 @@ impl Palette {
             selection_bg: rgb(0x073642), // base02 (canonical highlight)
             selection_bg_dim: rgb(0x05303a),
             selection_fg: rgb(0xfdf6e3), // base3
+            chip_fg: rgb(0x002b36), // base03
         }
     }
 
@@ -148,6 +155,7 @@ impl Palette {
             selection_bg: rgb(0xeee8d5), // base2
             selection_bg_dim: rgb(0xf5efdc),
             selection_fg: rgb(0x073642), // base02
+            chip_fg: rgb(0x002b36), // base03
         }
     }
 
@@ -168,6 +176,7 @@ impl Palette {
             selection_bg: rgb(0x504945), // bg2
             selection_bg_dim: rgb(0x3c3836),
             selection_fg: rgb(0xebdbb2),
+            chip_fg: rgb(0x1d2021), // bg0_h
         }
     }
 
@@ -188,6 +197,7 @@ impl Palette {
             selection_bg: rgb(0xebdbb2),
             selection_bg_dim: rgb(0xf2e5bc),
             selection_fg: rgb(0x3c3836),
+            chip_fg: rgb(0x1d2021), // bg0_h
         }
     }
 
@@ -208,6 +218,7 @@ impl Palette {
             selection_bg: rgb(0x44475a), // current line
             selection_bg_dim: rgb(0x343746),
             selection_fg: rgb(0xf8f8f2),
+            chip_fg: rgb(0x21222c),
         }
     }
 
@@ -228,6 +239,7 @@ impl Palette {
             selection_bg: rgb(0x434c5e), // nord2
             selection_bg_dim: rgb(0x3b4252),
             selection_fg: rgb(0xeceff4),
+            chip_fg: rgb(0x2e3440), // nord0
         }
     }
 
@@ -248,6 +260,7 @@ impl Palette {
             selection_bg: rgb(0x45475a), // surface1
             selection_bg_dim: rgb(0x313244),
             selection_fg: rgb(0xcdd6f4),
+            chip_fg: rgb(0x11111b), // crust
         }
     }
 
@@ -268,6 +281,7 @@ impl Palette {
             selection_bg: rgb(0xccd0da),
             selection_bg_dim: rgb(0xdce0e8),
             selection_fg: rgb(0x4c4f69),
+            chip_fg: rgb(0x4c4f69), // text
         }
     }
 
@@ -313,6 +327,7 @@ impl Palette {
             "selection_bg" => self.selection_bg = color,
             "selection_bg_dim" => self.selection_bg_dim = color,
             "selection_fg" => self.selection_fg = color,
+            "chip_fg" => self.chip_fg = color,
             _ => return false,
         }
         true
@@ -403,6 +418,9 @@ pub fn success() -> Color {
 }
 pub fn warning() -> Color {
     palette().warning
+}
+pub fn chip_fg() -> Color {
+    palette().chip_fg
 }
 
 /// `#rrggbb` hex or an ANSI color name (the ratatui `Color` names,
@@ -545,6 +563,16 @@ mod tests {
         assert!(Palette::by_name("mocha").is_some());
         assert!(Palette::by_name("latte").is_some());
         assert!(Palette::by_name("tokyonight").is_none());
+    }
+
+    #[test]
+    fn every_preset_draws_chip_text_in_rgb() {
+        // ANSI black under bold renders as bright black (grey) in many
+        // terminals, which vanishes on the chip colour.
+        for name in PRESET_NAMES {
+            let p = Palette::by_name(name).unwrap();
+            assert!(matches!(p.chip_fg, Color::Rgb(..)), "preset {} chip_fg is not RGB", name);
+        }
     }
 
     #[test]
