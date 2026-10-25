@@ -1,6 +1,7 @@
 // ported from neboto-tui src/ui/widgets/help_overlay.rs @ d483900
 use crate::app::App;
 use crate::ui::theme;
+use unicode_width::UnicodeWidthStr;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -55,7 +56,7 @@ const LEFT_SECTIONS: &[Section] = &[
             ("[[ / ]]", "prev / next group header"),
             ("^W", "wrap long values"),
             ("H / L", "sub-tab (opens its first row)"),
-            ("⏎", "jump to the ARM id on the line (Related)"),
+            ("⏎", "jump to the ARM id on the line"),
             ("y", "copy line or selection"),
             ("^L", "repaint the screen"),
             ("Z", "full-width pane"),
@@ -70,7 +71,7 @@ const RIGHT_SECTIONS: &[Section] = &[
         entries: &[
             ("O", "open in Azure portal"),
             ("y", "copy resource id"),
-            ("C", "copy an az command: inspect / connect / change (never run)"),
+            ("C", "copy an az command (never run)"),
             ("e", "open in $EDITOR"),
             ("N", "network access (NSG rules)"),
             ("U", "referenced by (warm lists; L loads likely)"),
@@ -125,18 +126,31 @@ const RIGHT_SECTIONS: &[Section] = &[
     },
 ];
 
+/// Columns between the two help columns, so a truncated left entry never
+/// runs into a right-column title.
+const GUTTER: u16 = 3;
+
 /// Render the help overlay: two aligned key/description columns, sized to the
-/// content (capped at 80% of the terminal), scrollable when it doesn't fit.
+/// content (capped by the terminal), scrollable when it doesn't fit.
 pub fn render_help_overlay(app: &App, frame: &mut Frame) {
     let size = frame.size();
 
-    // Width: 76% of the terminal, capped so ultrawide screens don't stretch
-    // the two columns apart. Column width drives description truncation.
-    let width = (size.width * 76 / 100).clamp(40, 110);
-    let col_width = (width.saturating_sub(2 + 4) / 2) as usize; // borders + margins
+    // Width: what the content needs, so nothing is truncated while the
+    // terminal has room. A narrower terminal shares the space in proportion
+    // to each column's need; only then do descriptions get a `…`.
+    let (left_need, right_need) = (natural_width(LEFT_SECTIONS), natural_width(RIGHT_SECTIONS));
+    let chrome = 2 + 4 + GUTTER; // borders + margins + gutter
+    let width = (left_need + right_need + chrome).min(size.width.saturating_sub(4)).max(40);
+    let avail = width.saturating_sub(chrome);
+    let (left_w, right_w) = if left_need + right_need <= avail {
+        (left_need, avail - left_need)
+    } else {
+        let left = (avail as u32 * left_need as u32 / (left_need + right_need) as u32) as u16;
+        (left, avail - left)
+    };
 
-    let left_lines = section_lines(LEFT_SECTIONS, col_width);
-    let right_lines = section_lines(RIGHT_SECTIONS, col_width);
+    let left_lines = section_lines(LEFT_SECTIONS, left_w as usize);
+    let right_lines = section_lines(RIGHT_SECTIONS, right_w as usize);
     let content_h = left_lines.len().max(right_lines.len()) as u16;
 
     // Height: fit the content; cap at 80% of the terminal and scroll the rest.
@@ -179,7 +193,11 @@ pub fn render_help_overlay(app: &App, frame: &mut Frame) {
 
     let columns = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([
+            Constraint::Length(left_w),
+            Constraint::Length(GUTTER),
+            Constraint::Min(0),
+        ])
         .horizontal_margin(2)
         .split(inner);
 
@@ -189,20 +207,37 @@ pub fn render_help_overlay(app: &App, frame: &mut Frame) {
     );
     frame.render_widget(
         Paragraph::new(right_lines).scroll((offset, 0)),
-        columns[1],
+        columns[2],
     );
+}
+
+/// Key column width shared by a column's entries.
+fn key_width(sections: &[Section]) -> usize {
+    sections
+        .iter()
+        .flat_map(|s| s.entries.iter())
+        .map(|(key, _)| key.width())
+        .max()
+        .unwrap_or(0)
+}
+
+/// The width a column needs to show every entry untruncated.
+fn natural_width(sections: &[Section]) -> u16 {
+    let desc = sections
+        .iter()
+        .flat_map(|s| s.entries.iter())
+        .map(|(_, desc)| desc.width())
+        .max()
+        .unwrap_or(0);
+    let titles = sections.iter().map(|s| s.title.width()).max().unwrap_or(0);
+    (2 + key_width(sections) + 2 + desc).max(titles) as u16
 }
 
 /// Build one column's lines: section titles + `key  description` rows with
 /// the keys right-padded to a shared column. No wrapping — a description
 /// that can't fit is truncated with `…`.
 fn section_lines(sections: &[Section], col_width: usize) -> Vec<Line<'static>> {
-    let key_width = sections
-        .iter()
-        .flat_map(|s| s.entries.iter())
-        .map(|(key, _)| key.chars().count())
-        .max()
-        .unwrap_or(0);
+    let key_width = key_width(sections);
     let desc_budget = col_width.saturating_sub(2 + key_width + 2);
 
     let mut lines = vec![Line::raw("")];
@@ -214,7 +249,7 @@ fn section_lines(sections: &[Section], col_width: usize) -> Vec<Line<'static>> {
                 .add_modifier(Modifier::BOLD),
         )));
         for (key, desc) in section.entries {
-            let pad = " ".repeat(key_width.saturating_sub(key.chars().count()) + 2);
+            let pad = " ".repeat(key_width.saturating_sub(key.width()) + 2);
             lines.push(Line::from(vec![
                 Span::raw("  "),
                 Span::styled(
@@ -288,5 +323,20 @@ mod tests {
         assert_eq!(truncate("short", 10), "short");
         assert_eq!(truncate("exactly-10", 10), "exactly-10");
         assert_eq!(truncate("longer than that", 10), "longer th…");
+    }
+
+    #[test]
+    fn natural_width_shows_every_description_whole() {
+        // The overlay is sized to this width when the terminal allows, so
+        // nothing should be ellipsized on a wide screen.
+        for sections in [LEFT_SECTIONS, RIGHT_SECTIONS] {
+            let text: String = section_lines(sections, natural_width(sections) as usize)
+                .iter()
+                .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect::<String>() + "\n")
+                .collect();
+            for (_, desc) in sections.iter().flat_map(|s| s.entries.iter()) {
+                assert!(text.contains(desc), "{desc:?} is truncated at natural width");
+            }
+        }
     }
 }
