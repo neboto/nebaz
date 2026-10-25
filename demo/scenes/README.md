@@ -27,20 +27,26 @@ and a Nerd Font (JetBrainsMono Nerd Font):
 cargo build --release                  # the tapes run ./target/release/nebaz
 demo/render.sh                         # the hero and every scene (about 6 minutes)
 demo/render.sh demo/scenes/dns.tape    # just one
+demo/render.sh --composite-only        # re-composite demo/.raw/, no recording (under a minute)
 ```
 
 `render.sh` runs each tape, then puts the take over the backdrop. VHS
 records the terminal background and the window margin in one key colour
 (`#010203`, the tapes' `Set Theme` and `MarginFill`) to `demo/.raw/`;
 `render.sh` keys that colour out and lays the take over
-`demo/backdrop.png` dimmed to 35%, so the backdrop shows through the
-terminal and everything nebaz draws keeps its own colour. `vhs` alone only
-writes the raw take. The hero is re-paletted to 64 colours (under 3 MB, no
-visible banding) and its first frame becomes `demo/poster.png`; the scenes
-are 2 MB or less.
+`demo/backdrop.png`, so the backdrop shows through the terminal and
+everything nebaz draws keeps its own colour. `vhs` alone only writes the raw
+take. The hero is re-paletted to 128 colours (under 3 MB; fewer rings the
+backdrop's glow) and its first frame becomes `demo/poster.png`; the scenes
+are about 2 MB or less. A new backdrop or palette needs no re-recording:
+`--composite-only` re-composites the takes already in `demo/.raw/`.
 
 The backdrop is generated, not a photo, so it carries no licence:
-`uv run demo/backdrop.py demo/backdrop.png` rebuilds it. The look is
+`uv run demo/backdrop.py demo/backdrop.png` rebuilds it. It is deliberately
+quiet (navy, one soft blue glow, a faint grid) and used undimmed, and it
+is the backdrop neboto.dev/nebaz/ builds its clips on too
+(`scripts/nebaz-media.sh` in the neboto.dev repo), so the README and the
+site look the same. The look is
 nebaz's `dracula` preset with the accent muted to `#4a9fc4`
 (`demo/nebaz.toml`).
 
