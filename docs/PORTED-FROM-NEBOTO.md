@@ -29,7 +29,7 @@ Safe to re-port by copying and re-applying the same renames.
 | `src/search/fuzzy.rs` | `src/search/fuzzy.rs` | path |
 | `src/search/query_parser.rs` | `src/search/query_parser.rs` | path; tests rewritten for the Azure prefixes |
 | `src/bookmarks.rs` | `src/bookmarks.rs` | env var / path; tests rewritten (`NavLocation` no longer carries `EcsView` / S3 paths) |
-| `src/ui/theme.rs` | `src/ui/theme.rs` | palette slot `aws_orange` → `brand` (Azure blue per preset); `"aws_orange"` still accepted as an override key |
+| `src/ui/theme.rs` | `src/ui/theme.rs` | palette slot `aws_orange` → `brand` (Azure blue per preset); `"aws_orange"` still accepted as an override key; a `chip_fg` slot (RGB per preset) replaces the hardcoded `Color::Black` on the active tab, sub-tab and endpoint badge, which bold-as-bright terminals turned into an unreadable grey |
 | `src/ui/widgets/jump_list.rs`, `macro_picker.rs`, `message_log.rs`, `subtab_bar.rs`, `search_bar.rs` | same | `theme::aws_orange()` → `theme::brand()`; one hint string |
 | `src/ui/widgets/service_selector.rs` | same | path; tests reference `Aks` / `KeyVault` |
 | `src/ui/widgets/location_selector.rs` | `src/ui/widgets/region_selector.rs` | `Region` → `Location` throughout |

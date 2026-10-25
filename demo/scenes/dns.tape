@@ -11,19 +11,23 @@
 #   - Zone sections: 2 Records, 3 VNet links
 #   - VNet sections: 6 Related
 
-Output demo/scenes/dns.gif
+Output demo/.raw/dns.gif
 
 Set Shell "zsh"
 Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 14
-Set Width 1200
-Set Height 700
+Set Width 1296
+Set Height 796
 Set Padding 12
 Set Framerate 12
 Set TypingSpeed 80ms
-Set Theme "Catppuccin Mocha"
+# Dracula with the background as a key colour: demo/render.sh swaps
+# it (and the margin) for the backdrop.
+Set Theme { "name": "DraculaKeyed", "black": "#21222c", "red": "#ff5555", "green": "#50fa7b", "yellow": "#f1fa8c", "blue": "#bd93f9", "magenta": "#ff79c6", "cyan": "#8be9fd", "white": "#f8f8f2", "brightBlack": "#6272a4", "brightRed": "#ff6e6e", "brightGreen": "#69ff94", "brightYellow": "#ffffa5", "brightBlue": "#d6acff", "brightMagenta": "#ff92df", "brightCyan": "#a4ffff", "brightWhite": "#ffffff", "background": "#010203", "foreground": "#f8f8f2", "selection": "#44475a", "cursor": "#f8f8f2" }
 Set WindowBar Colorful
-Set BorderRadius 8
+Set BorderRadius 10
+Set Margin 48
+Set MarginFill "#010203"
 
 # demo/nebaz.toml pins theme and banner; --demo pins tenant and data. The
 # XDG dirs point nowhere so bookmarks and macros can't leak in either.

@@ -13,9 +13,9 @@
 #   brew install ttyd ffmpeg          # vhs drives ttyd; ffmpeg encodes
 #   go install github.com/charmbracelet/vhs@latest   # v0.11.0 and v0.12.1 work
 #     (v0.12.0 prints "Creating …" and writes nothing — charmbracelet/vhs#787)
-#   vhs demo/nebaz.tape               # writes demo/nebaz.gif + demo/poster.png
-#   # then squeeze the hero under 3 MB (64 colours is lossless for this palette):
-#   ffmpeg -i demo/nebaz.gif -vf "split[a][b];[a]palettegen=max_colors=64:stats_mode=full[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" /tmp/n.gif && mv /tmp/n.gif demo/nebaz.gif
+#   brew install imagemagick          # render.sh composites with magick + ffmpeg
+#   demo/render.sh demo/nebaz.tape    # writes demo/nebaz.gif + demo/poster.png
+# (`vhs demo/nebaz.tape` alone only writes the raw take to demo/.raw/.)
 #
 # Keys: `--show-keys` puts each key, and what it did, in a corner box — the
 # clip is silent, so that box is how a viewer knows one key did each step.
@@ -31,23 +31,28 @@
 #   - Enter moves the keys to the detail pane, where / filters the section;
 #     h hands them back to the list before each @service search.
 #
-# Sizing: 1200×700 px at 14px — the split pane needs ≥ 110 cols to render list
-# + detail side by side without truncating the section bar. A Nerd Font is
-# required for the ⛓ ⇄ glyphs.
+# Sizing: a 1200×700 px terminal at 14px inside a 48 px margin (1296×796) —
+# the split pane needs ≥ 110 cols to render list + detail side by side
+# without truncating the section bar. A Nerd Font is required for the ⛓ ⇄
+# glyphs.
 
-Output demo/nebaz.gif
+Output demo/.raw/nebaz.gif
 
 Set Shell "zsh"
 Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 14
-Set Width 1200
-Set Height 700
+Set Width 1296
+Set Height 796
 Set Padding 12
 Set Framerate 12
 Set TypingSpeed 70ms
-Set Theme "Catppuccin Mocha"
+# Dracula with the background as a key colour: demo/render.sh swaps
+# it (and the margin) for the backdrop.
+Set Theme { "name": "DraculaKeyed", "black": "#21222c", "red": "#ff5555", "green": "#50fa7b", "yellow": "#f1fa8c", "blue": "#bd93f9", "magenta": "#ff79c6", "cyan": "#8be9fd", "white": "#f8f8f2", "brightBlack": "#6272a4", "brightRed": "#ff6e6e", "brightGreen": "#69ff94", "brightYellow": "#ffffa5", "brightBlue": "#d6acff", "brightMagenta": "#ff92df", "brightCyan": "#a4ffff", "brightWhite": "#ffffff", "background": "#010203", "foreground": "#f8f8f2", "selection": "#44475a", "cursor": "#f8f8f2" }
 Set WindowBar Colorful
-Set BorderRadius 8
+Set BorderRadius 10
+Set Margin 48
+Set MarginFill "#010203"
 
 # demo/nebaz.toml pins theme and banner so the machine's real config can't
 # leak into a take; --demo pins tenant, subscription and data. The XDG dirs
@@ -65,8 +70,7 @@ Enter
 Sleep 3s
 Show
 
-# The first frame doubles as a poster.
-Screenshot demo/poster.png
+# Hold the first frame: demo/render.sh takes the poster from it.
 Sleep 1s
 
 # ── 1. The red herring: ca-orders-worker's rollout failed ─────────────────────

@@ -5,7 +5,7 @@ use crossterm::event::KeyCode;
 use crate::ui::theme;
 use ratatui::{
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::Paragraph,
     Frame,
@@ -70,7 +70,7 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
     let update_style = Style::default().fg(theme::text_dim());
 
     let endpoint_style = Style::default()
-        .fg(Color::Black)
+        .fg(theme::chip_fg())
         .bg(theme::warning())
         .add_modifier(Modifier::BOLD);
     let sub_style = Style::default()
@@ -215,7 +215,7 @@ pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
             spans.push(Span::styled(
                 format!(" {} ", label),
                 Style::default()
-                    .fg(Color::Black)
+                    .fg(theme::chip_fg())
                     .bg(theme::brand())
                     .add_modifier(Modifier::BOLD),
             ));

@@ -20,18 +20,29 @@ The outage is also the hero loop, `demo/nebaz.tape`, which writes
 ## Re-recording
 
 From the repo root, with `vhs` (v0.11.0 or v0.12.1; v0.12.0 writes
-nothing, charmbracelet/vhs#787), `ttyd`, `ffmpeg` and a Nerd Font
-(JetBrainsMono Nerd Font):
+nothing, charmbracelet/vhs#787), `ttyd`, `ffmpeg`, ImageMagick (`magick`)
+and a Nerd Font (JetBrainsMono Nerd Font):
 
 ```bash
-cargo build --release                             # the tapes run ./target/release/nebaz
-vhs demo/nebaz.tape                               # the hero
-for t in demo/scenes/*.tape; do vhs "$t"; done   # writes demo/scenes/<name>.gif
+cargo build --release                  # the tapes run ./target/release/nebaz
+demo/render.sh                         # the hero and every scene (about 6 minutes)
+demo/render.sh demo/scenes/dns.tape    # just one
 ```
 
-The hero comes out near 4 MB; one ffmpeg pass (the command is in
-`demo/nebaz.tape`'s header) re-palettes it to 64 colours and under 3 MB
-with no visible change. The scenes are 2 MB or less as recorded.
+`render.sh` runs each tape, then puts the take over the backdrop. VHS
+records the terminal background and the window margin in one key colour
+(`#010203`, the tapes' `Set Theme` and `MarginFill`) to `demo/.raw/`;
+`render.sh` keys that colour out and lays the take over
+`demo/backdrop.png` dimmed to 35%, so the backdrop shows through the
+terminal and everything nebaz draws keeps its own colour. `vhs` alone only
+writes the raw take. The hero is re-paletted to 64 colours (under 3 MB, no
+visible banding) and its first frame becomes `demo/poster.png`; the scenes
+are 2 MB or less.
+
+The backdrop is generated, not a photo, so it carries no licence:
+`uv run demo/backdrop.py demo/backdrop.png` rebuilds it. The look is
+nebaz's `dracula` preset with the accent muted to `#4a9fc4`
+(`demo/nebaz.toml`).
 
 To record a binary somewhere else (an installed release, say), change the
 `Type "./target/release/nebaz …"` line in the tape's hidden boot.
@@ -39,8 +50,8 @@ To record a binary somewhere else (an installed release, say), change the
 Every tape:
 
 - runs with `--show-keys`, so a corner box names each key and what it did;
-- pins its config with `NEBAZ_CONFIG=demo/nebaz.toml` (theme, no banner,
-  no update check) and points `XDG_CONFIG_HOME` / `XDG_CACHE_HOME` at a
+- pins its config with `NEBAZ_CONFIG=demo/nebaz.toml` (theme and accent,
+  no banner, no update check) and points `XDG_CONFIG_HOME` / `XDG_CACHE_HOME` at a
   directory that doesn't exist, so the recording machine's config,
   bookmarks and macros never leak into a take;
 - sets `EDITOR=true` and never presses `e`;

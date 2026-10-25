@@ -17,7 +17,7 @@ use crate::ui::theme;
 use crossterm::event::KeyCode;
 use ratatui::{
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::Paragraph,
     Frame,
@@ -137,7 +137,7 @@ pub fn chip_spans(
             spans.push(Span::styled(
                 format!(" {} ", label),
                 Style::default()
-                    .fg(Color::Black)
+                    .fg(theme::chip_fg())
                     .bg(theme::brand())
                     .add_modifier(Modifier::BOLD),
             ));
