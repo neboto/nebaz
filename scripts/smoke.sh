@@ -156,6 +156,12 @@ run firewall-ngfw ok ngfw '[]' \
   "4 Cloud NGFW" \
   "cannot reach 127.0.0.1"
 
+# VM scale sets load through a routing prefix (the VMs tab's fourth chip).
+run vm-scale-sets ok vmss '[]' \
+  "Virtual Machines, Disks, NICs & Scale Sets" \
+  "4 Scale sets" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

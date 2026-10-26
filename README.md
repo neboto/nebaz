@@ -151,7 +151,7 @@ all).
 | Prefix | Service | Sub-tabs |
 |---|---|---|
 | `sub` | Subscriptions | Subscriptions, Resource groups (`rg`), All resources (`all`) |
-| `vm` | Virtual Machines | VMs, Disks (`disk`), NICs (`nic`) |
+| `vm` | Virtual Machines | VMs, Disks (`disk`), NICs (`nic`), Scale sets (`vmss`, instances lazy; a Flexible set's VMs are in VMs) |
 | `storage` | Storage | Accounts (blob containers lazy) |
 | `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`, appliance next hops matched to their NIC / VM or load balancer), NAT gateways (`nat`), Private endpoints (`pe`), Bastion hosts (`bastion`), DDoS protection plans (`ddos`) |
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`) |

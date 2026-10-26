@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry,
-    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
+    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -74,6 +74,17 @@ pub(crate) fn disk(name: &str, location: &str) -> Box<dyn Resource> {
     let id = arm_id(&format!("Microsoft.Compute/disks/{name}"));
     let v = body(&id, location, json!({"diskSizeGB": 30, "diskState": "Attached"}));
     parse("DiskRow", compute::DiskRow::from_json(&v, Some(TENANT)))
+}
+
+/// A Uniform scale set of two in `location`.
+pub(crate) fn scale_set(name: &str, location: &str) -> Box<dyn Resource> {
+    let mut v = body(
+        &arm_id(&format!("Microsoft.Compute/virtualMachineScaleSets/{name}")),
+        location,
+        json!({"provisioningState": "Succeeded", "orchestrationMode": "Uniform"}),
+    );
+    v["sku"] = json!({"name": "Standard_D2s_v5", "capacity": 2});
+    parse("ScaleSetRow", scale_sets::ScaleSetRow::from_json(&v, Some(TENANT)))
 }
 
 pub(crate) fn vnet(name: &str, location: &str) -> Box<dyn Resource> {
@@ -217,6 +228,7 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
         m(JumpView::VirtualMachines, "VmRow", vm("vm-1", l)),
         m(JumpView::Disks, "DiskRow", disk("disk-1", l)),
         m(JumpView::Nics, "NicRow", nic("nic-1", l)),
+        m(JumpView::ScaleSets, "ScaleSetRow", scale_set("vmss-1", l)),
         m(
             JumpView::StorageAccounts,
             "StorageAccountRow",

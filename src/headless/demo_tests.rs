@@ -39,6 +39,8 @@ const PLANTED: &[(&str, &str)] = &[
     ("/connections/cn-vpn-branch-office", "NotConnected"),
     // compute: caj-nightly-export's last execution failed (its Executions section).
     ("/jobs/caj-nightly-export", "caj-nightly-export-q7k2m9x"),
+    // compute: vmss-legacy-web's instance 2 still runs the old image.
+    ("/virtualMachineScaleSets/vmss-legacy-web", "not on the latest model"),
     // core: failed operations in the Activity sections of contoso-prod (the
     // v119 rollout, the batch pool's quota, the guest's denied VM start).
     (crate::demo::PROD, "⚠ Failed | Create Deployment"),
@@ -67,6 +69,7 @@ const AUDIT_EXPECTED: &[&str] = &[
     "app-min-tls",
     "app-ftps",
     "disk-unattached",
+    "vmss-instance-not-latest-model",
     // data
     "storage-blob-public-access",
     "storage-min-tls",

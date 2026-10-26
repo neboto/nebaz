@@ -232,6 +232,13 @@
     "foundry": [
       "ai-accounts (foundry)"
     ],
+    "fw": [
+      "azure-firewalls (fw)",
+      "firewall-policies (fwp)",
+      "ip-groups (ipg)",
+      "cloud-ngfws (ngfw)",
+      "ngfw-rulestacks (rulestack)"
+    ],
     "id": [
       "identities (id)",
       "service-principals (sp)",
@@ -273,7 +280,8 @@
     "vm": [
       "vms (vm)",
       "disks (disk)",
-      "nics (nic)"
+      "nics (nic)",
+      "scale-sets (vmss)"
     ],
     "vnet": [
       "vnets (vnet)",
@@ -286,13 +294,6 @@
       "private-endpoints (pe)",
       "bastion-hosts (bastion)",
       "ddos-plans (ddos)"
-    ],
-    "fw": [
-      "azure-firewalls (fw)",
-      "firewall-policies (fwp)",
-      "ip-groups (ipg)",
-      "cloud-ngfws (ngfw)",
-      "ngfw-rulestacks (rulestack)"
     ]
   },
   "sections": {
@@ -358,10 +359,43 @@
       "Related",
       "Tags"
     ],
+    "Azure Firewall": [
+      "Overview",
+      "Network",
+      "Policy",
+      "Rules",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Bastion": [
       "Overview",
       "Features",
       "Network",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Cloud NGFW": [
+      "Overview",
+      "Network",
+      "Front end",
+      "Rules",
+      "Management",
+      "Status",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Cloud NGFW rulestack": [
+      "Overview",
+      "Rules",
+      "Objects",
+      "Security services",
+      "Firewalls",
       "Access",
       "Activity",
       "Related",
@@ -511,6 +545,16 @@
       "Related",
       "Tags"
     ],
+    "Firewall policy": [
+      "Overview",
+      "Settings",
+      "Rule collection groups",
+      "Hierarchy",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Front Door profile": [
       "Overview",
       "Endpoints",
@@ -526,6 +570,15 @@
       "Overview",
       "Configuration",
       "IPsec",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "IP group": [
+      "Overview",
+      "Addresses",
+      "Used by",
       "Access",
       "Activity",
       "Related",
@@ -776,6 +829,17 @@
       "Related",
       "Tags"
     ],
+    "VM Scale Set": [
+      "Overview",
+      "Model",
+      "Scaling",
+      "Network",
+      "Instances",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Virtual Machine": [
       "Overview",
       "Instance view",
@@ -813,58 +877,6 @@
       "Managed rules",
       "Custom rules",
       "Associations",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Azure Firewall": [
-      "Overview",
-      "Network",
-      "Policy",
-      "Rules",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Cloud NGFW": [
-      "Overview",
-      "Network",
-      "Front end",
-      "Rules",
-      "Management",
-      "Status",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Cloud NGFW rulestack": [
-      "Overview",
-      "Rules",
-      "Objects",
-      "Security services",
-      "Firewalls",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Firewall policy": [
-      "Overview",
-      "Settings",
-      "Rule collection groups",
-      "Hierarchy",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "IP group": [
-      "Overview",
-      "Addresses",
-      "Used by",
       "Access",
       "Activity",
       "Related",

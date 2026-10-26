@@ -1,0 +1,199 @@
+{
+  "value": [
+    {
+      "name": "vmss-legacy-web_0",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/0",
+      "type": "Microsoft.Compute/virtualMachineScaleSets/virtualMachines",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-ops@contoso.com",
+        "costCenter": "CC-4410"
+      },
+      "instanceId": "0",
+      "sku": {
+        "name": "Standard_D2s_v5",
+        "tier": "Standard"
+      },
+      "zones": [
+        "1"
+      ],
+      "properties": {
+        "latestModelApplied": true,
+        "modelDefinitionApplied": "VirtualMachineScaleSet",
+        "vmId": "0b6d2f4a-91c3-4e57-a8d0-3f5b7c9e1a24",
+        "instanceView": {
+          "computerName": "legacyweb000000",
+          "osName": "ubuntu",
+          "osVersion": "22.04",
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-9d}}"
+            },
+            {
+              "code": "PowerState/running",
+              "level": "Info",
+              "displayStatus": "VM running"
+            }
+          ]
+        },
+        "hardwareProfile": {},
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-jammy",
+            "sku": "22_04-lts-gen2",
+            "version": "22.04.202410020"
+          }
+        },
+        "osProfile": {
+          "computerName": "legacyweb000000",
+          "adminUsername": "azureuser"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/0/networkInterfaces/nic-legacy-web"
+            }
+          ]
+        },
+        "provisioningState": "Succeeded",
+        "timeCreated": "{{iso:now-9d}}"
+      }
+    },
+    {
+      "name": "vmss-legacy-web_1",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/1",
+      "type": "Microsoft.Compute/virtualMachineScaleSets/virtualMachines",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-ops@contoso.com",
+        "costCenter": "CC-4410"
+      },
+      "instanceId": "1",
+      "sku": {
+        "name": "Standard_D2s_v5",
+        "tier": "Standard"
+      },
+      "zones": [
+        "2"
+      ],
+      "properties": {
+        "latestModelApplied": true,
+        "modelDefinitionApplied": "VirtualMachineScaleSet",
+        "vmId": "6e3a8c1f-27d4-49b0-b5e2-8d1f4a6c0b39",
+        "instanceView": {
+          "computerName": "legacyweb000001",
+          "osName": "ubuntu",
+          "osVersion": "22.04",
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-9d}}"
+            },
+            {
+              "code": "PowerState/running",
+              "level": "Info",
+              "displayStatus": "VM running"
+            }
+          ]
+        },
+        "hardwareProfile": {},
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-jammy",
+            "sku": "22_04-lts-gen2",
+            "version": "22.04.202410020"
+          }
+        },
+        "osProfile": {
+          "computerName": "legacyweb000001",
+          "adminUsername": "azureuser"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/1/networkInterfaces/nic-legacy-web"
+            }
+          ]
+        },
+        "provisioningState": "Succeeded",
+        "timeCreated": "{{iso:now-9d}}"
+      }
+    },
+    {
+      "name": "vmss-legacy-web_2",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/2",
+      "type": "Microsoft.Compute/virtualMachineScaleSets/virtualMachines",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-ops@contoso.com",
+        "costCenter": "CC-4410"
+      },
+      "instanceId": "2",
+      "sku": {
+        "name": "Standard_D2s_v5",
+        "tier": "Standard"
+      },
+      "zones": [
+        "3"
+      ],
+      "properties": {
+        "latestModelApplied": false,
+        "modelDefinitionApplied": "VirtualMachineScaleSet",
+        "vmId": "a2f5d8b1-4c07-4e93-9d6a-1b8e3c5f7d02",
+        "instanceView": {
+          "computerName": "legacyweb000002",
+          "osName": "ubuntu",
+          "osVersion": "22.04",
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-61d}}"
+            },
+            {
+              "code": "PowerState/running",
+              "level": "Info",
+              "displayStatus": "VM running"
+            }
+          ]
+        },
+        "hardwareProfile": {},
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-jammy",
+            "sku": "22_04-lts-gen2",
+            "version": "22.04.202407010"
+          }
+        },
+        "osProfile": {
+          "computerName": "legacyweb000002",
+          "adminUsername": "azureuser"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/2/networkInterfaces/nic-legacy-web"
+            }
+          ]
+        },
+        "provisioningState": "Succeeded",
+        "timeCreated": "{{iso:now-61d}}"
+      }
+    }
+  ]
+}

@@ -108,6 +108,10 @@ pub struct LazyStore {
     // ── Virtual Machines ─────────────────────────────────────────────────
     /// `GET {vm}/instanceView` — the Instance view section, keyed by VM id.
     pub vm_instance_views: LazyMap<serde_json::Value>,
+    /// A scale set's Instances: `{vmss}/virtualMachines` (Uniform) or the
+    /// VM list filtered to the set (Flexible), both with the instance
+    /// view; keyed by scale-set id.
+    pub vmss_instances: LazyMap<Vec<serde_json::Value>>,
 
     // ── Storage ──────────────────────────────────────────────────────────
     /// `GET {account}/blobServices/default/containers` — the Containers

@@ -1,0 +1,44 @@
+{
+  "computerName": "batchflex3F2A9C",
+  "osName": "ubuntu",
+  "osVersion": "24.04",
+  "hyperVGeneration": "V2",
+  "vmAgent": {
+    "vmAgentVersion": "2.11.1.12",
+    "statuses": [
+      {
+        "code": "ProvisioningState/succeeded",
+        "level": "Info",
+        "displayStatus": "Ready",
+        "message": "Guest Agent is running",
+        "time": "{{iso:now-6d}}"
+      }
+    ]
+  },
+  "disks": [
+    {
+      "name": "vmss-batch-flex_3f2a9c1e_OsDisk_1_4c8e2a7f1d934b65a0e79f3c5b1d8a26",
+      "statuses": [
+        {
+          "code": "ProvisioningState/succeeded",
+          "level": "Info",
+          "displayStatus": "Provisioning succeeded",
+          "time": "{{iso:now-6d}}"
+        }
+      ]
+    }
+  ],
+  "statuses": [
+    {
+      "code": "ProvisioningState/succeeded",
+      "level": "Info",
+      "displayStatus": "Provisioning succeeded",
+      "time": "{{iso:now-6d}}"
+    },
+    {
+      "code": "PowerState/running",
+      "level": "Info",
+      "displayStatus": "VM running"
+    }
+  ]
+}

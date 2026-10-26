@@ -91,7 +91,11 @@ each one backs are in the catalog table
   and the `statusOnly=true` pass that puts the power state on the row),
   `Microsoft.Compute/virtualMachines/instanceView/read` (Instance view
   section); Disks: `Microsoft.Compute/disks/read`; NICs:
-  `Microsoft.Network/networkInterfaces/read`.
+  `Microsoft.Network/networkInterfaces/read`; Scale sets:
+  `Microsoft.Compute/virtualMachineScaleSets/read`, and the lazy Instances
+  section `Microsoft.Compute/virtualMachineScaleSets/virtualMachines/read`
+  (a Uniform set's instances; a Flexible set's are VMs, the VM list's
+  action above).
 - **Storage**: `Microsoft.Storage/storageAccounts/read`; the lazy
   Containers section: `Microsoft.Storage/storageAccounts/blobServices/containers/read`
   (container metadata through ARM, never a blob).

@@ -224,7 +224,7 @@ impl ReverseIndex {
 pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
     use JumpView::*;
     match target {
-        NetworkSecurityGroups => &[Nics, Subnets],
+        NetworkSecurityGroups => &[Nics, Subnets, ScaleSets],
         Subnets => &[
             Nics,
             PrivateEndpoints,
@@ -238,6 +238,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             VnetGateways,
             AzureFirewalls,
             CloudNgfws,
+            ScaleSets,
         ],
         VirtualNetworks => &[
             Nics,
@@ -267,10 +268,14 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             MysqlServers,
             AppGateways,
             FrontDoorProfiles,
+            ScaleSets,
         ],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
         PublicIps => &[Nics, LoadBalancers, NatGateways, AppGateways, VnetGateways, AzureFirewalls, CloudNgfws],
         Disks => &[VirtualMachines],
+        // A Flexible set's VMs name it.
+        ScaleSets => &[VirtualMachines],
+        LoadBalancers => &[ScaleSets],
         Nics => &[VirtualMachines, PrivateEndpoints, AppGateways],
         RouteTables | NatGateways => &[Subnets],
         AppServicePlans => &[WebApps],

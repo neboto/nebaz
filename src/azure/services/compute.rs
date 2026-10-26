@@ -6,9 +6,12 @@
 //!   delivered as one replacement. The instance view is a lazy section.
 //! - **Disks** — `diskState` is the runtime state.
 //! - **NICs** — attachment (`virtualMachine.id`) is the runtime state.
+//! - **Scale sets** — the rows and sections are `scale_sets.rs`'s; the
+//!   list is here, on the VM api-version (one Compute spec).
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::scale_sets::ScaleSetRow;
 use crate::azure::services::{
     arm_row, error_rows, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope,
 };
@@ -23,10 +26,13 @@ use tokio::sync::mpsc;
 pub const VM_API_VERSION: &str = "2026-04-01";
 pub const DISK_API_VERSION: &str = "2026-03-02";
 pub const NIC_API_VERSION: &str = "2025-09-01";
+/// Scale sets are in the same Compute spec as VMs: one version.
+pub const VMSS_API_VERSION: &str = VM_API_VERSION;
 
 const VM_PATH: &str = "/providers/Microsoft.Compute/virtualMachines";
 const DISK_PATH: &str = "/providers/Microsoft.Compute/disks";
 const NIC_PATH: &str = "/providers/Microsoft.Network/networkInterfaces";
+const VMSS_PATH: &str = "/providers/Microsoft.Compute/virtualMachineScaleSets";
 
 crate::sections! {
     pub enum VmDetailSection,
@@ -120,6 +126,9 @@ pub struct VmRow {
     /// `(id, primary)`.
     pub nics: Vec<(String, bool)>,
     pub availability_set: Option<String>,
+    /// `virtualMachineScaleSet.id`: the Flexible scale set this VM is an
+    /// instance of.
+    pub scale_set: Option<String>,
     pub identity_type: Option<String>,
     pub user_identity_ids: Vec<String>,
     pub time_created: Option<String>,
@@ -206,6 +215,7 @@ impl VmRow {
                 })
                 .collect(),
             availability_set: json::arm_id(json::id_at(v, &format!("{}/availabilitySet", p))),
+            scale_set: json::arm_id(json::id_at(v, &format!("{}/virtualMachineScaleSet", p))),
             identity_type: json::str_at(v, "/identity/type"),
             user_identity_ids: json::user_identity_ids(v),
             time_created: json::str_at(v, &format!("{}/timeCreated", p)),
@@ -297,6 +307,10 @@ impl Resource for VmRow {
             ("Computer name".into(), json::opt(self.computer_name.clone())),
             ("Admin user".into(), json::opt(self.admin_username.clone())),
             ("Zones".into(), json::join(&self.zones)),
+            (
+                "Scale set".into(),
+                self.scale_set.as_deref().map(name_of_id).unwrap_or("-").to_string(),
+            ),
             ("Priority".into(), json::opt(self.priority.clone())),
             ("License".into(), json::opt(self.license_type.clone())),
             ("Identity".into(), json::opt(self.identity_type.clone())),
@@ -317,6 +331,9 @@ impl Resource for VmRow {
         }
         if let Some(a) = &self.availability_set {
             v.push((format!("Availability set {}", name_of_id(a)), a.clone()));
+        }
+        if let Some(s) = &self.scale_set {
+            v.push((format!("Scale set {}", name_of_id(s)), s.clone()));
         }
         for id in &self.user_identity_ids {
             v.push((format!("Identity {}", name_of_id(id)), id.clone()));
@@ -784,6 +801,14 @@ impl AzureService for ComputeService {
                     .filter_map(|v| NicRow::from_json(v, tenant))
                     .collect(),
             ),
+            JumpView::ScaleSets => Self::boxed(
+                self.scope
+                    .list(VMSS_PATH, VMSS_API_VERSION)
+                    .await?
+                    .iter()
+                    .filter_map(|v| ScaleSetRow::from_json(v, tenant))
+                    .collect(),
+            ),
             _ => {
                 let mut rows: Vec<VmRow> = self
                     .scope
@@ -828,6 +853,15 @@ impl AzureService for ComputeService {
                     .scope
                     .stream(NIC_PATH, NIC_API_VERSION, &[], service_type, "Listing network interfaces…", &event_tx, |page| {
                         Self::boxed(page.iter().filter_map(|v| NicRow::from_json(v, tenant.as_deref())).collect())
+                    })
+                    .await;
+                finish_stream(service_type, r, &event_tx)
+            }
+            JumpView::ScaleSets => {
+                let r = self
+                    .scope
+                    .stream(VMSS_PATH, VMSS_API_VERSION, &[], service_type, "Listing scale sets…", &event_tx, |page| {
+                        Self::boxed(page.iter().filter_map(|v| ScaleSetRow::from_json(v, tenant.as_deref())).collect())
                     })
                     .await;
                 finish_stream(service_type, r, &event_tx)
@@ -899,6 +933,10 @@ impl AzureService for ComputeService {
             Some(JumpView::Nics) => {
                 let v = self.scope.get(id, NIC_API_VERSION).await?;
                 Ok(Box::new(NicRow::from_json(&v, tenant).ok_or_else(not_found)?))
+            }
+            Some(JumpView::ScaleSets) => {
+                let v = self.scope.get(id, VMSS_API_VERSION).await?;
+                Ok(Box::new(ScaleSetRow::from_json(&v, tenant).ok_or_else(not_found)?))
             }
             _ => Err(not_found()),
         }
@@ -1013,6 +1051,18 @@ mod tests {
         assert!(iv.iter().any(|(k, v)| k == "VM agent" && v == "2.9 · Ready"));
         assert!(iv.iter().any(|(k, v)| k == "  PowerState/running" && v == "VM running"));
         assert!(iv.iter().any(|(k, v)| k == "  web-1_OsDisk" && v == "Provisioning succeeded"));
+    }
+
+    #[test]
+    fn a_flexible_scale_set_vm_links_back_to_its_scale_set() {
+        let ss = format!("{}/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-flex", RG);
+        let mut v = vm_json();
+        v["properties"]["virtualMachineScaleSet"] = serde_json::json!({"id": ss});
+        let row = VmRow::from_json(&v, None).unwrap();
+        assert!(row.related().iter().any(|(l, id)| l == "Scale set vmss-flex"
+            && crate::azure::service::JumpView::for_arm_id(id) == Some(crate::azure::service::JumpView::ScaleSets)));
+        assert!(row.details().iter().any(|(k, v)| k == "Scale set" && v == "vmss-flex"));
+        assert!(VmRow::from_json(&vm_json(), None).unwrap().scale_set.is_none());
     }
 
     #[test]

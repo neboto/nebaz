@@ -1,0 +1,75 @@
+{
+  "name": "vmss-batch-flex_8b41d7a0",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vmss-batch-flex_8b41d7a0",
+  "type": "Microsoft.Compute/virtualMachines",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-ops@contoso.com",
+    "workload": "nightly-batch"
+  },
+  "zones": [
+    "2"
+  ],
+  "properties": {
+    "vmId": "d1b7f3a9-6e24-4c80-85fa-2c9e7a3d1b58",
+    "hardwareProfile": {
+      "vmSize": "Standard_D4s_v5"
+    },
+    "storageProfile": {
+      "imageReference": {
+        "publisher": "Canonical",
+        "offer": "ubuntu-24_04-lts",
+        "sku": "server",
+        "version": "latest",
+        "exactVersion": "24.04.202409300"
+      },
+      "osDisk": {
+        "osType": "Linux",
+        "name": "vmss-batch-flex_8b41d7a0_OsDisk_1_d1b7f3a96e244c8085fa2c9e7a3d1b58",
+        "createOption": "FromImage",
+        "caching": "ReadWrite",
+        "managedDisk": {
+          "storageAccountType": "StandardSSD_LRS",
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vmss-batch-flex_8b41d7a0_OsDisk_1_d1b7f3a96e244c8085fa2c9e7a3d1b58"
+        },
+        "deleteOption": "Delete",
+        "diskSizeGB": 64
+      },
+      "dataDisks": [],
+      "diskControllerType": "SCSI"
+    },
+    "osProfile": {
+      "computerName": "batchflex8B41D7",
+      "adminUsername": "azureuser",
+      "linuxConfiguration": {
+        "disablePasswordAuthentication": true,
+        "provisionVMAgent": true
+      },
+      "secrets": [],
+      "allowExtensionOperations": true
+    },
+    "networkProfile": {
+      "networkInterfaces": [
+        {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/vmss-batch-flex_8b41d7a0-nic-batch",
+          "properties": {
+            "primary": true,
+            "deleteOption": "Delete"
+          }
+        }
+      ]
+    },
+    "virtualMachineScaleSet": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-batch-flex"
+    },
+    "priority": "Spot",
+    "provisioningState": "Succeeded",
+    "timeCreated": "{{iso:now-6d}}",
+    "evictionPolicy": "Deallocate",
+    "billingProfile": {
+      "maxPrice": -1
+    }
+  }
+}
