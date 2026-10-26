@@ -29,6 +29,10 @@ pub enum ServiceType {
     /// Standard / Premium profiles and the WAF policies of both. Its own
     /// tab (SERVICES.md rule 26 says why); backend health is never read.
     Edge,
+    /// The hybrid estate: ExpressRoute circuits, virtual network gateways,
+    /// their connections and local network gateways. Its own tab
+    /// (SERVICES.md rule 27); never a shared or authorization key.
+    Hybrid,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
     /// User-assigned managed identities (ARM); service principals and app
@@ -82,7 +86,9 @@ pub enum ServiceType {
 /// enum with a variant per sub-tab (ADR 0002): its string form is the list
 /// cache's `variant`, and a routing prefix (`@disk`) names one directly. A
 /// sub-tab exists only when its rows come from one subscription-wide list
-/// or are embedded in one; per-parent lists are lazy sections instead.
+/// or are embedded in one (or, for a type ARM lists per resource group
+/// only, the per-group lists of the groups that hold it: SERVICES.md rule
+/// 27); per-parent lists are lazy sections instead.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum JumpView {
     // Subscriptions
@@ -126,6 +132,15 @@ pub enum JumpView {
     FrontDoorProfiles,
     /// Application Gateway and Front Door WAF policies, one list of both.
     WafPolicies,
+    // Hybrid
+    /// `Microsoft.Network/expressRouteCircuits`.
+    ExpressRouteCircuits,
+    /// `virtualNetworkGateways` (ExpressRoute and VPN), listed per group.
+    VnetGateways,
+    /// `Microsoft.Network/connections`, listed per group.
+    GatewayConnections,
+    /// `localNetworkGateways`, listed per group.
+    LocalGateways,
     // Key Vault
     KeyVaults,
     // Identity
@@ -197,6 +212,7 @@ impl JumpView {
             | NatGateways | PrivateEndpoints | BastionHosts | DdosPlans => ServiceType::Network,
             PrivateDnsZones | DnsZones | DnsResolvers | DnsForwardingRulesets | DnsResolverPolicies => ServiceType::Dns,
             AppGateways | FrontDoorProfiles | WafPolicies => ServiceType::Edge,
+            ExpressRouteCircuits | VnetGateways | GatewayConnections | LocalGateways => ServiceType::Hybrid,
             KeyVaults => ServiceType::KeyVault,
             Identities | ServicePrincipals | AppRegistrations => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
@@ -245,6 +261,10 @@ impl JumpView {
             AppGateways => "app-gateways",
             FrontDoorProfiles => "front-door-profiles",
             WafPolicies => "waf-policies",
+            ExpressRouteCircuits => "expressroute-circuits",
+            VnetGateways => "vnet-gateways",
+            GatewayConnections => "gateway-connections",
+            LocalGateways => "local-gateways",
             KeyVaults => "vaults",
             Identities => "identities",
             ServicePrincipals => "service-principals",
@@ -307,6 +327,10 @@ impl JumpView {
             AppGateways => "App gateways",
             FrontDoorProfiles => "Front Door",
             WafPolicies => "WAF policies",
+            ExpressRouteCircuits => "ER circuits",
+            VnetGateways => "VNet gateways",
+            GatewayConnections => "Connections",
+            LocalGateways => "Local gateways",
             KeyVaults => "Vaults",
             Identities => "Identities",
             ServicePrincipals => "Service principals",
@@ -379,6 +403,10 @@ impl JumpView {
             // Classic CDN profiles share the type; the list keeps Front
             // Door Standard / Premium only, so a classic one is not found.
             ("microsoft.cdn", ["profiles"]) => JumpView::FrontDoorProfiles,
+            ("microsoft.network", ["expressroutecircuits"]) => JumpView::ExpressRouteCircuits,
+            ("microsoft.network", ["virtualnetworkgateways"]) => JumpView::VnetGateways,
+            ("microsoft.network", ["connections"]) => JumpView::GatewayConnections,
+            ("microsoft.network", ["localnetworkgateways"]) => JumpView::LocalGateways,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
@@ -467,6 +495,7 @@ impl ServiceType {
             ServiceType::Network,
             ServiceType::Dns,
             ServiceType::Edge,
+            ServiceType::Hybrid,
             ServiceType::KeyVault,
             ServiceType::Identity,
             ServiceType::Aks,
@@ -505,6 +534,7 @@ impl ServiceType {
             ServiceType::Network => "Networking",
             ServiceType::Dns => "Networking",
             ServiceType::Edge => "Networking",
+            ServiceType::Hybrid => "Networking",
             ServiceType::KeyVault => "Security",
             ServiceType::Identity => "Security",
             ServiceType::Aks => "Containers",
@@ -532,6 +562,7 @@ impl ServiceType {
             ServiceType::Network => "Virtual Network",
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
+            ServiceType::Hybrid => "Hybrid",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Managed Identity",
             ServiceType::Aks => "AKS",
@@ -560,6 +591,7 @@ impl ServiceType {
             ServiceType::Network => "VNet",
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
+            ServiceType::Hybrid => "Hybrid",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Identity",
             ServiceType::Aks => "AKS",
@@ -587,6 +619,7 @@ impl ServiceType {
             ServiceType::Network => "VNets, NSGs, IPs, LBs, NAT, Bastion & DDoS",
             ServiceType::Dns => "DNS zones, Private Resolver & rulesets",
             ServiceType::Edge => "App gateways, Front Door & WAF policies",
+            ServiceType::Hybrid => "ExpressRoute, VNet gateways, connections & local gateways",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Identity => "Managed identities, service principals & app registrations",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
@@ -628,6 +661,7 @@ impl ServiceType {
             ],
             ServiceType::Dns => &[PrivateDnsZones, DnsZones, DnsResolvers, DnsForwardingRulesets, DnsResolverPolicies],
             ServiceType::Edge => &[AppGateways, FrontDoorProfiles, WafPolicies],
+            ServiceType::Hybrid => &[ExpressRouteCircuits, VnetGateways, GatewayConnections, LocalGateways],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Identity => &[Identities, ServicePrincipals, AppRegistrations],
             ServiceType::Aks => &[Clusters, NodePools],
@@ -727,6 +761,18 @@ impl ServiceType {
             }
             "afd" | "frontdoor" | "frontdoors" | "fd" => (ServiceType::Edge, Some(JumpView::FrontDoorProfiles)),
             "waf" | "wafs" | "wafpolicy" | "wafpolicies" => (ServiceType::Edge, Some(JumpView::WafPolicies)),
+            "er" | "erc" | "expressroute" | "expressroutecircuit" | "expressroutecircuits" | "circuit" | "circuits" | "hybrid" => {
+                (ServiceType::Hybrid, None)
+            }
+            "vgw" | "vng" | "vnetgateway" | "vnetgateways" | "vpngateway" | "vpngateways" | "ergateway" => {
+                (ServiceType::Hybrid, Some(JumpView::VnetGateways))
+            }
+            "cn" | "conn" | "connection" | "connections" | "vpnconnection" | "vpnconnections" => {
+                (ServiceType::Hybrid, Some(JumpView::GatewayConnections))
+            }
+            "lgw" | "lng" | "localgateway" | "localgateways" | "localnetworkgateway" | "localnetworkgateways" => {
+                (ServiceType::Hybrid, Some(JumpView::LocalGateways))
+            }
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
             // `@app` is App Service's; app registrations are `@appreg`.
@@ -799,6 +845,7 @@ impl ServiceType {
             ServiceType::Network => "@vnet",
             ServiceType::Dns => "@dns",
             ServiceType::Edge => "@agw",
+            ServiceType::Hybrid => "@er",
             ServiceType::KeyVault => "@kv",
             ServiceType::Identity => "@id",
             ServiceType::Aks => "@aks",
@@ -821,12 +868,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@vgw", "@cn", "@lgw", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@agw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@agw", "@er", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1094,6 +1141,16 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@agw"), Some((ServiceType::Edge, None)));
         assert_eq!(ServiceType::from_prefix("@afd"), Some((ServiceType::Edge, Some(JumpView::FrontDoorProfiles))));
         assert_eq!(ServiceType::from_prefix("@waf"), Some((ServiceType::Edge, Some(JumpView::WafPolicies))));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.Network/expressRouteCircuits/erc")),
+            Some(JumpView::ExpressRouteCircuits)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/expressRouteCircuits/erc/peerings/AzurePrivatePeering")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworkGateways/vgw")), Some(JumpView::VnetGateways));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/connections/cn")), Some(JumpView::GatewayConnections));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/localNetworkGateways/lgw")), Some(JumpView::LocalGateways));
+        assert_eq!(ServiceType::from_prefix("@er"), Some((ServiceType::Hybrid, None)));
+        assert_eq!(ServiceType::from_prefix("@cn"), Some((ServiceType::Hybrid, Some(JumpView::GatewayConnections))));
         assert_eq!(JumpView::for_arm_id("garbage"), None);
     }
 

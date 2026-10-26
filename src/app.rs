@@ -60,6 +60,11 @@ use crate::azure::services::edge::{
     AppGatewayDetailSection, AppGatewayRow, BackendTargets, FrontDoorDetailSection, FrontDoorProfileRow, TargetLists,
     WafPolicyDetailSection, WafPolicyRow,
 };
+use crate::azure::services::hybrid::{
+    circuit_section_lines, connection_section_lines, gateway_section_lines, local_gateway_section_lines, CircuitDetailSection,
+    CircuitRow, ConnectionDetailSection, ConnectionRow, GatewayDetailSection, GatewayRow, LocalGatewayDetailSection,
+    LocalGatewayRow,
+};
 use crate::azure::services::network_private::{
     private_dns_zone_section_lines, private_endpoint_section_lines, zone_child_path, PrivateDnsZoneDetailSection,
     PrivateDnsZoneRow, PrivateEndpointDetailSection, PrivateEndpointRow, PRIVATE_DNS_API_VERSION,
@@ -1977,6 +1982,13 @@ impl App {
         self.cache.get_ref(&ServiceType::Edge, sub, Some(JumpView::WafPolicies.as_str()))
     }
 
+    /// The warm hybrid Connections list of an ARM id's subscription: what a
+    /// circuit's, gateway's or local gateway's Connections section matches.
+    fn warm_gateway_connections(&self, id: &str) -> Option<&[Box<dyn Resource>]> {
+        let sub = subscription_of(id)?;
+        self.cache.get_ref(&ServiceType::Hybrid, sub, Some(JumpView::GatewayConnections.as_str()))
+    }
+
     /// The loaded (or loading) DNS topology of an ARM id's subscription.
     fn dns_topology_for(&self, id: &str) -> Option<&crate::lazy::Lazy<DnsTopology>> {
         subscription_id_of(id).and_then(|k| self.lazy.dns_topology.get(&k))
@@ -2893,6 +2905,21 @@ impl App {
                 &targets,
                 self.warm_waf_policies(r.id()),
             ));
+        }
+        if let Some(r) = any.downcast_ref::<CircuitRow>() {
+            let warm = self.warm_gateway_connections(r.id());
+            return Some(circuit_section_lines(r, CircuitDetailSection::from_index(idx), warm));
+        }
+        if let Some(r) = any.downcast_ref::<GatewayRow>() {
+            let warm = self.warm_gateway_connections(r.id());
+            return Some(gateway_section_lines(r, GatewayDetailSection::from_index(idx), warm));
+        }
+        if let Some(r) = any.downcast_ref::<ConnectionRow>() {
+            return Some(connection_section_lines(r, ConnectionDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<LocalGatewayRow>() {
+            let warm = self.warm_gateway_connections(r.id());
+            return Some(local_gateway_section_lines(r, LocalGatewayDetailSection::from_index(idx), warm));
         }
         if let Some(r) = any.downcast_ref::<NatGatewayRow>() {
             return Some(nat_gateway_section_lines(r, NatGatewayDetailSection::from_index(idx)));

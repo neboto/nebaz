@@ -22,7 +22,7 @@
   "properties": {
     "provisioningState": "Succeeded",
     "resourceGuid": "8a2f4c6e-1b3d-5e7f-9a0c-2d4f6b8e0a35",
-    "ipAddress": "20.103.45.13",
+    "ipAddress": "20.103.45.16",
     "publicIPAddressVersion": "IPv4",
     "publicIPAllocationMethod": "Static",
     "idleTimeoutInMinutes": 4,

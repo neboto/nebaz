@@ -1,0 +1,28 @@
+{
+  "name": "lgw-branch-office",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/localNetworkGateways/lgw-branch-office",
+  "etag": "W/\"c4e1a9d6-2f7b-5038-9e5a-8b3d0f6c1a27\"",
+  "type": "Microsoft.Network/localNetworkGateways",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "4f9b1d73-6e2a-4c85-a0d7-3b8e5f1c9a62",
+    "localNetworkAddressSpace": {
+      "addressPrefixes": [
+        "192.168.0.0/16"
+      ]
+    },
+    "gatewayIpAddress": "203.0.113.24",
+    "bgpSettings": {
+      "asn": 65050,
+      "bgpPeeringAddress": "192.168.255.1",
+      "peerWeight": 0
+    }
+  }
+}

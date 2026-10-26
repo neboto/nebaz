@@ -1,0 +1,90 @@
+{
+  "value": [
+    {
+      "name": "cn-er-hub-ams",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/connections/cn-er-hub-ams",
+      "etag": "W/\"e8b2f5a1-0c4d-5e79-a3b6-9d2f7c1e4a80\"",
+      "type": "Microsoft.Network/connections",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "8c3e0a95-1f7d-4b62-9e48-2a6d5c0f3b71",
+        "virtualNetworkGateway1": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod"
+        },
+        "connectionType": "ExpressRoute",
+        "routingWeight": 0,
+        "enableBgp": false,
+        "useLocalAzureIpAddress": false,
+        "usePolicyBasedTrafficSelectors": false,
+        "ipsecPolicies": [],
+        "trafficSelectorPolicies": [],
+        "connectionStatus": "Connected",
+        "ingressBytesTransferred": 48213775360,
+        "egressBytesTransferred": 61937418240,
+        "expressRouteGatewayBypass": false,
+        "enablePrivateLinkFastPath": false,
+        "peer": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteCircuits/erc-contoso-ams"
+        },
+        "authorizationKey": "demo-redeemed-key-never-shown"
+      }
+    },
+    {
+      "name": "cn-vpn-branch-office",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/connections/cn-vpn-branch-office",
+      "etag": "W/\"1a7d3c90-5e2b-5f46-8c1d-4b9e0a6f2d53\"",
+      "type": "Microsoft.Network/connections",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200",
+        "purpose": "backup path to the branch office"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "0b6f2d48-7a3e-4c91-b5e0-9d1c4a7f2e36",
+        "virtualNetworkGateway1": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod"
+        },
+        "localNetworkGateway2": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/localNetworkGateways/lgw-branch-office"
+        },
+        "connectionType": "IPsec",
+        "connectionProtocol": "IKEv2",
+        "routingWeight": 10,
+        "dpdTimeoutSeconds": 45,
+        "connectionMode": "Default",
+        "sharedKey": "demo-psk-never-shown",
+        "enableBgp": true,
+        "useLocalAzureIpAddress": false,
+        "usePolicyBasedTrafficSelectors": false,
+        "ipsecPolicies": [
+          {
+            "saLifeTimeSeconds": 27000,
+            "saDataSizeKilobytes": 102400000,
+            "ipsecEncryption": "GCMAES256",
+            "ipsecIntegrity": "GCMAES256",
+            "ikeEncryption": "AES256",
+            "ikeIntegrity": "SHA256",
+            "dhGroup": "DHGroup14",
+            "pfsGroup": "PFS2048"
+          }
+        ],
+        "trafficSelectorPolicies": [],
+        "connectionStatus": "NotConnected",
+        "ingressBytesTransferred": 0,
+        "egressBytesTransferred": 0,
+        "expressRouteGatewayBypass": false
+      }
+    }
+  ]
+}

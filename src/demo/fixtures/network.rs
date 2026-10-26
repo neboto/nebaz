@@ -2,10 +2,12 @@
 //! Virtual Network (VNets and their subnets, NSGs, public IPs, the load
 //! balancer, route table, NAT gateway, private endpoints), the NICs, DNS
 //! (private and public zones, the resolver, its ruleset, a DNS security
-//! policy) and Edge (the application gateway, Front Door, both WAF
-//! policies). Lists first, then each lazy child list, then a single GET
-//! per resource: `r` on a row, the `N` lens (a VNet for its subnets, an
-//! NSG, a NIC) and jumps read those.
+//! policy), Edge (the application gateway, Front Door, both WAF
+//! policies) and Hybrid (the ExpressRoute circuit, both hub gateways,
+//! their connections, the branch office's local gateway). Lists first,
+//! then each lazy child list, then a single GET per resource: `r` on a
+//! row, the `N` lens (a VNet for its subnets, an NSG, a NIC) and jumps
+//! read those.
 
 use super::{fx, Fixture};
 
@@ -76,6 +78,18 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/customDomains", "afd-custom-domains.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/securityPolicies", "afd-security-policies.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso", "afd-contoso.json"),
+    // Hybrid: the circuit list, then the per-group lists the gateways,
+    // connections and local gateways are read through
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/expressRouteCircuits", "expressroute-circuits.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways", "vnet-gateways-rg-network-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/connections", "connections-rg-network-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/localNetworkGateways", "local-gateways-rg-network-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteCircuits/erc-contoso-ams", "erc-contoso-ams.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod", "vgw-er-hub-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod", "vgw-vpn-hub-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/connections/cn-er-hub-ams", "cn-er-hub-ams.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/connections/cn-vpn-branch-office", "cn-vpn-branch-office.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/localNetworkGateways/lgw-branch-office", "lgw-branch-office.json"),
     // Single GETs (`r`, the `N` lens, jumps)
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod", "vnet-hub-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca", "vnet-hub-prod--snet-aca.json"),
@@ -86,6 +100,7 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-jump", "vnet-hub-prod--snet-jump.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureFirewallSubnet", "vnet-hub-prod--AzureFirewallSubnet.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-dns-outbound", "vnet-hub-prod--snet-dns-outbound.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/GatewaySubnet", "vnet-hub-prod--GatewaySubnet.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-nva", "vnet-hub-prod--snet-nva.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureBastionSubnet", "vnet-hub-prod--AzureBastionSubnet.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr", "vnet-pp-dr.json"),
@@ -108,6 +123,9 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod", "pip-agw-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ng-prod", "pip-ng-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vm-jump-01", "pip-vm-jump-01.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-er-hub-prod", "pip-vgw-er-hub-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-vpn-hub-prod-1", "pip-vgw-vpn-hub-prod-1.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-vpn-hub-prod-2", "pip-vgw-vpn-hub-prod-2.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-bas-hub-prod", "pip-bas-hub-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-legacy-internal", "lb-legacy-internal.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal", "lb-nva-internal.json"),

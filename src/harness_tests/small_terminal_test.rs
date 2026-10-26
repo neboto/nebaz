@@ -78,6 +78,25 @@ async fn the_edge_tab_fits_80_by_24() {
     }
 }
 
+/// The Hybrid tab at 80×24 (#135): its four sub-tabs and every section of
+/// each row draw, and the sub-tab bar names the one on screen.
+#[tokio::test]
+async fn the_hybrid_tab_fits_80_by_24() {
+    let mut h = Harness::sized(80, 24).await;
+    for view in [JumpView::ExpressRouteCircuits, JumpView::VnetGateways, JumpView::GatewayConnections, JumpView::LocalGateways] {
+        let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
+        h.install(mock).await;
+        let screen = h.render();
+        assert!(screen.contains(view.label()), "{view:?}:\n{screen}");
+        h.press(KeyCode::Enter).await;
+        for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] {
+            h.press(KeyCode::Char(c)).await;
+            h.render();
+        }
+        h.press(KeyCode::Esc).await;
+    }
+}
+
 /// Network's ten sub-tabs (#137: Bastion and DDoS reach the digit-key
 /// ceiling) all reach their chip and every digit at 80×24; the last
 /// sub-tab is `0`.

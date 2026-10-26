@@ -523,6 +523,9 @@ fn profile(name: &str) -> (&'static str, Shape) {
         "throughput" => ("BytesPerSecond", Busy(9.0e4, 6.0e5)),
         "percentage4xx" => ("Percent", Busy(0.8, 0.9)),
         "percentage5xx" => ("Percent", Busy(0.02, 0.05)),
+        "bgpavailability" | "arpavailability" => ("Percent", Steady(100.0)),
+        "bitsinpersecond" | "bitsoutpersecond" | "expressroutegatewaybitspersecond" => ("BitsPerSecond", Busy(4.0e7, 1.6e8)),
+        "expressroutegatewaycpuutilization" => ("Percent", Busy(6.0, 12.0)),
         _ => ("Count", Busy(5.0, 10.0)),
     }
 }
@@ -617,7 +620,11 @@ fn sample(id: &str, name: &str, aggregation: &str, t: i64, step: i64, now: i64) 
         ("sb-orders-prod", "deadletteredmessages") => level = 1284.0,
         ("sb-orders-prod", "activemessages") if t >= cliff => level = 0.0,
         ("agw-contoso-prod", "healthyhostcount") => level = 2.0,
-        (_, "availability" | "vipavailability" | "dipavailability" | "datapathavailability" | "originhealthpercentage") => {
+        (
+            _,
+            "availability" | "vipavailability" | "dipavailability" | "datapathavailability" | "originhealthpercentage"
+            | "bgpavailability" | "arpavailability",
+        ) => {
             level = 100.0
         }
         _ => {}

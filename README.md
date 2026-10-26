@@ -154,6 +154,7 @@ all).
 | `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`, appliance next hops matched to their NIC / VM or load balancer), NAT gateways (`nat`), Private endpoints (`pe`), Bastion hosts (`bastion`), DDoS protection plans (`ddos`) |
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`) |
 | `agw` | Edge | Application gateways, Front Door (`afd`), WAF policies (`waf`) |
+| `er` | Hybrid | ExpressRoute circuits, VNet gateways (`vgw`), Connections (`cn`), Local network gateways (`lgw`) |
 | `kv` | Key Vault | Vaults (secret and key *names*, never values) |
 | `id` | Identity | Managed identities, Service principals (`sp`), App registrations (`appreg`) |
 | `aks` | AKS | Clusters, Node pools (`pool`) |
