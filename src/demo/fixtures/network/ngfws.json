@@ -1,0 +1,104 @@
+{
+  "value": [
+    {
+      "name": "ngfw-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub-prod",
+      "type": "PaloAltoNetworks.Cloudngfw/firewalls",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdAt": "2026-09-30T08:12:00Z"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "panEtag": "2b6f8a0c-1d3e-4f5a-9b7c-8d0e2f4a6b1c",
+        "isPanoramaManaged": "FALSE",
+        "isStrataCloudManaged": "FALSE",
+        "networkProfile": {
+          "networkType": "VNET",
+          "vnetConfiguration": {
+            "vnet": {
+              "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod",
+              "addressSpace": "10.10.0.0/16"
+            },
+            "trustSubnet": {
+              "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-ngfw-trust",
+              "addressSpace": "10.10.11.0/26"
+            },
+            "unTrustSubnet": {
+              "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-ngfw-untrust",
+              "addressSpace": "10.10.11.64/26"
+            },
+            "ipOfTrustSubnetForUdr": {
+              "address": "10.10.11.4"
+            }
+          },
+          "publicIps": [
+            {
+              "address": "20.103.45.18",
+              "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ngfw-prod"
+            }
+          ],
+          "enableEgressNat": "ENABLED",
+          "egressNatIp": [
+            {
+              "address": "20.103.45.18",
+              "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ngfw-prod"
+            }
+          ],
+          "trustedRanges": [
+            "10.0.0.0/8",
+            "192.168.0.0/16"
+          ],
+          "privateSourceNatRulesDestination": []
+        },
+        "associatedRulestack": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod",
+          "location": "westeurope"
+        },
+        "dnsSettings": {
+          "enableDnsProxy": "ENABLED",
+          "enabledDnsType": "AZURE",
+          "dnsServers": []
+        },
+        "frontEndSettings": [
+          {
+            "name": "dnat-sftp-partner",
+            "protocol": "TCP",
+            "frontendConfiguration": {
+              "port": "22",
+              "address": {
+                "address": "20.103.45.18",
+                "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ngfw-prod"
+              }
+            },
+            "backendConfiguration": {
+              "port": "22",
+              "address": {
+                "address": "10.10.8.4"
+              }
+            }
+          }
+        ],
+        "planData": {
+          "usageType": "PAYG",
+          "billingCycle": "MONTHLY",
+          "planId": "panw-cngfw-payg",
+          "effectiveDate": "2026-09-30T08:20:00Z"
+        },
+        "marketplaceDetails": {
+          "marketplaceSubscriptionId": "6f2d8b14-3c9a-4e7f-a1b5-0d4c8e2f6a93",
+          "offerId": "pan_swfw_cloud_ngfw",
+          "publisherId": "paloaltonetworks",
+          "marketplaceSubscriptionStatus": "Subscribed"
+        }
+      }
+    }
+  ]
+}

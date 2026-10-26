@@ -286,6 +286,13 @@
       "private-endpoints (pe)",
       "bastion-hosts (bastion)",
       "ddos-plans (ddos)"
+    ],
+    "fw": [
+      "azure-firewalls (fw)",
+      "firewall-policies (fwp)",
+      "ip-groups (ipg)",
+      "cloud-ngfws (ngfw)",
+      "ngfw-rulestacks (rulestack)"
     ]
   },
   "sections": {
@@ -806,6 +813,58 @@
       "Managed rules",
       "Custom rules",
       "Associations",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Azure Firewall": [
+      "Overview",
+      "Network",
+      "Policy",
+      "Rules",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Cloud NGFW": [
+      "Overview",
+      "Network",
+      "Front end",
+      "Rules",
+      "Management",
+      "Status",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Cloud NGFW rulestack": [
+      "Overview",
+      "Rules",
+      "Objects",
+      "Security services",
+      "Firewalls",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Firewall policy": [
+      "Overview",
+      "Settings",
+      "Rule collection groups",
+      "Hierarchy",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "IP group": [
+      "Overview",
+      "Addresses",
+      "Used by",
       "Access",
       "Activity",
       "Related",

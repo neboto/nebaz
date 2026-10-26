@@ -1,0 +1,155 @@
+{
+  "value": [
+    {
+      "name": "1000",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/localRules/1000",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks/localRules",
+      "properties": {
+        "ruleName": "deny-all-else",
+        "priority": 1000,
+        "ruleState": "ENABLED",
+        "source": {
+          "cidrs": [
+            "any"
+          ]
+        },
+        "destination": {
+          "cidrs": [
+            "any"
+          ]
+        },
+        "applications": [
+          "any"
+        ],
+        "protocolPortList": [],
+        "actionType": "DenySilent",
+        "enableLogging": "ENABLED",
+        "decryptionRuleType": "None",
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "name": "100",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/localRules/100",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks/localRules",
+      "properties": {
+        "ruleName": "allow-spokes-web-egress",
+        "priority": 100,
+        "ruleState": "ENABLED",
+        "source": {
+          "prefixLists": [
+            "pl-spokes-prod"
+          ]
+        },
+        "destination": {
+          "fqdnLists": [
+            "fqdn-egress-allowed"
+          ]
+        },
+        "applications": [
+          "ssl",
+          "web-browsing"
+        ],
+        "protocolPortList": [
+          "TCP:443",
+          "TCP:80"
+        ],
+        "actionType": "Allow",
+        "enableLogging": "ENABLED",
+        "decryptionRuleType": "None",
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "name": "110",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/localRules/110",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks/localRules",
+      "properties": {
+        "ruleName": "allow-spokes-to-onprem-dns",
+        "priority": 110,
+        "ruleState": "ENABLED",
+        "source": {
+          "prefixLists": [
+            "pl-spokes-prod"
+          ]
+        },
+        "destination": {
+          "cidrs": [
+            "192.168.10.4/32"
+          ]
+        },
+        "applications": [
+          "dns"
+        ],
+        "protocolPortList": [
+          "UDP:53",
+          "TCP:53"
+        ],
+        "actionType": "Allow",
+        "enableLogging": "ENABLED",
+        "decryptionRuleType": "None",
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "name": "200",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/localRules/200",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks/localRules",
+      "properties": {
+        "ruleName": "allow-partner-sftp-dnat",
+        "priority": 200,
+        "ruleState": "ENABLED",
+        "source": {
+          "cidrs": [
+            "203.0.113.0/24"
+          ]
+        },
+        "destination": {
+          "cidrs": [
+            "10.10.8.4/32"
+          ]
+        },
+        "applications": [
+          "ssh"
+        ],
+        "protocolPortList": [
+          "TCP:22"
+        ],
+        "actionType": "Allow",
+        "enableLogging": "ENABLED",
+        "decryptionRuleType": "None",
+        "provisioningState": "Succeeded",
+        "auditComment": "Fabrikam SFTP drop, ticket SEC-2211"
+      }
+    },
+    {
+      "name": "300",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/localRules/300",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks/localRules",
+      "properties": {
+        "ruleName": "block-high-risk-countries",
+        "priority": 300,
+        "ruleState": "DISABLED",
+        "source": {
+          "countries": [
+            "KP",
+            "IR"
+          ]
+        },
+        "destination": {
+          "cidrs": [
+            "any"
+          ]
+        },
+        "applications": [
+          "any"
+        ],
+        "protocolPortList": [],
+        "actionType": "DenySilent",
+        "enableLogging": "ENABLED",
+        "decryptionRuleType": "None",
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

@@ -164,6 +164,31 @@ each one backs are in the catalog table
   routes are `POST`s outside `Reader`: `C` copies the commands, nebaz never
   sends them. `az network vpn-connection shared-key`, `az network
   express-route auth` and `show-device-config-script` are named forbidden.
+- **Firewall** (Azure Firewall, firewall policies, IP groups, Cloud NGFW):
+  `Microsoft.Network/azureFirewalls/read` (IP configurations and classic
+  rule collections arrive embedded), `Microsoft.Network/firewallPolicies/read`,
+  `Microsoft.Network/ipGroups/read`; a policy's lazy Rule collection groups
+  (also read for a firewall's Rules and for a child policy's base):
+  `Microsoft.Network/firewallPolicies/ruleCollectionGroups/read`. Palo Alto
+  Networks Cloud NGFW, a Marketplace resource provider
+  (`PaloAltoNetworks.Cloudngfw`, which must be registered in the
+  subscription for the lists to answer):
+  `PaloAltoNetworks.Cloudngfw/firewalls/read`,
+  `PaloAltoNetworks.Cloudngfw/firewalls/statuses/read` (the lazy Status),
+  `PaloAltoNetworks.Cloudngfw/localRulestacks/read`; a rulestack's lazy
+  Rules and Objects: `PaloAltoNetworks.Cloudngfw/localRulestacks/localRules/read`,
+  `PaloAltoNetworks.Cloudngfw/localRulestacks/prefixlists/read`,
+  `PaloAltoNetworks.Cloudngfw/localRulestacks/fqdnlists/read`. `Reader`'s
+  `*/read` covers them all. Global rulestacks are tenant-scoped
+  (`/providers/PaloAltoNetworks.Cloudngfw/globalRulestacks`, no subscription
+  in the path): outside a subscription `Reader`, never read. Never sent,
+  all `POST`s (the guard refuses each literal): an Azure Firewall's
+  `learnedIPPrefixes`; a Cloud NGFW's `getGlobalRulestack`, `getLogProfile`
+  and `getSupportInfo`; a rulestack's `listFirewalls`, `listAppIds`,
+  `listSecurityServices`, `listAdvancedSecurityObjects`, `getChangeLog`; a
+  rule's `getCounters`. A Cloud NGFW's Panorama registration string
+  (`configString`) and VM auth key are stripped before the row keeps the
+  JSON.
 - **Key Vault**: `Microsoft.KeyVault/vaults/read`; the lazy Secrets and Keys
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:

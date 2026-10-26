@@ -1,0 +1,65 @@
+{
+  "value": [
+    {
+      "name": "rcg-platform-baseline",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-platform-base/ruleCollectionGroups/rcg-platform-baseline",
+      "etag": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "type": "Microsoft.Network/FirewallPolicies/RuleCollectionGroups",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "priority": 100,
+        "ruleCollections": [
+          {
+            "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+            "name": "net-platform-allow",
+            "priority": 100,
+            "action": {
+              "type": "Allow"
+            },
+            "rules": [
+              {
+                "ruleType": "NetworkRule",
+                "name": "allow-azure-dns",
+                "ipProtocols": [
+                  "UDP",
+                  "TCP"
+                ],
+                "sourceAddresses": [
+                  "10.0.0.0/8"
+                ],
+                "sourceIpGroups": [],
+                "destinationAddresses": [
+                  "168.63.129.16"
+                ],
+                "destinationIpGroups": [],
+                "destinationFqdns": [],
+                "destinationPorts": [
+                  "53"
+                ]
+              },
+              {
+                "ruleType": "NetworkRule",
+                "name": "allow-ntp",
+                "ipProtocols": [
+                  "UDP"
+                ],
+                "sourceAddresses": [
+                  "10.0.0.0/8"
+                ],
+                "sourceIpGroups": [],
+                "destinationAddresses": [],
+                "destinationIpGroups": [],
+                "destinationFqdns": [
+                  "time.windows.com"
+                ],
+                "destinationPorts": [
+                  "123"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

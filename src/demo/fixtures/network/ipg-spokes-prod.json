@@ -1,0 +1,32 @@
+{
+  "name": "ipg-spokes-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod",
+  "etag": "W/\"0a1b2c3d-4e5f-5a6b-7c8d-9e0f1a2b3c4d\"",
+  "type": "Microsoft.Network/IpGroups",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "ipAddresses": [
+      "10.10.0.0/23",
+      "10.10.4.0/24",
+      "10.10.7.0/24",
+      "10.30.0.0/16"
+    ],
+    "firewalls": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-hub-prod"
+      }
+    ],
+    "firewallPolicies": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod"
+      }
+    ]
+  }
+}

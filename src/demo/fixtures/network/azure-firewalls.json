@@ -1,0 +1,62 @@
+{
+  "value": [
+    {
+      "name": "afw-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-hub-prod",
+      "etag": "W/\"3c6f1d2e-8a4b-5c7d-9e0f-1a2b3c4d5e6f\"",
+      "type": "Microsoft.Network/azureFirewalls",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200",
+        "retire": "after-ngfw-cutover"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "properties": {
+        "provisioningState": "Succeeded",
+        "sku": {
+          "name": "AZFW_VNet",
+          "tier": "Premium"
+        },
+        "threatIntelMode": "Alert",
+        "additionalProperties": {},
+        "ipConfigurations": [
+          {
+            "name": "ipconfig-afw",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-hub-prod/azureFirewallIpConfigurations/ipconfig-afw",
+            "type": "Microsoft.Network/azureFirewalls/azureFirewallIpConfigurations",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAddress": "10.10.9.4",
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureFirewallSubnet"
+              },
+              "publicIPAddress": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-afw-prod"
+              }
+            }
+          }
+        ],
+        "networkRuleCollections": [],
+        "applicationRuleCollections": [],
+        "natRuleCollections": [],
+        "firewallPolicy": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod"
+        },
+        "ipGroups": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod",
+            "changeNumber": "3"
+          }
+        ]
+      }
+    }
+  ]
+}

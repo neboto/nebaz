@@ -1,0 +1,12 @@
+{
+  "name": "default",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub-prod/statuses/default",
+  "type": "PaloAltoNetworks.Cloudngfw/firewalls/statuses",
+  "properties": {
+    "isPanoramaManaged": "FALSE",
+    "isStrataCloudManaged": "FALSE",
+    "healthStatus": "GREEN",
+    "healthReason": "All instances healthy",
+    "provisioningState": "Succeeded"
+  }
+}

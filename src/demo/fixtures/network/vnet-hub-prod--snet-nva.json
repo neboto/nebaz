@@ -5,7 +5,7 @@
   "type": "Microsoft.Network/virtualNetworks/subnets",
   "properties": {
     "provisioningState": "Succeeded",
-    "addressPrefix": "10.10.11.0/28",
+    "addressPrefix": "10.10.13.0/28",
     "delegations": [],
     "privateEndpointNetworkPolicies": "Disabled",
     "privateLinkServiceNetworkPolicies": "Enabled",

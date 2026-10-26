@@ -1,0 +1,142 @@
+{
+  "value": [
+    {
+      "name": "rcg-hub-application",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod/ruleCollectionGroups/rcg-hub-application",
+      "etag": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "type": "Microsoft.Network/FirewallPolicies/RuleCollectionGroups",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "priority": 300,
+        "ruleCollections": [
+          {
+            "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+            "name": "app-spokes-egress",
+            "priority": 200,
+            "action": {
+              "type": "Allow"
+            },
+            "rules": [
+              {
+                "ruleType": "ApplicationRule",
+                "name": "allow-acr-and-mcr",
+                "protocols": [
+                  {
+                    "protocolType": "Https",
+                    "port": 443
+                  }
+                ],
+                "sourceAddresses": [],
+                "sourceIpGroups": [
+                  "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod"
+                ],
+                "targetFqdns": [
+                  "*.azurecr.io",
+                  "mcr.microsoft.com",
+                  "*.data.mcr.microsoft.com"
+                ],
+                "fqdnTags": [],
+                "terminateTLS": false
+              },
+              {
+                "ruleType": "ApplicationRule",
+                "name": "allow-windows-update",
+                "protocols": [
+                  {
+                    "protocolType": "Https",
+                    "port": 443
+                  },
+                  {
+                    "protocolType": "Http",
+                    "port": 80
+                  }
+                ],
+                "sourceAddresses": [],
+                "sourceIpGroups": [
+                  "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod"
+                ],
+                "targetFqdns": [],
+                "fqdnTags": [
+                  "WindowsUpdate"
+                ],
+                "terminateTLS": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "rcg-hub-network",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod/ruleCollectionGroups/rcg-hub-network",
+      "etag": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "type": "Microsoft.Network/FirewallPolicies/RuleCollectionGroups",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "priority": 200,
+        "ruleCollections": [
+          {
+            "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+            "name": "net-deny-onprem-mgmt",
+            "priority": 300,
+            "action": {
+              "type": "Deny"
+            },
+            "rules": [
+              {
+                "ruleType": "NetworkRule",
+                "name": "deny-spokes-to-onprem-rdp",
+                "ipProtocols": [
+                  "TCP"
+                ],
+                "sourceAddresses": [],
+                "sourceIpGroups": [
+                  "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod"
+                ],
+                "destinationAddresses": [
+                  "192.168.0.0/16"
+                ],
+                "destinationIpGroups": [],
+                "destinationFqdns": [],
+                "destinationPorts": [
+                  "3389",
+                  "22"
+                ]
+              }
+            ]
+          },
+          {
+            "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+            "name": "net-spokes-to-onprem",
+            "priority": 100,
+            "action": {
+              "type": "Allow"
+            },
+            "rules": [
+              {
+                "ruleType": "NetworkRule",
+                "name": "allow-corp-dns",
+                "ipProtocols": [
+                  "UDP",
+                  "TCP"
+                ],
+                "sourceAddresses": [],
+                "sourceIpGroups": [
+                  "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod"
+                ],
+                "destinationAddresses": [
+                  "192.168.10.4"
+                ],
+                "destinationIpGroups": [],
+                "destinationFqdns": [],
+                "destinationPorts": [
+                  "53"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -159,7 +159,7 @@
             ],
             "properties": {
               "provisioningState": "Succeeded",
-              "privateIPAddress": "10.10.11.10",
+              "privateIPAddress": "10.10.13.10",
               "privateIPAllocationMethod": "Static",
               "privateIPAddressVersion": "IPv4",
               "subnet": {
