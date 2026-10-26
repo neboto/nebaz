@@ -44,6 +44,7 @@ use crate::azure::services::postgres_mysql::{Engine, FlexibleServerRow};
 use crate::azure::services::power_platform::EnterprisePolicyRow;
 use crate::azure::services::private_link::PrivateLinkServiceRow;
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
+use crate::azure::services::scale_sets::ScaleSetRow;
 use crate::azure::services::sql::SqlServerRow;
 use crate::azure::services::storage::StorageAccountRow;
 use crate::azure::services::traffic_manager::TrafficManagerRow;
@@ -188,6 +189,8 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         vm_actions(vm)
     } else if any.downcast_ref::<NicRow>().is_some() {
         nic_actions(id)
+    } else if let Some(s) = any.downcast_ref::<ScaleSetRow>() {
+        scale_set_actions(s)
     } else if let Some(c) = any.downcast_ref::<ClusterRow>() {
         cluster_actions(c)
     } else if let Some(p) = any.downcast_ref::<NodePoolRow>() {
@@ -302,6 +305,26 @@ fn vm_actions(vm: &VmRow) -> Option<Vec<CliAction>> {
         change(format!("az vm deallocate {}", i))
             .note("releases the compute; a dynamic public IP is released with it"),
     ]);
+    Some(out)
+}
+
+/// `az vmss` re-declares the scale-set name without an `id_part` on
+/// `show` (and `list-instances` names it oddly), so the name form
+/// throughout. Reads only: an extension listing would print `settings`.
+fn scale_set_actions(s: &ScaleSetRow) -> Option<Vec<CliAction>> {
+    let id = &s.base.id;
+    let named = name_args(&s.base.name, id)?;
+    let mut out = vec![
+        inspect(format!("az vmss get-instance-view {}", named)).note("the set's statuses and extension health"),
+        inspect(format!("az vmss list-instances {} --expand instanceView", named))
+            .note("each instance with its power state and whether it runs the latest model"),
+    ];
+    if s.is_flexible() {
+        out.push(
+            inspect(format!("az vm list --vmss {} --subscription {}", shell_quote(id), shell_quote(subscription_of(id)?)))
+                .note("the set's VMs, as the VMs sub-tab shows them"),
+        );
+    }
     Some(out)
 }
 
@@ -963,6 +986,17 @@ mod tests {
         assert!(a.iter().all(|x| x.label != "network bastion rdp"), "Linux VM: no RDP");
         assert!(find(&a, "monitor activity-log list").command.contains("--offset 7d"));
         assert!(find(&a, "role assignment list").command.ends_with("--include-inherited"));
+    }
+
+    #[test]
+    fn a_scale_set_reads_in_the_name_form() {
+        let s = mock("ScaleSetRow");
+        let a = actions_for(s.as_ref());
+        let tail = format!("-n vmss-1 -g {} --subscription {}", mocks::RG, crate::app::harness_tests::SUB_DEV);
+        assert_eq!(a[0].command, format!("az vmss show {tail}"));
+        assert_eq!(find(&a, "vmss list-instances").command, format!("az vmss list-instances {tail} --expand instanceView"));
+        assert!(a.iter().all(|x| x.tier == CliTier::Inspect), "reads only");
+        assert!(a.iter().all(|x| x.label != "vm list"), "Uniform: no VMs to list");
     }
 
     #[test]

@@ -13,7 +13,7 @@ use tokio::sync::mpsc;
 pub enum ServiceType {
     /// Subscriptions + resource groups — the scoping rows.
     Subscriptions,
-    /// Virtual machines, managed disks, NICs.
+    /// Virtual machines, managed disks, NICs, VM scale sets.
     VirtualMachines,
     /// Storage accounts + blob containers (via ARM).
     Storage,
@@ -105,6 +105,9 @@ pub enum JumpView {
     VirtualMachines,
     Disks,
     Nics,
+    /// `Microsoft.Compute/virtualMachineScaleSets`; Uniform instances are a
+    /// lazy section, Flexible ones are VMs.
+    ScaleSets,
     // Storage
     StorageAccounts,
     // Network
@@ -226,7 +229,7 @@ impl JumpView {
         use JumpView::*;
         match self {
             Subscriptions | ResourceGroups | AllResources => ServiceType::Subscriptions,
-            VirtualMachines | Disks | Nics => ServiceType::VirtualMachines,
+            VirtualMachines | Disks | Nics | ScaleSets => ServiceType::VirtualMachines,
             StorageAccounts => ServiceType::Storage,
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
             | NatGateways | PrivateEndpoints | BastionHosts | DdosPlans => ServiceType::Network,
@@ -265,6 +268,7 @@ impl JumpView {
             VirtualMachines => "vms",
             Disks => "disks",
             Nics => "nics",
+            ScaleSets => "scale-sets",
             StorageAccounts => "accounts",
             VirtualNetworks => "vnets",
             Subnets => "subnets",
@@ -338,6 +342,7 @@ impl JumpView {
             VirtualMachines => "VMs",
             Disks => "Disks",
             Nics => "NICs",
+            ScaleSets => "Scale sets",
             StorageAccounts => "Accounts",
             VirtualNetworks => "VNets",
             Subnets => "Subnets",
@@ -418,6 +423,7 @@ impl JumpView {
             ("microsoft.compute", ["virtualmachines"]) => JumpView::VirtualMachines,
             ("microsoft.compute", ["disks"]) => JumpView::Disks,
             ("microsoft.network", ["networkinterfaces"]) => JumpView::Nics,
+            ("microsoft.compute", ["virtualmachinescalesets"]) => JumpView::ScaleSets,
             ("microsoft.storage", ["storageaccounts"]) => JumpView::StorageAccounts,
             ("microsoft.network", ["virtualnetworks"]) => JumpView::VirtualNetworks,
             ("microsoft.network", ["virtualnetworks", "subnets"]) => JumpView::Subnets,
@@ -662,7 +668,7 @@ impl ServiceType {
     pub fn description(&self) -> &str {
         match self {
             ServiceType::Subscriptions => "Subscriptions, groups & all resources",
-            ServiceType::VirtualMachines => "Virtual Machines, Disks & NICs",
+            ServiceType::VirtualMachines => "Virtual Machines, Disks, NICs & Scale Sets",
             ServiceType::Storage => "Storage Accounts & Containers",
             ServiceType::Network => "VNets, NSGs, IPs, LBs, NAT, Bastion & DDoS",
             ServiceType::Dns => "DNS zones, resolvers, rulesets & Traffic Manager",
@@ -694,7 +700,7 @@ impl ServiceType {
         use JumpView::*;
         match self {
             ServiceType::Subscriptions => &[Subscriptions, ResourceGroups, AllResources],
-            ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics],
+            ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics, ScaleSets],
             ServiceType::Storage => &[StorageAccounts],
             ServiceType::Network => &[
                 VirtualNetworks,
@@ -776,6 +782,9 @@ impl ServiceType {
             "vm" | "vms" | "compute" | "virtualmachines" => (ServiceType::VirtualMachines, None),
             "disk" | "disks" => (ServiceType::VirtualMachines, Some(JumpView::Disks)),
             "nic" | "nics" => (ServiceType::VirtualMachines, Some(JumpView::Nics)),
+            "vmss" | "scaleset" | "scalesets" | "virtualmachinescalesets" => {
+                (ServiceType::VirtualMachines, Some(JumpView::ScaleSets))
+            }
             "st" | "storage" | "blob" | "blobs" | "storageaccounts" => (ServiceType::Storage, None),
             "vnet" | "vnets" | "net" | "network" => (ServiceType::Network, None),
             "subnet" | "subnets" => (ServiceType::Network, Some(JumpView::Subnets)),
@@ -941,7 +950,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1080,6 +1089,10 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Compute/virtualMachines/vm")), Some(JumpView::VirtualMachines));
         assert_eq!(JumpView::for_arm_id(&p("microsoft.compute/DISKS/d")), Some(JumpView::Disks));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/networkInterfaces/n")), Some(JumpView::Nics));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Compute/virtualMachineScaleSets/ss")), Some(JumpView::ScaleSets));
+        // A Uniform instance is in no list: its id is copied, not jumped to.
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Compute/virtualMachineScaleSets/ss/virtualMachines/0")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Compute/virtualMachineScaleSets/ss/virtualMachines/0")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Storage/storageAccounts/a")), Some(JumpView::StorageAccounts));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v")), Some(JumpView::VirtualNetworks));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworks/v/subnets/s")), Some(JumpView::Subnets));

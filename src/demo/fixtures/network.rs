@@ -131,6 +131,8 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-dns-outbound", "vnet-hub-prod--snet-dns-outbound.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/GatewaySubnet", "vnet-hub-prod--GatewaySubnet.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-nva", "vnet-hub-prod--snet-nva.json"),
+    // The scale sets' subnet (compute's story, 10.10.14.0/24).
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-compute", "vnet-hub-prod--snet-compute.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureBastionSubnet", "vnet-hub-prod--AzureBastionSubnet.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pls", "vnet-hub-prod--snet-pls.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr", "vnet-pp-dr.json"),
@@ -147,6 +149,9 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-app-01", "nic-vm-legacy-app-01.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-batch-01", "nic-vm-legacy-batch-01.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-nva-01", "nic-vm-nva-01.json"),
+    // vmss-batch-flex's VMs (compute's story; their NICs live here).
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/vmss-batch-flex_3f2a9c1e-nic-batch", "vmss-batch-flex_3f2a9c1e-nic-batch.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/vmss-batch-flex_8b41d7a0-nic-batch", "vmss-batch-flex_8b41d7a0-nic-batch.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-kv-orders.nic.627b416c-1fd3-5bef-a63d-32327b7ae259", "pe-kv-orders-nic.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-sql-orders.nic.688b7d08-8973-524c-a37a-37618965c924", "pe-sql-orders-nic.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/pe-st-orders-blob.nic.70046295-69ae-5484-b910-39a0f34e5694", "pe-st-orders-blob-nic.json"),

@@ -79,6 +79,8 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `vm-jump-01` has a public IP | Related, `@pip` (no audit check: the lists `@audit` reads carry no NIC's public IP) |
 | `disk-legacy-data-01`: 1 TiB Premium SSD, unattached | Disks state, `@audit` (info) |
 | `vm-legacy-app-01` deallocated for 40 days | VMs state |
+| `vmss-legacy-web` (Uniform, Manual upgrades, three instances in `snet-compute` 10.10.14.0/24): instance 2 still runs the July image | Scale sets (Instances), `@audit` (info) |
+| `vmss-batch-flex` (Flexible, Spot with one regular VM first): its two VMs `vmss-batch-flex_3f2a9c1e` (running) and `vmss-batch-flex_8b41d7a0` (Spot, deallocated) are in the VMs list, each linking back to the set | VMs, Scale sets (Instances) |
 | `stcontosoordersprod` allows blob public access, minimum TLS 1.0 | `@audit` |
 | `privatelink.blob.core.windows.net` has the PE's A record but no link to `vnet-hub-prod`: the blob PE resolves publicly | DNS topology |
 | The Container Apps environment's private zone is linked to `vnet-hub-prod` but not to Power Platform's failover VNet `vnet-pp-dr` | DNS topology |
@@ -92,7 +94,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
 | `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
 | `nic-vm-legacy-batch-01` and `pip-vm-legacy-batch-01`, left behind by a deleted VM: a NIC attached to nothing, a static public IP attached to nothing | `@audit` (info) |
-| `snet-nva`, `snet-data`, `snet-dns-outbound`, `snet-pls`, `AzureBastionSubnet` and the Cloud NGFW's two subnets have no NSG (GatewaySubnet, AzureFirewallSubnet and the PE-only `snet-pe` are exempt) | `@audit` (low) |
+| `snet-nva`, `snet-data`, `snet-dns-outbound`, `snet-pls`, `snet-compute`, `AzureBastionSubnet` and the Cloud NGFW's two subnets have no NSG (GatewaySubnet, AzureFirewallSubnet and the PE-only `snet-pe` are exempt) | `@audit` (low) |
 | `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.11.4, `ngfw-hub-prod`'s trust IP: its Routes name the firewall and ⏎ opens it, once `@ngfw` is loaded | Network · Routes |
 | `afw-hub-prod` (Azure Firewall Premium) still runs after the cutover to `ngfw-hub-prod`: no route table sends traffic to it (its Network section, once `@rt` is loaded) | Firewall |
 | `mysql-reporting-legacy`: public access, `require_secure_transport` OFF | `@audit` |

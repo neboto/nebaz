@@ -16,6 +16,8 @@ use crate::azure::services::directory::now_unix;
 use crate::azure::services::messaging::{api_version_for as messaging_api_version, messaging_child_path};
 use crate::azure::services::postgres_mysql::{api_version_for as flex_api_version, flexible_server_child_path};
 use crate::azure::services::redis::{redis_child_path, REDIS_API_VERSION};
+use crate::azure::services::compute::VMSS_API_VERSION;
+use crate::azure::services::scale_sets::{InstancesRequest, ScaleSetRow};
 use crate::azure::services::sql::{server_child_path, SQL_API_VERSION};
 use crate::event::Event;
 use crate::lazy::{Lazy, LazyApply};
@@ -245,6 +247,24 @@ impl App {
             let fut = self.azure_clients.get_fetch(&site_config_path(&id), WEB_API_VERSION);
             self.trigger_lazy(|s| &mut s.site_configs, id, event_tx, move || fut);
         }
+        // A Uniform scale set's instances (a Flexible set's VMs carry no
+        // model flag, so no call for them).
+        let requests: Vec<(String, InstancesRequest)> = self
+            .cache
+            .get_ref(&ServiceType::VirtualMachines, &sub, Some(JumpView::ScaleSets.as_str()))
+            .map(|l| {
+                l.iter()
+                    .filter_map(|r| r.as_any().downcast_ref::<ScaleSetRow>())
+                    .filter(|s| !s.is_flexible())
+                    .take(AUDIT_LAZY_MAX)
+                    .filter_map(|s| Some((s.base.id.clone(), s.instances_request()?)))
+                    .collect()
+            })
+            .unwrap_or_default();
+        for (id, (path, query)) in requests {
+            let fut = self.azure_clients.list_fetch_query(&path, VMSS_API_VERSION, query);
+            self.trigger_lazy(|s| &mut s.vmss_instances, id, event_tx, move || fut);
+        }
     }
 
     /// Whether anything `r` started is still in flight: a source list, or
@@ -263,6 +283,7 @@ impl App {
                 + l.messaging_network_rules.loading_count()
                 + l.site_configs.loading_count()
                 + l.flow_logs.loading_count()
+                + l.vmss_instances.loading_count()
                 > 0
     }
 

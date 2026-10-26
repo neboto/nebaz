@@ -275,7 +275,8 @@
     "vm": [
       "vms (vm)",
       "disks (disk)",
-      "nics (nic)"
+      "nics (nic)",
+      "scale-sets (vmss)"
     ],
     "vnet": [
       "vnets (vnet)",
@@ -889,6 +890,17 @@
       "Overview",
       "Addresses",
       "Used by",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "VM Scale Set": [
+      "Overview",
+      "Model",
+      "Scaling",
+      "Network",
+      "Instances",
       "Access",
       "Activity",
       "Related",

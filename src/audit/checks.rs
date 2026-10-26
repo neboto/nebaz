@@ -43,6 +43,7 @@ use crate::azure::services::network_private::{PrivateEndpointRow, PrivateLinkCon
 use crate::azure::services::postgres_mysql::{Engine, FlexibleServerRow};
 use crate::azure::services::power_platform::{EnterprisePolicyRow, POWER_PLATFORM_DELEGATION};
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
+use crate::azure::services::scale_sets::{ScaleSetRow, VmssInstance};
 use crate::azure::services::sql::SqlServerRow;
 use crate::azure::services::storage::StorageAccountRow;
 use crate::lazy::Lazy;
@@ -72,6 +73,7 @@ const MYSQL: &[V] = &[V::MysqlServers];
 const FOUNDRY: &[V] = &[V::AiAccounts];
 const WAFS: &[V] = &[V::WafPolicies];
 const DISKS: &[V] = &[V::Disks];
+const SCALE_SETS: &[V] = &[V::ScaleSets];
 const VNETS: &[V] = &[V::VirtualNetworks];
 const PES: &[V] = &[V::PrivateEndpoints];
 const PIPS: &[V] = &[V::PublicIps];
@@ -86,7 +88,7 @@ const FWPS: &[V] = &[V::FirewallPolicies];
 const NGFWS: &[V] = &[V::CloudNgfws];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 70] = [
+pub static CHECKS: [Check; 71] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -622,6 +624,14 @@ pub static CHECKS: [Check; 70] = [
         fix: "Snapshot it if the data may be needed, then delete it; or attach it to the VM that should own it.",
         sources: &[DISKS],
         run: disk_unattached,
+    },
+    Check {
+        id: "vmss-instance-not-latest-model",
+        title: "Scale set instances not on the latest model",
+        why: "A Uniform scale set under a Manual upgrade policy (or a rolling upgrade that stopped) leaves instances on an older model: a previous image, size, extension or network setting, so a fix made to the model has not reached them. Hygiene, so info.",
+        fix: "Upgrade the listed instances (the scale set's Instances blade, Upgrade), or check why the rolling upgrade stopped.",
+        sources: &[SCALE_SETS],
+        run: vmss_instance_not_latest_model,
     },
     // ── Power Platform ──
     Check {
@@ -2180,6 +2190,36 @@ fn disk_unattached(check: &'static Check, input: &AuditInput, out: &mut Vec<Audi
         }
         out.push(AuditFinding::about(check, Severity::Info, d, format!("unattached, {}", size)).with_evidence(evidence));
     }
+}
+
+/// Uniform sets only: a Flexible set's VMs have no `latestModelApplied`.
+fn vmss_instance_not_latest_model(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for s in input.of::<ScaleSetRow>(V::ScaleSets).filter(|s| !s.is_flexible()) {
+        let Some(items) = gaps.see(&s.base.name, input.lazy().and_then(|l| l.vmss_instances.get(&s.base.id))) else {
+            continue;
+        };
+        let stale: Vec<VmssInstance> = items
+            .iter()
+            .map(VmssInstance::from_json)
+            .filter(|i| i.latest_model == Some(false))
+            .collect();
+        if stale.is_empty() {
+            continue;
+        }
+        let mut evidence = vec![format!(
+            "upgradePolicy: {} · {} of {} instances behind",
+            json::opt(s.upgrade_mode.clone()),
+            stale.len(),
+            items.len()
+        )];
+        evidence.extend(stale.iter().map(|i| format!("{}: latestModelApplied false", i.name)));
+        out.push(
+            AuditFinding::about(check, Severity::Info, s, format!("{} of {} instances on an older model", stale.len(), items.len()))
+                .with_evidence(evidence),
+        );
+    }
+    gaps.note(check, "instances", "Instances", out);
 }
 
 // ── Power Platform ────────────────────────────────────────────────────

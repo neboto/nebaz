@@ -34,6 +34,7 @@ pub mod postgres_mysql;
 pub mod power_platform;
 pub mod private_link;
 pub mod redis;
+pub mod scale_sets;
 pub mod sql;
 pub mod storage;
 pub mod subscriptions;

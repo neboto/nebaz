@@ -18,8 +18,9 @@ use crate::azure::services::aks::{
 };
 use crate::azure::services::compute::{
     disk_section_lines, instance_view_path, nic_section_lines, vm_section_lines, DiskDetailSection, DiskRow,
-    NicDetailSection, NicRow, VmDetailSection, VmRow, VM_API_VERSION,
+    NicDetailSection, NicRow, VmDetailSection, VmRow, VMSS_API_VERSION, VM_API_VERSION,
 };
+use crate::azure::services::scale_sets::{scale_set_section_lines, ScaleSetDetailSection, ScaleSetRow};
 use crate::azure::services::foundry::{
     child_path, foundry_section_lines, FoundryDetailSection, FoundryRow, FOUNDRY_API_VERSION,
 };
@@ -1740,6 +1741,23 @@ impl App {
         );
     }
 
+    /// On-enter hook for a scale set's Instances: one list per set, its
+    /// shape by orchestration mode (`ScaleSetRow::instances_request`).
+    pub fn trigger_vmss_instances(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some((path, query)) = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<ScaleSetRow>())
+            .and_then(ScaleSetRow::instances_request)
+        else {
+            return;
+        };
+        app.trigger_selected(
+            |s| &mut s.vmss_instances,
+            event_tx,
+            move |c, _| c.list_fetch_query(&path, VMSS_API_VERSION, query),
+        );
+    }
+
     /// On-enter hook for a storage account's Containers: one ARM list per
     /// account, on demand (the Storage RP's throttled budget).
     pub fn trigger_containers(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
@@ -2834,6 +2852,13 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<DiskRow>() {
             return Some(disk_section_lines(r, DiskDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<ScaleSetRow>() {
+            return Some(scale_set_section_lines(
+                r,
+                ScaleSetDetailSection::from_index(idx),
+                self.lazy.vmss_instances.get(r.id()),
+            ));
         }
         if let Some(r) = any.downcast_ref::<NicRow>() {
             return Some(nic_section_lines(r, NicDetailSection::from_index(idx)));

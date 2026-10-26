@@ -68,6 +68,52 @@
           ]
         }
       }
+    },
+    {
+      "name": "vmss-batch-flex_3f2a9c1e",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vmss-batch-flex_3f2a9c1e",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "westeurope",
+      "properties": {
+        "instanceView": {
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-6d}}"
+            },
+            {
+              "code": "PowerState/running",
+              "level": "Info",
+              "displayStatus": "VM running"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "vmss-batch-flex_8b41d7a0",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vmss-batch-flex_8b41d7a0",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "westeurope",
+      "properties": {
+        "instanceView": {
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-6d}}"
+            },
+            {
+              "code": "PowerState/deallocated",
+              "level": "Info",
+              "displayStatus": "VM deallocated"
+            }
+          ]
+        }
+      }
     }
   ]
 }

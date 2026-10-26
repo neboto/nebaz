@@ -377,7 +377,9 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
     };
     let chain: Vec<&str> = chain.iter().map(String::as_str).collect();
     match (ns.as_str(), chain.as_slice()) {
-        ("microsoft.compute", ["virtualmachines"]) => VM,
+        // A scale set's host metrics have the VM's names, aggregated
+        // over its instances.
+        ("microsoft.compute", ["virtualmachines"]) | ("microsoft.compute", ["virtualmachinescalesets"]) => VM,
         ("microsoft.containerservice", ["managedclusters"]) => AKS,
         ("microsoft.app", ["containerapps"]) => CONTAINER_APP,
         ("microsoft.web", ["sites"]) | ("microsoft.web", ["sites", "slots"]) => WEB_SITE,
@@ -833,6 +835,8 @@ pub(crate) mod tests {
         assert!(names(VM_ID).contains(&"Percentage CPU"));
         let p = |t: &str| format!("/subscriptions/0000/resourceGroups/rg/providers/{}", t);
         assert!(names(&p("Microsoft.Sql/servers/s/databases/orders")).contains(&"cpu_percent"));
+        assert!(names(&p("Microsoft.Compute/virtualMachineScaleSets/ss")).contains(&"Available Memory Bytes"));
+        assert!(!supports_metrics(&p("Microsoft.Compute/virtualMachineScaleSets/ss/virtualMachines/0")));
         assert!(names(&p("Microsoft.DBforPostgreSQL/flexibleServers/pg")).contains(&"connections_failed"));
         assert!(names(&p("Microsoft.DBforMySQL/flexibleServers/my")).contains(&"aborted_connections"));
         assert!(names(&p("microsoft.insights/components/ai")).contains(&"requests/failed"));

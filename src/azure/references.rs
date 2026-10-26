@@ -224,7 +224,7 @@ impl ReverseIndex {
 pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
     use JumpView::*;
     match target {
-        NetworkSecurityGroups => &[Nics, Subnets],
+        NetworkSecurityGroups => &[Nics, Subnets, ScaleSets],
         Subnets => &[
             Nics,
             PrivateEndpoints,
@@ -239,6 +239,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             AzureFirewalls,
             CloudNgfws,
             PrivateLinkServices,
+            ScaleSets,
         ],
         VirtualNetworks => &[
             Nics,
@@ -268,6 +269,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             MysqlServers,
             AppGateways,
             FrontDoorProfiles,
+            ScaleSets,
         ],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
         PublicIps => &[
@@ -281,6 +283,8 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             TrafficManagerProfiles,
         ],
         Disks => &[VirtualMachines],
+        // A Flexible set's VMs name it.
+        ScaleSets => &[VirtualMachines],
         Nics => &[VirtualMachines, PrivateEndpoints, AppGateways],
         RouteTables | NatGateways => &[Subnets],
         AppServicePlans => &[WebApps],
@@ -289,8 +293,8 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
         ContainerApps => &[AppGateways, FrontDoorProfiles],
         // ... and a Traffic Manager Azure endpoint.
         WebApps => &[AppGateways, FrontDoorProfiles, TrafficManagerProfiles],
-        // A Private Link service's frontend; a Front Door origin's target.
-        LoadBalancers => &[PrivateLinkServices],
+        // A scale set's backend pools; a Private Link service's frontend; a Front Door origin's target.
+        LoadBalancers => &[ScaleSets, PrivateLinkServices],
         PrivateLinkServices => &[FrontDoorProfiles, PrivateEndpoints],
         AppGateways => &[PublicIps, WafPolicies],
         WafPolicies => &[AppGateways, FrontDoorProfiles],
