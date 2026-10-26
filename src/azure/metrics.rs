@@ -354,6 +354,12 @@ const AZURE_FIREWALL: &[MetricSpec] = &[
     m("ApplicationRuleHit", "Application rule hits", Total),
     m("FirewallLatencyPng", "Latency (probe)", Avg),
 ];
+/// Recovery Services and Backup vaults: the health events Azure Monitor
+/// raises for backup and restore jobs (split by `healthStatus`).
+const BACKUP_VAULT: &[MetricSpec] = &[
+    m("BackupHealthEvent", "Backup health events", Count),
+    m("RestoreHealthEvent", "Restore health events", Count),
+];
 
 /// A Private Link service: traffic through it and its NAT port use (the
 /// exhaustion that drops new consumer flows).
@@ -408,6 +414,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.network", ["azurefirewalls"]) => AZURE_FIREWALL,
         ("microsoft.network", ["privatelinkservices"]) => PRIVATE_LINK_SERVICE,
         ("microsoft.network", ["trafficmanagerprofiles"]) => TRAFFIC_MANAGER,
+        ("microsoft.recoveryservices", ["vaults"]) | ("microsoft.dataprotection", ["backupvaults"]) => BACKUP_VAULT,
         _ => &[],
     }
 }
@@ -854,13 +861,15 @@ pub(crate) mod tests {
         assert!(!supports_metrics(&p("Microsoft.Network/localNetworkGateways/lgw")));
         assert!(names(&p("Microsoft.Network/azureFirewalls/afw")).contains(&"SNATPortUtilization"));
         assert!(!supports_metrics(&p("Microsoft.Network/firewallPolicies/fwp")));
+        assert!(names(&p("Microsoft.RecoveryServices/vaults/rsv")).contains(&"BackupHealthEvent"));
+        assert!(names(&p("Microsoft.DataProtection/backupVaults/bv")).contains(&"RestoreHealthEvent"));
         assert!(!supports_metrics(&p("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/w")));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));
         assert!(is_arm_resource(&p("Microsoft.Network/virtualNetworks/v")));
         assert!(!is_arm_resource("/subscriptions/0000"));
-        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS, APP_GATEWAY, FRONT_DOOR, ER_CIRCUIT, VNET_GATEWAY, GATEWAY_CONNECTION, AZURE_FIREWALL] {
+        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS, APP_GATEWAY, FRONT_DOOR, ER_CIRCUIT, VNET_GATEWAY, GATEWAY_CONNECTION, AZURE_FIREWALL, BACKUP_VAULT] {
             assert!((2..=6).contains(&set.len()));
         }
     }

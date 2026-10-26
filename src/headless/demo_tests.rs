@@ -35,6 +35,8 @@ const PLANTED: &[(&str, &str)] = &[
     ("/providers/Microsoft.Sql/servers/sql-orders-prod/databases/", "not a type nebaz lists"),
     ("/Redis/redis-orders-cache", "6379"),
     ("/namespaces/sb-orders-prod", "dead"),
+    // data: vm-nva-01's backups fail (no network to the backup service).
+    ("/vaults/rsv-contoso-prod", "vm-nva-01"),
     // network: the branch office's backup VPN tunnel is down.
     ("/connections/cn-vpn-branch-office", "NotConnected"),
     // network: contoso-dev's endpoint to the partner Private Link service
@@ -93,6 +95,8 @@ const AUDIT_EXPECTED: &[&str] = &[
     "mysql-password-no-entra",
     "sb-local-auth",
     "sb-public-network",
+    "backup-item-failing",
+    "backup-vault-hardening",
     // identity
     "appreg-credential-expiry",
     "foundry-public-network",

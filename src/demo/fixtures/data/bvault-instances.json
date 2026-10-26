@@ -1,0 +1,47 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupInstances/stcontosoordersprod-stcontosoordersprod-3c1f9a2e-7b4d-4e6a-9c0f-1d2e3f4a5b6c",
+      "name": "stcontosoordersprod-stcontosoordersprod-3c1f9a2e-7b4d-4e6a-9c0f-1d2e3f4a5b6c",
+      "type": "Microsoft.DataProtection/backupVaults/backupInstances",
+      "properties": {
+        "objectType": "BackupInstance",
+        "friendlyName": "stcontosoordersprod",
+        "provisioningState": "Succeeded",
+        "currentProtectionState": "ProtectionConfigured",
+        "protectionStatus": {"status": "ProtectionConfigured"},
+        "dataSourceInfo": {
+          "objectType": "Datasource",
+          "datasourceType": "Microsoft.Storage/storageAccounts/blobServices",
+          "resourceID": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+          "resourceName": "stcontosoordersprod",
+          "resourceType": "Microsoft.Storage/storageAccounts",
+          "resourceLocation": "westeurope",
+          "resourceUri": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod"
+        },
+        "policyInfo": {"policyId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupPolicies/pol-blob-operational-30d"}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupInstances/psql-orders-prod-psql-orders-prod-8a2d4c6e-1f3b-4d5a-b7c9-0e1f2a3b4c5d",
+      "name": "psql-orders-prod-psql-orders-prod-8a2d4c6e-1f3b-4d5a-b7c9-0e1f2a3b4c5d",
+      "type": "Microsoft.DataProtection/backupVaults/backupInstances",
+      "properties": {
+        "objectType": "BackupInstance",
+        "friendlyName": "psql-orders-prod",
+        "provisioningState": "Succeeded",
+        "currentProtectionState": "ProtectionConfigured",
+        "protectionStatus": {"status": "ProtectionConfigured"},
+        "dataSourceInfo": {
+          "objectType": "Datasource",
+          "datasourceType": "Microsoft.DBforPostgreSQL/flexibleServers",
+          "resourceID": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod",
+          "resourceName": "psql-orders-prod",
+          "resourceType": "Microsoft.DBforPostgreSQL/flexibleServers",
+          "resourceLocation": "westeurope"
+        },
+        "policyInfo": {"policyId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupPolicies/pol-pg-weekly-90d"}
+      }
+    }
+  ]
+}
