@@ -1,0 +1,44 @@
+{
+  "computerName": "batchflex8B41D7",
+  "osName": "ubuntu",
+  "osVersion": "24.04",
+  "hyperVGeneration": "V2",
+  "vmAgent": {
+    "vmAgentVersion": "Unknown",
+    "statuses": [
+      {
+        "code": "ProvisioningState/Unavailable",
+        "level": "Warning",
+        "displayStatus": "Not Ready",
+        "message": "VM status blob is found but not yet populated.",
+        "time": "{{iso:now-6d}}"
+      }
+    ]
+  },
+  "disks": [
+    {
+      "name": "vmss-batch-flex_8b41d7a0_OsDisk_1_d1b7f3a96e244c8085fa2c9e7a3d1b58",
+      "statuses": [
+        {
+          "code": "ProvisioningState/succeeded",
+          "level": "Info",
+          "displayStatus": "Provisioning succeeded",
+          "time": "{{iso:now-6d}}"
+        }
+      ]
+    }
+  ],
+  "statuses": [
+    {
+      "code": "ProvisioningState/succeeded",
+      "level": "Info",
+      "displayStatus": "Provisioning succeeded",
+      "time": "{{iso:now-6d}}"
+    },
+    {
+      "code": "PowerState/deallocated",
+      "level": "Info",
+      "displayStatus": "VM deallocated"
+    }
+  ]
+}

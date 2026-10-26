@@ -186,10 +186,10 @@ fn services_lists_every_service_and_subtab() {
     assert_eq!(v["count"], items.len());
     let vm = items.iter().find(|s| s["prefix"] == "vm").unwrap();
     let subtabs: Vec<&str> = vm["subtabs"].as_array().unwrap().iter().map(|t| t["prefix"].as_str().unwrap()).collect();
-    assert_eq!(subtabs, vec!["vm", "disk", "nic"]);
+    assert_eq!(subtabs, vec!["vm", "disk", "nic", "vmss"]);
     let md = services(OutputFormat::Md);
     assert!(md.starts_with("| Prefix | Service | Sub-tabs |"));
-    assert!(md.contains("| `vm` | Virtual Machines | VMs (`vm`), Disks (`disk`), NICs (`nic`) |"), "{md}");
+    assert!(md.contains("| `vm` | Virtual Machines | VMs (`vm`), Disks (`disk`), NICs (`nic`), Scale sets (`vmss`) |"), "{md}");
 }
 
 #[tokio::test]

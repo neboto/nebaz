@@ -6,8 +6,8 @@ use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
     aks, app_service, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
-    keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, sql,
-    storage,
+    keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
+    sql, storage,
 };
 use crate::lazy::LazyStore;
 use serde_json::json;
@@ -1084,6 +1084,44 @@ fn an_unattached_disk_is_info() {
     let rows = audit("disk-unattached", &lists, None);
     assert_eq!(findings(&rows), vec![("d-loose".into(), Severity::Info)], "Reserved is a deallocated VM's disk");
     assert_eq!(rows[0].reason, "unattached, 1024 GiB");
+}
+
+fn scale_set(name: &str, mode: &str) -> Box<dyn Resource> {
+    let v = body(
+        &format!("Microsoft.Compute/virtualMachineScaleSets/{name}"),
+        json!({"orchestrationMode": mode, "upgradePolicy": {"mode": "Manual"}}),
+    );
+    boxed(scale_sets::ScaleSetRow::from_json(&v, None))
+}
+
+fn instance(set: &str, n: u32, latest: Option<bool>) -> Value {
+    let mut props = json!({"provisioningState": "Succeeded"});
+    if let Some(l) = latest {
+        props["latestModelApplied"] = json!(l);
+    }
+    json!({"id": id(&format!("Microsoft.Compute/virtualMachineScaleSets/{set}/virtualMachines/{n}")),
+           "name": format!("{set}_{n}"), "properties": props})
+}
+
+#[test]
+fn a_uniform_instance_behind_the_model_is_info_and_flexible_sets_are_skipped() {
+    let lists = vec![(
+        V::ScaleSets,
+        vec![scale_set("vmss-stale", "Uniform"), scale_set("vmss-current", "Uniform"), scale_set("vmss-cold", "Uniform"), scale_set("vmss-flex", "Flexible")],
+    )];
+    let set = |n: &str| id(&format!("Microsoft.Compute/virtualMachineScaleSets/{n}"));
+    let mut lazy = LazyStore::new(0);
+    lazy.vmss_instances.apply(
+        set("vmss-stale"),
+        Ok(vec![instance("vmss-stale", 0, Some(true)), instance("vmss-stale", 1, Some(false))]),
+    );
+    lazy.vmss_instances.apply(set("vmss-current"), Ok(vec![instance("vmss-current", 0, Some(true))]));
+    lazy.vmss_instances.apply(set("vmss-flex"), Ok(vec![instance("vmss-flex", 0, None)]));
+    let rows = audit("vmss-instance-not-latest-model", &lists, Some(&lazy));
+    assert_eq!(findings(&rows), vec![("vmss-stale".into(), Severity::Info)]);
+    let stale = rows.iter().find(|f| f.kind == RowKind::Finding).unwrap();
+    assert_eq!(stale.reason, "1 of 2 instances on an older model");
+    assert_eq!(notes(&rows), vec!["1 of 3 not checked — r fetches instances".to_string()], "the Flexible set is not counted");
 }
 
 // ── Directory ──

@@ -84,7 +84,9 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
    whose `show` takes no `--ids` (`az account show`, `az group show`,
    `az keyvault show`, `az aks show`, `az aks nodepool show`,
    `az cognitiveservices account show`, `az acr show`,
-   `az functionapp show`, `az logicapp show`), which use the name form with `--subscription`.
+   `az functionapp show`, `az logicapp show`, `az vmss show`), which use the name form with `--subscription`.
+   `vmss show` re-declares the scale-set name with `id_part=None`
+   (because of `--instance-id`; azure-cli `_params.py`, 2026-10-26).
    `functionapp show` re-declares its name argument without an `id_part`,
    so its `--ids` support is not certain from the source; the name form
    works either way. Verified live 2026-09-23; the Cognitive Services one
@@ -231,7 +233,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics
     for the selected row, owning the detail pane until `Esc` (`Z` full
     width). The default set is curated by **ARM type**, not row struct,
-    so an All resources row (a SQL database) gets it too: VM, AKS,
+    so an All resources row (a SQL database) gets it too: VM (and VM scale
+    set: the same host metric names, over its instances), AKS,
     Container App, web app (and slot), App Service plan, SQL database,
     storage account, Key Vault, Cosmos account, load balancer, public IP,
     NAT gateway, container registry, Application Insights, Foundry /
@@ -269,7 +272,10 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `nsg` / `route-table` / `vnet subnet show` take `--ids`; `aks`,
     `functionapp`, `logicapp`, `ssh vm`, `serial-console`, `acr`,
     `keyvault … list`, `storage account network-rule`, `sql … list` use
-    names. Per type: **VM** get-instance-view, boot log · ssh vm, Bastion
+    names. **VM scale set** (reads only, the name form: `vmss show` has no
+    `id_part`) get-instance-view, list-instances with the instance view,
+    and for a Flexible set `vm list --vmss {id}`; never `vmss extension
+    list` (it prints `settings`). Per type: **VM** get-instance-view, boot log · ssh vm, Bastion
     ssh (rdp on Windows; the Bastion host is a placeholder), serial
     console · start, restart, stop, deallocate. **NIC** effective NSG and
     routes (Azure `POST`s; not under `Reader`). **AKS** get-upgrades,
@@ -587,9 +593,10 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Changes · All / Activity / Deployments / Health (rule 24) | — (an event: Overview is its named fields, then Related; no Access, Activity or Tags) | `failed` on a failed operation or deployment, an unavailable or degraded transition; else none; noise per rule 22 | what it happened to; a deployment's group and what it deployed; an alert's rule | `az monitor activity-log list --correlation-id {c} --subscription {sub}` · `az deployment group show -g {rg} -n {name} --subscription {sub}` · none for health |
 | Subscriptions · All resources | — (Overview: type, kind, SKU, identity, managed by, created, changed, and whether nebaz browses the type) | ladder on the expanded `provisioningState` | `Open in {Service › Sub-tab}` when browsed (Enter on the list row does the same), `managedBy` | `az resource show --ids` |
 | Subscriptions · Resource Groups | — | stateless when `Succeeded` | `managedBy` id when set | `az group show -n {name} --subscription {sub}` |
-| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) · (Overview and list summary: the marketplace plan as the kind, rule 27) | power state | each NIC, OS and data disks, availability set, user-assigned identities | `az vm show` |
+| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) · (Overview and list summary: the marketplace plan as the kind, rule 27; the scale set a Flexible instance belongs to) | power state | each NIC, OS and data disks, availability set, the scale set (`virtualMachineScaleSet.id`), user-assigned identities | `az vm show` |
 | Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
 | Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
+| Virtual Machines · Scale sets | Model (image, VM size, OS disk type and size, ephemeral, data disks, security type, computer name prefix, extensions by **name and type only**: `settings`, `protectedSettings`, `customData` and `userData` are stripped before the raw JSON is kept) · Scaling (capacity, orchestration Uniform / Flexible, upgrade policy and automatic OS upgrades, overprovision (Uniform), zones, zone balance, fault domains, single placement group, priority, eviction and max price, Spot restore, priority mix, automatic repairs, scale-in policy) · Network (each NIC configuration: accelerated networking, IP forwarding, NSG; each IP configuration's subnet, load balancer backend and NAT pools and application gateway pools as their parent, per-instance public IP; the health probe's load balancer) · Instances ⧗ (name, power state, zone, latest model for Uniform; a Uniform instance's id is copied, a Flexible set's VM jumps) · (list summary: mode · size × capacity) | ladder only | subnets, load balancers, application gateways, NSGs, user-assigned identities, proximity placement group and host group (All resources: not browsed) | `az vmss show -n {name} -g {rg} --subscription {sub}` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
 | Network · VNets | Subnets (embedded) · Peerings (state; forwarded traffic allowed or blocked; gateway transit: offers this VNet's gateway, uses the peer's, or none) · (Overview: DDoS protection on / off and the DDoS plan, jumpable) | stateless | each subnet, each peered VNet, the DDoS plan; ⧗ (rule 16) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
 | Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, each appliance next hop of its route table (rule 27; the warm route tables list), the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 16) the DNS resolver endpoints in it | `az network vnet subnet show` |
@@ -643,7 +650,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless); `location` is a Power Platform geography, so the row passes every `R` filter like `global` | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
-Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
+Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
 @lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @agw @afd @waf @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
@@ -710,6 +717,7 @@ has a fixture test there.
 | `foundry-public-network` | Foundry | public network access enabled, `networkAcls.defaultAction` not Deny | medium |
 | `foundry-local-auth` | Foundry | `disableLocalAuth` not true (API keys work) | medium |
 | `disk-unattached` | Disks | `diskState` Unattached (Reserved, a deallocated VM's disk, is not) | info: cost and data-at-rest hygiene, below the default `--fail-on low` |
+| `vmss-instance-not-latest-model` | Scale sets + Instances ⧗ (Uniform sets only: a Flexible set's VMs carry no model flag; `r` fetches up to 50) | an instance with `latestModelApplied` false; one finding per set | info |
 | `pp-policy-unhealthy` | Enterprise policies | `healthStatus` not Healthy | medium |
 | `appreg-credential-expiry` | App registrations | a secret or certificate expired · expiring within 30 days | medium · low |
 | `sp-credential-expiry` | Service principals (managed identities skipped) | the same | medium · low |
@@ -732,6 +740,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | VM Instance view | 1 per VM, on demand | `{vm}/instanceView` · `2026-04-01` |
 | Disks | 1 | `/providers/Microsoft.Compute/disks` · `2026-03-02` |
 | NICs | 1 | `/providers/Microsoft.Network/networkInterfaces` · `2025-09-01` |
+| Scale sets | 1 | `/providers/Microsoft.Compute/virtualMachineScaleSets` · `2026-04-01` (the VM version: one Compute spec) |
+| Scale set Instances | 1 per set, on demand | Uniform: `{vmss}/virtualMachines?$expand=instanceView` · Flexible: `/providers/Microsoft.Compute/virtualMachines?$filter='virtualMachineScaleSet/id' eq '{vmss}'&$expand=instanceView` (the filter the VM list documents, and the one `az vm list --vmss` sends) · `2026-04-01` |
 | Accounts | 1 (Storage RP: 100 list calls / 5 min) | `/providers/Microsoft.Storage/storageAccounts` · `2026-06-01` |
 | Containers | 1 per account, on demand (same budget) | `{account}/blobServices/default/containers` · `2026-06-01` |
 | VNets, Subnets | 1 each (same list) | `/providers/Microsoft.Network/virtualNetworks` · `2025-09-01` |
@@ -832,6 +842,22 @@ it; that floor is #63.
   (rule 8), on a subscription with an AKS cluster (#66).
 
 ## Not yet verified live
+
+- VM scale sets (#30), built without an Azure login from
+  azure-rest-api-specs (Compute `2026-04-01`, `ComputeRP.json`, the VM
+  version) and the azure-cli sources (2026-10-26). To check: the
+  subscription-wide list answers on that version; `orchestrationMode` is
+  absent on an older Uniform set (shown as Uniform); the Flexible
+  Instances call (subscription VM list with the `virtualMachineScaleSet/id`
+  `$filter` and `$expand=instanceView`) answers at subscription scope, as
+  the spec says (the CLI sends it per resource group); a Uniform
+  instance list with `$expand=instanceView` carries
+  `latestModelApplied` and the power state on every page; extension
+  `settings` arrive on the list body (stripped regardless); `az vmss
+  show` refuses `--ids` and `az vmss list-instances` takes the name form;
+  the scale set's metric names (`Percentage CPU`, `Available Memory
+  Bytes`, network and disk totals) answer at the set's id; the VMs tab's
+  four chips at 80×24.
 
 - Hybrid (#135), built without an Azure login from azure-rest-api-specs
   (Network `2025-09-01`, the Network service's version; `expressRoute.json`

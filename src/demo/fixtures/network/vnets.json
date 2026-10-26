@@ -376,6 +376,36 @@
               "privateEndpointNetworkPolicies": "Disabled",
               "privateLinkServiceNetworkPolicies": "Enabled"
             }
+          },
+          {
+            "name": "snet-compute",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-compute",
+            "etag": "W/\"3a9d6c2e-7f14-5b80-a2c6-9e1f4b7d3c05\"",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "addressPrefix": "10.10.14.0/24",
+              "delegations": [],
+              "privateEndpointNetworkPolicies": "Disabled",
+              "privateLinkServiceNetworkPolicies": "Enabled",
+              "ipConfigurations": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/vmss-batch-flex_3f2a9c1e-nic-batch/ipConfigurations/ipconfig1"
+                },
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/vmss-batch-flex_8b41d7a0-nic-batch/ipConfigurations/ipconfig1"
+                },
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/0/networkInterfaces/nic-legacy-web/ipConfigurations/ipconfig1"
+                },
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/1/networkInterfaces/nic-legacy-web/ipConfigurations/ipconfig1"
+                },
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-legacy-web/virtualMachines/2/networkInterfaces/nic-legacy-web/ipConfigurations/ipconfig1"
+                }
+              ]
+            }
           }
         ],
         "virtualNetworkPeerings": [

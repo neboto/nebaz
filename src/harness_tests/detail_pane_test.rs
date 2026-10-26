@@ -4,7 +4,7 @@
 //! `V` and `⏎` act on the line on screen; wrap only changes the screen
 //! shape, so they stay on logical rows.
 
-use super::mocks::{all_mocks, arm_id, disk, nic, nic_id, vm};
+use super::mocks::{all_mocks, arm_id, disk, nic, nic_id, scale_set, vm};
 use super::*;
 
 fn ctrl(c: char) -> KeyEvent {
@@ -331,6 +331,10 @@ async fn h_and_l_step_sub_tabs_from_either_pane() {
     h.land(vec![nic("vm-1-nic", "westeurope")]).await;
     assert!(h.app.details_focused);
     assert_eq!(h.selected_id(), Some(nic_id("vm-1-nic")));
+    h.press(KeyCode::Char('L')).await;
+    assert_eq!(h.app.current_view, JumpView::ScaleSets);
+    h.land(vec![scale_set("vmss-1", "westeurope")]).await;
+    assert!(h.app.details_focused);
 
     // Wrapping round to the first tab.
     h.press(KeyCode::Char('L')).await;

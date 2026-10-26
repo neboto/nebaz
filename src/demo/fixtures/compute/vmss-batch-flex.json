@@ -1,0 +1,99 @@
+{
+  "name": "vmss-batch-flex",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-batch-flex",
+  "type": "Microsoft.Compute/virtualMachineScaleSets",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-ops@contoso.com",
+    "workload": "nightly-batch"
+  },
+  "sku": {
+    "name": "Standard_D4s_v5",
+    "tier": "Standard",
+    "capacity": 2
+  },
+  "zones": [
+    "1",
+    "2"
+  ],
+  "properties": {
+    "singlePlacementGroup": false,
+    "orchestrationMode": "Flexible",
+    "virtualMachineProfile": {
+      "osProfile": {
+        "computerNamePrefix": "batchflex",
+        "adminUsername": "azureuser",
+        "linuxConfiguration": {
+          "disablePasswordAuthentication": true,
+          "provisionVMAgent": true
+        },
+        "secrets": [],
+        "allowExtensionOperations": true
+      },
+      "storageProfile": {
+        "osDisk": {
+          "osType": "Linux",
+          "createOption": "FromImage",
+          "caching": "ReadWrite",
+          "managedDisk": {
+            "storageAccountType": "StandardSSD_LRS"
+          },
+          "deleteOption": "Delete",
+          "diskSizeGB": 64
+        },
+        "imageReference": {
+          "publisher": "Canonical",
+          "offer": "ubuntu-24_04-lts",
+          "sku": "server",
+          "version": "latest"
+        },
+        "diskControllerType": "SCSI"
+      },
+      "networkProfile": {
+        "networkApiVersion": "2020-11-01",
+        "networkInterfaceConfigurations": [
+          {
+            "name": "nic-batch",
+            "properties": {
+              "primary": true,
+              "enableAcceleratedNetworking": true,
+              "deleteOption": "Delete",
+              "enableIPForwarding": false,
+              "ipConfigurations": [
+                {
+                  "name": "ipconfig1",
+                  "properties": {
+                    "primary": true,
+                    "subnet": {
+                      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-compute"
+                    },
+                    "privateIPAddressVersion": "IPv4"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "priority": "Spot",
+      "evictionPolicy": "Deallocate",
+      "billingProfile": {
+        "maxPrice": -1
+      }
+    },
+    "provisioningState": "Succeeded",
+    "platformFaultDomainCount": 1,
+    "priorityMixPolicy": {
+      "baseRegularPriorityCount": 1,
+      "regularPriorityPercentageAboveBase": 0
+    },
+    "spotRestorePolicy": {
+      "enabled": true,
+      "restoreTimeout": "PT1H"
+    },
+    "uniqueId": "e7a4c1f9-3b62-4d08-8f5e-0a9c2b6d4e17",
+    "timeCreated": "{{iso:now-96d}}"
+  }
+}

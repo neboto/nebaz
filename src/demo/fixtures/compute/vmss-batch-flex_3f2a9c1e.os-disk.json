@@ -1,0 +1,39 @@
+{
+  "name": "vmss-batch-flex_3f2a9c1e_OsDisk_1_4c8e2a7f1d934b65a0e79f3c5b1d8a26",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vmss-batch-flex_3f2a9c1e_OsDisk_1_4c8e2a7f1d934b65a0e79f3c5b1d8a26",
+  "type": "Microsoft.Compute/disks",
+  "location": "westeurope",
+  "tags": {},
+  "zones": [
+    "1"
+  ],
+  "sku": {
+    "name": "StandardSSD_LRS",
+    "tier": "Standard"
+  },
+  "properties": {
+    "creationData": {
+      "createOption": "FromImage",
+      "imageReference": {
+        "id": "/Subscriptions/{{prod}}/Providers/Microsoft.Compute/Locations/westeurope/Publishers/Canonical/ArtifactTypes/VMImage/Offers/ubuntu-24_04-lts/Skus/server/Versions/24.04.202409300"
+      }
+    },
+    "diskSizeGB": 64,
+    "diskIOPSReadWrite": 500,
+    "diskMBpsReadWrite": 100,
+    "encryption": {
+      "type": "EncryptionAtRestWithPlatformKey"
+    },
+    "networkAccessPolicy": "AllowAll",
+    "publicNetworkAccess": "Enabled",
+    "timeCreated": "{{iso:now-6d}}",
+    "provisioningState": "Succeeded",
+    "diskState": "Attached",
+    "diskSizeBytes": 68719476736,
+    "uniqueId": "62a8d1b5c3f9-7e0a-56b4-39d1-f7a2e8c4",
+    "tier": "E6",
+    "osType": "Linux",
+    "hyperVGeneration": "V2"
+  },
+  "managedBy": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vmss-batch-flex_3f2a9c1e"
+}

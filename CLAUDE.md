@@ -32,7 +32,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca / redis / amr / pg / mysql / sb / eh / agw / afd / waf / er / vgw / cn / lgw / fw / fwp / ipg / ngfw / rulestack / changes
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / vmss / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca / redis / amr / pg / mysql / sb / eh / agw / afd / waf / er / vgw / cn / lgw / fw / fwp / ipg / ngfw / rulestack / changes
 cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to stdout, exit codes in src/headless/contract.json
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 NEBAZ_BLESS=1 cargo test contract   # record an addition to the headless output contract
@@ -271,7 +271,7 @@ verbatim where the concept is unchanged.
 | `src/azure/service.rs` | `ServiceType`, `JumpView`, routing prefixes, `for_arm_id` |
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
-| `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_hub,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid,firewall}.rs` | one file per service |
+| `src/azure/services/{subscriptions,compute,scale_sets,storage,network,network_edge,network_hub,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid,firewall}.rs` | one file per service |
 | `src/headless.rs`, `src/app/headless.rs` | `nebaz services / ls / get`: a terminal-less `App`, the output contract, `skills/nebaz/SKILL.md` |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/cli_actions.rs` | the `C` catalogue: every copyable `az` command per type, tiers; the one file the guard lets spell a Connect / Change verb |
