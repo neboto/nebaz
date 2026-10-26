@@ -1,9 +1,11 @@
 # /// script
 # dependencies = ["numpy", "pillow"]
 # ///
-"""The backdrop behind every demo recording: Azure glows over a navy sky,
-a glowing horizon and a perspective grid. Generated, so it carries no
-licence. demo/render.sh dims it and shows it through the terminal.
+"""The backdrop behind every demo recording: a quiet navy sky, one soft blue
+glow, a faint horizon and perspective grid. Generated, so it carries no
+licence. demo/render.sh shows it through the terminal as it is, so it is
+kept dark enough to read text over and calm enough to sit on neboto.dev's
+navy (neboto.dev/nebaz/ uses the same takes).
 
     uv run demo/backdrop.py demo/backdrop.png
 
@@ -28,16 +30,14 @@ def glow(cx, cy, r, color, strength):
     return np.exp(-d)[..., None] * hexc(color) * strength
 
 
-# Base: deep navy, slightly lighter towards the horizon.
+# Base: navy, slightly lighter towards the horizon.
 t = (y / H)[..., None]
-img = hexc("#030814") * (1 - t) + hexc("#06132b") * t
+img = hexc("#06101b") * (1 - t) + hexc("#0a1828") * t
 
-# Glows: Azure blue top-left, cyan right, a touch of violet top-right.
-img += glow(180, 120, 520, "#0078d4", 0.32)
-img += glow(1150, 420, 420, "#50e6ff", 0.12)
-img += glow(1050, 60, 380, "#5b3fd1", 0.20)
+# One soft blue glow, top-left.
+img += glow(180, 120, 560, "#006aa7", 0.10)
 
-# Perspective grid below the horizon.
+# Perspective grid below the horizon, faint.
 hz = H * 0.62
 grid = np.zeros((H, W), np.float32)
 below = y > hz
@@ -54,16 +54,11 @@ with np.errstate(divide="ignore", invalid="ignore"):
 grid[below] = np.maximum(hline, vline)[below] * np.clip(depth[below] * 1.6, 0, 1) ** 1.8
 gimg = Image.fromarray((grid * 255).astype(np.uint8))
 soft = np.asarray(gimg.filter(ImageFilter.GaussianBlur(3)), np.float32) / 255
-img += grid[..., None] * hexc("#3aa0ff") * 0.55 + soft[..., None] * hexc("#0078d4") * 0.6
+img += grid[..., None] * hexc("#2d5f86") * 0.22 + soft[..., None] * hexc("#006aa7") * 0.12
 
-# Horizon light.
-hzd = np.exp(-((y - hz) ** 2) / (2 * 6 ** 2)) * np.exp(-((x - W / 2) ** 2) / (2 * 420 ** 2))
-img += hzd[..., None] * hexc("#7fd8ff") * 0.9
-img += glow(W / 2, hz, 300, "#0078d4", 0.25) * np.clip((hz + 70 - y) / 50, 0, 1)[..., None]
-
-# Dot matrix in the sky, fading out towards the horizon.
-dots = ((x % 22 < 1.5) & (y % 22 < 1.5) & (y < hz - 20)).astype(np.float32)
-img += dots[..., None] * hexc("#8ab8ff") * 0.10 * (1 - y / hz)[..., None]
+# Horizon light, a thin line.
+hzd = np.exp(-((y - hz) ** 2) / (2 * 8 ** 2)) * np.exp(-((x - W / 2) ** 2) / (2 * 380 ** 2))
+img += hzd[..., None] * hexc("#5d9fcf") * 0.18
 
 img = np.clip(img, 0, 1)
 Image.fromarray((img * 255).astype(np.uint8)).save(out)
