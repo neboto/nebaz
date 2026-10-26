@@ -1549,8 +1549,8 @@ mod tests {
     fn secrets_are_stripped_and_the_service_key_masked() {
         let c = CircuitRow::from_json(&circuit_json(), None).unwrap();
         let raw = c.raw_content().unwrap();
-        for secret in ["fixture-auth-key", "fixture-md5", "fixture-gr-key", "fixture-activation", "444455556666"] {
-            assert!(!raw.contains(secret), "{secret} left in the circuit JSON");
+        for (i, needle) in ["fixture-auth-key", "fixture-md5", "fixture-gr-key", "fixture-activation", "444455556666"].iter().enumerate() {
+            assert!(!raw.contains(needle), "fixture value {i} left in the circuit JSON");
         }
         assert!(raw.contains("****6666"));
         assert_eq!(c.service_key.as_deref(), Some("****6666"));
