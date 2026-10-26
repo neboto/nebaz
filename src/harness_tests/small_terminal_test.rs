@@ -64,7 +64,7 @@ async fn main_screen_and_overlays_render_at_small_sizes() {
 #[tokio::test]
 async fn the_edge_tab_fits_80_by_24() {
     let mut h = Harness::sized(80, 24).await;
-    for view in [JumpView::AppGateways, JumpView::FrontDoorProfiles, JumpView::WafPolicies] {
+    for view in [JumpView::AppGateways, JumpView::FrontDoorProfiles, JumpView::WafPolicies, JumpView::PrivateLinkServices] {
         let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
         h.install(mock).await;
         let screen = h.render();
@@ -75,6 +75,22 @@ async fn the_edge_tab_fits_80_by_24() {
             h.render();
         }
         h.press(KeyCode::Esc).await;
+    }
+}
+
+/// The DNS tab at 80×24 with its sixth sub-tab, Traffic Manager (#143):
+/// the chip is on screen and every section of the profile draws.
+#[tokio::test]
+async fn the_dns_tab_with_traffic_manager_fits_80_by_24() {
+    let mut h = Harness::sized(80, 24).await;
+    let mock = mocks::all_mocks().into_iter().find(|m| m.view == JumpView::TrafficManagerProfiles).unwrap();
+    h.install(mock).await;
+    let screen = h.render();
+    assert!(screen.contains(JumpView::TrafficManagerProfiles.label()), "{screen}");
+    h.press(KeyCode::Enter).await;
+    for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] {
+        h.press(KeyCode::Char(c)).await;
+        h.render();
     }
 }
 

@@ -148,6 +148,7 @@ mod command_picker;
 mod audit;
 mod network_lens;
 mod firewall;
+mod flow_logs;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
 mod refs_lens;
 /// The ownership ribbon (#48): what it says, the deployments trigger.
@@ -2843,6 +2844,9 @@ impl App {
                 StorageAccountDetailSection::from_index(idx),
                 self.lazy.containers.get(r.id()),
             ));
+        }
+        if let Some(lines) = self.flow_log_section_lines(resource, idx) {
+            return Some(lines);
         }
         if let Some(r) = any.downcast_ref::<VnetRow>() {
             let section = VnetDetailSection::from_index(idx);

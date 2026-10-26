@@ -193,7 +193,8 @@
     "agw": [
       "app-gateways (agw)",
       "front-door-profiles (afd)",
-      "waf-policies (waf)"
+      "waf-policies (waf)",
+      "private-link-services (pls)"
     ],
     "aks": [
       "clusters (aks)",
@@ -221,7 +222,8 @@
       "dns-zones (dnsz)",
       "dns-resolvers (dnsr)",
       "dns-forwarding-rulesets (dnsfr)",
-      "dns-resolver-policies (dnsp)"
+      "dns-resolver-policies (dnsp)",
+      "traffic-manager-profiles (tm)"
     ],
     "er": [
       "expressroute-circuits (er)",
@@ -638,6 +640,7 @@
       "Inbound",
       "Outbound",
       "Used by",
+      "Flow logs",
       "Access",
       "Activity",
       "Related",
@@ -676,6 +679,16 @@
       "Overview",
       "Connection",
       "DNS",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Private Link service": [
+      "Overview",
+      "Frontend",
+      "Visibility",
+      "Connections",
       "Access",
       "Activity",
       "Related",
@@ -776,6 +789,16 @@
       "Related",
       "Tags"
     ],
+    "Traffic Manager profile": [
+      "Overview",
+      "Routing",
+      "Monitor",
+      "Endpoints",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Virtual Machine": [
       "Overview",
       "Instance view",
@@ -790,6 +813,7 @@
       "Overview",
       "Subnets",
       "Peerings",
+      "Flow logs",
       "Access",
       "Activity",
       "Related",

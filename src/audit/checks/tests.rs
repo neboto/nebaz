@@ -1275,3 +1275,57 @@ fn a_clean_run_says_so() {
     assert_eq!(rows[0].kind, RowKind::AllClear);
     assert_eq!(rows[0].resource_name, "✓ no findings — 1 check ran clean");
 }
+
+// ── Flow logs (#143) ──
+
+fn flow_log(name: &str, target: &str, enabled: bool) -> crate::azure::services::flow_logs::FlowLog {
+    let nw = format!("/subscriptions/{}/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/nw", SUB);
+    crate::azure::services::flow_logs::FlowLog::from_json(
+        &json!({"id": format!("{}/flowLogs/{}", nw, name), "name": name,
+            "properties": {"targetResourceId": target, "enabled": enabled}}),
+        &nw,
+    )
+    .unwrap()
+}
+
+#[test]
+fn a_vnet_without_an_enabled_flow_log_is_found_and_a_cold_read_is_a_note() {
+    let vnet = |name: &str, nsg: Option<&str>| {
+        let mut subnet = json!({"id": id(&format!("Microsoft.Network/virtualNetworks/{name}/subnets/a")), "name": "a",
+            "properties": {"addressPrefix": "10.0.0.0/24"}});
+        if let Some(n) = nsg {
+            subnet["properties"]["networkSecurityGroup"] = json!({"id": id(&format!("Microsoft.Network/networkSecurityGroups/{n}"))});
+        }
+        boxed(network::VnetRow::from_json(&body(&format!("Microsoft.Network/virtualNetworks/{name}"), json!({"subnets": [subnet]})), None))
+    };
+    let lists = vec![(
+        V::VirtualNetworks,
+        vec![vnet("vnet-logged", None), vnet("vnet-subnet", None), vnet("vnet-nsg", Some("nsg-a")), vnet("vnet-off", None), vnet("vnet-none", None)],
+    )];
+    // Cold: one note, no finding, never a pass.
+    let rows = audit("flow-logs-missing", &lists, Some(&LazyStore::new(0)));
+    assert!(findings(&rows).is_empty());
+    assert_eq!(notes(&rows), vec!["not checked — r fetches flow logs".to_string()]);
+
+    let mut lazy = LazyStore::new(0);
+    lazy.flow_logs.apply(
+        format!("/subscriptions/{}", SUB),
+        Ok(crate::azure::services::flow_logs::FlowLogs {
+            logs: vec![
+                flow_log("fl-vnet", &id("Microsoft.Network/virtualNetworks/vnet-logged"), true),
+                flow_log("fl-subnet", &id("Microsoft.Network/virtualNetworks/vnet-subnet/subnets/a"), true),
+                flow_log("fl-nsg", &id("Microsoft.Network/networkSecurityGroups/nsg-a"), true),
+                flow_log("fl-off", &id("Microsoft.Network/virtualNetworks/vnet-off"), false),
+            ],
+            warnings: Vec::new(),
+            watchers: 1,
+        }),
+    );
+    let rows = audit("flow-logs-missing", &lists, Some(&lazy));
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(got, vec![("vnet-none".into(), Severity::Low), ("vnet-off".into(), Severity::Low)]);
+    assert!(notes(&rows).is_empty());
+    let off = rows.iter().find(|f| f.resource_name == "vnet-off").unwrap();
+    assert_eq!(off.reason, "flow logs disabled");
+}

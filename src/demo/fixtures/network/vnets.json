@@ -376,6 +376,24 @@
               "privateEndpointNetworkPolicies": "Disabled",
               "privateLinkServiceNetworkPolicies": "Enabled"
             }
+          },
+          {
+            "name": "snet-pls",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pls",
+            "etag": "W/\"4c2e8a1f-7b3d-5e9a-8c1f-2d4b6e8a0c15\"",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "addressPrefix": "10.10.15.0/24",
+              "delegations": [],
+              "privateEndpointNetworkPolicies": "Disabled",
+              "privateLinkServiceNetworkPolicies": "Disabled",
+              "ipConfigurations": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/frontendIPConfigurations/fe-pls"
+                }
+              ]
+            }
           }
         ],
         "virtualNetworkPeerings": [

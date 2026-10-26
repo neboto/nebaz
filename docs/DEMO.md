@@ -92,7 +92,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
 | `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
 | `nic-vm-legacy-batch-01` and `pip-vm-legacy-batch-01`, left behind by a deleted VM: a NIC attached to nothing, a static public IP attached to nothing | `@audit` (info) |
-| `snet-nva`, `snet-data`, `snet-dns-outbound`, `AzureBastionSubnet` and the Cloud NGFW's two subnets have no NSG (GatewaySubnet, AzureFirewallSubnet and the PE-only `snet-pe` are exempt) | `@audit` (low) |
+| `snet-nva`, `snet-data`, `snet-dns-outbound`, `snet-pls`, `AzureBastionSubnet` and the Cloud NGFW's two subnets have no NSG (GatewaySubnet, AzureFirewallSubnet and the PE-only `snet-pe` are exempt) | `@audit` (low) |
 | `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.11.4, `ngfw-hub-prod`'s trust IP: its Routes name the firewall and ⏎ opens it, once `@ngfw` is loaded | Network · Routes |
 | `afw-hub-prod` (Azure Firewall Premium) still runs after the cutover to `ngfw-hub-prod`: no route table sends traffic to it (its Network section, once `@rt` is loaded) | Firewall |
 | `mysql-reporting-legacy`: public access, `require_secure_transport` OFF | `@audit` |
@@ -105,6 +105,9 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `vnet-hub-prod` peers with `vnet-dev` in **contoso-dev** (a cross-subscription jump) | Related |
 | `snet-pp-injection-dr`, Power Platform's failover subnet in `vnet-pp-dr`, has no NSG | `@audit` |
 | `ca-orders-api-dev` (contoso-dev): external ingress on a public environment, no IP restrictions | `@audit` on contoso-dev |
+| `vnet-pp-dr` has no flow log (`vnet-hub-prod` has a VNet flow log with traffic analytics, and `nsg-jump-prod` an NSG flow log) | VNet Flow logs, `@audit` (low) |
+| `pls-orders-partner`: contoso-dev's endpoint `pe-orders-dev-pls` waits for approval (Fabrikam's is Approved) | Edge · Private Link |
+| `tm-contoso-api`: the on-premises DR endpoint `dr-onprem` is Degraded, so the profile is too | DNS · Traffic Manager |
 
 ## Recordings
 
@@ -123,6 +126,7 @@ tape; `demo/scenes/README.md` says how to re-record.
 | contoso-prod | `{{prod}}` = `8f4c2a1e-6b3d-4e7a-9c15-2d8e0f6a7b31` (default) |
 | contoso-dev | `{{dev}}` = `3b9e7d52-1a4f-4c8b-b2e6-7f0a9d1c5e48` |
 | Fabrikam tenant (the vendor's) | `5b888731-5714-47aa-9f0a-d158b563fcb6` |
+| Fabrikam's subscription (its Private Link endpoint; not in the demo) | `7d3e9a1c-5b2f-4e8d-a6c4-1f9b3d5e7a20` |
 
 Locations: `westeurope` (primary), `northeurope` (Power Platform's paired
 failover; Power Platform's `europe` geography wants both), `global`
@@ -187,11 +191,14 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
   - `snet-ngfw-trust` 10.10.11.0/26 and `snet-ngfw-untrust` 10.10.11.64/26, both delegated `PaloAltoNetworks.Cloudngfw/firewalls`: `ngfw-hub-prod`, whose trust IP 10.10.11.4 is where `rt-spoke-egress` sends 0.0.0.0/0
   - `snet-dns-outbound` 10.10.10.0/28, delegated `Microsoft.Network/dnsResolvers` (the resolver's outbound endpoint)
   - `GatewaySubnet` 10.10.255.0/27: `vgw-er-hub-prod` and `vgw-vpn-hub-prod`
+  - `snet-pls` 10.10.15.0/24, Private Link service network policies off: `lb-pls-orders`'s frontend `fe-pls` 10.10.15.4 and `pls-orders-partner`'s NAT IP 10.10.15.10
 - `vnet-pp-dr` (northeurope) 10.20.0.0/16, peered with `vnet-hub-prod`, subnet `snet-pp-injection-dr` 10.20.4.0/24 delegated `Microsoft.PowerPlatform/enterprisePolicies`, **no NSG**
 - NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`, "temp vendor access"; `AllowRdpFromOnPrem` 110 from 192.168.0.0/16), `nsg-appgw-prod` (GatewayManager 65200–65535, 443 from `AzureFrontDoor.Backend`)
 - Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12), `pip-afw-prod` (20.103.45.17, `afw-hub-prod`), `pip-ngfw-prod` (20.103.45.18, `ngfw-hub-prod`'s public and egress NAT IP), `pip-bas-hub-prod` (20.103.45.16), the gateways' (20.103.45.13–15, below), `pip-vm-legacy-batch-01` (20.103.45.19, static, attached to nothing)
 - `ng-prod` (NAT gateway), `rt-spoke-egress` (`default-to-firewall` 0.0.0.0/0 → 10.10.11.4, the Cloud NGFW's trust IP, which resolves to `ngfw-hub-prod` once `@ngfw` is loaded, `onprem-via-nva` 192.168.0.0/16 → 10.10.13.10), `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443), `lb-nva-internal` (internal LB in front of `vm-nva-01`: pool `be-nva`, HA ports)
 - `ddos-contoso` (DDoS protection plan covering `vnet-hub-prod`)
+- Flow logs (Network Watcher, `NetworkWatcher_westeurope` in `NetworkWatcherRG`): `fl-vnet-hub-prod`, a VNet flow log on `vnet-hub-prod` (JSON v2, 30 days, to `stcontosoordersprod`, traffic analytics every 10 minutes to `law-contoso-prod`), and `fl-nsg-jump-prod`, an NSG flow log on `nsg-jump-prod` (retiring). `NetworkWatcher_northeurope` has none, so `vnet-pp-dr` is unlogged
+- Private Link: `pls-orders-partner` publishes the orders API to partners behind `lb-pls-orders` (internal Standard LB, frontend `fe-pls`, rule `lbr-https` 443 to the pool `be-orders-api` = `cae-orders-prod`'s static IP 10.10.0.62); visible to Fabrikam's subscription and contoso-dev, no auto-approval; connections: Fabrikam's `pe-fabrikam-orders` (Approved) and contoso-dev's `pe-orders-dev-pls` (**Pending**); neither endpoint is in the demo's endpoint lists, so both are text
 - Firewall, the hub's security layer. **`ngfw-hub-prod`** (Palo Alto Networks Cloud NGFW, VNET, PAYG, Marketplace `Subscribed`) is the hub's firewall: trust / untrust subnets above, egress NAT on `pip-ngfw-prod`, DNS proxy on, a DNAT front end `dnat-sftp-partner` (20.103.45.18:22 → `vm-jump-01` 10.10.8.4:22), rules from the local rulestack **`lrs-hub-prod`** (IPS mode, BestPractice security profiles; rules 100 web egress to the FQDN list `fqdn-egress-allowed` from the prefix list `pl-spokes-prod`, 110 on-prem DNS, 200 the partner SFTP DNAT, 300 a country block (disabled), 1000 deny the rest); status GREEN. **`afw-hub-prod`** (Azure Firewall Premium, policy `fwp-hub-prod`, tag `retire = after-ngfw-cutover`) is the firewall it replaced: still running, nothing routes to it any more. `fwp-hub-prod` (IDPS Deny with one signature override and a bypass, DNS proxy) inherits from the base policy `fwp-platform-base` (threat intel Deny, IDPS Alert; group `rcg-platform-baseline`: Azure DNS, NTP); its own groups `rcg-hub-network` (200: corp DNS allowed, RDP/SSH to on-prem denied) and `rcg-hub-application` (300: ACR / MCR and Windows Update) use the IP group `ipg-spokes-prod` (four spoke prefixes)
 - Private endpoints (in `snet-pe`): `pe-kv-orders` (vault, 10.10.5.4), `pe-sql-orders` (sqlServer, 10.10.5.5), `pe-st-orders-blob` (blob, 10.10.5.6), `pe-acr-prod` (registry, 10.10.5.7 data endpoint + 10.10.5.8); their NICs `<pe>.nic.<guid>` in this group too
 - Private DNS zones (global): `privatelink.vaultcore.azure.net`, `privatelink.database.windows.net`, `privatelink.azurecr.io` (each linked to `vnet-hub-prod` by `link-vnet-hub-prod`), `privatelink.blob.core.windows.net` (**not linked**), `psql-orders-prod.private.postgres.database.azure.com` (`psql-orders-prod`'s VNet-integration zone: A `7f3a9c2e1b4d` → 10.10.7.4 in `snet-data`; linked to `vnet-hub-prod`), and the environment's zone `wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (`*` and `@` → 10.10.0.62; linked to `vnet-hub-prod`, **not** to `vnet-pp-dr`)
@@ -220,6 +227,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `acrcontosoprod` (Premium, admin user on, public network disabled, behind `pe-acr-prod`; replicated to `northeurope`; webhook `ordersapipush` on `orders-api:*` pushes)
 - `aks-platform-prod`: 1.28.9, Free tier, Azure CNI overlay (managed VNet, no subnet of ours), Entra integration with `Contoso Platform Admins` as admins, monitoring to `law-contoso-prod`, node resource group `MC_rg-platform-prod_aks-platform-prod_westeurope`; node pools `system` (3 × Standard_D4s_v5, Succeeded) and `batch` (autoscale 0 → 4 × Standard_D8s_v5, Failed)
 - `agw-contoso-prod` (WAF_v2, in `snet-appgw`, `pip-agw-prod`): listener `api.contoso-demo.com` → backend pool `orders-api` → `ca-orders-api`'s FQDN `ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (the app's `ingress.fqdn` must be exactly this for the backend to match); WAF policy `wafp-agw-prod` in **Detection**
+- Traffic Manager `tm-contoso-api` (global, Priority, `contoso-api.trafficmanager.net`, HTTPS probe on `/healthz`): `agw-westeurope` (Azure endpoint → `pip-agw-prod`, priority 1, Online) and `dr-onprem` (external `api-dr.contoso-demo.com`, priority 2, **Degraded**)
 - Front Door `afd-contoso` (Premium, global): endpoint `contoso-web` (host `contoso-web-c7d9e2f4a1b3.z01.azurefd.net`) with route `route-web` for the custom domain `www.contoso-demo.com`, origin group `og-agw-prod` → origin `origin-agw-prod` at `pip-agw-prod`'s FQDN, WAF policy `wafpafdcontoso` in Prevention (through security policy `sp-wafpafdcontoso`)
 - `law-contoso-prod` (Log Analytics, 30 days; workspace (customer) id `a5584474-4031-4fdf-9df6-93254d6c4c43`, which `cae-orders-prod`'s logs config names)
 - Power Platform enterprise policy `ep-pp-network-injection` (kind `NetworkInjection`, location `europe`): `snet-pp-injection` in `vnet-hub-prod` and `snet-pp-injection-dr` in `vnet-pp-dr`
@@ -260,7 +268,7 @@ Graph (`directoryObjects`) is `identity`'s.
 | Area | Services |
 |---|---|
 | `core` | Subscriptions (subscription details, locations, resource groups, All resources), the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
-| `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs), NICs, DNS, Edge, Hybrid, Firewall |
+| `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Firewall |
 | `compute` | VMs, disks, AKS, Container Registry, App Service, Container Apps |
 | `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry |

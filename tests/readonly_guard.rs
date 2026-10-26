@@ -723,7 +723,8 @@ fn permissions_doc_grants_only_read_actions() {
 /// `learnedIPPrefixes`; Cloud NGFW's `getGlobalRulestack`, `getLogProfile`,
 /// `getSupportInfo`, a rulestack's `listFirewalls`, `listAppIds`,
 /// `listSecurityServices`, `listAdvancedSecurityObjects`, `getChangeLog`
-/// and a rule's `getCounters`):
+/// and a rule's `getCounters`; Network Watcher's `queryFlowLogStatus` and
+/// `configureFlowLog`, #143, where only the `flowLogs` GET is read):
 /// `ReadOnlyPolicy` would refuse them at runtime anyway; the guard keeps
 /// them out of `src/`. The network lens (#50) computes NSG access
 /// client-side from GETs instead.
@@ -742,6 +743,8 @@ const POST_ONLY_READS: &[&str] = &[
     "listadvancedsecurityobjects",
     "getchangelog",
     "getcounters",
+    "queryflowlogstatus",
+    "configureflowlog",
 ];
 
 /// GET reads that return a secret: a connection's pre-shared key

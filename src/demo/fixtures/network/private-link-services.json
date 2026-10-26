@@ -1,0 +1,94 @@
+{
+  "value": [
+    {
+      "name": "pls-orders-partner",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateLinkServices/pls-orders-partner",
+      "etag": "W/\"5d7f9b1c-3e5a-5c7e-9a1c-3e5f7b9d1a62\"",
+      "type": "Microsoft.Network/privateLinkServices",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "purpose": "the orders API for Fabrikam over Private Link"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "alias": "pls-orders-partner.7c1e2a9b-4d6f-4a8c-b0e2-5f7a9c1e3b5d.westeurope.azure.privatelinkservice",
+        "loadBalancerFrontendIpConfigurations": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/frontendIPConfigurations/fe-pls"
+          }
+        ],
+        "ipConfigurations": [
+          {
+            "name": "nat-ipconfig-1",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateLinkServices/pls-orders-partner/ipConfigurations/nat-ipconfig-1",
+            "type": "Microsoft.Network/privateLinkServices/ipConfigurations",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAddress": "10.10.15.10",
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddressVersion": "IPv4",
+              "primary": true,
+              "subnet": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pls"
+              }
+            }
+          }
+        ],
+        "visibility": {
+          "subscriptions": [
+            "7d3e9a1c-5b2f-4e8d-a6c4-1f9b3d5e7a20",
+            "{{dev}}"
+          ]
+        },
+        "autoApproval": {
+          "subscriptions": []
+        },
+        "fqdns": [
+          "orders-api.partner.contoso-demo.com"
+        ],
+        "enableProxyProtocol": false,
+        "privateEndpointConnections": [
+          {
+            "name": "pe-fabrikam-orders.4f1a2b3c-5d6e-4f70-8192-a3b4c5d6e7f8",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateLinkServices/pls-orders-partner/privateEndpointConnections/pe-fabrikam-orders.4f1a2b3c-5d6e-4f70-8192-a3b4c5d6e7f8",
+            "type": "Microsoft.Network/privateLinkServices/privateEndpointConnections",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateEndpoint": {
+                "id": "/subscriptions/7d3e9a1c-5b2f-4e8d-a6c4-1f9b3d5e7a20/resourceGroups/rg-fabrikam-connectors/providers/Microsoft.Network/privateEndpoints/pe-fabrikam-orders"
+              },
+              "privateEndpointLocation": "westeurope",
+              "privateLinkServiceConnectionState": {
+                "status": "Approved",
+                "description": "Approved by alex.kim (Fabrikam connector, ticket CHG-2231)",
+                "actionsRequired": "None"
+              },
+              "linkIdentifier": "536870913"
+            }
+          },
+          {
+            "name": "pe-orders-dev-pls.9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateLinkServices/pls-orders-partner/privateEndpointConnections/pe-orders-dev-pls.9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a",
+            "type": "Microsoft.Network/privateLinkServices/privateEndpointConnections",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateEndpoint": {
+                "id": "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/privateEndpoints/pe-orders-dev-pls"
+              },
+              "privateEndpointLocation": "westeurope",
+              "privateLinkServiceConnectionState": {
+                "status": "Pending",
+                "description": "dev wants the prod orders API for a load test",
+                "actionsRequired": "None"
+              },
+              "linkIdentifier": "536870914"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

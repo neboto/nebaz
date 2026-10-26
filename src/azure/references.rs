@@ -238,6 +238,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             VnetGateways,
             AzureFirewalls,
             CloudNgfws,
+            PrivateLinkServices,
         ],
         VirtualNetworks => &[
             Nics,
@@ -269,14 +270,28 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             FrontDoorProfiles,
         ],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
-        PublicIps => &[Nics, LoadBalancers, NatGateways, AppGateways, VnetGateways, AzureFirewalls, CloudNgfws],
+        PublicIps => &[
+            Nics,
+            LoadBalancers,
+            NatGateways,
+            AppGateways,
+            VnetGateways,
+            AzureFirewalls,
+            CloudNgfws,
+            TrafficManagerProfiles,
+        ],
         Disks => &[VirtualMachines],
         Nics => &[VirtualMachines, PrivateEndpoints, AppGateways],
         RouteTables | NatGateways => &[Subnets],
         AppServicePlans => &[WebApps],
         ContainerAppEnvironments => &[ContainerApps, ContainerAppJobs, WebApps, AppGateways, FrontDoorProfiles],
         // A gateway backend or a Front Door origin matched to the row.
-        ContainerApps | WebApps => &[AppGateways, FrontDoorProfiles],
+        ContainerApps => &[AppGateways, FrontDoorProfiles],
+        // ... and a Traffic Manager Azure endpoint.
+        WebApps => &[AppGateways, FrontDoorProfiles, TrafficManagerProfiles],
+        // A Private Link service's frontend; a Front Door origin's target.
+        LoadBalancers => &[PrivateLinkServices],
+        PrivateLinkServices => &[FrontDoorProfiles, PrivateEndpoints],
         AppGateways => &[PublicIps, WafPolicies],
         WafPolicies => &[AppGateways, FrontDoorProfiles],
         FrontDoorProfiles => &[WafPolicies],

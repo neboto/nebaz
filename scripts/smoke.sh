@@ -146,8 +146,18 @@ run messaging-eh ok eh '[6.0]' \
 # The Edge tab loads through a routing prefix (WAF policies: two lists,
 # both failing is the one error).
 run edge-waf ok waf '[]' \
-  "App gateways, Front Door & WAF policies" \
+  "App gateways, Front Door, WAF policies & Private Link services" \
   "3 WAF policies" \
+  "cannot reach 127.0.0.1"
+
+# Private Link services are the Edge tab's fourth chip (#143).
+run edge-pls ok pls '[]' \
+  "4 Private Link" \
+  "cannot reach 127.0.0.1"
+
+# Traffic Manager is the DNS tab's sixth chip, on its own api-version.
+run dns-traffic-manager ok tm '[]' \
+  "6 Traffic Manager" \
   "cannot reach 127.0.0.1"
 
 # The Firewall tab loads through a routing prefix (Cloud NGFW).

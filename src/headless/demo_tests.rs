@@ -37,6 +37,11 @@ const PLANTED: &[(&str, &str)] = &[
     ("/namespaces/sb-orders-prod", "dead"),
     // network: the branch office's backup VPN tunnel is down.
     ("/connections/cn-vpn-branch-office", "NotConnected"),
+    // network: contoso-dev's endpoint to the partner Private Link service
+    // waits for approval; Traffic Manager's on-premises DR endpoint is
+    // degraded.
+    ("/privateLinkServices/pls-orders-partner", "Pending"),
+    ("/trafficManagerProfiles/tm-contoso-api", "Degraded"),
     // compute: caj-nightly-export's last execution failed (its Executions section).
     ("/jobs/caj-nightly-export", "caj-nightly-export-q7k2m9x"),
     // core: failed operations in the Activity sections of contoso-prod (the
@@ -97,6 +102,7 @@ const AUDIT_EXPECTED: &[&str] = &[
     "pip-unattached",
     "nic-orphaned",
     "vpn-connection-down",
+    "flow-logs-missing",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).
