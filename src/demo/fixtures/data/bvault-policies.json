@@ -1,0 +1,38 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupPolicies/pol-blob-operational-30d",
+      "name": "pol-blob-operational-30d",
+      "type": "Microsoft.DataProtection/backupVaults/backupPolicies",
+      "properties": {
+        "objectType": "BackupPolicy",
+        "datasourceTypes": ["Microsoft.Storage/storageAccounts/blobServices"],
+        "policyRules": [
+          {"objectType": "AzureRetentionRule", "name": "Default", "isDefault": true,
+           "lifecycles": [{"deleteAfter": {"objectType": "AbsoluteDeleteOption", "duration": "P30D"},
+             "sourceDataStore": {"objectType": "DataStoreInfoBase", "dataStoreType": "OperationalStore"}, "targetDataStoreCopySettings": []}]}
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupPolicies/pol-pg-weekly-90d",
+      "name": "pol-pg-weekly-90d",
+      "type": "Microsoft.DataProtection/backupVaults/backupPolicies",
+      "properties": {
+        "objectType": "BackupPolicy",
+        "datasourceTypes": ["Microsoft.DBforPostgreSQL/flexibleServers"],
+        "policyRules": [
+          {"objectType": "AzureBackupRule", "name": "BackupWeekly",
+           "backupParameters": {"objectType": "AzureBackupParams", "backupType": "Full"},
+           "dataStore": {"objectType": "DataStoreInfoBase", "dataStoreType": "VaultStore"},
+           "trigger": {"objectType": "ScheduleBasedTriggerContext",
+             "schedule": {"repeatingTimeIntervals": ["R/2026-01-04T01:00:00+00:00/P1W"], "timeZone": "UTC"},
+             "taggingCriteria": [{"isDefault": true, "taggingPriority": 99, "tagInfo": {"tagName": "Default"}}]}},
+          {"objectType": "AzureRetentionRule", "name": "Default", "isDefault": true,
+           "lifecycles": [{"deleteAfter": {"objectType": "AbsoluteDeleteOption", "duration": "P90D"},
+             "sourceDataStore": {"objectType": "DataStoreInfoBase", "dataStoreType": "VaultStore"}, "targetDataStoreCopySettings": []}]}
+        ]
+      }
+    }
+  ]
+}

@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry,
+    aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager,
 };
@@ -982,6 +982,45 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                         "name": "lrs-1",
                         "location": "eastus",
                         "properties": {"provisioningState": "Succeeded", "scope": "LOCAL", "defaultMode": "IPS"}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::RecoveryVaults,
+            "RecoveryVaultRow",
+            parse(
+                "RecoveryVaultRow",
+                backup::RecoveryVaultRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.RecoveryServices/vaults/rsv-1"),
+                        "name": "rsv-1",
+                        "location": "eastus",
+                        "sku": {"name": "RS0"},
+                        "properties": {"provisioningState": "Succeeded",
+                            "redundancySettings": {"standardTierStorageRedundancy": "GeoRedundant", "crossRegionRestore": "Enabled"},
+                            "securitySettings": {"softDeleteSettings": {"softDeleteState": "Enabled", "softDeleteRetentionPeriodInDays": 14},
+                                "immutabilitySettings": {"state": "Disabled"}, "multiUserAuthorization": "Disabled"},
+                            "publicNetworkAccess": "Enabled"}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::BackupVaults,
+            "BackupVaultRow",
+            parse(
+                "BackupVaultRow",
+                backup::BackupVaultRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.DataProtection/backupVaults/bv-1"),
+                        "name": "bv-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded",
+                            "storageSettings": [{"datastoreType": "VaultStore", "type": "LocallyRedundant"}],
+                            "securitySettings": {"softDeleteSettings": {"state": "On", "retentionDurationInDays": 14}}}
                     }),
                     t,
                 ),

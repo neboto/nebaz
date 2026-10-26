@@ -1,0 +1,82 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupFabrics/Azure/protectionContainers/IaasVMContainer;iaasvmcontainerv2;rg-legacy-prod;vm-jump-01/protectedItems/VM;iaasvmcontainerv2;rg-legacy-prod;vm-jump-01",
+      "name": "VM;iaasvmcontainerv2;rg-legacy-prod;vm-jump-01",
+      "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+      "properties": {
+        "protectedItemType": "Microsoft.Compute/virtualMachines",
+        "backupManagementType": "AzureIaasVM",
+        "workloadType": "VM",
+        "friendlyName": "vm-jump-01",
+        "containerName": "iaasvmcontainerv2;rg-legacy-prod;vm-jump-01",
+        "virtualMachineId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01",
+        "sourceResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01",
+        "policyId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupPolicies/pol-vm-daily-30d",
+        "policyName": "pol-vm-daily-30d",
+        "policyType": "V2",
+        "protectionStatus": "Healthy",
+        "protectionState": "Protected",
+        "healthStatus": "Passed",
+        "lastBackupStatus": "Completed",
+        "lastBackupTime": "{{iso:now-9h}}",
+        "lastRecoveryPoint": "{{iso:now-9h}}",
+        "protectedItemDataId": "70368744213411",
+        "isScheduledForDeferredDelete": false,
+        "softDeleteRetentionPeriodInDays": 14,
+        "extendedInfo": {"recoveryPointCount": 30, "oldestRecoveryPoint": "{{iso:now-30d}}", "policyInconsistent": false}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupFabrics/Azure/protectionContainers/IaasVMContainer;iaasvmcontainerv2;rg-network-prod;vm-nva-01/protectedItems/VM;iaasvmcontainerv2;rg-network-prod;vm-nva-01",
+      "name": "VM;iaasvmcontainerv2;rg-network-prod;vm-nva-01",
+      "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+      "properties": {
+        "protectedItemType": "Microsoft.Compute/virtualMachines",
+        "backupManagementType": "AzureIaasVM",
+        "workloadType": "VM",
+        "friendlyName": "vm-nva-01",
+        "containerName": "iaasvmcontainerv2;rg-network-prod;vm-nva-01",
+        "virtualMachineId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01",
+        "sourceResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01",
+        "policyId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupPolicies/pol-vm-daily-30d",
+        "policyName": "pol-vm-daily-30d",
+        "policyType": "V2",
+        "protectionStatus": "Unhealthy",
+        "protectionState": "Protected",
+        "healthStatus": "ActionRequired",
+        "healthDetails": [{"code": 400239, "title": "ExtensionSnapshotFailedNoNetwork", "message": "Snapshot operation failed due to no network connectivity on the virtual machine.", "recommendations": ["Allow the VM to reach the Azure Backup service (the AzureBackup and Storage service tags) through its route table and firewall."]}],
+        "lastBackupStatus": "Failed",
+        "lastBackupTime": "{{iso:now-9h}}",
+        "lastRecoveryPoint": "{{iso:now-57h}}",
+        "protectedItemDataId": "70368744213412",
+        "isScheduledForDeferredDelete": false,
+        "softDeleteRetentionPeriodInDays": 14,
+        "extendedInfo": {"recoveryPointCount": 28, "oldestRecoveryPoint": "{{iso:now-30d}}", "policyInconsistent": false}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupFabrics/Azure/protectionContainers/IaasVMContainer;iaasvmcontainerv2;rg-legacy-prod;vm-legacy-app-01/protectedItems/VM;iaasvmcontainerv2;rg-legacy-prod;vm-legacy-app-01",
+      "name": "VM;iaasvmcontainerv2;rg-legacy-prod;vm-legacy-app-01",
+      "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+      "properties": {
+        "protectedItemType": "Microsoft.Compute/virtualMachines",
+        "backupManagementType": "AzureIaasVM",
+        "workloadType": "VM",
+        "friendlyName": "vm-legacy-app-01",
+        "containerName": "iaasvmcontainerv2;rg-legacy-prod;vm-legacy-app-01",
+        "virtualMachineId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01",
+        "sourceResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01",
+        "protectionStatus": "Healthy",
+        "protectionState": "ProtectionStopped",
+        "healthStatus": "Passed",
+        "lastBackupStatus": "Completed",
+        "lastBackupTime": "{{iso:now-41d}}",
+        "lastRecoveryPoint": "{{iso:now-41d}}",
+        "protectedItemDataId": "70368744213409",
+        "isScheduledForDeferredDelete": false,
+        "extendedInfo": {"recoveryPointCount": 12, "oldestRecoveryPoint": "{{iso:now-160d}}", "policyInconsistent": false}
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupJobs/7d3c9a51-2f84-4b6e-9e1d-5a0c8b7f3e21",
+      "name": "7d3c9a51-2f84-4b6e-9e1d-5a0c8b7f3e21",
+      "type": "Microsoft.RecoveryServices/vaults/backupJobs",
+      "properties": {
+        "jobType": "AzureIaaSVMJob",
+        "entityFriendlyName": "vm-nva-01",
+        "backupManagementType": "AzureIaasVM",
+        "operation": "Backup",
+        "status": "Failed",
+        "startTime": "{{iso:now-9h}}",
+        "endTime": "{{iso:now-8h}}",
+        "duration": "PT41M12.5531187S",
+        "activityId": "3f6e2b1c-8a4d-4c7e-b2f9-0d1a5e7c9b34",
+        "virtualMachineVersion": "Compute",
+        "isUserTriggered": false,
+        "errorDetails": [{"errorCode": "ExtensionSnapshotFailedNoNetwork", "errorString": "Snapshot operation failed due to no network connectivity on the virtual machine.", "recommendations": ["Allow outbound access to the AzureBackup and Storage service tags."]}]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupJobs/a1e85f2d-6c9b-47d3-8f05-2b4e9c1d7a63",
+      "name": "a1e85f2d-6c9b-47d3-8f05-2b4e9c1d7a63",
+      "type": "Microsoft.RecoveryServices/vaults/backupJobs",
+      "properties": {
+        "jobType": "AzureIaaSVMJob",
+        "entityFriendlyName": "vm-nva-01",
+        "backupManagementType": "AzureIaasVM",
+        "operation": "Backup",
+        "status": "Failed",
+        "startTime": "{{iso:now-33h}}",
+        "endTime": "{{iso:now-32h}}",
+        "duration": "PT40M2.1290431S",
+        "activityId": "9b2d4f6a-1c3e-4a5b-8d7f-0e2c4a6b8d13",
+        "virtualMachineVersion": "Compute",
+        "isUserTriggered": false,
+        "errorDetails": [{"errorCode": "ExtensionSnapshotFailedNoNetwork", "errorString": "Snapshot operation failed due to no network connectivity on the virtual machine."}]
+      }
+    }
+  ]
+}

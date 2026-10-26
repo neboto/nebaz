@@ -1,0 +1,58 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupJobs/5e7a9c1b-3d2f-4a6e-8b0c-9d1e2f3a4b5c",
+      "name": "5e7a9c1b-3d2f-4a6e-8b0c-9d1e2f3a4b5c",
+      "type": "Microsoft.DataProtection/backupVaults/backupJobs",
+      "properties": {
+        "activityID": "5e7a9c1b-3d2f-4a6e-8b0c-9d1e2f3a4b5c",
+        "backupInstanceFriendlyName": "psql-orders-prod",
+        "backupInstanceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupInstances/psql-orders-prod-psql-orders-prod-8a2d4c6e-1f3b-4d5a-b7c9-0e1f2a3b4c5d",
+        "dataSourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod",
+        "dataSourceLocation": "westeurope",
+        "dataSourceName": "psql-orders-prod",
+        "dataSourceType": "Microsoft.DBforPostgreSQL/flexibleServers",
+        "duration": "PT18M44.31S",
+        "startTime": "{{iso:now-2d}}",
+        "endTime": "{{iso:now-2d}}",
+        "isUserTriggered": false,
+        "operation": "Backup",
+        "operationCategory": "Backup",
+        "policyName": "pol-pg-weekly-90d",
+        "progressEnabled": false,
+        "sourceResourceGroup": "rg-orders-prod",
+        "sourceSubscriptionID": "{{prod}}",
+        "status": "Completed",
+        "subscriptionId": "{{prod}}",
+        "vaultName": "bvault-contoso-prod"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupJobs/0c2e4a6b-8d1f-4b3c-9e5a-7f0b1c2d3e4f",
+      "name": "0c2e4a6b-8d1f-4b3c-9e5a-7f0b1c2d3e4f",
+      "type": "Microsoft.DataProtection/backupVaults/backupJobs",
+      "properties": {
+        "activityID": "0c2e4a6b-8d1f-4b3c-9e5a-7f0b1c2d3e4f",
+        "backupInstanceFriendlyName": "psql-orders-prod",
+        "backupInstanceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupInstances/psql-orders-prod-psql-orders-prod-8a2d4c6e-1f3b-4d5a-b7c9-0e1f2a3b4c5d",
+        "dataSourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-orders-prod",
+        "dataSourceLocation": "westeurope",
+        "dataSourceName": "psql-orders-prod",
+        "dataSourceType": "Microsoft.DBforPostgreSQL/flexibleServers",
+        "duration": "PT17M2.08S",
+        "startTime": "{{iso:now-9d}}",
+        "endTime": "{{iso:now-9d}}",
+        "isUserTriggered": false,
+        "operation": "Backup",
+        "operationCategory": "Backup",
+        "policyName": "pol-pg-weekly-90d",
+        "progressEnabled": false,
+        "sourceResourceGroup": "rg-orders-prod",
+        "sourceSubscriptionID": "{{prod}}",
+        "status": "Completed",
+        "subscriptionId": "{{prod}}",
+        "vaultName": "bvault-contoso-prod"
+      }
+    }
+  ]
+}

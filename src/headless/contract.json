@@ -296,6 +296,10 @@
       "ip-groups (ipg)",
       "cloud-ngfws (ngfw)",
       "ngfw-rulestacks (rulestack)"
+    ],
+    "backup": [
+      "recovery-vaults (backup)",
+      "backup-vaults (bvault)"
     ]
   },
   "sections": {
@@ -901,6 +905,28 @@
       "Scaling",
       "Network",
       "Instances",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Recovery Services vault": [
+      "Overview",
+      "Security",
+      "Protected items",
+      "Policies",
+      "Failed jobs",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Backup vault": [
+      "Overview",
+      "Security",
+      "Backup instances",
+      "Policies",
+      "Jobs",
       "Access",
       "Activity",
       "Related",

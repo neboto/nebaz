@@ -171,3 +171,32 @@ async fn the_firewall_tab_fits_80_by_24_and_rules_sections_read_lazily() {
     assert!(h.app.lazy.ngfw_prefix_lists.contains(&rules_key(&rulestack)));
     assert!(h.app.lazy.ngfw_status.contains(&mocks::arm_id("PaloAltoNetworks.Cloudngfw/firewalls/ngfw-1")));
 }
+
+/// The Backup tab at 80×24 (#32): both sub-tabs and every section draw.
+/// Entering Protected items reads a Recovery Services vault's items and
+/// policies; a Backup vault's instances read its jobs too; Policies and
+/// (Failed) jobs each read theirs.
+#[tokio::test]
+async fn the_backup_tab_fits_80_by_24_and_vault_sections_read_lazily() {
+    let mut h = Harness::sized(80, 24).await;
+    for view in [JumpView::RecoveryVaults, JumpView::BackupVaults] {
+        let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
+        h.install(mock).await;
+        let screen = h.render();
+        assert!(screen.contains(view.label()), "{view:?}:\n{screen}");
+        h.press(KeyCode::Enter).await;
+        for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9'] {
+            h.press(KeyCode::Char(c)).await;
+            h.render();
+        }
+        h.press(KeyCode::Esc).await;
+    }
+    let rsv = mocks::arm_id("Microsoft.RecoveryServices/vaults/rsv-1");
+    let bv = mocks::arm_id("Microsoft.DataProtection/backupVaults/bv-1");
+    assert!(h.app.lazy.backup_protected_items.contains(&rsv));
+    assert!(h.app.lazy.backup_policies.contains(&rsv));
+    assert!(h.app.lazy.backup_jobs.contains(&rsv));
+    assert!(h.app.lazy.backup_instances.contains(&bv));
+    assert!(h.app.lazy.backup_policies.contains(&bv));
+    assert!(h.app.lazy.backup_jobs.contains(&bv));
+}

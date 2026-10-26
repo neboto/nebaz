@@ -1,0 +1,34 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod",
+      "name": "rsv-contoso-prod",
+      "type": "Microsoft.RecoveryServices/vaults",
+      "location": "westeurope",
+      "tags": {"env": "prod", "team": "platform", "owner": "alex.kim@contoso.com"},
+      "sku": {"name": "RS0", "tier": "Standard"},
+      "identity": {"type": "SystemAssigned", "principalId": "c4f1a7e2-5b38-4d9e-a061-7e2b9c3d8f15", "tenantId": "{{tenant}}"},
+      "properties": {
+        "provisioningState": "Succeeded",
+        "privateEndpointStateForBackup": "None",
+        "privateEndpointStateForSiteRecovery": "None",
+        "publicNetworkAccess": "Enabled",
+        "backupStorageVersion": "V2",
+        "redundancySettings": {"standardTierStorageRedundancy": "GeoRedundant", "crossRegionRestore": "Enabled"},
+        "restoreSettings": {"crossSubscriptionRestoreSettings": {"crossSubscriptionRestoreState": "Enabled"}},
+        "securitySettings": {
+          "softDeleteSettings": {"softDeleteState": "AlwaysON", "softDeleteRetentionPeriodInDays": 14, "enhancedSecurityState": "AlwaysON"},
+          "immutabilitySettings": {"state": "Unlocked"},
+          "multiUserAuthorization": "Disabled"
+        },
+        "monitoringSettings": {
+          "azureMonitorAlertSettings": {"alertsForAllJobFailures": "Enabled", "alertsForAllReplicationIssues": "Enabled", "alertsForAllFailoverIssues": "Enabled"},
+          "classicAlertSettings": {"alertsForCriticalOperations": "Disabled", "emailNotificationsForSiteRecovery": "Disabled"}
+        },
+        "secureScore": "Adequate",
+        "bcdrSecurityLevel": "Good",
+        "moveState": "Unknown"
+      }
+    }
+  ]
+}

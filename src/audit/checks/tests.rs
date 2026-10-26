@@ -5,7 +5,7 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
+    aks, app_service, backup, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
     keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
     sql, storage,
 };
@@ -1366,4 +1366,99 @@ fn a_vnet_without_an_enabled_flow_log_is_found_and_a_cold_read_is_a_note() {
     assert!(notes(&rows).is_empty());
     let off = rows.iter().find(|f| f.resource_name == "vnet-off").unwrap();
     assert_eq!(off.reason, "flow logs disabled");
+}
+
+// ── Backup ──
+
+fn rsv(name: &str, soft_delete: &str, immutability: &str, mua: &str) -> Box<dyn Resource> {
+    boxed(backup::RecoveryVaultRow::from_json(
+        &body(
+            &format!("Microsoft.RecoveryServices/vaults/{name}"),
+            json!({"securitySettings": {"softDeleteSettings": {"softDeleteState": soft_delete},
+                "immutabilitySettings": {"state": immutability}, "multiUserAuthorization": mua}}),
+        ),
+        None,
+    ))
+}
+
+fn bvault(name: &str, soft_delete: &str, immutability: &str, guard: bool) -> Box<dyn Resource> {
+    boxed(backup::BackupVaultRow::from_json(
+        &body(
+            &format!("Microsoft.DataProtection/backupVaults/{name}"),
+            json!({"securitySettings": {"softDeleteSettings": {"state": soft_delete}, "immutabilitySettings": {"state": immutability}},
+                "isVaultProtectedByResourceGuard": guard}),
+        ),
+        None,
+    ))
+}
+
+fn backup_lists() -> Vec<(JumpView, Vec<Box<dyn Resource>>)> {
+    vec![
+        (
+            V::RecoveryVaults,
+            vec![rsv("rsv-good", "AlwaysON", "Locked", "Enabled"), rsv("rsv-weak", "Disabled", "Disabled", "Disabled")],
+        ),
+        (V::BackupVaults, vec![bvault("bv-off", "Off", "Unlocked", false), bvault("bv-good", "AlwaysOn", "Locked", true)]),
+    ]
+}
+
+#[test]
+fn backup_vault_soft_delete_and_hardening() {
+    let lists = backup_lists();
+    assert_eq!(
+        findings(&audit("backup-soft-delete-off", &lists, None)),
+        vec![("bv-off".into(), Severity::Medium), ("rsv-weak".into(), Severity::Medium)]
+    );
+    let rows = audit("backup-vault-hardening", &lists, None);
+    assert_eq!(findings(&rows), vec![("bv-off".into(), Severity::Info), ("rsv-weak".into(), Severity::Info)]);
+    let reasons: Vec<&str> = rows.iter().map(|f| f.reason.as_str()).collect();
+    assert_eq!(reasons, ["no multi-user authorization", "no immutability, no multi-user authorization"]);
+    // A Backup vault list not loaded: the checks wait for it.
+    let only_rsv = vec![(V::RecoveryVaults, vec![rsv("rsv-weak", "Disabled", "Disabled", "Disabled")])];
+    assert!(findings(&audit("backup-soft-delete-off", &only_rsv, None)).is_empty());
+}
+
+#[test]
+fn a_failing_or_overdue_protected_item_is_flagged_on_its_source() {
+    let lists = backup_lists();
+    let vm = |n: &str| id(&format!("Microsoft.Compute/virtualMachines/{n}"));
+    let item = |n: &str, status: &str, at: &str| {
+        json!({"name": format!("VM;iaasvmcontainerv2;rg;{n}"), "properties": {"friendlyName": n, "sourceResourceId": vm(n),
+            "protectionState": "Protected", "lastBackupStatus": status, "lastBackupTime": at}})
+    };
+    let mut lazy = LazyStore::new(0);
+    lazy.backup_protected_items.apply(
+        id("Microsoft.RecoveryServices/vaults/rsv-good"),
+        Ok(vec![
+            item("vm-ok", "Completed", "2027-01-15T02:00:00Z"),
+            item("vm-failed", "Failed", "2027-01-15T02:00:00Z"),
+            item("vm-overdue", "Completed", "2027-01-12T02:00:00Z"),
+        ]),
+    );
+    let bi = id("Microsoft.DataProtection/backupVaults/bv-off/backupInstances/disk-1");
+    lazy.backup_instances.apply(
+        id("Microsoft.DataProtection/backupVaults/bv-off"),
+        Ok(vec![json!({"id": bi, "name": "disk-1", "properties": {"friendlyName": "disk-1",
+            "currentProtectionState": "ProtectionConfigured", "protectionStatus": {"status": "ProtectionConfigured"},
+            "dataSourceInfo": {"resourceID": id("Microsoft.Compute/disks/disk-1")}}})]),
+    );
+    lazy.backup_jobs.apply(
+        id("Microsoft.DataProtection/backupVaults/bv-off"),
+        Ok(vec![json!({"properties": {"backupInstanceId": bi, "operationCategory": "Backup", "status": "Failed",
+            "startTime": "2027-01-15T01:00:00Z"}})]),
+    );
+    let rows = audit("backup-item-failing", &lists, Some(&lazy));
+    assert_eq!(
+        findings(&rows),
+        vec![
+            ("disk-1".into(), Severity::Medium),
+            ("vm-failed".into(), Severity::Medium),
+            ("vm-overdue".into(), Severity::Low),
+        ]
+    );
+    let failed = rows.iter().find(|f| f.resource_name == "vm-failed").unwrap();
+    assert_eq!(failed.resource_id, vm("vm-failed"), "Enter opens the VM");
+    assert_eq!(failed.reason, "last backup Failed in rsv-good");
+    // rsv-weak and bv-good were never read: a note, not a pass.
+    assert_eq!(notes(&rows), vec!["2 of 4 not checked — r fetches protected items".to_string()]);
 }

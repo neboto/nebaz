@@ -170,6 +170,20 @@ pub struct LazyStore {
     /// and the Panorama connection.
     pub ngfw_status: LazyMap<serde_json::Value>,
 
+    // ── Backup ───────────────────────────────────────────────────────────
+    /// `GET {vault}/backupProtectedItems`, keyed by Recovery Services vault
+    /// id: the Protected items section, the VM-side reverse look-up
+    /// (`backup::protection_of`) and `@audit`.
+    pub backup_protected_items: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {vault}/backupInstances`, keyed by Backup vault id, with the
+    /// data source credentials stripped (`backup::without_secrets`).
+    pub backup_instances: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {vault}/backupPolicies`, keyed by vault id (either kind).
+    pub backup_policies: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {vault}/backupJobs`, keyed by vault id: a Recovery Services
+    /// vault's failed jobs of the last week, a Backup vault's recent jobs.
+    pub backup_jobs: LazyMap<Vec<serde_json::Value>>,
+
     // ── App Service ──────────────────────────────────────────────────────
     /// `GET {site}/config/web` — the Configuration section, keyed by site
     /// id. Never app settings or connection strings.

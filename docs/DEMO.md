@@ -98,6 +98,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.11.4, `ngfw-hub-prod`'s trust IP: its Routes name the firewall and ⏎ opens it, once `@ngfw` is loaded | Network · Routes |
 | `afw-hub-prod` (Azure Firewall Premium) still runs after the cutover to `ngfw-hub-prod`: no route table sends traffic to it (its Network section, once `@rt` is loaded) | Firewall |
 | `mysql-reporting-legacy`: public access, `require_secure_transport` OFF | `@audit` |
+| `vm-nva-01`'s backups in `rsv-contoso-prod` fail (`ExtensionSnapshotFailedNoNetwork`, twice in the last day and a half): its last good recovery point is 57h old; neither vault has multi-user authorization, `bvault-contoso-prod` no immutability | Backup (Protected items, Failed jobs), `@audit` |
 | `sb-orders-prod` queue `orders` has 1,284 dead-lettered messages; local auth on | Messaging |
 | `ai-contoso-prod` (Foundry): public network and key auth on | `@audit` |
 | `github-actions-deploy` has Contributor and User Access Administrator on the **subscription** (both granted yesterday by alex; UAA so its Bicep can assign AcrPull) | Access, `@changes`, `@audit` |
@@ -232,6 +233,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - Traffic Manager `tm-contoso-api` (global, Priority, `contoso-api.trafficmanager.net`, HTTPS probe on `/healthz`): `agw-westeurope` (Azure endpoint → `pip-agw-prod`, priority 1, Online) and `dr-onprem` (external `api-dr.contoso-demo.com`, priority 2, **Degraded**)
 - Front Door `afd-contoso` (Premium, global): endpoint `contoso-web` (host `contoso-web-c7d9e2f4a1b3.z01.azurefd.net`) with route `route-web` for the custom domain `www.contoso-demo.com`, origin group `og-agw-prod` → origin `origin-agw-prod` at `pip-agw-prod`'s FQDN, WAF policy `wafpafdcontoso` in Prevention (through security policy `sp-wafpafdcontoso`)
 - `law-contoso-prod` (Log Analytics, 30 days; workspace (customer) id `a5584474-4031-4fdf-9df6-93254d6c4c43`, which `cae-orders-prod`'s logs config names)
+- Backup. **`rsv-contoso-prod`** (Recovery Services, GRS with cross-region restore, soft delete Always On 14 days, immutability Unlocked, no multi-user authorization, public network on, alerts for job failures on) protects `vm-jump-01` (completed 9h ago), `vm-nva-01` (**last backup Failed** 9h ago, health ActionRequired, last recovery point 57h ago) and `vm-legacy-app-01` (protection stopped 41 days ago, data retained) with `pol-vm-daily-30d` (Enhanced, daily 02:00 W. Europe, instant restore 7 days, 30 days / 12 weeks / 12 months); `DefaultPolicy` protects nothing; two failed jobs in the last week, both `vm-nva-01`. **`bvault-contoso-prod`** (Backup vault, ZRS vault store, soft delete On 14 days, immutability off, no resource guard) protects `stcontosoordersprod`'s blobs (`pol-blob-operational-30d`, operational tier: continuous, no jobs) and `psql-orders-prod` (`pol-pg-weekly-90d`, weekly Sunday 01:00 UTC, 90 days in the vault store; completed 2 days ago)
 - Power Platform enterprise policy `ep-pp-network-injection` (kind `NetworkInjection`, location `europe`): `snet-pp-injection` in `vnet-hub-prod` and `snet-pp-injection-dr` in `vnet-pp-dr`
 
 **`rg-legacy-prod`** (team legacy)
@@ -272,5 +274,5 @@ Graph (`directoryObjects`) is `identity`'s.
 | `core` | Subscriptions (subscription details, locations, resource groups, All resources), the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
 | `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Firewall |
 | `compute` | VMs, disks, AKS, Container Registry, App Service, Container Apps |
-| `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging |
+| `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, Backup |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry |
