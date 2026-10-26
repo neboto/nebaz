@@ -1,0 +1,39 @@
+{
+  "name": "vm-nva-01_OsDisk_1_5c2e8a4f9d1b4e7a8c3f6b0d2e4a9c71",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/disks/vm-nva-01_OsDisk_1_5c2e8a4f9d1b4e7a8c3f6b0d2e4a9c71",
+  "type": "Microsoft.Compute/disks",
+  "location": "westeurope",
+  "tags": {},
+  "sku": {
+    "name": "Premium_LRS",
+    "tier": "Premium"
+  },
+  "properties": {
+    "creationData": {
+      "createOption": "FromImage",
+      "imageReference": {
+        "id": "/Subscriptions/{{prod}}/Providers/Microsoft.Compute/Locations/westeurope/Publishers/fortinet/ArtifactTypes/VMImage/Offers/fortinet_fortigate-vm_v5/Skus/fortinet_fg-vm_payg_2023/Versions/7.4.4"
+      }
+    },
+    "diskSizeGB": 2,
+    "diskIOPSReadWrite": 120,
+    "diskMBpsReadWrite": 25,
+    "encryption": {
+      "type": "EncryptionAtRestWithPlatformKey"
+    },
+    "networkAccessPolicy": "DenyAll",
+    "publicNetworkAccess": "Disabled",
+    "timeCreated": "{{iso:now-210d}}",
+    "provisioningState": "Succeeded",
+    "diskState": "Attached",
+    "diskSizeBytes": 2147483648,
+    "uniqueId": "3f5a7c9e-1b3d-4f5a-7c9e-1b3d5f7a9c46",
+    "tier": "P1",
+    "osType": "Linux",
+    "hyperVGeneration": "V1"
+  },
+  "managedBy": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01",
+  "zones": [
+    "1"
+  ]
+}

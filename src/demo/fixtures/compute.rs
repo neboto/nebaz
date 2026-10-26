@@ -11,13 +11,17 @@ pub static FIXTURES: &[Fixture] = &[
     // The lazy Instance view section, then the single GET (`$expand=instanceView`).
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/instanceView", "vm-jump-01.instance-view.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01/instanceView", "vm-legacy-app-01.instance-view.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01/instanceView", "vm-nva-01.instance-view.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01", "vm-jump-01.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01", "vm-legacy-app-01.json"),
+    // The hub's FortiGate NVA (network's story; its VM rows live here).
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01", "vm-nva-01.json"),
     // ── Disks ──
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.Compute/disks", "disks.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/disk-legacy-data-01", "disk-legacy-data-01.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68", "vm-jump-01.os-disk.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13", "vm-legacy-app-01.os-disk.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/disks/vm-nva-01_OsDisk_1_5c2e8a4f9d1b4e7a8c3f6b0d2e4a9c71", "vm-nva-01.os-disk.json"),
     // ── AKS: clusters (node pools are flattened from them), one pool GET each ──
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.ContainerService/managedClusters", "managed-clusters.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod/agentPools/system", "aks-pool-system.json"),

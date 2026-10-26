@@ -169,19 +169,22 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 ### contoso-prod
 
 **`rg-network-prod`** (team platform)
-- `vnet-hub-prod` 10.10.0.0/16, peered with `vnet-dev` (contoso-dev) and with `vnet-pp-dr`. Subnets:
+- `vnet-hub-prod` 10.10.0.0/16, peered with `vnet-dev` (contoso-dev) and with `vnet-pp-dr`, DDoS protection on through `ddos-contoso`. Subnets:
   - `snet-aca` 10.10.0.0/23, delegated `Microsoft.App/environments`, NSG `nsg-aca`, route table `rt-spoke-egress`, NAT gateway `ng-prod`
   - `snet-pp-injection` 10.10.4.0/24, delegated `Microsoft.PowerPlatform/enterprisePolicies`, NSG `nsg-pp-injection`
   - `snet-pe` 10.10.5.0/24, private endpoints
   - `snet-appgw` 10.10.6.0/24, `agw-contoso-prod`, NSG `nsg-appgw-prod`
   - `snet-data` 10.10.7.0/24, delegated `Microsoft.DBforPostgreSQL/flexibleServers`
   - `snet-jump` 10.10.8.0/27, NSG `nsg-jump-prod`: `nic-vm-jump-01` 10.10.8.4, `nic-vm-legacy-app-01` 10.10.8.5, `lb-legacy-internal`'s frontend `fe-legacy-app` 10.10.8.10
-  - `AzureFirewallSubnet` 10.10.9.0/26 (the firewall itself is not in the demo; `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.9.4)
+  - `AzureFirewallSubnet` 10.10.9.0/26 (the firewall itself is not in the demo; `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.9.4, which Routes shows as "not a NIC or load balancer in the warm lists")
+  - `snet-nva` 10.10.11.0/28: the FortiGate NVA `vm-nva-01` (marketplace plan `fortinet` / `fortinet_fortigate-vm_v5`, so its kind reads "Fortinet fortinet_fortigate-vm_v5"; `nic-vm-nva-01` 10.10.11.4, IP forwarding on) behind `lb-nva-internal`'s frontend `fe-nva` 10.10.11.10 (HA ports rule `lbr-ha-ports`); `rt-spoke-egress` sends 192.168.0.0/16 there, the hit path of the next-hop match
+  - `AzureBastionSubnet` 10.10.12.0/26: `bas-hub-prod` (Standard, 2 scale units, native client, IP connect and file copy on; public IP `pip-bas-hub-prod` 20.103.45.13)
   - `snet-dns-outbound` 10.10.10.0/28, delegated `Microsoft.Network/dnsResolvers` (the resolver's outbound endpoint)
 - `vnet-pp-dr` (northeurope) 10.20.0.0/16, peered with `vnet-hub-prod`, subnet `snet-pp-injection-dr` 10.20.4.0/24 delegated `Microsoft.PowerPlatform/enterprisePolicies`, **no NSG**
 - NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`, "temp vendor access"; `AllowRdpFromOnPrem` 110 from 192.168.0.0/16), `nsg-appgw-prod` (GatewayManager 65200–65535, 443 from `AzureFrontDoor.Backend`)
-- Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12)
-- `ng-prod` (NAT gateway), `rt-spoke-egress`, `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443)
+- Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12), `pip-bas-hub-prod` (20.103.45.13)
+- `ng-prod` (NAT gateway), `rt-spoke-egress` (`default-to-firewall` 0.0.0.0/0 → 10.10.9.4, `onprem-via-nva` 192.168.0.0/16 → 10.10.11.10), `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443), `lb-nva-internal` (internal LB in front of `vm-nva-01`: pool `be-nva`, HA ports)
+- `ddos-contoso` (DDoS protection plan covering `vnet-hub-prod`)
 - Private endpoints (in `snet-pe`): `pe-kv-orders` (vault, 10.10.5.4), `pe-sql-orders` (sqlServer, 10.10.5.5), `pe-st-orders-blob` (blob, 10.10.5.6), `pe-acr-prod` (registry, 10.10.5.7 data endpoint + 10.10.5.8); their NICs `<pe>.nic.<guid>` in this group too
 - Private DNS zones (global): `privatelink.vaultcore.azure.net`, `privatelink.database.windows.net`, `privatelink.azurecr.io` (each linked to `vnet-hub-prod` by `link-vnet-hub-prod`), `privatelink.blob.core.windows.net` (**not linked**), `psql-orders-prod.private.postgres.database.azure.com` (`psql-orders-prod`'s VNet-integration zone: A `7f3a9c2e1b4d` → 10.10.7.4 in `snet-data`; linked to `vnet-hub-prod`), and the environment's zone `wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (`*` and `@` → 10.10.0.62; linked to `vnet-hub-prod`, **not** to `vnet-pp-dr`)
 - Public DNS zone `contoso-demo.com` (global): `api` A alias → `pip-agw-prod`, `www` CNAME → the Front Door endpoint (`_dnsauth.www` TXT validates it), MX and SPF

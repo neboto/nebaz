@@ -77,3 +77,28 @@ async fn the_edge_tab_fits_80_by_24() {
         h.press(KeyCode::Esc).await;
     }
 }
+
+/// Network's ten sub-tabs (#137: Bastion and DDoS reach the digit-key
+/// ceiling) all reach their chip and every digit at 80×24; the last
+/// sub-tab is `0`.
+#[tokio::test]
+async fn the_network_tab_with_ten_sub_tabs_fits_80_by_24() {
+    let mut h = Harness::sized(80, 24).await;
+    assert_eq!(ServiceType::Network.views().len(), 10);
+    for view in [JumpView::BastionHosts, JumpView::DdosPlans] {
+        let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
+        h.install(mock).await;
+        let screen = h.render();
+        assert!(screen.contains(view.label()), "{view:?}:\n{screen}");
+        h.press(KeyCode::Enter).await;
+        for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] {
+            h.press(KeyCode::Char(c)).await;
+            h.render();
+        }
+        h.press(KeyCode::Esc).await;
+    }
+    // The tenth sub-tab is the 0 key from the list.
+    h.open(JumpView::VirtualNetworks).await;
+    h.press(KeyCode::Char('0')).await;
+    assert_eq!(h.app.current_view, JumpView::DdosPlans);
+}

@@ -28,6 +28,10 @@ use crate::azure::services::network_edge::{
     LoadBalancerDetailSection, LoadBalancerRow, NatGatewayDetailSection, NatGatewayRow, PublicIpDetailSection,
     PublicIpRow, RouteTableDetailSection, RouteTableRow,
 };
+use crate::azure::services::network_hub::{
+    bastion_section_lines, ddos_plan_section_lines, subnet_next_hop_lines, BastionDetailSection, BastionRow,
+    DdosPlanDetailSection, DdosPlanRow, NextHopLists, NextHops,
+};
 use crate::azure::services::all_resources::{
     generic_resource_section_lines, GenericResourceDetailSection, GenericResourceRow,
 };
@@ -1953,6 +1957,20 @@ impl App {
         })
     }
 
+    /// The warm lists of an ARM id's subscription a route's
+    /// `VirtualAppliance` next hop is matched against (never a call).
+    pub(crate) fn next_hops(&self, id: &str) -> NextHops {
+        let Some(sub) = subscription_of(id) else {
+            return NextHops::default();
+        };
+        let get = |view: JumpView| self.cache.get_ref(&view.service(), sub, Some(view.as_str()));
+        NextHops::from_lists(NextHopLists {
+            nics: get(JumpView::Nics),
+            load_balancers: get(JumpView::LoadBalancers),
+            vms: get(JumpView::VirtualMachines),
+        })
+    }
+
     /// The warm WAF policies list of an ARM id's subscription.
     fn warm_waf_policies(&self, id: &str) -> Option<&[Box<dyn Resource>]> {
         let sub = subscription_of(id)?;
@@ -2829,6 +2847,11 @@ impl App {
             });
             let mut extra = subnet_policy_lines(r, policies);
             extra.extend(subnet_dns_related(self.dns_topology_for(r.id()), r.id()));
+            // Its route table's appliance hops, from the warm lists.
+            let route_tables = subscription_of(r.id()).and_then(|sub| {
+                self.cache.get_ref(&ServiceType::Network, sub, Some(JumpView::RouteTables.as_str()))
+            });
+            extra.extend(subnet_next_hop_lines(r, route_tables, &self.next_hops(r.id())));
             return Some(subnet_section_lines(r, SubnetDetailSection::from_index(idx), extra));
         }
         if let Some(r) = any.downcast_ref::<NsgRow>() {
@@ -2841,7 +2864,13 @@ impl App {
             return Some(load_balancer_section_lines(r, LoadBalancerDetailSection::from_index(idx)));
         }
         if let Some(r) = any.downcast_ref::<RouteTableRow>() {
-            return Some(route_table_section_lines(r, RouteTableDetailSection::from_index(idx)));
+            return Some(route_table_section_lines(r, RouteTableDetailSection::from_index(idx), &self.next_hops(r.id())));
+        }
+        if let Some(r) = any.downcast_ref::<BastionRow>() {
+            return Some(bastion_section_lines(r, BastionDetailSection::from_index(idx)));
+        }
+        if let Some(r) = any.downcast_ref::<DdosPlanRow>() {
+            return Some(ddos_plan_section_lines(r, DdosPlanDetailSection::from_index(idx)));
         }
         if let Some(r) = any.downcast_ref::<AppGatewayRow>() {
             let targets = self.backend_targets(r.id());
