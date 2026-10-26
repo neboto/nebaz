@@ -238,6 +238,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             VnetGateways,
             AzureFirewalls,
             CloudNgfws,
+            PrivateLinkServices,
             ScaleSets,
         ],
         VirtualNetworks => &[
@@ -271,17 +272,30 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             ScaleSets,
         ],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
-        PublicIps => &[Nics, LoadBalancers, NatGateways, AppGateways, VnetGateways, AzureFirewalls, CloudNgfws],
+        PublicIps => &[
+            Nics,
+            LoadBalancers,
+            NatGateways,
+            AppGateways,
+            VnetGateways,
+            AzureFirewalls,
+            CloudNgfws,
+            TrafficManagerProfiles,
+        ],
         Disks => &[VirtualMachines],
         // A Flexible set's VMs name it.
         ScaleSets => &[VirtualMachines],
-        LoadBalancers => &[ScaleSets],
         Nics => &[VirtualMachines, PrivateEndpoints, AppGateways],
         RouteTables | NatGateways => &[Subnets],
         AppServicePlans => &[WebApps],
         ContainerAppEnvironments => &[ContainerApps, ContainerAppJobs, WebApps, AppGateways, FrontDoorProfiles],
         // A gateway backend or a Front Door origin matched to the row.
-        ContainerApps | WebApps => &[AppGateways, FrontDoorProfiles],
+        ContainerApps => &[AppGateways, FrontDoorProfiles],
+        // ... and a Traffic Manager Azure endpoint.
+        WebApps => &[AppGateways, FrontDoorProfiles, TrafficManagerProfiles],
+        // A scale set's backend pools; a Private Link service's frontend; a Front Door origin's target.
+        LoadBalancers => &[ScaleSets, PrivateLinkServices],
+        PrivateLinkServices => &[FrontDoorProfiles, PrivateEndpoints],
         AppGateways => &[PublicIps, WafPolicies],
         WafPolicies => &[AppGateways, FrontDoorProfiles],
         FrontDoorProfiles => &[WafPolicies],

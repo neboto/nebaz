@@ -9,7 +9,7 @@
 #   - Private DNS: 0 privatelink.azurecr.io, 1 privatelink.blob…, 2 database,
 #     3 vaultcore, 4 psql-orders-prod…, 5 wonderfulsea-… → j, then jjjj
 #   - Zone sections: 2 Records, 3 VNet links
-#   - VNet sections: 6 Related
+#   - VNet sections: 7 Related
 
 Output demo/.raw/dns.gif
 
@@ -79,7 +79,7 @@ Enter
 Sleep 600ms
 Enter
 Sleep 1.8s
-Type "6"
+Type "7"
 Sleep 1s
 Type "Z"
 Sleep 7.5s

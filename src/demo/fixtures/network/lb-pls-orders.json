@@ -1,0 +1,130 @@
+{
+  "name": "lb-pls-orders",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders",
+  "etag": "W/\"8e1c3a5f-2b4d-5f6a-9c8e-0d2f4a6b8c37\"",
+  "type": "Microsoft.Network/loadBalancers",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "purpose": "private link to the orders API for partners"
+  },
+  "sku": {
+    "name": "Standard",
+    "tier": "Regional"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "3b5d7f9a-1c3e-5a7b-9d1f-3a5c7e9b1d48",
+    "frontendIPConfigurations": [
+      {
+        "name": "fe-pls",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/frontendIPConfigurations/fe-pls",
+        "type": "Microsoft.Network/loadBalancers/frontendIPConfigurations",
+        "zones": [
+          "1",
+          "2",
+          "3"
+        ],
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.15.4",
+          "privateIPAllocationMethod": "Static",
+          "privateIPAddressVersion": "IPv4",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pls"
+          },
+          "loadBalancingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/loadBalancingRules/lbr-https"
+            }
+          ]
+        }
+      }
+    ],
+    "backendAddressPools": [
+      {
+        "name": "be-orders-api",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/backendAddressPools/be-orders-api",
+        "type": "Microsoft.Network/loadBalancers/backendAddressPools",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "virtualNetwork": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+          },
+          "loadBalancerBackendAddresses": [
+            {
+              "name": "cae-orders-prod",
+              "properties": {
+                "ipAddress": "10.10.0.62",
+                "virtualNetwork": {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+                }
+              }
+            }
+          ],
+          "loadBalancingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/loadBalancingRules/lbr-https"
+            }
+          ]
+        }
+      }
+    ],
+    "loadBalancingRules": [
+      {
+        "name": "lbr-https",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/loadBalancingRules/lbr-https",
+        "type": "Microsoft.Network/loadBalancers/loadBalancingRules",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "frontendIPConfiguration": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/frontendIPConfigurations/fe-pls"
+          },
+          "frontendPort": 443,
+          "backendPort": 443,
+          "enableFloatingIP": false,
+          "idleTimeoutInMinutes": 4,
+          "protocol": "Tcp",
+          "loadDistribution": "Default",
+          "disableOutboundSnat": true,
+          "backendAddressPool": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/backendAddressPools/be-orders-api"
+          },
+          "probe": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/probes/probe-https"
+          }
+        }
+      }
+    ],
+    "probes": [
+      {
+        "name": "probe-https",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/probes/probe-https",
+        "type": "Microsoft.Network/loadBalancers/probes",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "protocol": "Tcp",
+          "port": 443,
+          "intervalInSeconds": 5,
+          "numberOfProbes": 2,
+          "probeThreshold": 1,
+          "loadBalancingRules": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders/loadBalancingRules/lbr-https"
+            }
+          ]
+        }
+      }
+    ],
+    "inboundNatRules": [],
+    "outboundRules": [],
+    "inboundNatPools": [],
+    "privateLinkServices": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateLinkServices/pls-orders-partner"
+      }
+    ]
+  }
+}

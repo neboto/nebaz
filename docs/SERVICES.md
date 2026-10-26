@@ -177,7 +177,10 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     debugged as one workflow (which zone answers, which resolver forwards,
     which ruleset rule, which VNet is linked) that VNets and subnets only
     touch through their Related lines. Private DNS moved with it; its
-    prefix (`@pdns`), view and cache key are unchanged.
+    prefix (`@pdns`), view and cache key are unchanged. Traffic Manager
+    profiles (`@tm`, #143) are its sixth sub-tab: Traffic Manager answers
+    DNS (a CNAME to the endpoint it picks), so it is debugged here, beside
+    the zone whose record points at it.
 16. **DNS topology** (`network_dns.rs`): what ties resolvers, endpoints,
     subnets, rulesets, policies, private zones and VNets together lives in
     child lists no list body carries, and the API's reverse lookups
@@ -215,7 +218,10 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `{n} classic rules`); firewall policy `{tier} · threat intel {mode} ·
     IDPS {mode}` (+ `· base {name}`); IP group `{n} addresses · used by {n}`;
     Cloud NGFW `{VNET|VWAN} · UDR {trust IP} · {local rulestack name |
-    Panorama | …}`; rulestack `{scope} · {default mode}`; All resources `→`/`·` and
+    Panorama | …}`; rulestack `{scope} · {default mode}`; Private Link
+    service `{load balancer} · {n} connections` (+ `· {n} not approved`);
+    Traffic Manager `{routing method} · {n} endpoints` (+ `· {n}
+    degraded`); All resources `→`/`·` and
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
@@ -246,7 +252,9 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     gateway (ExpressRoute and VPN names in one set), gateway connection,
     Azure Firewall (health, SNAT port utilisation, throughput, rule hits,
     latency probe; Cloud NGFW has no curated set: the `a` picker lists what
-    Azure Monitor has for it) (`curated_metrics` is the list). Any other
+    Azure Monitor has for it), Private Link service (bytes in / out, NAT
+    port use), Traffic Manager profile (queries returned, endpoints up)
+    (`curated_metrics` is the list). Any other
     ARM resource opens on the `a` picker (its metric definitions);
     `supports_metrics` drives the status-bar hint, so the hint and the
     default set cannot drift. One call per aggregation (2–3 per open, no
@@ -453,7 +461,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     users' directory objects, each SQL server's and Redis cache's firewall rules, each
     PostgreSQL and MySQL server's firewall rules, parameters and Entra
     admins, each
-    messaging namespace's network rule set, each site's `config/web`; at most 50 each), re-auditing as each lands; a
+    messaging namespace's network rule set, each site's `config/web`; at most 50 each; the subscription's flow
+    logs, rule 30), re-auditing as each lands; a
     failed source is one status error. A subscription switch drops what is
     in flight (the lazy epoch). A finding row is a list row like any
     other: a click selects it, a double-click is Enter. Headless: `nebaz
@@ -463,7 +472,13 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     listed below the catalog.
 
 26. **Edge is its own tab** (#31, `src/azure/services/edge.rs`): App
-    gateways (`@agw`), Front Door (`@afd`) and WAF policies (`@waf`).
+    gateways (`@agw`), Front Door (`@afd`), WAF policies (`@waf`) and
+    Private Link services (`@pls`, #143, `private_link.rs`: the provider
+    side of Private Link, what a Front Door Premium origin's or a private
+    endpoint's Private Link target lands on; its load balancer frontends
+    are matched in the warm load balancers, each consumer endpoint jumps
+    only when the warm private endpoints list has it, else it is text: it
+    is usually another subscription or tenant).
     Network already had eight sub-tabs; two more reach the ten digit keys
     and Front Door (`Microsoft.Cdn`) would be an eleventh, the DNS problem
     of rule 15 again. Those two slots went to Bastion and DDoS plans (#137):
@@ -580,6 +595,27 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `list…` / `get…` action and an Azure Firewall's `learnedIPPrefixes`
     (POSTs; the guard refuses the literals).
 
+30. **Flow logs are one lazy read per subscription** (#143,
+    `src/azure/services/flow_logs.rs`, glue `src/app/flow_logs.rs`): a
+    flow log is a child of its region's Network Watcher and names what it
+    logs by `targetResourceId` (a VNet, subnet or NIC for a VNet flow log;
+    an NSG for an NSG flow log), and no list body carries the details. So
+    `App::trigger_flow_logs` lists the subscription's network watchers and
+    each one's `flowLogs` (keyed `/subscriptions/{sub}`, read once per
+    session like rule 16's topology; a watcher whose list fails is a ⚠
+    line, only the watcher list failing fails the whole). The **Flow logs**
+    section of a VNet shows the VNet flow logs on it, its subnets and (with
+    `@nic` warm) the NICs in them, each with its target named, then the NSG
+    flow logs on its subnets' NSGs; an NSG's shows its own, then the VNet
+    flow logs on the subnets it guards. Each: enabled (⚠ when off), target,
+    storage account (jumps), retention, format and version, traffic
+    analytics with its workspace (jumps) and interval, the watcher. An NSG
+    flow log carries Microsoft's note: NSG flow logs retire on 30 September
+    2027 and none can be created since 30 June 2025. `flow-logs-missing`
+    (`@audit`) reads the same map; `r` there fetches it. Never Network
+    Watcher's `configureFlowLog` or `queryFlowLogStatus` (POSTs; the guard
+    refuses the literals).
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -598,9 +634,9 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
 | Virtual Machines · Scale sets | Model (image, VM size, OS disk type and size, ephemeral, data disks, security type, computer name prefix, extensions by **name and type only**: `settings`, `protectedSettings`, `customData` and `userData` are stripped before the raw JSON is kept) · Scaling (capacity, orchestration Uniform / Flexible, upgrade policy and automatic OS upgrades, overprovision (Uniform), zones, zone balance, fault domains, single placement group, priority, eviction and max price, Spot restore, priority mix, automatic repairs, scale-in policy) · Network (each NIC configuration: accelerated networking, IP forwarding, NSG; each IP configuration's subnet, load balancer backend and NAT pools and application gateway pools as their parent, per-instance public IP; the health probe's load balancer) · Instances ⧗ (name, power state, zone, latest model for Uniform; a Uniform instance's id is copied, a Flexible set's VM jumps) · (list summary: mode · size × capacity) | ladder only | subnets, load balancers, application gateways, NSGs, user-assigned identities, proximity placement group and host group (All resources: not browsed) | `az vmss show -n {name} -g {rg} --subscription {sub}` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
-| Network · VNets | Subnets (embedded) · Peerings (state; forwarded traffic allowed or blocked; gateway transit: offers this VNet's gateway, uses the peer's, or none) · (Overview: DDoS protection on / off and the DDoS plan, jumpable) | stateless | each subnet, each peered VNet, the DDoS plan; ⧗ (rule 16) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
+| Network · VNets | Subnets (embedded) · Peerings (state; forwarded traffic allowed or blocked; gateway transit: offers this VNet's gateway, uses the peer's, or none) · Flow logs ⧗ (rule 30) · (Overview: DDoS protection on / off and the DDoS plan, jumpable) | stateless | each subnet, each peered VNet, the DDoS plan; ⧗ (rule 16) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
 | Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, each appliance next hop of its route table (rule 27; the warm route tables list), the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 16) the DNS resolver endpoints in it | `az network vnet subnet show` |
-| Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
+| Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) · Flow logs ⧗ (rule 30: its NSG flow logs with the retirement note, the VNet flow logs on its subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
 | Network · Public IPs | — (Overview: address, allocation, version, SKU · tier, attached to, DNS label, FQDN, idle timeout, zones, DDoS) | attached / unattached | the owner of its IP configuration (NIC, load balancer, gateway, firewall, bastion), NAT gateway, prefix | `az network public-ip show` |
 | Network · LBs | Frontends (public IP, or private IP + subnet) · Backend pools (NICs, deduplicated from IP configurations; or addresses) · Rules (LB rules, health probes, inbound NAT, outbound) | stateless | frontend public IPs and subnets, backend NICs | `az network lb show` |
 | Network · Routes | Routes (prefix → next hop type and IP; under a `VirtualAppliance` route, what its IP is in the warm NICs / load balancers, jumpable, rule 27) | stateless | each associated subnet, each matched appliance next hop | `az network route-table show` |
@@ -609,13 +645,15 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Network · Bastion | Features (copy and paste, native client / tunneling, IP-based connection, shareable link, file copy, Kerberos, session recording, private-only; on / off, and what the SKU allows) · Network (VNet, each IP configuration's subnet and public IP, jumpable; the Developer SKU's VNet and allowed sources) · (Overview: SKU, scale units, DNS name, zones) | stateless | VNet, `AzureBastionSubnet`, public IP | `az network bastion show` (the `bastion` CLI extension) |
 | Network · DDoS | Protected (each VNet and public IP it covers, jumpable) · (Overview: counts, GUID) | stateless | each protected VNet and public IP | `az network ddos-protection show` |
 | DNS · Private DNS | Records ⧗ (name, type, TTL, values; auto-registered flagged) · VNet links ⧗ (each linked VNet jumps; auto-registration, state) | stateless; `location` is `global`, which passes every `R` filter | — (linked VNets are in VNet links) | `az network private-dns zone show` |
-| DNS · DNS zones | Records ⧗ (name, type, TTL, values, TXT cut at 60 characters; an alias record set's target is its own line and jumps; the first 1,000 record sets) · Delegation (the name servers, as text; never resolved) · (Overview: zone type, record sets of max, records per set) | stateless; `location` is `global` | alias targets (once Records has loaded: public IPs, Traffic Manager and Front Door land in All resources, record sets copy), a legacy private zone's VNets | `az network dns zone show` |
+| DNS · DNS zones | Records ⧗ (name, type, TTL, values, TXT cut at 60 characters; an alias record set's target is its own line and jumps; the first 1,000 record sets) · Delegation (the name servers, as text; never resolved) · (Overview: zone type, record sets of max, records per set) | stateless; `location` is `global` | alias targets (once Records has loaded: public IPs and Traffic Manager profiles jump, Front Door lands in All resources, record sets copy), a legacy private zone's VNets | `az network dns zone show` |
 | DNS · Resolvers | Endpoints ⧗ (inbound: private IP, subnet, allocation; outbound: subnet) · Rulesets ⧗ (those forwarding through its outbound endpoints) | ladder, then `dnsResolverState` (`Connected` → Available, `Disconnected` → Unavailable) | VNet; then ⧗ each endpoint's subnet, each ruleset | `az dns-resolver show` (the `dns-resolver` CLI extension) |
 | DNS · Rulesets | Rules ⧗ (domain → target servers and ports, enabled) · VNet links ⧗ (each linked VNet jumps; metadata) | ladder only | each outbound endpoint's resolver; then ⧗ the endpoints' subnets, the resolver's VNet, each linked VNet | `az dns-resolver forwarding-ruleset show` (extension) |
+| DNS · Traffic Manager (rule 15) | Routing (method explained, max return for MultiValue, relative name, FQDN as text, TTL, profile status, traffic view) · Monitor (status, protocol, port, path, interval, timeout, tolerated failures, expected status codes, custom headers) · Endpoints (by priority: type Azure / External / Nested, target resource jumpable (a child profile for Nested) or target FQDN as text, endpoint status, `endpointMonitorStatus` with Degraded and Stopped ⚠, priority, weight, location, geo mapping, subnets, min child endpoints, always serve) | ladder, then `profileStatus` `Disabled` → stopped, else `profileMonitorStatus` (`Online` → available, `Inactive` → unavailable, `Degraded` / `CheckingEndpoints` → pending); `location` is `global` | each endpoint's target resource (public IPs, App Service sites, child profiles) | `az network traffic-manager profile show` |
 | DNS · DNS policies | Rules ⧗ (security rules by priority: action, state, each domain list, which lands in All resources) · VNet links ⧗ | ladder only | ⧗ each linked VNet | `az dns-resolver policy show` (extension) |
 | Edge · App gateways (rule 26) | Frontends (public IP jumpable with its address from the warm list, or private IP + subnet; each frontend's listeners; the gateway subnet and its NSG requirement; private link configurations and endpoints) · Listeners (TLS policy; protocol, port, frontend, host names; certificate **name** and Key Vault secret id or "uploaded"; SNI; per-listener WAF policy; the rules using it, ⚠ when none) · Rules (by priority, the chain a request follows: listener → pool via settings, or path map → each path rule's pool, default, redirects; matched targets jumpable; ⚠ a Container App / App Service pool behind settings that keep the client's host) · Backends (pools with every address matched to a warm target or "not matched", backend NICs, empty pools flagged, which rules use each; HTTP and L4 settings: host name handling, path, affinity, probe, trusted roots, draining; probes; backend health is a POST, never sent) · WAF (gateway, listener and path-rule policies with mode and rule sets from the warm WAF list; classic WAF config; a policy on a non-WAF tier flagged) · (Overview: SKU, capacity or autoscale bounds, zones, HTTP/2, FIPS, counts) | ladder, then `operationalState` (`Running`, `Stopped`, else Pending) | gateway and frontend subnets, frontend public IPs, every WAF policy, backend NICs, private endpoints, user-assigned identities; then each matched backend | `az network application-gateway show` |
 | Edge · Front Door | Endpoints ⧗ (host name as text, enabled, deployment; each route: patterns, protocols → origin group, domains, forwarding protocol and HTTPS redirect, origin path, caching, rule sets, the group's origin hosts) · Origins ⧗ (per group: probe, load balancing, session affinity, origin auth identity, the routes using it; per origin by priority: host, priority, weight, ports, host header, certificate name check, the Azure resource (`azureOrigin`) or the warm-list match, host header warnings for Container Apps / App Service, Private Link target jumpable with status, ⚠ until approved) · Domains ⧗ (host name, validation state, ⚠ until approved, certificate type and secret **name**, min TLS, Azure DNS zone jumpable, routes and WAF using it; the DCV token is never shown) · Security ⧗ (each security policy's WAF policy jumpable, its mode from the warm WAF list, the domains and patterns it covers; ⚠ when none) · (Overview: SKU, resource state, Front Door id for `X-Azure-FDID`, origin response timeout, identity) | ladder, then `resourceState` (`Active` → available, `Disabled` → stopped); `location` is `global` | user-assigned identities; ⧗ WAF policies, Azure origins, Private Link targets, origin hosts matched in the warm lists, DNS zones, origin auth identities | `az afd profile show` (the `cdn` CLI extension) |
 | Edge · WAF policies | Settings (state, mode explained, request body inspection and limits, file upload limit, block response, log scrubbing) · Managed rules (each set and version, rule-group overrides with rule ids and state, exclusions) · Custom rules (by priority: action, type, rate limit, each condition with variable, selector, operator, negation, values, transforms) · Associations (gateways, listeners and path rules, Front Door security policies, classic endpoints; each jumps to its top resource) · (Overview: kind, resource state, mode, rule sets, counts) | ladder, then `resourceState` (`Enabled` → available, `Disabled` → stopped), else the policy's enabled state | each associated gateway or Front Door profile (classic Front Door lands in All resources) | `az network application-gateway waf-policy show`; Front Door: `az network front-door waf-policy show` (the `front-door` CLI extension) |
+| Edge · Private Link (rule 26) | Frontend (each load balancer frontend: the load balancer jumpable, its private IP and subnet from the warm list; or the direct-connect destination IP; NAT IP configurations with address, allocation and subnet jumpable; proxy protocol; NICs) · Visibility (alias as text, visibility and auto-approval subscription lists, access mode, FQDNs) · Connections (each consumer endpoint: jumpable when the warm private endpoints list has it, else text; location, status ⚠ unless Approved, description, link id) · (Overview: alias, load balancer, NAT IPs, visibility, auto-approval, proxy protocol, connections) | ladder only | load balancers, NAT subnets, NICs; the consumer endpoints in the warm list | `az network private-link-service show` |
 | Hybrid · ER circuits (rule 28) | Provider (provider, peering location, bandwidth or the Direct port, SKU tier · family, circuit and provider state explained, service key masked, notes, Global Reach, classic operations) · Peerings (each: type and state, VLAN, peer and Azure ASN, primary / secondary prefixes, Azure ports, route filter jumpable; Microsoft peering: advertised prefixes, ⚠ while `ValidationNeeded`, customer ASN, routing registry, communities; IPv6) · Global Reach (each peer circuit jumpable, the peering it rides, address prefix, status) · Authorizations (name and use status only) · Connections (from the warm Connections list: each jumpable, type, status, the gateway, FastPath) · (Overview: states, provider, location, bandwidth, SKU, peerings, authorizations) | ladder, then disabled → stopped, then the provider state (rule 28) | ExpressRoute port, route filters, Global Reach peer circuits; then each connection in the warm list | `az network express-route show` |
 | Hybrid · VNet gateways | Configuration (gateway type, SKU and tier, zone redundancy from an `…AZ` SKU, active-active; VPN: VPN type, generation, private IP; ExpressRoute: FastPath is per connection, remote VNet and Virtual WAN traffic; BGP, admin state, custom routes) · IP configurations (allocation, private IP, subnet and public IP jumpable; ⚠ a subnet not named GatewaySubnet) · BGP (ASN, peer weight, peering addresses; per IP configuration the default, APIPA and tunnel addresses) · Point-to-site (address pool, tunnel types, auth types, Entra tenant / audience / issuer, RADIUS server addresses, root certificate **names**, revoked count, custom IPsec policies) · Connections (warm list) · (Overview: type, SKU, zone redundancy, active-active, BGP, ASN, VNet, public IPs) | ladder, then `adminState` `Disabled` → stopped | VNet, GatewaySubnet, public IPs; then each connection in the warm list | `az network vnet-gateway show` |
 | Hybrid · Connections | Configuration (type, status, ⚠ when `NotConnected`, routing weight, ingress / egress bytes; ExpressRoute: FastPath, Private Link FastPath; IPsec / VNet-to-VNet: protocol, BGP, policy-based selectors, DPD timeout, mode, authentication (the key is never read); each tunnel's status, bytes and last connect) · IPsec (custom policies: IKE and IPsec proposals, SA lifetime; or Azure's defaults; traffic selectors) · (Overview: type, status, gateway, other side, routing weight) | ladder, then `connectionStatus` (rule 28) | the gateway, the circuit (any subscription), the local gateway, the VNet-to-VNet peer gateway | `az network vpn-connection show` |
@@ -651,7 +689,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @agw @afd @waf @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -666,6 +704,7 @@ has a fixture test there.
 | `subnet-pp-no-nsg` | VNets or Subnets | a subnet delegated to `Microsoft.PowerPlatform/enterprisePolicies` with no NSG | medium |
 | `waf-not-blocking` | WAF policies (both kinds) | a policy attached to something (a gateway, listener, path rule, Front Door security policy) in Detection mode or disabled; an unattached policy is skipped | medium |
 | `subnet-no-nsg` | VNets or Subnets | any other subnet with no NSG. Skipped: GatewaySubnet, AzureFirewallSubnet, AzureFirewallManagementSubnet, RouteServerSubnet (Azure refuses or forbids one), a `Microsoft.Netapp/volumes` delegation (Basic network features take none), a Power Platform subnet (`subnet-pp-no-nsg`), a subnet holding only private endpoints with network policies off (an NSG would not apply to them). AzureBastionSubnet supports one and is checked | low |
+| `flow-logs-missing` | VNets + flow logs ⧗ (rule 30; NICs when cached) | no enabled VNet flow log on the VNet, a subnet or a NIC in it, and no enabled NSG flow log on its subnets' NSGs; a note while the flow logs are not loaded | low |
 | `peering-not-connected` | VNets | a peering whose `peeringState` is not Connected (Initiated, Disconnected); one finding per VNet | medium |
 | `pe-not-approved` | Private endpoints | a connection whose status is not Approved; one finding per endpoint | medium: Rejected, Disconnected · low: Pending |
 | `pip-unattached` | Public IPs (+ Cloud NGFW when cached) | no IP configuration and no NAT gateway; a dynamic IP with no address (bills nothing) and the IPs a warm Cloud NGFW uses (ARM shows them attached to nothing) are skipped | info |
@@ -753,11 +792,13 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | PEs | 1 | `/providers/Microsoft.Network/privateEndpoints` · `2025-09-01` |
 | Bastion | 1 | `/providers/Microsoft.Network/bastionHosts` · `2025-09-01` (never the shareable-link or session POSTs) |
 | DDoS | 1 | `/providers/Microsoft.Network/ddosProtectionPlans` · `2025-09-01` |
+| Flow logs (VNet and NSG Flow logs sections, `flow-logs-missing`; rule 30) | once per subscription per session, on demand: 1 + 1 per network watcher (the first 100). Never `configureFlowLog` or `queryFlowLogStatus` (POSTs) | `/providers/Microsoft.Network/networkWatchers` · then `{watcher}/flowLogs` · `2025-09-01` |
 | Appliance next hops (Routes, subnet Related; rule 27) | 0: the warm NICs, load balancers, VMs and route tables | — |
 | Private DNS | 1 | `/providers/Microsoft.Network/privateDnsZones` · `2024-06-01` (its own spec) |
 | Records, VNet links | 1 each per zone, on demand | `{zone}/ALL` · `{zone}/virtualNetworkLinks` · `2024-06-01` |
 | DNS zones | 1 | `/providers/Microsoft.Network/dnszones` · `2018-05-01` (its own spec; the newest stable, DNSSEC is preview-only) |
 | DNS zone Records (and Related's alias targets) | 1 per zone, on demand, stopping at 1,000 record sets | `{zone}/all` · `2018-05-01` |
+| Traffic Manager | 1 (endpoints embedded) | `/providers/Microsoft.Network/trafficmanagerprofiles` · `2022-04-01` (its own spec; `2026-09-01` is seven weeks old and adds only `recordType`) |
 | Resolvers, Rulesets, DNS policies | 1 each | `/providers/Microsoft.Network/dnsResolvers` · `dnsForwardingRulesets` · `dnsResolverPolicies` · `2025-05-01` (the resolver spec) |
 | Ruleset Rules, policy Rules | 1 per ruleset or policy, on demand | `{ruleset}/forwardingRules` · `{policy}/dnsSecurityRules` · `2025-05-01` |
 | DNS topology (resolver Endpoints / Rulesets, ruleset and policy VNet links, the DNS lines of VNet and subnet Related; rule 16) | once per subscription per session, on demand: `4 + 2·resolvers + rulesets + policies + private zones`, each parent list followed for its first 100 | the three resolver lists, then `{resolver}/inboundEndpoints` · `{resolver}/outboundEndpoints` · `{ruleset}/virtualNetworkLinks` · `{policy}/virtualNetworkLinks` (`2025-05-01`); `privateDnsZones`, then `{zone}/virtualNetworkLinks` (`2024-06-01`) |
@@ -767,13 +808,14 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Change timeline (`W`, rule 23) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
 | `@changes` (rule 24) | per window, on load and `r`: the Activity Log (≤10 pages), Resource Health (≤20 pages), then 1 per group with a deployment in the window (≤20); Graph: ≤50 caller lookups (2 when an id is an app id) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{window start}'` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` (or `/subscriptions/{sub}/providers/Microsoft.Resources/deployments`) · `2025-04-01`; Graph `/v1.0/directoryObjects/{id}`, `/v1.0/servicePrincipals(appId='{id}')` |
-| `@audit` (rule 25) | 0 on open (the warm caches only). `r`: each uncached source list once (the rows above), then at most 50 each of SQL Firewall, Redis firewall rules, Service Bus and Event Hubs network rule sets, App Configuration and Access principal names, plus the subscription's Access list. `nebaz audit` makes the same calls | the paths of the rows above |
+| `@audit` (rule 25) | 0 on open (the warm caches only). `r`: each uncached source list once (the rows above), then at most 50 each of SQL Firewall, Redis firewall rules, Service Bus and Event Hubs network rule sets, App Configuration and Access principal names, plus the subscription's Access list and its flow logs (rule 30). `nebaz audit` makes the same calls | the paths of the rows above |
 | Network access lens (`N`) | 0 when the NICs, VNets and NSGs lists are warm; else 1 per missing NIC, VNet (for its subnet) and NSG, on demand. Never the POST effective-rules call | `{nic}` · `{vnet}` · `{nsg}` · `2025-09-01` |
 | Referenced by (`U`, rule 21) | 0. `L`: each likely list not warm, at that list's own cost (below), once | the lists' own calls |
 | Ownership ribbon (rule 22) | 0 for tags and `managedBy`; with the pane focused, 1 per resource group per subscription visit, plus 1 per not-succeeded deployment among the newest 3 | `{group}/providers/Microsoft.Resources/deployments?$top=100` · `{group}/providers/Microsoft.Resources/deployments/{name}/operations` · `2025-04-01` |
 | Can do (identities) | 1 per identity, on demand | `/subscriptions/{sub}/providers/Microsoft.Authorization/roleAssignments?$filter=principalId eq '{principal}'` · `2022-04-01` |
 | App gateways | 1 (frontends, listeners, rules, pools, settings, probes embedded; certificate `data` and `password` stripped before the row keeps it; backend health is a POST, never sent) | `/providers/Microsoft.Network/applicationGateways` · `2025-09-01` |
 | WAF policies | 2 (one list; a failure of either beside the other is a warning) | `/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies` · `2025-09-01`; `/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies` · `2026-04-01` (its own spec) |
+| Private Link services | 1 (NAT IP configurations and private endpoint connections embedded) | `/providers/Microsoft.Network/privateLinkServices` · `2025-09-01` |
 | Front Door | 1 (classic CDN SKUs filtered out client-side) | `/providers/Microsoft.Cdn/profiles` · `2026-07-01` |
 | Front Door Endpoints, Origins, Domains, Security (and Related) | once per profile, on demand: `4 + endpoints + origin groups`, the first 50 of each followed; only the endpoints failing fails it, any other child is a warning line. Never `{profile}/secrets` | `{profile}/afdEndpoints` · `{endpoint}/routes` · `{profile}/originGroups` · `{group}/origins` · `{profile}/customDomains` · `{profile}/securityPolicies` · `2026-07-01` |
 | Hybrid ER circuits | 1 (peerings, authorizations and Global Reach connections embedded; authorization and shared keys stripped, the service key masked) | `/providers/Microsoft.Network/expressRouteCircuits` · `2025-09-01` |
@@ -843,6 +885,22 @@ it; that floor is #63.
 
 ## Not yet verified live
 
+- Private Link services, Traffic Manager and flow logs (#143), built
+  without an Azure login from azure-rest-api-specs (Network `2025-09-01`
+  for `privateLinkServices`, `networkWatchers` and `flowLogs`; Traffic
+  Manager `2022-04-01`) and the CLI sources. To check: the subscription-wide
+  `privateLinkServices` list carries `privateEndpointConnections` with
+  `privateEndpointLocation`; Traffic Manager's list path answers in its
+  lowercase form (`trafficmanagerprofiles`, as the spec spells it) and
+  endpoints are embedded; a flow log list body carries
+  `flowAnalyticsConfiguration` (with `workspaceResourceId`) and `format`;
+  a VNet flow log on a NIC appears on its VNet once `@nic` is warm; the
+  metric names (`PLSBytesIn`, `PLSBytesOut`, `PLSNatPortsUsage`,
+  `QpsByEndpoint`, `ProbeAgentCurrentEndpointStateByProfileResourceId`);
+  `az network private-link-service show` and `az network traffic-manager
+  profile show` take `--ids` (`id_part='name'`); `az network watcher
+  flow-log list --location` (a custom command, no `--ids`); the Edge and
+  DNS tabs at 80×24 on a real estate.
 - VM scale sets (#30), built without an Azure login from
   azure-rest-api-specs (Compute `2026-04-01`, `ComputeRP.json`, the VM
   version) and the azure-cli sources (2026-10-26). To check: the

@@ -124,6 +124,48 @@ async fn a_vnet_related_lists_its_dns_once_the_topology_lands() {
     assert_eq!(h.app.pending_jump, Some((resolver, true)));
 }
 
+/// A VNet's Flow logs section asks for the subscription's flow logs once;
+/// when they land the VNet's own flow log renders and its storage account
+/// line jumps to Storage (#143).
+#[tokio::test]
+async fn a_vnet_flow_logs_section_reads_the_subscription_once_and_jumps() {
+    use crate::azure::services::flow_logs::{FlowLog, FlowLogs};
+    let mut h = Harness::new().await;
+    h.open(JumpView::VirtualNetworks).await;
+    h.land(vec![super::mocks::vnet("vnet-hub", "westeurope")]).await;
+    h.press(KeyCode::Enter).await;
+    let idx = h.section_labels().iter().position(|l| *l == "Flow logs").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(idx).unwrap())).await;
+
+    let key = format!("/subscriptions/{}", super::SUB_DEV);
+    assert!(matches!(h.app.lazy.flow_logs.get(&key), Some(crate::lazy::Lazy::Loading)), "entering Flow logs fired the read");
+    assert!(h.app.get_detail_lines().iter().any(|(k, v)| k == "Flow logs" && v == "Loading…"));
+
+    let storage = arm_id("Microsoft.Storage/storageAccounts/stflowlogs");
+    let watcher = arm_id("Microsoft.Network/networkWatchers/NetworkWatcher_westeurope");
+    let log = FlowLog::from_json(
+        &serde_json::json!({"id": format!("{watcher}/flowLogs/fl-hub"), "name": "fl-hub",
+            "properties": {"targetResourceId": arm_id("Microsoft.Network/virtualNetworks/vnet-hub"),
+                "enabled": true, "storageId": storage, "retentionPolicy": {"days": 7, "enabled": true}}}),
+        &watcher,
+    )
+    .unwrap();
+    let logs = FlowLogs { logs: vec![log], warnings: Vec::new(), watchers: 1 };
+    let apply: Box<dyn FnOnce(&mut App) + Send> = Box::new(move |app: &mut App| app.lazy.flow_logs.apply(key, Ok(logs)));
+    let epoch = h.app.lazy.epoch();
+    h.send(Event::Lazy(LazyApply { epoch, apply })).await;
+
+    let lines = h.app.get_detail_lines();
+    assert!(lines.iter().any(|(k, _)| k == "VNet flow log · fl-hub"), "{lines:#?}");
+    assert!(lines.contains(&("  Retention".to_string(), "7 days".to_string())), "{lines:#?}");
+    assert!(h.render().contains("fl-hub"));
+
+    h.cursor_to_value(&storage).await;
+    h.press(KeyCode::Enter).await;
+    assert_eq!(h.app.current_service, Some(ServiceType::Storage));
+    assert_eq!(h.app.pending_jump, Some((storage, true)));
+}
+
 /// A jump whose list ends without the row clears with a message.
 #[tokio::test]
 async fn a_jump_to_a_missing_row_clears_when_the_load_ends() {

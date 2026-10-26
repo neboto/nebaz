@@ -355,6 +355,20 @@ const AZURE_FIREWALL: &[MetricSpec] = &[
     m("FirewallLatencyPng", "Latency (probe)", Avg),
 ];
 
+/// A Private Link service: traffic through it and its NAT port use (the
+/// exhaustion that drops new consumer flows).
+const PRIVATE_LINK_SERVICE: &[MetricSpec] = &[
+    m("PLSBytesIn", "Bytes in", Total),
+    m("PLSBytesOut", "Bytes out", Total),
+    m("PLSNatPortsUsage", "NAT ports used %", Max),
+];
+/// A Traffic Manager profile: the queries it answered and its endpoints'
+/// probe state (1 up, 0 down).
+const TRAFFIC_MANAGER: &[MetricSpec] = &[
+    m("QpsByEndpoint", "Queries returned", Total),
+    m("ProbeAgentCurrentEndpointStateByProfileResourceId", "Endpoints up", Avg),
+];
+
 /// The default set for an ARM id, by its provider and type chain; empty
 /// for a type with none (the `a` picker still lists what it has).
 pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
@@ -392,6 +406,8 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.network", ["virtualnetworkgateways"]) => VNET_GATEWAY,
         ("microsoft.network", ["connections"]) => GATEWAY_CONNECTION,
         ("microsoft.network", ["azurefirewalls"]) => AZURE_FIREWALL,
+        ("microsoft.network", ["privatelinkservices"]) => PRIVATE_LINK_SERVICE,
+        ("microsoft.network", ["trafficmanagerprofiles"]) => TRAFFIC_MANAGER,
         _ => &[],
     }
 }

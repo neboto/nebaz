@@ -2228,6 +2228,11 @@ impl EdgeService {
     fn rows(view: JumpView, page: &[Value], tenant: Option<&str>) -> Vec<Box<dyn Resource>> {
         match view {
             JumpView::WafPolicies => Self::boxed(page.iter().filter_map(|v| WafPolicyRow::from_json(v, tenant)).collect()),
+            JumpView::PrivateLinkServices => Self::boxed(
+                page.iter()
+                    .filter_map(|v| crate::azure::services::private_link::PrivateLinkServiceRow::from_json(v, tenant))
+                    .collect(),
+            ),
             JumpView::FrontDoorProfiles => Self::boxed(
                 page.iter().filter(|v| is_front_door(v)).filter_map(|v| FrontDoorProfileRow::from_json(v, tenant)).collect(),
             ),
@@ -2243,6 +2248,11 @@ impl EdgeService {
                 (AFD_WAF_PATH, AFD_WAF_API_VERSION, "Listing Front Door WAF policies…"),
             ],
             JumpView::FrontDoorProfiles => &[(PROFILES_PATH, CDN_API_VERSION, "Listing Front Door profiles…")],
+            JumpView::PrivateLinkServices => &[(
+                crate::azure::services::private_link::PRIVATE_LINK_SERVICES_PATH,
+                AGW_API_VERSION,
+                "Listing Private Link services…",
+            )],
             _ => &[(APP_GATEWAYS_PATH, AGW_API_VERSION, "Listing application gateways…")],
         }
     }

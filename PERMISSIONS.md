@@ -109,7 +109,12 @@ each one backs are in the catalog table
   `Microsoft.Network/privateEndpoints/read`; Bastion hosts:
   `Microsoft.Network/bastionHosts/read`; DDoS protection plans:
   `Microsoft.Network/ddosProtectionPlans/read`. Appliance next hops are
-  matched in lists already read: no action of their own.
+  matched in lists already read: no action of their own. The VNet and NSG
+  Flow logs sections (and `flow-logs-missing`):
+  `Microsoft.Network/networkWatchers/read`,
+  `Microsoft.Network/networkWatchers/flowLogs/read`; Network Watcher's
+  configure and status-query flow-log actions are `POST`s nebaz never
+  sends.
 - **DNS**: private DNS zones:
   `Microsoft.Network/privateDnsZones/read`, and the lazy Records and VNet
   links sections: `Microsoft.Network/privateDnsZones/ALL/read`,
@@ -124,16 +129,20 @@ each one backs are in the catalog table
   `Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks/read`; DNS
   security policies: `Microsoft.Network/dnsResolverPolicies/read`,
   `Microsoft.Network/dnsResolverPolicies/dnsSecurityRules/read`,
-  `Microsoft.Network/dnsResolverPolicies/virtualNetworkLinks/read`. The
+  `Microsoft.Network/dnsResolverPolicies/virtualNetworkLinks/read`. Traffic
+  Manager profiles (endpoints embedded):
+  `Microsoft.Network/trafficManagerProfiles/read`. The
   VNet ⇄ resolver lookups the resolver API offers
   (`virtualNetworks/listDnsResolvers`, `listDnsForwardingRulesets`) are
   `POST`s and are never sent; the links are gathered from the `GET`s above.
   The network access lens (`N`) needs nothing more: it reads NICs, VNets
   and NSGs with the actions above and computes the rules itself, because a
   NIC's effective rules and routes are POST actions nebaz never calls.
-- **Edge** (application gateways, Front Door, WAF policies):
-  `Microsoft.Network/applicationGateways/read` (frontends, listeners,
-  rules, pools, settings and probes arrive embedded),
+- **Edge** (application gateways, Front Door, WAF policies, Private Link
+  services): `Microsoft.Network/applicationGateways/read` (frontends,
+  listeners, rules, pools, settings and probes arrive embedded),
+  `Microsoft.Network/privateLinkServices/read` (NAT IP configurations and
+  private endpoint connections arrive embedded),
   `Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/read`,
   `Microsoft.Network/frontDoorWebApplicationFirewallPolicies/read`,
   `Microsoft.Cdn/profiles/read`; a Front Door profile's lazy topology:

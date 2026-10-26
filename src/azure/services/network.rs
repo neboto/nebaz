@@ -36,6 +36,8 @@ crate::sections! {
         Overview "Overview",
         Subnets "Subnets",
         Peerings "Peerings",
+        // The subscription's flow logs (rule 30), one lazy read.
+        FlowLogs "Flow logs" => crate::app::App::trigger_flow_logs,
         Access "Access" => crate::app::App::trigger_access,
         Activity "Activity" => crate::app::App::trigger_activity,
         // The DNS resolvers, rulesets, policies and zones pointing here.
@@ -63,6 +65,7 @@ crate::sections! {
         Inbound "Inbound",
         Outbound "Outbound",
         UsedBy "Used by",
+        FlowLogs "Flow logs" => crate::app::App::trigger_flow_logs,
         Access "Access" => crate::app::App::trigger_access,
         Activity "Activity" => crate::app::App::trigger_activity,
         Related "Related",
@@ -262,6 +265,8 @@ pub fn vnet_section_lines(r: &VnetRow, section: VnetDetailSection) -> Vec<(Strin
             }
             lines
         }
+        // Rendered by the app from the subscription's flow logs.
+        VnetDetailSection::FlowLogs => crate::azure::services::rendered_by_app(),
         VnetDetailSection::Access => crate::azure::services::rendered_by_app(),
         VnetDetailSection::Activity => crate::azure::services::rendered_by_app(),
         VnetDetailSection::Related => related_rows(r),
@@ -696,6 +701,8 @@ pub fn nsg_section_lines(r: &NsgRow, section: NsgDetailSection) -> Vec<(String, 
             }
             lines
         }
+        // Rendered by the app from the subscription's flow logs.
+        NsgDetailSection::FlowLogs => crate::azure::services::rendered_by_app(),
         NsgDetailSection::Access => crate::azure::services::rendered_by_app(),
         NsgDetailSection::Activity => crate::azure::services::rendered_by_app(),
         NsgDetailSection::Related => related_rows(r),

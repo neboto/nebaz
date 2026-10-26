@@ -28,6 +28,7 @@ use crate::azure::resource::{
     ResourceState,
 };
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::traffic_manager::{TrafficManagerRow, TRAFFIC_MANAGER_API_VERSION, TRAFFIC_MANAGER_PATH};
 use crate::azure::services::network_private::{PrivateDnsZoneRow, PRIVATE_DNS_API_VERSION, PRIVATE_DNS_ZONES_PATH};
 use crate::azure::services::{
     arm_row, finish_stream, json, lazy_list_rows, overview_rows, related_lines, tag_rows, ArmBase, Scope,
@@ -1210,6 +1211,7 @@ impl DnsService {
             JumpView::DnsResolverPolicies => {
                 (DNS_RESOLVER_POLICIES_PATH, DNS_RESOLVER_API_VERSION, "Listing DNS security policies…")
             }
+            JumpView::TrafficManagerProfiles => (TRAFFIC_MANAGER_PATH, TRAFFIC_MANAGER_API_VERSION, "Listing Traffic Manager profiles…"),
             _ => (PRIVATE_DNS_ZONES_PATH, PRIVATE_DNS_API_VERSION, "Listing private DNS zones…"),
         }
     }
@@ -1224,6 +1226,7 @@ impl DnsService {
             JumpView::DnsResolvers => boxed(page.iter().filter_map(|v| DnsResolverRow::from_json(v, tenant))),
             JumpView::DnsForwardingRulesets => boxed(page.iter().filter_map(|v| DnsRulesetRow::from_json(v, tenant))),
             JumpView::DnsResolverPolicies => boxed(page.iter().filter_map(|v| DnsPolicyRow::from_json(v, tenant))),
+            JumpView::TrafficManagerProfiles => boxed(page.iter().filter_map(|v| TrafficManagerRow::from_json(v, tenant))),
             _ => boxed(page.iter().filter_map(|v| PrivateDnsZoneRow::from_json(v, tenant))),
         }
     }

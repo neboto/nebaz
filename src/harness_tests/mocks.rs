@@ -8,7 +8,8 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry,
-    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets, sql, storage, subscriptions,
+    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
+    traffic_manager,
 };
 use serde_json::{json, Value};
 
@@ -356,6 +357,30 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                 "DnsPolicyRow",
                 network_dns::DnsPolicyRow::from_json(
                     &body(&arm_id("Microsoft.Network/dnsResolverPolicies/pol-1"), l, json!({"provisioningState": "Succeeded"})),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::TrafficManagerProfiles,
+            "TrafficManagerRow",
+            parse(
+                "TrafficManagerRow",
+                traffic_manager::TrafficManagerRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/trafficManagerProfiles/tm-1"),
+                        "name": "tm-1",
+                        "location": "global",
+                        "properties": {
+                            "profileStatus": "Enabled",
+                            "trafficRoutingMethod": "Priority",
+                            "dnsConfig": {"relativeName": "tm-1", "fqdn": "tm-1.trafficmanager.example", "ttl": 30},
+                            "monitorConfig": {"profileMonitorStatus": "Online", "protocol": "HTTPS", "port": 443, "path": "/"},
+                            "endpoints": [{"name": "ep-1", "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+                                "properties": {"targetResourceId": arm_id("Microsoft.Network/publicIPAddresses/pip-1"),
+                                    "endpointStatus": "Enabled", "endpointMonitorStatus": "Online", "priority": 1}}]
+                        }
+                    }),
                     t,
                 ),
             ),
@@ -738,6 +763,31 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "policySettings": {"state": "Enabled", "mode": "Prevention"},
                             "managedRules": {"managedRuleSets": [{"ruleSetType": "OWASP", "ruleSetVersion": "3.2"}]},
                             "applicationGateways": [{"id": arm_id("Microsoft.Network/applicationGateways/agw-1")}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::PrivateLinkServices,
+            "PrivateLinkServiceRow",
+            parse(
+                "PrivateLinkServiceRow",
+                private_link::PrivateLinkServiceRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/privateLinkServices/pls-1"),
+                        "name": "pls-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "alias": "pls-1.00000000-0000-0000-0000-000000000000.eastus.azure.privatelinkservice",
+                            "loadBalancerFrontendIpConfigurations": [{"id": arm_id("Microsoft.Network/loadBalancers/lb-1/frontendIPConfigurations/fe-1")}],
+                            "ipConfigurations": [{"name": "nat-1", "properties": {"privateIPAddress": "10.0.1.10",
+                                "subnet": {"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/default")}}}],
+                            "privateEndpointConnections": [{"name": "pe-1.conn", "properties": {
+                                "privateEndpoint": {"id": arm_id("Microsoft.Network/privateEndpoints/pe-1")},
+                                "privateLinkServiceConnectionState": {"status": "Approved"}}}]
                         }
                     }),
                     t,

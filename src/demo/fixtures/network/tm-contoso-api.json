@@ -1,0 +1,74 @@
+{
+  "name": "tm-contoso-api",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/trafficManagerProfiles/tm-contoso-api",
+  "type": "Microsoft.Network/trafficManagerProfiles",
+  "location": "global",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com"
+  },
+  "properties": {
+    "profileStatus": "Enabled",
+    "trafficRoutingMethod": "Priority",
+    "dnsConfig": {
+      "relativeName": "contoso-api",
+      "fqdn": "contoso-api.trafficmanager.net",
+      "ttl": 30
+    },
+    "monitorConfig": {
+      "profileMonitorStatus": "Degraded",
+      "protocol": "HTTPS",
+      "port": 443,
+      "path": "/healthz",
+      "intervalInSeconds": 30,
+      "timeoutInSeconds": 10,
+      "toleratedNumberOfFailures": 3,
+      "customHeaders": [
+        {
+          "name": "Host",
+          "value": "api.contoso-demo.com"
+        }
+      ],
+      "expectedStatusCodeRanges": [
+        {
+          "min": 200,
+          "max": 299
+        }
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "agw-westeurope",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/trafficManagerProfiles/tm-contoso-api/azureEndpoints/agw-westeurope",
+        "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+        "properties": {
+          "endpointStatus": "Enabled",
+          "endpointMonitorStatus": "Online",
+          "targetResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod",
+          "target": "agw-contoso-prod.westeurope.cloudapp.azure.com",
+          "weight": 1,
+          "priority": 1,
+          "endpointLocation": "West Europe",
+          "alwaysServe": "Disabled"
+        }
+      },
+      {
+        "name": "dr-onprem",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/trafficManagerProfiles/tm-contoso-api/externalEndpoints/dr-onprem",
+        "type": "Microsoft.Network/trafficManagerProfiles/externalEndpoints",
+        "properties": {
+          "endpointStatus": "Enabled",
+          "endpointMonitorStatus": "Degraded",
+          "target": "api-dr.contoso-demo.com",
+          "weight": 1,
+          "priority": 2,
+          "endpointLocation": "North Europe",
+          "alwaysServe": "Disabled"
+        }
+      }
+    ],
+    "trafficViewEnrollmentStatus": "Disabled",
+    "maxReturn": 0
+  }
+}

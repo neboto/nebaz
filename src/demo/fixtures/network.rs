@@ -1,9 +1,9 @@
 //! Demo fixtures: the `network` area (see `docs/DEMO.md` for who owns what):
 //! Virtual Network (VNets and their subnets, NSGs, public IPs, the load
-//! balancer, route table, NAT gateway, private endpoints), the NICs, DNS
-//! (private and public zones, the resolver, its ruleset, a DNS security
-//! policy), Edge (the application gateway, Front Door, both WAF
-//! policies), Hybrid (the ExpressRoute circuit, both hub gateways,
+//! balancer, route table, NAT gateway, private endpoints, flow logs), the
+//! NICs, DNS (private and public zones, the resolver, its ruleset, a DNS
+//! security policy, the Traffic Manager profile), Edge (the application
+//! gateway, Front Door, both WAF policies, the Private Link service), Hybrid (the ExpressRoute circuit, both hub gateways,
 //! their connections, the branch office's local gateway) and Firewall
 //! (the Cloud NGFW and its local rulestack, the Azure Firewall with its
 //! two policies and IP group). Lists first,
@@ -34,6 +34,8 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/dnsResolvers", "dns-resolvers.json"),
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/dnsForwardingRulesets", "dns-forwarding-rulesets.json"),
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/dnsResolverPolicies", "dns-resolver-policies.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/trafficmanagerprofiles", "traffic-manager-profiles.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/trafficManagerProfiles/tm-contoso-api", "tm-contoso-api.json"),
     // Private DNS zones: records, links, the zone
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io/ALL", "pdns-acr-records.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io/virtualNetworkLinks", "pdns-acr-links.json"),
@@ -70,6 +72,8 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies", "agw-waf-policies.json"),
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies", "afd-waf-policies.json"),
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Cdn/profiles", "cdn-profiles.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/privateLinkServices", "private-link-services.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateLinkServices/pls-orders-partner", "pls-orders-partner.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/applicationGateways/agw-contoso-prod", "agw-contoso-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/wafp-agw-prod", "wafp-agw-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/wafpafdcontoso", "wafpafdcontoso.json"),
@@ -110,6 +114,9 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod", "ipg-spokes-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub-prod", "ngfw-hub-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod", "lrs-hub-prod.json"),
+    // Network Watcher flow logs: the watchers list is core's; each
+    // watcher's flowLogs (northeurope has none: vnet-pp-dr is unlogged)
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/NetworkWatcher_westeurope/flowLogs", "flow-logs-westeurope.json"),
     // Single GETs (`r`, the `N` lens, jumps)
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod", "vnet-hub-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca", "vnet-hub-prod--snet-aca.json"),
@@ -127,6 +134,7 @@ pub static FIXTURES: &[Fixture] = &[
     // The scale sets' subnet (compute's story, 10.10.14.0/24).
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-compute", "vnet-hub-prod--snet-compute.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureBastionSubnet", "vnet-hub-prod--AzureBastionSubnet.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-pls", "vnet-hub-prod--snet-pls.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr", "vnet-pp-dr.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr/subnets/snet-pp-injection-dr", "vnet-pp-dr--snet-pp-injection-dr.json"),
     fx!("network", "/subscriptions/{{dev}}/resourceGroups/rg-dev/providers/Microsoft.Network/virtualNetworks/vnet-dev", "vnet-dev.json"),
@@ -160,6 +168,7 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ngfw-prod", "pip-ngfw-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-legacy-internal", "lb-legacy-internal.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal", "lb-nva-internal.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders", "lb-pls-orders.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/bastionHosts/bas-hub-prod", "bas-hub-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ddosProtectionPlans/ddos-contoso", "ddos-contoso.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress", "rt-spoke-egress.json"),

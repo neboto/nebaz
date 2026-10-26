@@ -143,6 +143,10 @@ pub struct LazyStore {
     /// resolver, ruleset and policy sections and the VNet and subnet
     /// Related sections read.
     pub dns_topology: LazyMap<crate::azure::services::network_dns::DnsTopology>,
+    /// Every Network Watcher flow log in a subscription, keyed by
+    /// `/subscriptions/{sub}`: what the VNet and NSG Flow logs sections and
+    /// the `flow-logs-missing` audit check read (`flow_logs.rs`).
+    pub flow_logs: LazyMap<crate::azure::services::flow_logs::FlowLogs>,
 
     // ── Edge ─────────────────────────────────────────────────────────────
     /// A Front Door profile's endpoints with their routes, origin groups

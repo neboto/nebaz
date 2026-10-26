@@ -1,0 +1,70 @@
+{
+  "value": [
+    {
+      "name": "fl-vnet-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/NetworkWatcher_westeurope/flowLogs/fl-vnet-hub-prod",
+      "type": "Microsoft.Network/networkWatchers/flowLogs",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "targetResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod",
+        "targetResourceGuid": "2f4a6c8e-0b1d-4f3a-5c7e-9b1d3f5a7c90",
+        "storageId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+        "enabled": true,
+        "retentionPolicy": {
+          "days": 30,
+          "enabled": true
+        },
+        "format": {
+          "type": "JSON",
+          "version": 2
+        },
+        "flowAnalyticsConfiguration": {
+          "networkWatcherFlowAnalyticsConfiguration": {
+            "enabled": true,
+            "workspaceId": "a5584474-4031-4fdf-9df6-93254d6c4c43",
+            "workspaceRegion": "westeurope",
+            "workspaceResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/law-contoso-prod",
+            "trafficAnalyticsInterval": 10
+          }
+        }
+      }
+    },
+    {
+      "name": "fl-nsg-jump-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/NetworkWatcherRG/providers/Microsoft.Network/networkWatchers/NetworkWatcher_westeurope/flowLogs/fl-nsg-jump-prod",
+      "type": "Microsoft.Network/networkWatchers/flowLogs",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "targetResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-jump-prod",
+        "targetResourceGuid": "2f4a6c8e-0b1d-4f3a-5c7e-9b1d3f5a7c90",
+        "storageId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+        "enabled": true,
+        "retentionPolicy": {
+          "days": 30,
+          "enabled": true
+        },
+        "format": {
+          "type": "JSON",
+          "version": 2
+        },
+        "flowAnalyticsConfiguration": {
+          "networkWatcherFlowAnalyticsConfiguration": {
+            "enabled": false
+          }
+        }
+      }
+    }
+  ]
+}

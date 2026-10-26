@@ -31,6 +31,7 @@ use crate::azure::services::directory::{AppRegistrationRow, DirectoryBase, Expir
 use crate::azure::services::edge::{WafKind, WafPolicyRow};
 use crate::azure::services::firewall::{AzureFirewallRow, CloudNgfwRow, FirewallPolicyRow};
 use crate::azure::services::hybrid::{CircuitRow, ConnectionRow, GatewayRow};
+use crate::azure::services::flow_logs::FlowLog;
 use crate::azure::services::foundry::FoundryRow;
 use crate::azure::services::json;
 use crate::azure::services::keyvault::VaultRow;
@@ -87,7 +88,7 @@ const FWPS: &[V] = &[V::FirewallPolicies];
 const NGFWS: &[V] = &[V::CloudNgfws];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 70] = [
+pub static CHECKS: [Check; 71] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -128,6 +129,14 @@ pub static CHECKS: [Check; 70] = [
         fix: "Create the peering on the remote VNet; a Disconnected peering must be deleted and recreated on both sides.",
         sources: &[VNETS],
         run: peering_not_connected,
+    },
+    Check {
+        id: "flow-logs-missing",
+        title: "VNet has no flow log",
+        why: "Without a flow log nothing records which flows reached, left or were denied in the VNet: an incident or an NSG change can't be reconstructed, and traffic analytics has nothing to show. Counted as covered: an enabled VNet flow log on the VNet, one of its subnets or (with @nic loaded) one of its NICs, or an enabled NSG flow log on one of its subnets' NSGs. NSG flow logs retire on 30 September 2027 and none can be created since 30 June 2025, so new coverage is a VNet flow log.",
+        fix: "Create a VNet flow log on the VNet (Network Watcher, Flow logs; or the built-in Azure Policy that deploys them), to a storage account in the same region, with traffic analytics if a Log Analytics workspace is available.",
+        sources: &[VNETS],
+        run: flow_logs_missing,
     },
     Check {
         id: "pe-not-approved",
@@ -951,6 +960,66 @@ fn subnet_no_nsg(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditF
         }
         out.push(AuditFinding::about(check, Severity::Low, s, "no NSG on the subnet").with_evidence(evidence));
     }
+}
+
+fn flow_logs_missing(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let scope = input.subscription_scope();
+    let logs = match input.lazy().and_then(|l| l.flow_logs.get(&scope)) {
+        Some(Lazy::Loaded(f)) => f,
+        Some(Lazy::Loading) => {
+            out.push(AuditFinding::note(
+                check,
+                "flow logs loading…".into(),
+                "The subscription's flow logs are loading; the check runs when they land.".into(),
+            ));
+            return;
+        }
+        Some(Lazy::Error(e)) => {
+            out.push(AuditFinding::note(
+                check,
+                "flow logs unreadable".into(),
+                format!("Couldn't read the subscription's flow logs: {}", e),
+            ));
+            return;
+        }
+        None => {
+            out.push(AuditFinding::note(
+                check,
+                "not checked — r fetches flow logs".into(),
+                "The subscription's flow logs (Network Watcher) aren't loaded. Press r here, or open a VNet's Flow logs section."
+                    .into(),
+            ));
+            return;
+        }
+    };
+    let nics: Vec<&NicRow> = input.of::<NicRow>(V::Nics).collect();
+    for v in input.of::<VnetRow>(V::VirtualNetworks) {
+        let vnet_logs = logs.vnet_logs(v, &nics);
+        let nsg_logs = logs.subnet_nsg_logs(v);
+        if vnet_logs.iter().chain(nsg_logs.iter()).any(|l| l.is_enabled()) {
+            continue;
+        }
+        let evidence = vec![
+            format!(
+                "VNet flow logs (VNet, subnets{}): {}",
+                if nics.is_empty() { "" } else { ", NICs" },
+                describe_logs(&vnet_logs)
+            ),
+            format!("NSG flow logs on its subnets' NSGs: {}", describe_logs(&nsg_logs)),
+        ];
+        let reason = if vnet_logs.is_empty() && nsg_logs.is_empty() { "no flow log" } else { "flow logs disabled" };
+        out.push(AuditFinding::about(check, Severity::Low, v, reason).with_evidence(evidence));
+    }
+}
+
+fn describe_logs(logs: &[&FlowLog]) -> String {
+    if logs.is_empty() {
+        return "none".into();
+    }
+    logs.iter()
+        .map(|l| format!("{} ({})", l.name, if l.is_enabled() { "enabled" } else { "disabled" }))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn peering_not_connected(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {

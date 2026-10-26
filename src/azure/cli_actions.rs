@@ -39,13 +39,15 @@ use crate::azure::services::firewall::{AzureFirewallRow, CloudNgfwRow, FirewallP
 use crate::azure::services::hybrid::{CircuitRow, ConnectionRow, GatewayRow};
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, ServiceBusRow};
-use crate::azure::services::network::{NsgRow, SubnetRow};
+use crate::azure::services::network::{NsgRow, SubnetRow, VnetRow};
 use crate::azure::services::postgres_mysql::{Engine, FlexibleServerRow};
 use crate::azure::services::power_platform::EnterprisePolicyRow;
+use crate::azure::services::private_link::PrivateLinkServiceRow;
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
 use crate::azure::services::scale_sets::ScaleSetRow;
 use crate::azure::services::sql::SqlServerRow;
 use crate::azure::services::storage::StorageAccountRow;
+use crate::azure::services::traffic_manager::TrafficManagerRow;
 
 /// How much a command can do: drives grouping, colour and the toast.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -217,6 +219,12 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         flexible_server_actions(f)
     } else if let Some(n) = any.downcast_ref::<NsgRow>() {
         nsg_actions(n)
+    } else if let Some(v) = any.downcast_ref::<VnetRow>() {
+        vnet_actions(v)
+    } else if let Some(p) = any.downcast_ref::<PrivateLinkServiceRow>() {
+        private_link_service_actions(p)
+    } else if let Some(t) = any.downcast_ref::<TrafficManagerRow>() {
+        traffic_manager_actions(t)
     } else if let Some(s) = any.downcast_ref::<SubnetRow>() {
         subnet_actions(s)
     } else if let Some(sp) = any.downcast_ref::<ServicePrincipalRow>() {
@@ -584,12 +592,53 @@ fn flexible_server_actions(f: &FlexibleServerRow) -> Option<Vec<CliAction>> {
 // ── Network ──────────────────────────────────────────────────────────
 
 fn nsg_actions(n: &NsgRow) -> Option<Vec<CliAction>> {
-    Some(vec![inspect(format!(
+    let mut out = vec![inspect(format!(
         "az network nsg rule list --nsg-name {} {} --include-default",
         shell_quote(&n.base.name),
         rg_sub(&n.base.id)?
     ))
-    .note("custom and default rules")])
+    .note("custom and default rules")];
+    out.extend(flow_log_list(&n.base.location, &n.base.id));
+    Some(out)
+}
+
+fn vnet_actions(v: &VnetRow) -> Option<Vec<CliAction>> {
+    Some(flow_log_list(&v.base.location, &v.base.id).into_iter().collect())
+}
+
+/// The region's flow logs (the Flow logs section's question). The CLI's
+/// `flow-log` commands take the region's watcher by `--location`, no
+/// `--ids`; `show` takes `--location` and `--name`.
+fn flow_log_list(location: &str, id: &str) -> Option<CliAction> {
+    if location.is_empty() {
+        return None;
+    }
+    Some(
+        inspect(format!(
+            "az network watcher flow-log list --location {} --subscription {}",
+            shell_quote(location),
+            shell_quote(subscription_of(id)?)
+        ))
+        .note("every flow log of this region's Network Watcher (the Flow logs section)"),
+    )
+}
+
+/// A Private Link service's connections (the generic private endpoint
+/// connection list takes the service's id).
+fn private_link_service_actions(p: &PrivateLinkServiceRow) -> Option<Vec<CliAction>> {
+    Some(vec![inspect(format!("az network private-endpoint-connection list --id {}", shell_quote(&p.base.id)))
+        .note("every consumer's private endpoint connection and its status")])
+}
+
+/// A Traffic Manager profile's endpoints (`--profile-name` has no
+/// `id_part`: the name form).
+fn traffic_manager_actions(t: &TrafficManagerRow) -> Option<Vec<CliAction>> {
+    Some(vec![inspect(format!(
+        "az network traffic-manager endpoint list --profile-name {} {}",
+        shell_quote(&t.base.name),
+        rg_sub(&t.base.id)?
+    ))
+    .note("each endpoint with its monitor status")])
 }
 
 fn subnet_actions(s: &SubnetRow) -> Option<Vec<CliAction>> {
@@ -1037,6 +1086,16 @@ mod tests {
         assert!(find(&nic, "network nic list-effective-nsg").note.as_deref().unwrap().contains("POST"));
         let subnet = actions_for(mock("SubnetRow").as_ref());
         assert!(subnet.iter().all(|a| a.tier == CliTier::Inspect));
+        let vnet = actions_for(mock("VnetRow").as_ref());
+        assert!(find(&vnet, "network watcher flow-log list").command.contains("--location "));
+        assert!(find(&n, "network watcher flow-log list").tier == CliTier::Inspect);
+        let pls = actions_for(mock("PrivateLinkServiceRow").as_ref());
+        assert!(pls[0].command.starts_with("az network private-link-service show --ids "));
+        assert!(find(&pls, "network private-endpoint-connection list").command.contains("--id "));
+        let tm = actions_for(mock("TrafficManagerRow").as_ref());
+        assert!(tm[0].command.starts_with("az network traffic-manager profile show --ids "));
+        assert!(find(&tm, "network traffic-manager endpoint list").command.contains("--profile-name tm-1 "));
+        assert!(pls.iter().chain(&tm).chain(&vnet).all(|a| a.tier == CliTier::Inspect));
     }
 
     #[test]
