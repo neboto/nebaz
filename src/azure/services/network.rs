@@ -36,7 +36,7 @@ crate::sections! {
         Overview "Overview",
         Subnets "Subnets",
         Peerings "Peerings",
-        // The subscription's flow logs (rule 32), one lazy read.
+        // The subscription's flow logs (rule 30), one lazy read.
         FlowLogs "Flow logs" => crate::app::App::trigger_flow_logs,
         Access "Access" => crate::app::App::trigger_access,
         Activity "Activity" => crate::app::App::trigger_activity,
