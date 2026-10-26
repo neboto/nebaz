@@ -175,6 +175,14 @@ const AZ_READ_VERBS: &[&str] = &[
     // An application gateway's backend health: a read, but a POST action
     // outside `Reader`; the catalogue copies it, nebaz never sends it.
     "show-backend-health",
+    // ExpressRoute and VPN gateway reads (#135): circuit stats are a GET
+    // the app does not show; route tables, ARP tables, BGP peer status and
+    // learned routes are POST actions outside `Reader`. Copied, never sent.
+    "get-stats",
+    "list-route-tables-summary",
+    "list-arp-tables",
+    "list-bgp-peer-status",
+    "list-learned-routes",
 ];
 
 /// The `C` command catalogue (ADR 0005, #47): the one file that may hold
@@ -278,6 +286,11 @@ const AZ_FORBIDDEN: &[&str] = &[
     "network application-gateway ssl-cert",
     "network application-gateway root-cert",
     "afd secret",
+    // A connection's pre-shared key, a circuit's authorization keys (`auth
+    // list` prints them) and a VPN device script (it embeds the key).
+    "network vpn-connection shared-key",
+    "network express-route auth",
+    "network vpn-connection show-device-config-script",
 ];
 
 
@@ -670,6 +683,9 @@ fn the_az_rules_catch_what_they_should() {
         "az network application-gateway ssl-cert list --gateway-name {}",
         "az afd secret list --profile-name {}",
         "az afd endpoint purge --ids {}",
+        "az network vpn-connection shared-key show --connection-name {}",
+        "az network express-route auth list --circuit-name {}",
+        "az network vpn-connection show-device-config-script --ids {}",
     ] {
         let line = format!("let c = \"{}\";", cmd);
         assert_eq!(count(CLI_CATALOGUE_FILE, &line), 1, "{cmd} must be refused in the catalogue");
@@ -707,6 +723,30 @@ fn permissions_doc_grants_only_read_actions() {
 /// them out of `src/`. The network lens (#50) computes NSG access
 /// client-side from GETs instead.
 const POST_ONLY_READS: &[&str] = &["effectivenetworksecuritygroups", "effectiveroutetable", "listkeys", "backendhealth"];
+
+/// GET reads that return a secret: a connection's pre-shared key
+/// (`{connection}/sharedkey`, #135). `ReadOnlyPolicy` lets a GET through,
+/// so the guard keeps the path out of `src/` (the field name `sharedKey`,
+/// which the hybrid rows strip, is not the path).
+const SECRET_READS: &[&str] = &["/sharedkey"];
+
+#[test]
+fn no_secret_read_is_requested() {
+    let mut problems = Vec::new();
+    for path in rust_sources() {
+        let file = without_line_comments(&fs::read_to_string(&path).unwrap());
+        let text = non_test_part(&file);
+        for (offset, literal) in string_literals(text) {
+            let lower = literal.to_lowercase();
+            for read in SECRET_READS {
+                if lower.contains(read) {
+                    problems.push(format!("{}:{}: `{}` returns a secret", rel(&path), line_of(text, offset), read));
+                }
+            }
+        }
+    }
+    assert!(problems.is_empty(), "read-only guard (secret reads):\n  {}", problems.join("\n  "));
+}
 
 #[test]
 fn no_post_only_read_is_requested() {

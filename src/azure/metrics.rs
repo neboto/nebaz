@@ -321,6 +321,29 @@ const FRONT_DOOR: &[MetricSpec] = &[
     m("TotalLatency", "Total latency", Avg),
     m("WebApplicationFirewallRequestCount", "WAF matches", Total),
 ];
+/// ExpressRoute circuit: is BGP and ARP up towards the peers, and the
+/// traffic each way.
+const ER_CIRCUIT: &[MetricSpec] = &[
+    m("BgpAvailability", "BGP availability", Avg),
+    m("ArpAvailability", "ARP availability", Avg),
+    m("BitsInPerSecond", "Bits in/s", Avg),
+    m("BitsOutPerSecond", "Bits out/s", Avg),
+];
+/// Virtual network gateway, ExpressRoute and VPN in one set (one ARM
+/// type: an ExpressRoute gateway's VPN lines are flat, and the reverse).
+const VNET_GATEWAY: &[MetricSpec] = &[
+    m("ExpressRouteGatewayBitsPerSecond", "ER bits/s", Avg),
+    m("ExpressRouteGatewayCpuUtilization", "ER CPU", Avg),
+    m("AverageBandwidth", "S2S bandwidth", Avg),
+    m("TunnelIngressBytes", "Tunnel in", Total),
+    m("TunnelEgressBytes", "Tunnel out", Total),
+    m("P2SConnectionCount", "P2S connections", Total),
+];
+/// A gateway connection (ExpressRoute: its share of the circuit).
+const GATEWAY_CONNECTION: &[MetricSpec] = &[
+    m("BitsInPerSecond", "Bits in/s", Avg),
+    m("BitsOutPerSecond", "Bits out/s", Avg),
+];
 
 /// The default set for an ARM id, by its provider and type chain; empty
 /// for a type with none (the `a` picker still lists what it has).
@@ -353,6 +376,9 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.eventhub", ["namespaces"]) => EVENT_HUBS,
         ("microsoft.network", ["applicationgateways"]) => APP_GATEWAY,
         ("microsoft.cdn", ["profiles"]) => FRONT_DOOR,
+        ("microsoft.network", ["expressroutecircuits"]) => ER_CIRCUIT,
+        ("microsoft.network", ["virtualnetworkgateways"]) => VNET_GATEWAY,
+        ("microsoft.network", ["connections"]) => GATEWAY_CONNECTION,
         _ => &[],
     }
 }
@@ -791,13 +817,17 @@ pub(crate) mod tests {
         assert!(!supports_metrics(&p("Microsoft.ServiceBus/namespaces/sb/queues/q")));
         assert!(names(&p("Microsoft.Network/applicationGateways/agw")).contains(&"UnhealthyHostCount"));
         assert!(names(&p("Microsoft.Cdn/profiles/afd")).contains(&"OriginHealthPercentage"));
+        assert!(names(&p("Microsoft.Network/expressRouteCircuits/erc")).contains(&"BgpAvailability"));
+        assert!(names(&p("Microsoft.Network/virtualNetworkGateways/vgw")).contains(&"ExpressRouteGatewayCpuUtilization"));
+        assert!(names(&p("Microsoft.Network/connections/cn")).contains(&"BitsInPerSecond"));
+        assert!(!supports_metrics(&p("Microsoft.Network/localNetworkGateways/lgw")));
         assert!(!supports_metrics(&p("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/w")));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));
         assert!(is_arm_resource(&p("Microsoft.Network/virtualNetworks/v")));
         assert!(!is_arm_resource("/subscriptions/0000"));
-        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS, APP_GATEWAY, FRONT_DOOR] {
+        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS, APP_GATEWAY, FRONT_DOOR, ER_CIRCUIT, VNET_GATEWAY, GATEWAY_CONNECTION] {
             assert!((2..=6).contains(&set.len()));
         }
     }

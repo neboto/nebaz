@@ -223,6 +223,12 @@
       "dns-forwarding-rulesets (dnsfr)",
       "dns-resolver-policies (dnsp)"
     ],
+    "er": [
+      "expressroute-circuits (er)",
+      "vnet-gateways (vgw)",
+      "gateway-connections (cn)",
+      "local-gateways (lgw)"
+    ],
     "foundry": [
       "ai-accounts (foundry)"
     ],
@@ -467,12 +473,33 @@
       "Related",
       "Tags"
     ],
+    "ExpressRoute circuit": [
+      "Overview",
+      "Provider",
+      "Peerings",
+      "Global Reach",
+      "Authorizations",
+      "Connections",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Front Door profile": [
       "Overview",
       "Endpoints",
       "Origins",
       "Domains",
       "Security",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Gateway connection": [
+      "Overview",
+      "Configuration",
+      "IPsec",
       "Access",
       "Activity",
       "Related",
@@ -494,6 +521,15 @@
       "Frontends",
       "Backend pools",
       "Rules",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Local network gateway": [
+      "Overview",
+      "On-premises",
+      "Connections",
       "Access",
       "Activity",
       "Related",
@@ -728,6 +764,18 @@
       "Overview",
       "Subnets",
       "Peerings",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Virtual network gateway": [
+      "Overview",
+      "Configuration",
+      "IP configurations",
+      "BGP",
+      "Point-to-site",
+      "Connections",
       "Access",
       "Activity",
       "Related",

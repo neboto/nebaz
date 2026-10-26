@@ -35,6 +35,8 @@ const PLANTED: &[(&str, &str)] = &[
     ("/providers/Microsoft.Sql/servers/sql-orders-prod/databases/", "not a type nebaz lists"),
     ("/Redis/redis-orders-cache", "6379"),
     ("/namespaces/sb-orders-prod", "dead"),
+    // network: the branch office's backup VPN tunnel is down.
+    ("/connections/cn-vpn-branch-office", "NotConnected"),
     // compute: caj-nightly-export's last execution failed (its Executions section).
     ("/jobs/caj-nightly-export", "caj-nightly-export-q7k2m9x"),
     // core: failed operations in the Activity sections of contoso-prod (the

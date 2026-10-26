@@ -1,0 +1,24 @@
+{
+  "name": "GatewaySubnet",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/GatewaySubnet",
+  "etag": "W/\"9d4b7e21-3a8f-5c60-b1e5-2f7c0a9d4e83\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.255.0/27",
+    "delegations": [],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "ipConfigurations": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod/ipConfigurations/default"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/default"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/activeActive"
+      }
+    ]
+  }
+}

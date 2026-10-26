@@ -90,6 +90,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `cosmos-legacy`: public network, key auth on | `@audit` |
 | `redis-orders-cache`: non-TLS port 6379 enabled | `@audit` |
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
+| `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid |
 | `mysql-reporting-legacy`: public access, `require_secure_transport` OFF | `@audit` |
 | `sb-orders-prod` queue `orders` has 1,284 dead-lettered messages; local auth on | Messaging |
 | `ai-contoso-prod` (Foundry): public network and key auth on | `@audit` |
@@ -178,14 +179,16 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
   - `snet-jump` 10.10.8.0/27, NSG `nsg-jump-prod`: `nic-vm-jump-01` 10.10.8.4, `nic-vm-legacy-app-01` 10.10.8.5, `lb-legacy-internal`'s frontend `fe-legacy-app` 10.10.8.10
   - `AzureFirewallSubnet` 10.10.9.0/26 (the firewall itself is not in the demo; `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.9.4)
   - `snet-dns-outbound` 10.10.10.0/28, delegated `Microsoft.Network/dnsResolvers` (the resolver's outbound endpoint)
+  - `GatewaySubnet` 10.10.255.0/27: `vgw-er-hub-prod` and `vgw-vpn-hub-prod`
 - `vnet-pp-dr` (northeurope) 10.20.0.0/16, peered with `vnet-hub-prod`, subnet `snet-pp-injection-dr` 10.20.4.0/24 delegated `Microsoft.PowerPlatform/enterprisePolicies`, **no NSG**
 - NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`, "temp vendor access"; `AllowRdpFromOnPrem` 110 from 192.168.0.0/16), `nsg-appgw-prod` (GatewayManager 65200–65535, 443 from `AzureFrontDoor.Backend`)
-- Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12)
+- Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12), the gateways' (below)
 - `ng-prod` (NAT gateway), `rt-spoke-egress`, `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443)
 - Private endpoints (in `snet-pe`): `pe-kv-orders` (vault, 10.10.5.4), `pe-sql-orders` (sqlServer, 10.10.5.5), `pe-st-orders-blob` (blob, 10.10.5.6), `pe-acr-prod` (registry, 10.10.5.7 data endpoint + 10.10.5.8); their NICs `<pe>.nic.<guid>` in this group too
 - Private DNS zones (global): `privatelink.vaultcore.azure.net`, `privatelink.database.windows.net`, `privatelink.azurecr.io` (each linked to `vnet-hub-prod` by `link-vnet-hub-prod`), `privatelink.blob.core.windows.net` (**not linked**), `psql-orders-prod.private.postgres.database.azure.com` (`psql-orders-prod`'s VNet-integration zone: A `7f3a9c2e1b4d` → 10.10.7.4 in `snet-data`; linked to `vnet-hub-prod`), and the environment's zone `wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (`*` and `@` → 10.10.0.62; linked to `vnet-hub-prod`, **not** to `vnet-pp-dr`)
 - Public DNS zone `contoso-demo.com` (global): `api` A alias → `pip-agw-prod`, `www` CNAME → the Front Door endpoint (`_dnsauth.www` TXT validates it), MX and SPF
 - A DNS private resolver `dnspr-hub-prod` with an outbound endpoint `outbound-onprem` (in `snet-dns-outbound`, no inbound endpoint) and a forwarding ruleset `dnsfrs-onprem` (rule `corp-contoso-com`: `corp.contoso.com.` → 192.168.10.4; linked to `vnet-hub-prod`)
+- Hybrid (the hub's way to on-premises 192.168.0.0/16): ExpressRoute circuit `erc-contoso-ams` (Equinix, Amsterdam, 1 Gbps, Standard · MeteredData, provisioned; private peering VLAN 100, peer ASN 65010, 172.16.0.0/30 and 172.16.0.4/30; authorization `auth-contoso-dev`, available); gateways `vgw-er-hub-prod` (ExpressRoute, ErGw1AZ, `pip-vgw-er-hub-prod` 20.103.45.13) and `vgw-vpn-hub-prod` (VPN, VpnGw2AZ, active-active, BGP ASN 65515, `pip-vgw-vpn-hub-prod-1` / `-2` 20.103.45.14 / .15); connections `cn-er-hub-ams` (ExpressRoute → the circuit, Connected) and `cn-vpn-branch-office` (IPsec IKEv2 with a custom policy → `lgw-branch-office`, routing weight 10, BGP, **NotConnected**); local gateway `lgw-branch-office` (the office, 203.0.113.24, 192.168.0.0/16, BGP ASN 65050). Every key in the bodies is a `…-never-shown` placeholder the rows strip
 - A DNS security policy `dnssp-hub-prod` (rule `block-malicious-domains` 100 blocks the domain list `dnsdl-malicious-domains`; linked to `vnet-hub-prod`)
 
 **`rg-orders-prod`** (team orders)
@@ -247,7 +250,7 @@ Graph (`directoryObjects`) is `identity`'s.
 | Area | Services |
 |---|---|
 | `core` | Subscriptions (subscription details, locations, resource groups, All resources), the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
-| `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs), NICs, DNS, Edge |
+| `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs), NICs, DNS, Edge, Hybrid |
 | `compute` | VMs, disks, AKS, Container Registry, App Service, Container Apps |
 | `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry |

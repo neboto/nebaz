@@ -1,0 +1,145 @@
+{
+  "value": [
+    {
+      "name": "vgw-er-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod",
+      "etag": "W/\"6f2a8d13-4b5e-5c07-8e91-3d0c7b2a5f68\"",
+      "type": "Microsoft.Network/virtualNetworkGateways",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "2d7e9a40-5b1c-4f63-8a0e-7c3b1d9f6e25",
+        "gatewayType": "ExpressRoute",
+        "vpnType": "RouteBased",
+        "enableBgp": false,
+        "activeActive": false,
+        "sku": {
+          "name": "ErGw1AZ",
+          "tier": "ErGw1AZ"
+        },
+        "ipConfigurations": [
+          {
+            "name": "default",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod/ipConfigurations/default",
+            "etag": "W/\"0e7b3d52-6a1c-5f84-b2d9-4c8e1a6f3b70\"",
+            "type": "Microsoft.Network/virtualNetworkGateways/ipConfigurations",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-er-hub-prod"
+              },
+              "subnet": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/GatewaySubnet"
+              }
+            }
+          }
+        ],
+        "bgpSettings": {
+          "asn": 65515,
+          "bgpPeeringAddress": "10.10.255.12,10.10.255.13",
+          "peerWeight": 0
+        },
+        "allowRemoteVnetTraffic": false,
+        "allowVirtualWanTraffic": false,
+        "adminState": "Enabled"
+      }
+    },
+    {
+      "name": "vgw-vpn-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod",
+      "etag": "W/\"a19c4e27-8d3f-5a60-b7e2-5f1d9c3a0b84\"",
+      "type": "Microsoft.Network/virtualNetworkGateways",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "7a4c2e81-9d0b-4e56-b3f7-1c8a5d2e0f96",
+        "gatewayType": "Vpn",
+        "vpnType": "RouteBased",
+        "vpnGatewayGeneration": "Generation2",
+        "enableBgp": true,
+        "activeActive": true,
+        "enablePrivateIpAddress": false,
+        "disableIPSecReplayProtection": false,
+        "sku": {
+          "name": "VpnGw2AZ",
+          "tier": "VpnGw2AZ"
+        },
+        "ipConfigurations": [
+          {
+            "name": "default",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/default",
+            "etag": "W/\"0e7b3d52-6a1c-5f84-b2d9-4c8e1a6f3b70\"",
+            "type": "Microsoft.Network/virtualNetworkGateways/ipConfigurations",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-vpn-hub-prod-1"
+              },
+              "subnet": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/GatewaySubnet"
+              }
+            }
+          },
+          {
+            "name": "activeActive",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/activeActive",
+            "etag": "W/\"0e7b3d52-6a1c-5f84-b2d9-4c8e1a6f3b70\"",
+            "type": "Microsoft.Network/virtualNetworkGateways/ipConfigurations",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-vpn-hub-prod-2"
+              },
+              "subnet": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/GatewaySubnet"
+              }
+            }
+          }
+        ],
+        "bgpSettings": {
+          "asn": 65515,
+          "bgpPeeringAddress": "10.10.255.4,10.10.255.5",
+          "peerWeight": 0,
+          "bgpPeeringAddresses": [
+            {
+              "ipconfigurationId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/default",
+              "defaultBgpIpAddresses": [
+                "10.10.255.4"
+              ],
+              "customBgpIpAddresses": [],
+              "tunnelIpAddresses": [
+                "20.103.45.14"
+              ]
+            },
+            {
+              "ipconfigurationId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/activeActive",
+              "defaultBgpIpAddresses": [
+                "10.10.255.5"
+              ],
+              "customBgpIpAddresses": [],
+              "tunnelIpAddresses": [
+                "20.103.45.15"
+              ]
+            }
+          ]
+        },
+        "adminState": "Enabled"
+      }
+    }
+  ]
+}

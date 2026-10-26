@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, foundry,
-    identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
+    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -716,6 +716,99 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "policySettings": {"state": "Enabled", "mode": "Prevention"},
                             "managedRules": {"managedRuleSets": [{"ruleSetType": "OWASP", "ruleSetVersion": "3.2"}]},
                             "applicationGateways": [{"id": arm_id("Microsoft.Network/applicationGateways/agw-1")}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ExpressRouteCircuits,
+            "CircuitRow",
+            parse(
+                "CircuitRow",
+                hybrid::CircuitRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/expressRouteCircuits/erc-1"),
+                        "name": "erc-1",
+                        "location": "eastus",
+                        "sku": {"name": "Standard_MeteredData", "tier": "Standard", "family": "MeteredData"},
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "circuitProvisioningState": "Enabled",
+                            "serviceProviderProvisioningState": "Provisioned",
+                            "serviceKey": "00000000-0000-0000-0000-000000000001",
+                            "serviceProviderProperties": {"serviceProviderName": "Equinix", "peeringLocation": "Washington DC", "bandwidthInMbps": 1000},
+                            "peerings": [{"name": "AzurePrivatePeering", "properties": {"peeringType": "AzurePrivatePeering",
+                                "state": "Enabled", "vlanId": 100, "peerASN": 65010,
+                                "primaryPeerAddressPrefix": "172.16.0.0/30", "secondaryPeerAddressPrefix": "172.16.0.4/30"}}],
+                            "authorizations": [{"name": "auth-1", "properties": {"authorizationUseStatus": "Available"}}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::VnetGateways,
+            "GatewayRow",
+            parse(
+                "GatewayRow",
+                hybrid::GatewayRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/virtualNetworkGateways/vgw-1"),
+                        "name": "vgw-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "gatewayType": "ExpressRoute",
+                            "sku": {"name": "ErGw1AZ", "tier": "ErGw1AZ"},
+                            "ipConfigurations": [{"name": "default", "properties": {"privateIPAllocationMethod": "Dynamic",
+                                "subnet": {"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/GatewaySubnet")},
+                                "publicIPAddress": {"id": arm_id("Microsoft.Network/publicIPAddresses/pip-vgw-1")}}}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::GatewayConnections,
+            "ConnectionRow",
+            parse(
+                "ConnectionRow",
+                hybrid::ConnectionRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/connections/cn-1"),
+                        "name": "cn-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "connectionType": "IPsec",
+                            "connectionStatus": "Connected",
+                            "connectionProtocol": "IKEv2",
+                            "virtualNetworkGateway1": {"id": arm_id("Microsoft.Network/virtualNetworkGateways/vgw-1")},
+                            "localNetworkGateway2": {"id": arm_id("Microsoft.Network/localNetworkGateways/lgw-1")}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::LocalGateways,
+            "LocalGatewayRow",
+            parse(
+                "LocalGatewayRow",
+                hybrid::LocalGatewayRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/localNetworkGateways/lgw-1"),
+                        "name": "lgw-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "gatewayIpAddress": "203.0.113.10",
+                            "localNetworkAddressSpace": {"addressPrefixes": ["192.168.0.0/16"]}
                         }
                     }),
                     t,

@@ -1,0 +1,37 @@
+{
+  "name": "pip-vgw-vpn-hub-prod-2",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-vpn-hub-prod-2",
+  "etag": "W/\"7487c2fa-ddbb-568a-9485-295162c382d0\"",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "zones": [
+    "1",
+    "2",
+    "3"
+  ],
+  "type": "Microsoft.Network/publicIPAddresses",
+  "sku": {
+    "name": "Standard",
+    "tier": "Regional"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "803e4c12-5d9f-5b6a-c3e8-2f1a6d4b9c57",
+    "ipAddress": "20.103.45.15",
+    "publicIPAddressVersion": "IPv4",
+    "publicIPAllocationMethod": "Static",
+    "idleTimeoutInMinutes": 4,
+    "ipTags": [],
+    "ddosSettings": {
+      "protectionMode": "VirtualNetworkInherited"
+    },
+    "ipConfiguration": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/activeActive"
+    }
+  }
+}

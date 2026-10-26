@@ -1,0 +1,36 @@
+{
+  "name": "cn-er-hub-ams",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/connections/cn-er-hub-ams",
+  "etag": "W/\"e8b2f5a1-0c4d-5e79-a3b6-9d2f7c1e4a80\"",
+  "type": "Microsoft.Network/connections",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "8c3e0a95-1f7d-4b62-9e48-2a6d5c0f3b71",
+    "virtualNetworkGateway1": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod"
+    },
+    "connectionType": "ExpressRoute",
+    "routingWeight": 0,
+    "enableBgp": false,
+    "useLocalAzureIpAddress": false,
+    "usePolicyBasedTrafficSelectors": false,
+    "ipsecPolicies": [],
+    "trafficSelectorPolicies": [],
+    "connectionStatus": "Connected",
+    "ingressBytesTransferred": 48213775360,
+    "egressBytesTransferred": 61937418240,
+    "expressRouteGatewayBypass": false,
+    "enablePrivateLinkFastPath": false,
+    "peer": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteCircuits/erc-contoso-ams"
+    },
+    "authorizationKey": "demo-redeemed-key-never-shown"
+  }
+}

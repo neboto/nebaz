@@ -35,6 +35,7 @@ use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, Jo
 use crate::azure::services::container_registry::RegistryRow;
 use crate::azure::services::directory::{AppRegistrationRow, ServicePrincipalRow};
 use crate::azure::services::edge::{AppGatewayRow, FrontDoorProfileRow, WafKind, WafPolicyRow};
+use crate::azure::services::hybrid::{CircuitRow, ConnectionRow, GatewayRow};
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SubnetRow};
@@ -230,6 +231,12 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         waf_policy_actions(w)
     } else if let Some(p) = any.downcast_ref::<FrontDoorProfileRow>() {
         front_door_actions(p)
+    } else if let Some(c) = any.downcast_ref::<CircuitRow>() {
+        circuit_actions(c)
+    } else if let Some(g) = any.downcast_ref::<GatewayRow>() {
+        Some(vnet_gateway_actions(g))
+    } else if let Some(c) = any.downcast_ref::<ConnectionRow>() {
+        connection_actions(c)
     } else {
         None
     };
@@ -693,6 +700,65 @@ fn front_door_actions(p: &FrontDoorProfileRow) -> Option<Vec<CliAction>> {
     ])
 }
 
+/// `express-route show` and `get-stats` take `--ids`; the peering
+/// listing declares `--circuit-name` without an `id_part`, and the route
+/// table and ARP reads put the peering in the id (`child_name_1`), so
+/// those use the name form. Never `express-route auth`: it lists the
+/// authorization keys (guard).
+fn circuit_actions(c: &CircuitRow) -> Option<Vec<CliAction>> {
+    let id = &c.base.id;
+    let named = name_args(&c.base.name, id)?;
+    let peering = c
+        .peerings
+        .iter()
+        .find_map(|p| crate::azure::services::json::str_at(p, "/name"))
+        .unwrap_or_else(|| "AzurePrivatePeering".into());
+    Some(vec![
+        inspect(format!(
+            "az network express-route peering list --circuit-name {} {}",
+            shell_quote(&c.base.name),
+            rg_sub(id)?
+        )),
+        inspect(format!("az network express-route get-stats {}", ids(id))).note("bytes in and out per peering"),
+        inspect(format!(
+            "az network express-route list-route-tables-summary {} --peering-name {} --path primary",
+            named,
+            shell_quote(&peering)
+        ))
+        .note("a POST action (the BGP neighbours and their prefix counts): not in the Reader role; nebaz never sends it"),
+        inspect(format!(
+            "az network express-route list-arp-tables {} --peering-name {} --path primary",
+            named,
+            shell_quote(&peering)
+        ))
+        .note("a POST action: not in the Reader role; nebaz never sends it"),
+    ])
+}
+
+/// `vnet-gateway show` and its BGP reads take `--ids` (`id_part='name'`).
+fn vnet_gateway_actions(g: &GatewayRow) -> Vec<CliAction> {
+    let i = ids(&g.base.id);
+    vec![
+        inspect(format!("az network vnet-gateway list-bgp-peer-status {}", i))
+            .note("a POST action: not in the Reader role; nebaz never sends it"),
+        inspect(format!("az network vnet-gateway list-learned-routes {}", i))
+            .note("a POST action: not in the Reader role; nebaz never sends it"),
+    ]
+}
+
+/// The IPsec policy listing declares `--connection-name` without an
+/// `id_part`: the name form. Never `vpn-connection shared-key` (guard).
+fn connection_actions(c: &ConnectionRow) -> Option<Vec<CliAction>> {
+    if c.is_expressroute() {
+        return Some(Vec::new());
+    }
+    Some(vec![inspect(format!(
+        "az network vpn-connection ipsec-policy list --connection-name {} {}",
+        shell_quote(&c.base.name),
+        rg_sub(&c.base.id)?
+    ))])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -954,6 +1020,25 @@ mod tests {
         }
         let p = actions_for(mock("FrontDoorProfileRow").as_ref());
         assert!(find(&p, "afd origin-group list").command.contains("--profile-name afd-1 -g "));
+    }
+
+    #[test]
+    fn hybrid_rows_offer_reads_only_and_never_a_key() {
+        let c = actions_for(mock("CircuitRow").as_ref());
+        assert!(c[0].command.starts_with("az network express-route show --ids "));
+        assert!(find(&c, "network express-route peering list").command.contains("--circuit-name erc-1 -g "));
+        assert!(find(&c, "network express-route list-arp-tables").command.contains("--subscription"));
+        let g = actions_for(mock("GatewayRow").as_ref());
+        assert!(g[0].command.starts_with("az network vnet-gateway show --ids "));
+        assert!(find(&g, "network vnet-gateway list-bgp-peer-status").command.contains("--ids "));
+        let cn = actions_for(mock("ConnectionRow").as_ref());
+        assert!(cn[0].command.starts_with("az network vpn-connection show --ids "));
+        let l = actions_for(mock("LocalGatewayRow").as_ref());
+        assert!(l[0].command.starts_with("az network local-gateway show --ids "));
+        for a in c.iter().chain(&g).chain(&cn).chain(&l) {
+            assert_eq!(a.tier, CliTier::Inspect, "{}", a.command);
+            assert!(!a.command.contains("shared-key") && !a.command.contains(" auth "), "{}", a.command);
+        }
     }
 
     #[test]

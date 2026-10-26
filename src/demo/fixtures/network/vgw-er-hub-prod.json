@@ -1,0 +1,51 @@
+{
+  "name": "vgw-er-hub-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod",
+  "etag": "W/\"6f2a8d13-4b5e-5c07-8e91-3d0c7b2a5f68\"",
+  "type": "Microsoft.Network/virtualNetworkGateways",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "2d7e9a40-5b1c-4f63-8a0e-7c3b1d9f6e25",
+    "gatewayType": "ExpressRoute",
+    "vpnType": "RouteBased",
+    "enableBgp": false,
+    "activeActive": false,
+    "sku": {
+      "name": "ErGw1AZ",
+      "tier": "ErGw1AZ"
+    },
+    "ipConfigurations": [
+      {
+        "name": "default",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod/ipConfigurations/default",
+        "etag": "W/\"0e7b3d52-6a1c-5f84-b2d9-4c8e1a6f3b70\"",
+        "type": "Microsoft.Network/virtualNetworkGateways/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAllocationMethod": "Dynamic",
+          "publicIPAddress": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-er-hub-prod"
+          },
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/GatewaySubnet"
+          }
+        }
+      }
+    ],
+    "bgpSettings": {
+      "asn": 65515,
+      "bgpPeeringAddress": "10.10.255.12,10.10.255.13",
+      "peerWeight": 0
+    },
+    "allowRemoteVnetTraffic": false,
+    "allowVirtualWanTraffic": false,
+    "adminState": "Enabled"
+  }
+}

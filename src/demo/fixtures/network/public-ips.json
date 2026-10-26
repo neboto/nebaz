@@ -110,6 +110,117 @@
           "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-jump-01/ipConfigurations/ipconfig1"
         }
       }
+    },
+    {
+      "name": "pip-vgw-er-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-er-hub-prod",
+      "etag": "W/\"7487c2fa-ddbb-568a-9485-295162c382d0\"",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "6e1c2a90-3b7d-5f48-a1c6-0d9e4b2f7a35",
+        "ipAddress": "20.103.45.13",
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4,
+        "ipTags": [],
+        "ddosSettings": {
+          "protectionMode": "VirtualNetworkInherited"
+        },
+        "ipConfiguration": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-er-hub-prod/ipConfigurations/default"
+        }
+      }
+    },
+    {
+      "name": "pip-vgw-vpn-hub-prod-1",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-vpn-hub-prod-1",
+      "etag": "W/\"7487c2fa-ddbb-568a-9485-295162c382d0\"",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "7f2d3b01-4c8e-5a59-b2d7-1e0f5c3a8b46",
+        "ipAddress": "20.103.45.14",
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4,
+        "ipTags": [],
+        "ddosSettings": {
+          "protectionMode": "VirtualNetworkInherited"
+        },
+        "ipConfiguration": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/default"
+        }
+      }
+    },
+    {
+      "name": "pip-vgw-vpn-hub-prod-2",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vgw-vpn-hub-prod-2",
+      "etag": "W/\"7487c2fa-ddbb-568a-9485-295162c382d0\"",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "803e4c12-5d9f-5b6a-c3e8-2f1a6d4b9c57",
+        "ipAddress": "20.103.45.15",
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4,
+        "ipTags": [],
+        "ddosSettings": {
+          "protectionMode": "VirtualNetworkInherited"
+        },
+        "ipConfiguration": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworkGateways/vgw-vpn-hub-prod/ipConfigurations/activeActive"
+        }
+      }
     }
   ]
 }

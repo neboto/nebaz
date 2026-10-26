@@ -144,6 +144,23 @@ each one backs are in the catalog table
   `az network application-gateway ssl-cert`, `root-cert` and `az afd secret`
   are named forbidden. The Front Door endpoints' own hosts are on the
   guard's list.
+- **Hybrid** (ExpressRoute circuits, VNet gateways, connections, local
+  gateways): `Microsoft.Network/expressRouteCircuits/read` (peerings,
+  authorizations and Global Reach connections arrive embedded),
+  `Microsoft.Network/virtualNetworkGateways/read`,
+  `Microsoft.Network/connections/read`,
+  `Microsoft.Network/localNetworkGateways/read`. The last three have no
+  subscription-wide list: their groups come from the generic list
+  (`Microsoft.Resources/subscriptions/resources/read`, filtered to the
+  type), then each group is listed. A connection's pre-shared key is a
+  `GET` (`{connection}/sharedkey`, `Microsoft.Network/connections/sharedKey/read`)
+  that `Reader` can call; nebaz never does (the guard refuses the path).
+  Authorization keys, shared and MD5 keys, RADIUS secrets and the circuit
+  activation key are stripped before the row keeps the JSON, and the
+  service key is masked. ARP and route tables, BGP peer status and learned
+  routes are `POST`s outside `Reader`: `C` copies the commands, nebaz never
+  sends them. `az network vpn-connection shared-key`, `az network
+  express-route auth` and `show-device-config-script` are named forbidden.
 - **Key Vault**: `Microsoft.KeyVault/vaults/read`; the lazy Secrets and Keys
   sections: `Microsoft.KeyVault/vaults/secrets/read`,
   `Microsoft.KeyVault/vaults/keys/read`. These are control-plane actions:

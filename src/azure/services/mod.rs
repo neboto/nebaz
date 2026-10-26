@@ -18,6 +18,7 @@ pub mod cosmos;
 pub mod directory;
 pub mod edge;
 pub mod foundry;
+pub mod hybrid;
 pub mod identity;
 pub mod keyvault;
 pub mod messaging;

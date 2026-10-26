@@ -1,0 +1,71 @@
+{
+  "name": "erc-contoso-ams",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteCircuits/erc-contoso-ams",
+  "etag": "W/\"3c1d0e5a-7f2b-5e4c-9a81-2b6d4f0c8e17\"",
+  "type": "Microsoft.Network/expressRouteCircuits",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "sku": {
+    "name": "Standard_MeteredData",
+    "tier": "Standard",
+    "family": "MeteredData"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "9b2f4e61-0c3a-5d78-b1e4-6a8f2c0d3e95",
+    "circuitProvisioningState": "Enabled",
+    "serviceProviderProvisioningState": "Provisioned",
+    "allowClassicOperations": false,
+    "globalReachEnabled": false,
+    "serviceKey": "5e8a3c1f-2b7d-4f90-a6c4-8d1e0b9f7a23",
+    "serviceProviderNotes": "",
+    "serviceProviderProperties": {
+      "serviceProviderName": "Equinix",
+      "peeringLocation": "Amsterdam",
+      "bandwidthInMbps": 1000
+    },
+    "gatewayManagerEtag": "",
+    "authorizations": [
+      {
+        "name": "auth-contoso-dev",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteCircuits/erc-contoso-ams/authorizations/auth-contoso-dev",
+        "etag": "W/\"5d0e2a71-9c3f-5b18-a4d6-1e7c9f2b0a34\"",
+        "type": "Microsoft.Network/expressRouteCircuits/authorizations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "authorizationKey": "demo-authorization-key-never-shown",
+          "authorizationUseStatus": "Available"
+        }
+      }
+    ],
+    "peerings": [
+      {
+        "name": "AzurePrivatePeering",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteCircuits/erc-contoso-ams/peerings/AzurePrivatePeering",
+        "etag": "W/\"8a4c1f02-3e6d-5b97-9c20-7f1a3d5e8b46\"",
+        "type": "Microsoft.Network/expressRouteCircuits/peerings",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "peeringType": "AzurePrivatePeering",
+          "azureASN": 12076,
+          "peerASN": 65010,
+          "primaryPeerAddressPrefix": "172.16.0.0/30",
+          "secondaryPeerAddressPrefix": "172.16.0.4/30",
+          "primaryAzurePort": "EQIX-AMS-06GMR-CIS-1-PRI-A",
+          "secondaryAzurePort": "EQIX-AMS-06GMR-CIS-2-SEC-A",
+          "state": "Enabled",
+          "vlanId": 100,
+          "gatewayManagerEtag": "",
+          "lastModifiedBy": "Customer",
+          "connections": [],
+          "peeredConnections": []
+        }
+      }
+    ]
+  }
+}
