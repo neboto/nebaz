@@ -488,9 +488,9 @@ pub fn with_protection(mut lines: Vec<(String, String)>, extra: Vec<(String, Str
     }
     // The footer is a blank line then the ⏎ hint.
     let at = lines.iter().rposition(|(k, v)| k.is_empty() && v.is_empty()).unwrap_or(lines.len());
-    for (n, e) in extra.into_iter().enumerate() {
-        lines.insert(at + n, e);
-    }
+    let footer = lines.split_off(at);
+    lines.extend(extra);
+    lines.extend(footer);
     lines
 }
 
