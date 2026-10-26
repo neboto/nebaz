@@ -1,0 +1,52 @@
+{
+  "name": "bas-hub-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/bastionHosts/bas-hub-prod",
+  "etag": "W/\"5d0b7e3a-4c1f-5b8d-9e2a-7f3c1a5e9b46\"",
+  "type": "Microsoft.Network/bastionHosts",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "sku": {
+    "name": "Standard"
+  },
+  "zones": [
+    "1",
+    "2",
+    "3"
+  ],
+  "properties": {
+    "provisioningState": "Succeeded",
+    "dnsName": "bst-4f7a2c9e-1b3d-4e6f-8a0c-2d4f6b8e0a57.bastion.azure.com",
+    "scaleUnits": 2,
+    "disableCopyPaste": false,
+    "enableFileCopy": true,
+    "enableIpConnect": true,
+    "enableShareableLink": false,
+    "enableTunneling": true,
+    "enableKerberos": false,
+    "enableSessionRecording": false,
+    "enablePrivateOnlyBastion": false,
+    "ipConfigurations": [
+      {
+        "name": "IpConf",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/bastionHosts/bas-hub-prod/bastionHostIpConfigurations/IpConf",
+        "etag": "W/\"5d0b7e3a-4c1f-5b8d-9e2a-7f3c1a5e9b46\"",
+        "type": "Microsoft.Network/bastionHosts/bastionHostIpConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAllocationMethod": "Dynamic",
+          "publicIPAddress": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-bas-hub-prod"
+          },
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureBastionSubnet"
+          }
+        }
+      }
+    ]
+  }
+}

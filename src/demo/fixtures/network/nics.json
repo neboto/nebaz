@@ -384,6 +384,67 @@
           "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-acr-prod"
         }
       }
+    },
+    {
+      "name": "nic-vm-nva-01",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-nva-01",
+      "etag": "W/\"2e4a6c8e-0b2d-5f4a-6c8e-0a2c4e6a8c80\"",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "kind": "Regular",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "c5e7a9b1-3d5f-5b7a-9c1e-3f5a7c9e1b91",
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-nva-01/ipConfigurations/ipconfig1",
+            "etag": "W/\"2e4a6c8e-0b2d-5f4a-6c8e-0a2c4e6a8c80\"",
+            "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAddress": "10.10.11.4",
+              "privateIPAllocationMethod": "Static",
+              "subnet": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-nva"
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4",
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/backendAddressPools/be-nva"
+                }
+              ]
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": [],
+          "appliedDnsServers": [],
+          "internalDomainNameSuffix": "3ee76804c92655a7b52f2d.ax.internal.cloudapp.net"
+        },
+        "enableAcceleratedNetworking": true,
+        "vnetEncryptionSupported": false,
+        "enableIPForwarding": true,
+        "disableTcpStateTracking": false,
+        "hostedWorkloads": [],
+        "tapConfigurations": [],
+        "nicType": "Standard",
+        "allowPort25Out": false,
+        "auxiliaryMode": "None",
+        "auxiliarySku": "None",
+        "macAddress": "00-0D-3A-4B-7C-21",
+        "primary": true,
+        "virtualMachine": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01"
+        }
+      }
     }
   ]
 }

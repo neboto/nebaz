@@ -1,0 +1,37 @@
+{
+  "name": "pip-bas-hub-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-bas-hub-prod",
+  "etag": "W/\"3c8e1a5f-7b2d-5c9e-a4f0-6d1b3e5a7c24\"",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "zones": [
+    "1",
+    "2",
+    "3"
+  ],
+  "type": "Microsoft.Network/publicIPAddresses",
+  "sku": {
+    "name": "Standard",
+    "tier": "Regional"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "8a2f4c6e-1b3d-5e7f-9a0c-2d4f6b8e0a35",
+    "ipAddress": "20.103.45.13",
+    "publicIPAddressVersion": "IPv4",
+    "publicIPAllocationMethod": "Static",
+    "idleTimeoutInMinutes": 4,
+    "ipTags": [],
+    "ddosSettings": {
+      "protectionMode": "VirtualNetworkInherited"
+    },
+    "ipConfiguration": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/bastionHosts/bas-hub-prod/bastionHostIpConfigurations/IpConf"
+    }
+  }
+}

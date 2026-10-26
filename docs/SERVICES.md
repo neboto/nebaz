@@ -436,7 +436,9 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     gateways (`@agw`), Front Door (`@afd`) and WAF policies (`@waf`).
     Network already had eight sub-tabs; two more reach the ten digit keys
     and Front Door (`Microsoft.Cdn`) would be an eleventh, the DNS problem
-    of rule 15 again. The WAF policies serve both front ends (one list of
+    of rule 15 again. Those two slots went to Bastion and DDoS plans (#137):
+    **Network now has ten sub-tabs, the digit-key ceiling** (`0` is the
+    tenth). Another Network type needs its own tab or must replace one. The WAF policies serve both front ends (one list of
     both kinds, the kind in the summary), and debugging ingress is one
     workflow: listener → rule → pool → the app behind it. A gateway's own
     subnet, NSG and public IP stay in Network and jump from its Related;
@@ -461,6 +463,25 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `Microsoft.Cdn/profiles` list; their ids land in All resources or are
     not found).
 
+27. **Appliance next hops are matched, never resolved** (#137,
+    `src/azure/services/network_hub.rs`, `NextHops`): a route whose next
+    hop is `VirtualAppliance` names only an IP. It is compared with the
+    warm NICs (each IP configuration's private IP → the NIC → its VM, the
+    VM's marketplace kind when the VMs list is warm) and load balancers
+    (each private frontend; an `All`/port 0 rule on it is named "HA
+    ports", the shape an NVA pair sits behind). A match is a line under
+    the route that jumps; a NIC hop without IP forwarding gets a ⚠ (it
+    drops what is not addressed to it); a miss says the IP is not a NIC or
+    load balancer in the warm lists, or names the cold lists. The same
+    matches are in the route table's Related and, through the warm route
+    tables list, in each subnet's Related ("Next hop 0.0.0.0/0 → …"). No
+    call. Azure Firewall and Cloud NGFW private IPs are not matched yet
+    (#136): each is one more source in `NextHops::from_lists`. A VM with
+    a marketplace `plan` shows it as its kind in the list summary and
+    Overview: `paloaltonetworks` reads "Palo Alto VM-Series"; Fortinet,
+    Check Point and Cisco their vendor and product; any other publisher
+    its publisher and product.
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -474,18 +495,20 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Changes · All / Activity / Deployments / Health (rule 24) | — (an event: Overview is its named fields, then Related; no Access, Activity or Tags) | `failed` on a failed operation or deployment, an unavailable or degraded transition; else none; noise per rule 22 | what it happened to; a deployment's group and what it deployed; an alert's rule | `az monitor activity-log list --correlation-id {c} --subscription {sub}` · `az deployment group show -g {rg} -n {name} --subscription {sub}` · none for health |
 | Subscriptions · All resources | — (Overview: type, kind, SKU, identity, managed by, created, changed, and whether nebaz browses the type) | ladder on the expanded `provisioningState` | `Open in {Service › Sub-tab}` when browsed (Enter on the list row does the same), `managedBy` | `az resource show --ids` |
 | Subscriptions · Resource Groups | — | stateless when `Succeeded` | `managedBy` id when set | `az group show -n {name} --subscription {sub}` |
-| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) | power state | each NIC, OS and data disks, availability set, user-assigned identities | `az vm show` |
+| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) · (Overview and list summary: the marketplace plan as the kind, rule 27) | power state | each NIC, OS and data disks, availability set, user-assigned identities | `az vm show` |
 | Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
 | Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
-| Network · VNets | Subnets (embedded) · Peerings | stateless | each subnet, each peered VNet; ⧗ (rule 16) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
-| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 16) the DNS resolver endpoints in it | `az network vnet subnet show` |
+| Network · VNets | Subnets (embedded) · Peerings (state; forwarded traffic allowed or blocked; gateway transit: offers this VNet's gateway, uses the peer's, or none) · (Overview: DDoS protection on / off and the DDoS plan, jumpable) | stateless | each subnet, each peered VNet, the DDoS plan; ⧗ (rule 16) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
+| Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, each appliance next hop of its route table (rule 27; the warm route tables list), the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 16) the DNS resolver endpoints in it | `az network vnet subnet show` |
 | Network · NSGs | Inbound · Outbound (custom rules by priority, then default rules dimmed) · Used by (NICs, subnets) | stateless | each associated subnet and NIC | `az network nsg show` |
 | Network · Public IPs | — (Overview: address, allocation, version, SKU · tier, attached to, DNS label, FQDN, idle timeout, zones, DDoS) | attached / unattached | the owner of its IP configuration (NIC, load balancer, gateway, firewall, bastion), NAT gateway, prefix | `az network public-ip show` |
 | Network · LBs | Frontends (public IP, or private IP + subnet) · Backend pools (NICs, deduplicated from IP configurations; or addresses) · Rules (LB rules, health probes, inbound NAT, outbound) | stateless | frontend public IPs and subnets, backend NICs | `az network lb show` |
-| Network · Routes | Routes (prefix → next hop type and IP) | stateless | each associated subnet | `az network route-table show` |
+| Network · Routes | Routes (prefix → next hop type and IP; under a `VirtualAppliance` route, what its IP is in the warm NICs / load balancers, jumpable, rule 27) | stateless | each associated subnet, each matched appliance next hop | `az network route-table show` |
 | Network · NAT | — (Overview: SKU, idle timeout, zones, counts) | stateless | public IPs (v4 and v6), prefixes, each subnet | `az network nat gateway show` |
 | Network · PEs | Connection (target, sub-resource, status, description, automatic or manual approval) · DNS (custom DNS configs: FQDN → IPs) | ladder, then connection status (`Approved` → Available, `Pending` → Pending, `Rejected` / `Disconnected` → Unavailable) | **target** (`privateLinkServiceId`: jumps to the vault, account, storage account… it fronts), subnet, NICs | `az network private-endpoint show` |
+| Network · Bastion | Features (copy and paste, native client / tunneling, IP-based connection, shareable link, file copy, Kerberos, session recording, private-only; on / off, and what the SKU allows) · Network (VNet, each IP configuration's subnet and public IP, jumpable; the Developer SKU's VNet and allowed sources) · (Overview: SKU, scale units, DNS name, zones) | stateless | VNet, `AzureBastionSubnet`, public IP | `az network bastion show` (the `bastion` CLI extension) |
+| Network · DDoS | Protected (each VNet and public IP it covers, jumpable) · (Overview: counts, GUID) | stateless | each protected VNet and public IP | `az network ddos-protection show` |
 | DNS · Private DNS | Records ⧗ (name, type, TTL, values; auto-registered flagged) · VNet links ⧗ (each linked VNet jumps; auto-registration, state) | stateless; `location` is `global`, which passes every `R` filter | — (linked VNets are in VNet links) | `az network private-dns zone show` |
 | DNS · DNS zones | Records ⧗ (name, type, TTL, values, TXT cut at 60 characters; an alias record set's target is its own line and jumps; the first 1,000 record sets) · Delegation (the name servers, as text; never resolved) · (Overview: zone type, record sets of max, records per set) | stateless; `location` is `global` | alias targets (once Records has loaded: public IPs, Traffic Manager and Front Door land in All resources, record sets copy), a legacy private zone's VNets | `az network dns zone show` |
 | DNS · Resolvers | Endpoints ⧗ (inbound: private IP, subnet, allocation; outbound: subnet) · Rulesets ⧗ (those forwarding through its outbound endpoints) | ladder, then `dnsResolverState` (`Connected` → Available, `Disconnected` → Unavailable) | VNet; then ⧗ each endpoint's subnet, each ruleset | `az dns-resolver show` (the `dns-resolver` CLI extension) |
@@ -605,6 +628,9 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Routes | 1 (routes embedded) | `/providers/Microsoft.Network/routeTables` · `2025-09-01` |
 | NAT | 1 | `/providers/Microsoft.Network/natGateways` · `2025-09-01` |
 | PEs | 1 | `/providers/Microsoft.Network/privateEndpoints` · `2025-09-01` |
+| Bastion | 1 | `/providers/Microsoft.Network/bastionHosts` · `2025-09-01` (never the shareable-link or session POSTs) |
+| DDoS | 1 | `/providers/Microsoft.Network/ddosProtectionPlans` · `2025-09-01` |
+| Appliance next hops (Routes, subnet Related; rule 27) | 0: the warm NICs, load balancers, VMs and route tables | — |
 | Private DNS | 1 | `/providers/Microsoft.Network/privateDnsZones` · `2024-06-01` (its own spec) |
 | Records, VNet links | 1 each per zone, on demand | `{zone}/ALL` · `{zone}/virtualNetworkLinks` · `2024-06-01` |
 | DNS zones | 1 | `/providers/Microsoft.Network/dnszones` · `2018-05-01` (its own spec; the newest stable, DNSSEC is preview-only) |
@@ -686,6 +712,16 @@ it; that floor is #63.
   (rule 8), on a subscription with an AKS cluster (#66).
 
 ## Not yet verified live
+
+- Bastion, DDoS plans and appliance next hops (#137), built without an
+  Azure login from azure-rest-api-specs `2025-09-01` (Network's version).
+  To check: both subscription-wide lists answer on that version; a
+  Bastion's `ipConfigurations[].properties.subnet` is on the list body;
+  a Developer SKU names `virtualNetwork`; `az network bastion show`
+  (the `bastion` extension) and `az network ddos-protection show` take
+  `--ids` (both name arguments carry `id_part='name'`); a VM-Series VM's
+  `plan.publisher` is `paloaltonetworks` on the list body; Network's ten
+  chips at 80×24.
 
 - Redis (#29), built from azure-rest-api-specs (`2024-11-01` for
   `Microsoft.Cache/redis`, `2026-09-01` for `redisEnterprise`, the newest

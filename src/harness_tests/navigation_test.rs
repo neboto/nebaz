@@ -276,3 +276,48 @@ async fn a_sub_tab_switch_lands_on_the_top_row_and_back_restores() {
     assert_eq!(h.app.current_view, JumpView::Disks);
     assert_eq!(h.selected_id().as_deref(), Some(disk_b.as_str()));
 }
+
+/// A route whose next hop is a `VirtualAppliance` IP resolves against the
+/// warm load balancers: the line under it names the internal LB's
+/// frontend, and Enter on it opens the LB (#137). A route to an IP no warm
+/// list knows says which lists were cold.
+#[tokio::test]
+async fn enter_on_a_resolved_next_hop_jumps_to_the_load_balancer() {
+    use crate::azure::services::network_edge::{LoadBalancerRow, RouteTableRow};
+    let mut h = Harness::new().await;
+    let lb_id = arm_id("Microsoft.Network/loadBalancers/lb-nva");
+    let lb = LoadBalancerRow::from_json(
+        &serde_json::json!({"id": lb_id, "name": "lb-nva", "location": "westeurope",
+            "properties": {"frontendIPConfigurations": [{"name": "fe-trust", "properties": {"privateIPAddress": "10.0.1.10"}}]}}),
+        Some(super::TENANT),
+    )
+    .unwrap();
+    h.open(JumpView::LoadBalancers).await;
+    h.land(vec![Box::new(lb)]).await;
+
+    let rt = RouteTableRow::from_json(
+        &serde_json::json!({"id": arm_id("Microsoft.Network/routeTables/rt-spoke"), "name": "rt-spoke", "location": "westeurope",
+            "properties": {"routes": [
+                {"name": "default", "properties": {"addressPrefix": "0.0.0.0/0", "nextHopType": "VirtualAppliance", "nextHopIpAddress": "10.0.1.10"}},
+                {"name": "other", "properties": {"addressPrefix": "10.9.0.0/16", "nextHopType": "VirtualAppliance", "nextHopIpAddress": "10.0.9.4"}}]}}),
+        Some(super::TENANT),
+    )
+    .unwrap();
+    h.open(JumpView::RouteTables).await;
+    h.land(vec![Box::new(rt)]).await;
+    h.press(KeyCode::Enter).await;
+    let routes = h.section_labels().iter().position(|l| *l == "Routes").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(routes).unwrap())).await;
+
+    let lines = h.app.get_detail_lines();
+    assert!(lines.contains(&("  → Load balancer lb-nva · frontend fe-trust".to_string(), lb_id.clone())), "{lines:#?}");
+    assert!(
+        lines.iter().any(|(_, v)| v == "10.0.9.4 not matched; not loaded: @nic (open them to match more)"),
+        "the NICs were never opened: {lines:#?}"
+    );
+
+    h.cursor_to_value(&lb_id).await;
+    h.press(KeyCode::Enter).await;
+    assert_eq!(h.app.current_view, JumpView::LoadBalancers);
+    assert_eq!(h.selected_id().as_deref(), Some(lb_id.as_str()), "the warm list lands the jump at once");
+}

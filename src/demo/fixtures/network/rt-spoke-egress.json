@@ -27,6 +27,19 @@
           "nextHopIpAddress": "10.10.9.4",
           "hasBgpOverride": false
         }
+      },
+      {
+        "name": "onprem-via-nva",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress/routes/onprem-via-nva",
+        "etag": "W/\"b1d3f5a7-9c1e-5a3b-5d7f-9b1d3f5a7c13\"",
+        "type": "Microsoft.Network/routeTables/routes",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "addressPrefix": "192.168.0.0/16",
+          "nextHopType": "VirtualAppliance",
+          "nextHopIpAddress": "10.10.11.10",
+          "hasBgpOverride": false
+        }
       }
     ],
     "subnets": [

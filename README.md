@@ -151,7 +151,7 @@ all).
 | `sub` | Subscriptions | Subscriptions, Resource groups (`rg`), All resources (`all`) |
 | `vm` | Virtual Machines | VMs, Disks (`disk`), NICs (`nic`) |
 | `storage` | Storage | Accounts (blob containers lazy) |
-| `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`), NAT gateways (`nat`), Private endpoints (`pe`) |
+| `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`, appliance next hops matched to their NIC / VM or load balancer), NAT gateways (`nat`), Private endpoints (`pe`), Bastion hosts (`bastion`), DDoS protection plans (`ddos`) |
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`) |
 | `agw` | Edge | Application gateways, Front Door (`afd`), WAF policies (`waf`) |
 | `kv` | Key Vault | Vaults (secret and key *names*, never values) |

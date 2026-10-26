@@ -1,0 +1,18 @@
+{
+  "name": "AzureBastionSubnet",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureBastionSubnet",
+  "etag": "W/\"0e7d4c2a-9b3f-5a1e-8d6c-4f2b0a8e6c13\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.12.0/26",
+    "delegations": [],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled",
+    "ipConfigurations": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/bastionHosts/bas-hub-prod/bastionHostIpConfigurations/IpConf"
+      }
+    ]
+  }
+}

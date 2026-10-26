@@ -126,6 +126,134 @@
         "outboundRules": [],
         "inboundNatPools": []
       }
+    },
+    {
+      "name": "lb-nva-internal",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal",
+      "etag": "W/\"e7b4a88f-e390-5541-a25c-ee7324db7723\"",
+      "type": "Microsoft.Network/loadBalancers",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "e7a9c1d3-5f7b-5d9c-1e3a-5b7c9e1a3d02",
+        "frontendIPConfigurations": [
+          {
+            "name": "fe-nva",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/frontendIPConfigurations/fe-nva",
+            "etag": "W/\"1d5ee2df-3ebc-52c6-bdd0-9894e6b30279\"",
+            "type": "Microsoft.Network/loadBalancers/frontendIPConfigurations",
+            "zones": [
+              "1",
+              "2",
+              "3"
+            ],
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAddress": "10.10.11.10",
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddressVersion": "IPv4",
+              "subnet": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-nva"
+              },
+              "loadBalancingRules": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/loadBalancingRules/lbr-ha-ports"
+                }
+              ]
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "be-nva",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/backendAddressPools/be-nva",
+            "etag": "W/\"2a485445-280a-5464-800f-e5d91d37978a\"",
+            "type": "Microsoft.Network/loadBalancers/backendAddressPools",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "backendIPConfigurations": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-nva-01/ipConfigurations/ipconfig1"
+                }
+              ],
+              "loadBalancingRules": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/loadBalancingRules/lbr-ha-ports"
+                }
+              ]
+            }
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "lbr-ha-ports",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/loadBalancingRules/lbr-ha-ports",
+            "etag": "W/\"f9b32745-63d6-5602-8504-bd30f92a4bc9\"",
+            "type": "Microsoft.Network/loadBalancers/loadBalancingRules",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "frontendIPConfiguration": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/frontendIPConfigurations/fe-nva"
+              },
+              "frontendPort": 0,
+              "backendPort": 0,
+              "enableFloatingIP": true,
+              "idleTimeoutInMinutes": 4,
+              "protocol": "All",
+              "enableDestinationServiceEndpoint": false,
+              "enableTcpReset": false,
+              "allowBackendPortConflict": false,
+              "loadDistribution": "Default",
+              "disableOutboundSnat": true,
+              "backendAddressPool": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/backendAddressPools/be-nva"
+              },
+              "backendAddressPools": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/backendAddressPools/be-nva"
+                }
+              ],
+              "probe": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/probes/probe-nva"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "probe-nva",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/probes/probe-nva",
+            "etag": "W/\"bf5e2dcf-9fd2-54db-8159-46193d254587\"",
+            "type": "Microsoft.Network/loadBalancers/probes",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "protocol": "Tcp",
+              "port": 8008,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "probeThreshold": 1,
+              "loadBalancingRules": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/loadBalancingRules/lbr-ha-ports"
+                }
+              ]
+            }
+          }
+        ],
+        "inboundNatRules": [],
+        "outboundRules": [],
+        "inboundNatPools": []
+      }
     }
   ]
 }

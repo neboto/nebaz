@@ -102,7 +102,10 @@ each one backs are in the catalog table
   `Microsoft.Network/loadBalancers/read` (frontends, pools, rules and
   probes arrive embedded); route tables: `Microsoft.Network/routeTables/read`;
   NAT gateways: `Microsoft.Network/natGateways/read`; private endpoints:
-  `Microsoft.Network/privateEndpoints/read`.
+  `Microsoft.Network/privateEndpoints/read`; Bastion hosts:
+  `Microsoft.Network/bastionHosts/read`; DDoS protection plans:
+  `Microsoft.Network/ddosProtectionPlans/read`. Appliance next hops are
+  matched in lists already read: no action of their own.
 - **DNS**: private DNS zones:
   `Microsoft.Network/privateDnsZones/read`, and the lazy Records and VNet
   links sections: `Microsoft.Network/privateDnsZones/ALL/read`,

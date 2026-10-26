@@ -1,0 +1,26 @@
+{
+  "value": [
+    {
+      "name": "ddos-contoso",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ddosProtectionPlans/ddos-contoso",
+      "etag": "W/\"9f2c4e6a-8b0d-5f1a-3c5e-7a9b1d3f5e68\"",
+      "type": "Microsoft.Network/ddosProtectionPlans",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "b4d6f8a0-2c4e-5a6b-8d0f-1e3a5c7e9b79",
+        "virtualNetworks": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod"
+          }
+        ]
+      }
+    }
+  ]
+}
