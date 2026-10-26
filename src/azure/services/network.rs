@@ -4,7 +4,8 @@
 //! groups. All three are stateless: only a provisioning transition or
 //! failure colours a row. The edge types (public IPs, load balancers,
 //! route tables, NAT gateways) live in `network_edge.rs`, private
-//! endpoints in `network_private.rs`; the provider here lists all eight.
+//! endpoints in `network_private.rs`, Bastion hosts and DDoS protection
+//! plans in `network_hub.rs`; the provider here lists all ten.
 //! Private DNS zones (`network_private.rs`) and the rest of DNS
 //! (`network_dns.rs`) are Microsoft.Network too but list under the DNS
 //! tab (`DnsService`).
@@ -15,6 +16,7 @@ use crate::azure::services::network_edge::{
     LoadBalancerRow, NatGatewayRow, PublicIpRow, RouteTableRow, LOAD_BALANCERS_PATH, NAT_GATEWAYS_PATH,
     PUBLIC_IPS_PATH, ROUTE_TABLES_PATH,
 };
+use crate::azure::services::network_hub::{BastionRow, DdosPlanRow, BASTION_HOSTS_PATH, DDOS_PLANS_PATH};
 use crate::azure::services::network_private::{PrivateEndpointRow, PRIVATE_ENDPOINTS_PATH};
 use crate::azure::services::{arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope};
 use crate::error::{Error, Result};
@@ -77,6 +79,20 @@ pub struct Peering {
     pub state: Option<String>,
     pub allow_forwarded_traffic: Option<bool>,
     pub allow_gateway_transit: Option<bool>,
+    pub use_remote_gateways: Option<bool>,
+}
+
+impl Peering {
+    /// Gateway transit as one readable phrase: whether this VNet's gateway
+    /// serves the peer, or this VNet sends through the peer's.
+    pub fn transit(&self) -> &'static str {
+        match (self.allow_gateway_transit == Some(true), self.use_remote_gateways == Some(true)) {
+            (true, true) => "offers its gateway and uses the peer's (one side is misconfigured)",
+            (true, false) => "offers this VNet's gateway to the peer",
+            (false, true) => "uses the peer's gateway",
+            (false, false) => "none",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -85,6 +101,9 @@ pub struct VnetRow {
     pub address_prefixes: Vec<String>,
     pub dns_servers: Vec<String>,
     pub ddos_protection: Option<bool>,
+    /// The DDoS protection plan (`ddosProtectionPlan`), often in another
+    /// subscription (one plan per tenant is the usual shape).
+    pub ddos_plan_id: Option<String>,
     pub guid: Option<String>,
     pub subnets: Vec<SubnetRow>,
     pub peerings: Vec<Peering>,
@@ -106,12 +125,14 @@ impl VnetRow {
                 state: json::str_at(pe, "/properties/peeringState"),
                 allow_forwarded_traffic: json::bool_at(pe, "/properties/allowForwardedTraffic"),
                 allow_gateway_transit: json::bool_at(pe, "/properties/allowGatewayTransit"),
+                use_remote_gateways: json::bool_at(pe, "/properties/useRemoteGateways"),
             })
             .collect();
         Some(VnetRow {
             address_prefixes: json::strings_at(v, &format!("{}/addressSpace/addressPrefixes", p)),
             dns_servers: json::strings_at(v, &format!("{}/dhcpOptions/dnsServers", p)),
             ddos_protection: json::bool_at(v, &format!("{}/enableDdosProtection", p)),
+            ddos_plan_id: json::arm_id(json::id_at(v, &format!("{}/ddosProtectionPlan", p))),
             guid: json::str_at(v, &format!("{}/resourceGuid", p)),
             subnets,
             peerings,
@@ -155,6 +176,8 @@ impl Resource for VnetRow {
             ("Address space".into(), json::join(&self.address_prefixes)),
             ("DNS servers".into(), if self.dns_servers.is_empty() { "Azure-provided".into() } else { self.dns_servers.join(", ") }),
             ("DDoS protection".into(), json::yes_no(self.ddos_protection)),
+            // The plan's id, so the line opens it.
+            ("DDoS plan".into(), self.ddos_plan_id.clone().unwrap_or_else(|| "-".into())),
             ("Subnets".into(), self.subnets.len().to_string()),
             ("Peerings".into(), self.peerings.len().to_string()),
             ("GUID".into(), json::opt(self.guid.clone())),
@@ -169,6 +192,9 @@ impl Resource for VnetRow {
             if let Some(r) = &p.remote_id {
                 v.push((format!("Peered VNet {}", name_of_id(r)), r.clone()));
             }
+        }
+        if let Some(d) = &self.ddos_plan_id {
+            v.push((format!("DDoS plan {}", name_of_id(d)), d.clone()));
         }
         v
     }
@@ -211,6 +237,9 @@ pub fn vnet_section_lines(r: &VnetRow, section: VnetDetailSection) -> Vec<(Strin
                 if p.allow_gateway_transit == Some(true) {
                     flags.push("gateway transit");
                 }
+                if p.use_remote_gateways == Some(true) {
+                    flags.push("remote gateways");
+                }
                 lines.push((
                     format!(
                         "{} · {}{}",
@@ -220,6 +249,16 @@ pub fn vnet_section_lines(r: &VnetRow, section: VnetDetailSection) -> Vec<(Strin
                     ),
                     p.remote_id.clone().unwrap_or_else(|| "-".into()),
                 ));
+                lines.push((
+                    "  Forwarded traffic".into(),
+                    match p.allow_forwarded_traffic {
+                        Some(true) => "allowed (what an NVA forwards from the peer gets in)",
+                        Some(false) => "blocked",
+                        None => "-",
+                    }
+                    .into(),
+                ));
+                lines.push(("  Gateway transit".into(), p.transit().into()));
             }
             lines
         }
@@ -317,7 +356,7 @@ impl SubnetRow {
 
 /// `(parent id, parent name)` of a child ARM id, the segment before
 /// `/{child_type}/`.
-fn parent_of(id: &str, child_type: &str) -> Option<(String, String)> {
+pub(crate) fn parent_of(id: &str, child_type: &str) -> Option<(String, String)> {
     let needle = format!("/{}/", child_type);
     let pos = id.to_lowercase().rfind(&needle.to_lowercase())?;
     let parent = &id[..pos];
@@ -689,6 +728,8 @@ impl NetworkService {
             JumpView::RouteTables => (ROUTE_TABLES_PATH, NETWORK_API_VERSION, "Listing route tables…"),
             JumpView::NatGateways => (NAT_GATEWAYS_PATH, NETWORK_API_VERSION, "Listing NAT gateways…"),
             JumpView::PrivateEndpoints => (PRIVATE_ENDPOINTS_PATH, NETWORK_API_VERSION, "Listing private endpoints…"),
+            JumpView::BastionHosts => (BASTION_HOSTS_PATH, NETWORK_API_VERSION, "Listing Bastion hosts…"),
+            JumpView::DdosPlans => (DDOS_PLANS_PATH, NETWORK_API_VERSION, "Listing DDoS protection plans…"),
             _ => return None,
         })
     }
@@ -710,6 +751,8 @@ impl NetworkService {
             JumpView::PrivateEndpoints => {
                 Self::boxed(page.iter().filter_map(|v| PrivateEndpointRow::from_json(v, tenant)).collect())
             }
+            JumpView::BastionHosts => Self::boxed(page.iter().filter_map(|v| BastionRow::from_json(v, tenant)).collect()),
+            JumpView::DdosPlans => Self::boxed(page.iter().filter_map(|v| DdosPlanRow::from_json(v, tenant)).collect()),
             _ => Vec::new(),
         }
     }
@@ -840,6 +883,8 @@ mod tests {
             "properties": {
                 "provisioningState": "Succeeded",
                 "addressSpace": {"addressPrefixes": ["10.0.0.0/16"]},
+                "enableDdosProtection": true,
+                "ddosProtectionPlan": {"id": format!("{}/providers/Microsoft.Network/ddosProtectionPlans/ddos-hub", RG)},
                 "subnets": [
                     {"id": format!("{}/subnets/default", vnet), "name": "default",
                      "properties": {"addressPrefix": "10.0.0.0/24", "provisioningState": "Succeeded",
@@ -850,7 +895,7 @@ mod tests {
                      "properties": {"addressPrefixes": ["10.0.8.0/22"], "provisioningState": "Updating"}}
                 ],
                 "virtualNetworkPeerings": [{"name": "to-hub", "properties": {
-                    "peeringState": "Connected", "allowForwardedTraffic": true,
+                    "peeringState": "Connected", "allowForwardedTraffic": true, "useRemoteGateways": true,
                     "remoteVirtualNetwork": {"id": format!("{}/providers/Microsoft.Network/virtualNetworks/vnet-hub", RG)}}}]
             }
         })
@@ -880,7 +925,14 @@ mod tests {
         assert!(related.iter().any(|(l, _)| l == "Subnet aks"));
         assert!(related.iter().any(|(l, _)| l == "Peered VNet vnet-hub"));
         let peer = vnet_section_lines(&row, VnetDetailSection::Peerings);
-        assert_eq!(peer[0].0, "to-hub · connected · forwarded traffic");
+        assert_eq!(peer[0].0, "to-hub · connected · forwarded traffic, remote gateways");
+        assert!(peer.contains(&("  Gateway transit".to_string(), "uses the peer's gateway".to_string())), "{peer:?}");
+        assert!(peer.iter().any(|(k, v)| k == "  Forwarded traffic" && v.starts_with("allowed")));
+        // The DDoS plan: on in Overview (its id, so the line jumps) and in Related.
+        let plan = format!("{}/providers/Microsoft.Network/ddosProtectionPlans/ddos-hub", RG);
+        assert!(row.details().contains(&("DDoS plan".to_string(), plan.clone())));
+        assert!(row.details().contains(&("DDoS protection".to_string(), "yes".to_string())));
+        assert!(related.contains(&("DDoS plan ddos-hub".to_string(), plan)));
         let subnets = vnet_section_lines(&row, VnetDetailSection::Subnets);
         assert_eq!(subnets[0].0, "default · 10.0.0.0/24");
         assert!(subnets[0].1.ends_with("/subnets/default"));

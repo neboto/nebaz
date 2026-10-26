@@ -2,6 +2,7 @@
 use crate::azure::service::ServiceType;
 use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
+use unicode_width::UnicodeWidthStr;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -278,8 +279,27 @@ pub fn render_service_selector(
         return;
     }
 
-    let area = centered_rect(50, 75, frame.size());
+    // The name column fits the longest short name plus a gap, so a
+    // 10-character name ("Power Plat") never runs into its description.
+    let name_w = state.all.iter().map(|s| s.short_name().width()).max().unwrap_or(0) + 2;
+    let desc_w = state.all.iter().map(|s| s.description().width()).max().unwrap_or(0);
+    let counter_w = format!(" {}/{} ", state.all.len(), state.all.len()).width();
+
+    // Width: what the rows (highlight + marker + name + description) need,
+    // never under half the terminal, and always clear of its edges: a row
+    // the terminal draws a column wider than ratatui counted (an ambiguous-
+    // width `…` or `▌`) then can't spill past the edge and wrap onto the
+    // next line. A narrow terminal truncates descriptions with `…`.
+    let size = frame.size();
+    let rows_need = (2 + 2 + name_w + desc_w + 1 + 2) as u16; // + a column before the border
+    let width = rows_need.max(size.width / 2).min(size.width.saturating_sub(EDGE_MARGIN * 2));
+    let area = centered_rect(width, size.height * 75 / 100, size);
     frame.render_widget(Clear, area);
+
+    // The footer drops hints from the end of the list until it fits beside
+    // the counter, rather than widening the popup.
+    let hint = footer_hint((width as usize).saturating_sub(2 + 2 * counter_w + 2));
+    let desc_budget = (width as usize).saturating_sub(2 + 2 + 1 + 2 + name_w);
 
     // Split into search bar + list
     let chunks = Layout::default()
@@ -308,8 +328,9 @@ pub fn render_service_selector(
     };
     frame.render_widget(Paragraph::new(search_text), search_inner);
 
-    // Service list — category headers render dim-bold; navigation skips them,
-    // so the highlight only ever lands on a service row.
+    // Service list — category headers render like the help overlay's section
+    // titles (a dim header read as a description wrapped onto the next line);
+    // navigation skips them, so the highlight only ever lands on a service row.
     let items: Vec<ListItem> = state
         .rows
         .iter()
@@ -317,7 +338,7 @@ pub fn render_service_selector(
             SelectorRow::Header(category) => ListItem::new(Line::from(Span::styled(
                 format!("  {}", category),
                 Style::default()
-                    .fg(theme::text_dim())
+                    .fg(theme::warning())
                     .add_modifier(Modifier::BOLD),
             ))),
             SelectorRow::Service(service) => {
@@ -338,9 +359,9 @@ pub fn render_service_selector(
 
                 ListItem::new(Line::from(vec![
                     marker,
-                    Span::styled(format!("{:<10}", service.short_name()), name_style),
+                    Span::styled(format!("{:<name_w$}", service.short_name()), name_style),
                     Span::styled(
-                        service.description().to_string(),
+                        truncate(service.description(), desc_budget),
                         Style::default().fg(crate::ui::theme::text_dim()),
                     ),
                 ]))
@@ -353,14 +374,7 @@ pub fn render_service_selector(
         .borders(ratatui::widgets::Borders::LEFT | ratatui::widgets::Borders::RIGHT | ratatui::widgets::Borders::BOTTOM)
         .border_style(Style::default().fg(theme::border_dim()))
         .title(
-            Title::from(theme::hint_line(&[
-                ("type", "fuzzy filter"),
-                ("↑/↓", "move"),
-                ("^d/^u", "page"),
-                ("←/→", "category"),
-                ("⏎", "select"),
-                ("Esc", "cancel"),
-            ]))
+            Title::from(hint)
             .position(Position::Bottom)
             .alignment(Alignment::Center),
         )
@@ -393,24 +407,57 @@ pub fn render_service_selector(
     hits.borrow_mut().record_list(area, list_rows, list_state.offset(), state.rows.len());
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
+/// Columns kept free on each side of the popup.
+const EDGE_MARGIN: u16 = 2;
 
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
+/// Footer hints, most useful first; `footer_hint` keeps the longest prefix
+/// that fits.
+const HINTS: &[(&str, &str)] = &[
+    ("⏎", "select"),
+    ("Esc", "cancel"),
+    ("type", "fuzzy filter"),
+    ("↑/↓", "move"),
+    ("←/→", "category"),
+    ("^d/^u", "page"),
+];
+
+/// The footer hint line, as many `HINTS` as fit in `max` columns.
+fn footer_hint(max: usize) -> Line<'static> {
+    (1..=HINTS.len())
+        .rev()
+        .map(|n| theme::hint_line(&HINTS[..n]))
+        .find(|line| line.width() <= max)
+        .unwrap_or_else(|| theme::hint_line(&HINTS[..1]))
+}
+
+/// Truncate to `max` display columns, ellipsized.
+fn truncate(text: &str, max: usize) -> String {
+    if text.width() <= max {
+        return text.to_string();
+    }
+    let mut out = String::new();
+    for c in text.chars() {
+        if out.width() + c.to_string().width() + 1 > max {
+            break;
+        }
+        out.push(c);
+    }
+    if max > 0 {
+        out.push('…');
+    }
+    out
+}
+
+/// Centered rectangle of a fixed size, clamped to `r`.
+fn centered_rect(width: u16, height: u16, r: Rect) -> Rect {
+    let width = width.min(r.width);
+    let height = height.min(r.height);
+    Rect {
+        x: r.x + (r.width - width) / 2,
+        y: r.y + (r.height - height) / 2,
+        width,
+        height,
+    }
 }
 
 #[cfg(test)]
@@ -583,5 +630,37 @@ mod tests {
         state.select_first();
         assert_eq!(state.position().0, 1);
         assert!(state.selected_service().is_some());
+    }
+
+    #[test]
+    fn every_short_name_is_followed_by_a_gap() {
+        // "Power Plat" is exactly 10 wide: a fixed 10-column name slot ran
+        // it straight into "Power Platform enterprise policies".
+        let mut t = ratatui::Terminal::new(ratatui::backend::TestBackend::new(120, 60)).unwrap();
+        let mut state = ServiceSelectorState::new();
+        state.show(None);
+        let hits = std::cell::RefCell::new(crate::app::PopupHits::default());
+        t.draw(|f| render_service_selector(&state, None, &hits, f)).unwrap();
+        let buf = t.backend().buffer();
+        let screen: Vec<String> = (0..buf.area.height)
+            .map(|y| (0..buf.area.width).map(|x| buf.get(x, y).symbol()).collect())
+            .collect();
+        let name_w = ServiceType::all().iter().map(|s| s.short_name().width()).max().unwrap();
+        for service in ServiceType::all() {
+            // At least two spaces between the longest name and its description.
+            let row = format!("{:<w$}{}", service.short_name(), service.description(), w = name_w + 2);
+            assert!(
+                screen.iter().any(|l| l.contains(&row)),
+                "{:?}: no row reading {:?}",
+                service,
+                row
+            );
+        }
+    }
+
+    #[test]
+    fn truncate_ellipsizes_by_width() {
+        assert_eq!(truncate("short", 10), "short");
+        assert_eq!(truncate("longer than that", 10), "longer th…");
     }
 }

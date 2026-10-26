@@ -1,0 +1,122 @@
+{
+  "name": "vm-nva-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01",
+  "type": "Microsoft.Compute/virtualMachines",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200"
+  },
+  "properties": {
+    "vmId": "1d3f5a7c-9e1b-4d3f-a5c7-e9b1d3f5a724",
+    "hardwareProfile": {
+      "vmSize": "Standard_F4s_v2"
+    },
+    "storageProfile": {
+      "imageReference": {
+        "publisher": "fortinet",
+        "offer": "fortinet_fortigate-vm_v5",
+        "sku": "fortinet_fg-vm_payg_2023",
+        "version": "latest",
+        "exactVersion": "7.4.4"
+      },
+      "osDisk": {
+        "osType": "Linux",
+        "name": "vm-nva-01_OsDisk_1_5c2e8a4f9d1b4e7a8c3f6b0d2e4a9c71",
+        "createOption": "FromImage",
+        "caching": "ReadWrite",
+        "managedDisk": {
+          "storageAccountType": "Premium_LRS",
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/disks/vm-nva-01_OsDisk_1_5c2e8a4f9d1b4e7a8c3f6b0d2e4a9c71"
+        },
+        "deleteOption": "Delete",
+        "diskSizeGB": 2
+      },
+      "dataDisks": [],
+      "diskControllerType": "SCSI"
+    },
+    "osProfile": {
+      "computerName": "fgt-nva-01",
+      "adminUsername": "fortiadmin",
+      "linuxConfiguration": {
+        "disablePasswordAuthentication": false,
+        "provisionVMAgent": true
+      },
+      "secrets": [],
+      "allowExtensionOperations": true,
+      "requireGuestProvisionSignal": true
+    },
+    "networkProfile": {
+      "networkInterfaces": [
+        {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-nva-01",
+          "properties": {
+            "primary": true
+          }
+        }
+      ]
+    },
+    "diagnosticsProfile": {
+      "bootDiagnostics": {
+        "enabled": true
+      }
+    },
+    "priority": "Regular",
+    "provisioningState": "Succeeded",
+    "timeCreated": "{{iso:now-210d}}",
+    "instanceView": {
+      "computerName": "fgt-nva-01",
+      "osName": "FortiOS",
+      "osVersion": "7.4.4",
+      "hyperVGeneration": "V1",
+      "vmAgent": {
+        "vmAgentVersion": "2.9.1.1",
+        "statuses": [
+          {
+            "code": "ProvisioningState/succeeded",
+            "level": "Info",
+            "displayStatus": "Ready",
+            "message": "Guest Agent is running",
+            "time": "{{iso:now-2m}}"
+          }
+        ]
+      },
+      "disks": [
+        {
+          "name": "vm-nva-01_OsDisk_1_5c2e8a4f9d1b4e7a8c3f6b0d2e4a9c71",
+          "statuses": [
+            {
+              "code": "ProvisioningState/succeeded",
+              "level": "Info",
+              "displayStatus": "Provisioning succeeded",
+              "time": "{{iso:now-210d}}"
+            }
+          ]
+        }
+      ],
+      "statuses": [
+        {
+          "code": "ProvisioningState/succeeded",
+          "level": "Info",
+          "displayStatus": "Provisioning succeeded",
+          "time": "{{iso:now-210d}}"
+        },
+        {
+          "code": "PowerState/running",
+          "level": "Info",
+          "displayStatus": "VM running"
+        }
+      ]
+    }
+  },
+  "plan": {
+    "name": "fortinet_fg-vm_payg_2023",
+    "publisher": "fortinet",
+    "product": "fortinet_fortigate-vm_v5"
+  },
+  "zones": [
+    "1"
+  ]
+}

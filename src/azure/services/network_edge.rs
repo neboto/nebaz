@@ -8,7 +8,8 @@
 //! arrive embedded in the list body: no lazy calls.
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
-use crate::azure::services::{arm_row, json, overview_rows, related_rows, tag_rows, ArmBase};
+use crate::azure::services::network_hub::NextHops;
+use crate::azure::services::{arm_row, json, overview_rows, related_rows, related_rows_with, tag_rows, ArmBase};
 use serde_json::Value;
 
 pub const PUBLIC_IPS_PATH: &str = "/providers/Microsoft.Network/publicIPAddresses";
@@ -636,27 +637,30 @@ impl Resource for RouteTableRow {
     }
 }
 
-pub fn route_table_section_lines(r: &RouteTableRow, section: RouteTableDetailSection) -> Vec<(String, String)> {
+/// `hops` resolves each `VirtualAppliance` next hop against the warm
+/// NICs and load balancers (`NextHops`): a line under the route that
+/// jumps to it, or says why it could not.
+pub fn route_table_section_lines(r: &RouteTableRow, section: RouteTableDetailSection, hops: &NextHops) -> Vec<(String, String)> {
     match section {
         RouteTableDetailSection::Overview => overview_rows(r),
         RouteTableDetailSection::Routes => {
             if r.routes.is_empty() {
                 return vec![(String::new(), "No user routes (system routes apply)".into())];
             }
-            r.routes
-                .iter()
-                .map(|rt| {
-                    let hop = match &rt.next_hop_ip {
-                        Some(ip) => format!("{} {}", rt.next_hop_type, ip),
-                        None => rt.next_hop_type.clone(),
-                    };
-                    (rt.name.clone(), format!("{} → {}", rt.prefix, hop))
-                })
-                .collect()
+            let mut lines = Vec::new();
+            for rt in &r.routes {
+                let hop = match &rt.next_hop_ip {
+                    Some(ip) => format!("{} {}", rt.next_hop_type, ip),
+                    None => rt.next_hop_type.clone(),
+                };
+                lines.push((rt.name.clone(), format!("{} → {}", rt.prefix, hop)));
+                lines.extend(hops.route_lines(rt, "  "));
+            }
+            lines
         }
         RouteTableDetailSection::Access => crate::azure::services::rendered_by_app(),
         RouteTableDetailSection::Activity => crate::azure::services::rendered_by_app(),
-        RouteTableDetailSection::Related => related_rows(r),
+        RouteTableDetailSection::Related => related_rows_with(r, hops.links(r)),
         RouteTableDetailSection::Tags => tag_rows(r.tags()),
     }
 }
@@ -900,9 +904,10 @@ mod tests {
             None,
         )
         .unwrap();
-        let routes = route_table_section_lines(&rt, RouteTableDetailSection::Routes);
+        let routes = route_table_section_lines(&rt, RouteTableDetailSection::Routes, &NextHops::default());
         assert_eq!(routes[0], ("to-fw".to_string(), "0.0.0.0/0 → VirtualAppliance 10.0.0.4".to_string()));
-        assert_eq!(routes[1].1, "10.1.0.0/16 → VnetLocal");
+        assert_eq!(routes[1].0, "  →", "the appliance hop's line, unresolved");
+        assert_eq!(routes[2].1, "10.1.0.0/16 → VnetLocal");
         assert!(rt.details().iter().any(|(k, v)| k == "BGP route propagation" && v == "disabled"));
         assert!(rt.related().iter().any(|(l, _)| l == "Subnet app"));
         assert!(rt.cli_command().unwrap().starts_with("az network route-table show --ids "));

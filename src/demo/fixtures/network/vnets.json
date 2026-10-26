@@ -282,6 +282,45 @@
                 }
               ]
             }
+          },
+          {
+            "name": "snet-nva",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-nva",
+            "etag": "W/\"6b1f0c3e-2d4a-5e8b-9c7f-1a3d5e7b9c02\"",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "addressPrefix": "10.10.11.0/28",
+              "delegations": [],
+              "privateEndpointNetworkPolicies": "Disabled",
+              "privateLinkServiceNetworkPolicies": "Enabled",
+              "ipConfigurations": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-nva-01/ipConfigurations/ipconfig1"
+                },
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-nva-internal/frontendIPConfigurations/fe-nva"
+                }
+              ]
+            }
+          },
+          {
+            "name": "AzureBastionSubnet",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureBastionSubnet",
+            "etag": "W/\"0e7d4c2a-9b3f-5a1e-8d6c-4f2b0a8e6c13\"",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "addressPrefix": "10.10.12.0/26",
+              "delegations": [],
+              "privateEndpointNetworkPolicies": "Disabled",
+              "privateLinkServiceNetworkPolicies": "Enabled",
+              "ipConfigurations": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/bastionHosts/bas-hub-prod/bastionHostIpConfigurations/IpConf"
+                }
+              ]
+            }
           }
         ],
         "virtualNetworkPeerings": [
@@ -350,8 +389,11 @@
             }
           }
         ],
-        "enableDdosProtection": false,
-        "privateEndpointVNetPolicies": "Disabled"
+        "enableDdosProtection": true,
+        "privateEndpointVNetPolicies": "Disabled",
+        "ddosProtectionPlan": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ddosProtectionPlans/ddos-contoso"
+        }
       }
     },
     {

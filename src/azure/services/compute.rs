@@ -125,6 +125,41 @@ pub struct VmRow {
     pub time_created: Option<String>,
     pub license_type: Option<String>,
     pub image: Option<String>,
+    /// The marketplace `plan` a vendor image carries (an NVA's, usually).
+    pub plan: Option<MarketplacePlan>,
+}
+
+/// A VM's marketplace `plan`: who sells the image and which product.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MarketplacePlan {
+    pub publisher: String,
+    pub product: String,
+    pub name: String,
+}
+
+impl MarketplacePlan {
+    fn from_json(v: &Value) -> Option<MarketplacePlan> {
+        let publisher = json::str_at(v, "/plan/publisher").filter(|p| !p.is_empty())?;
+        Some(MarketplacePlan {
+            publisher,
+            product: json::text(v, "/plan/product"),
+            name: json::text(v, "/plan/name"),
+        })
+    }
+
+    /// What the image is, as a kind label: the network virtual appliances
+    /// a hub usually runs by their product name, any other vendor as its
+    /// publisher and product (the plan's own words).
+    pub fn label(&self) -> String {
+        let vendor = match self.publisher.to_lowercase().as_str() {
+            "paloaltonetworks" => return "Palo Alto VM-Series".into(),
+            "fortinet" => "Fortinet",
+            "checkpoint" => "Check Point",
+            "cisco" => "Cisco",
+            _ => return format!("{} {}", self.publisher, self.product).trim_end().to_string(),
+        };
+        format!("{} {}", vendor, self.product).trim_end().to_string()
+    }
 }
 
 impl VmRow {
@@ -176,6 +211,7 @@ impl VmRow {
             time_created: json::str_at(v, &format!("{}/timeCreated", p)),
             license_type: json::str_at(v, &format!("{}/licenseType", p)),
             image,
+            plan: MarketplacePlan::from_json(v),
             base,
         })
     }
@@ -209,9 +245,14 @@ impl VmRow {
 
 impl Resource for VmRow {
     arm_row!("Virtual Machine");
-    /// The VM size: what the row costs and can do.
+    /// The VM size: what the row costs and can do; a marketplace
+    /// appliance's kind first.
     fn list_summary(&self) -> Option<String> {
-        self.vm_size.clone()
+        match (&self.plan, &self.vm_size) {
+            (Some(p), Some(size)) => Some(format!("{} · {}", p.label(), size)),
+            (Some(p), None) => Some(p.label()),
+            (None, size) => size.clone(),
+        }
     }
     fn state(&self) -> ResourceState {
         self.ladder().0
@@ -224,7 +265,7 @@ impl Resource for VmRow {
     }
     fn search_text(&self) -> String {
         format!(
-            "{} {} {} {} {} {} {}",
+            "{} {} {} {} {} {} {} {}",
             self.base.id,
             self.base.name,
             self.resource_group().unwrap_or(""),
@@ -232,6 +273,7 @@ impl Resource for VmRow {
             json::opt(self.computer_name.clone()),
             json::opt(self.power_state.clone()),
             json::opt(self.os_type.clone()),
+            self.plan.as_ref().map(|p| format!("{} {}", p.label(), p.publisher)).unwrap_or_default(),
         )
     }
     fn details(&self) -> Vec<(String, String)> {
@@ -245,6 +287,13 @@ impl Resource for VmRow {
             ("Size".into(), json::opt(self.vm_size.clone())),
             ("OS".into(), json::opt(self.os_type.clone())),
             ("Image".into(), json::opt(self.image.clone())),
+            (
+                "Marketplace plan".into(),
+                self.plan
+                    .as_ref()
+                    .map(|p| format!("{} · {} / {} / {}", p.label(), p.publisher, p.product, p.name))
+                    .unwrap_or_else(|| "-".into()),
+            ),
             ("Computer name".into(), json::opt(self.computer_name.clone())),
             ("Admin user".into(), json::opt(self.admin_username.clone())),
             ("Zones".into(), json::join(&self.zones)),

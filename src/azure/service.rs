@@ -18,7 +18,8 @@ pub enum ServiceType {
     /// Storage accounts + blob containers (via ARM).
     Storage,
     /// Virtual networks, subnets, NSGs, public IPs, load balancers, route
-    /// tables, NAT gateways, private endpoints.
+    /// tables, NAT gateways, private endpoints, Bastion hosts, DDoS
+    /// protection plans.
     Network,
     /// Private and public DNS zones, the DNS Private Resolver, forwarding
     /// rulesets, DNS security policies. Microsoft.Network, but its own tab
@@ -111,6 +112,10 @@ pub enum JumpView {
     RouteTables,
     NatGateways,
     PrivateEndpoints,
+    /// `Microsoft.Network/bastionHosts`.
+    BastionHosts,
+    /// `Microsoft.Network/ddosProtectionPlans`.
+    DdosPlans,
     // DNS
     PrivateDnsZones,
     /// Public DNS zones (`Microsoft.Network/dnszones`).
@@ -204,7 +209,7 @@ impl JumpView {
             VirtualMachines | Disks | Nics => ServiceType::VirtualMachines,
             StorageAccounts => ServiceType::Storage,
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
-            | NatGateways | PrivateEndpoints => ServiceType::Network,
+            | NatGateways | PrivateEndpoints | BastionHosts | DdosPlans => ServiceType::Network,
             PrivateDnsZones | DnsZones | DnsResolvers | DnsForwardingRulesets | DnsResolverPolicies => ServiceType::Dns,
             AppGateways | FrontDoorProfiles | WafPolicies => ServiceType::Edge,
             ExpressRouteCircuits | VnetGateways | GatewayConnections | LocalGateways => ServiceType::Hybrid,
@@ -246,6 +251,8 @@ impl JumpView {
             RouteTables => "route-tables",
             NatGateways => "nat-gateways",
             PrivateEndpoints => "private-endpoints",
+            BastionHosts => "bastion-hosts",
+            DdosPlans => "ddos-plans",
             PrivateDnsZones => "private-dns-zones",
             DnsZones => "dns-zones",
             DnsResolvers => "dns-resolvers",
@@ -310,6 +317,8 @@ impl JumpView {
             RouteTables => "Routes",
             NatGateways => "NAT",
             PrivateEndpoints => "PEs",
+            BastionHosts => "Bastion",
+            DdosPlans => "DDoS",
             PrivateDnsZones => "Private DNS",
             DnsZones => "DNS zones",
             DnsResolvers => "Resolvers",
@@ -381,6 +390,8 @@ impl JumpView {
             ("microsoft.network", ["routetables"]) => JumpView::RouteTables,
             ("microsoft.network", ["natgateways"]) => JumpView::NatGateways,
             ("microsoft.network", ["privateendpoints"]) => JumpView::PrivateEndpoints,
+            ("microsoft.network", ["bastionhosts"]) => JumpView::BastionHosts,
+            ("microsoft.network", ["ddosprotectionplans"]) => JumpView::DdosPlans,
             ("microsoft.network", ["privatednszones"]) => JumpView::PrivateDnsZones,
             ("microsoft.network", ["dnszones"]) => JumpView::DnsZones,
             ("microsoft.network", ["dnsresolvers"]) => JumpView::DnsResolvers,
@@ -605,7 +616,7 @@ impl ServiceType {
             ServiceType::Subscriptions => "Subscriptions, groups & all resources",
             ServiceType::VirtualMachines => "Virtual Machines, Disks & NICs",
             ServiceType::Storage => "Storage Accounts & Containers",
-            ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
+            ServiceType::Network => "VNets, NSGs, IPs, LBs, NAT, Bastion & DDoS",
             ServiceType::Dns => "DNS zones, Private Resolver & rulesets",
             ServiceType::Edge => "App gateways, Front Door & WAF policies",
             ServiceType::Hybrid => "ExpressRoute, VNet gateways, connections & local gateways",
@@ -645,6 +656,8 @@ impl ServiceType {
                 RouteTables,
                 NatGateways,
                 PrivateEndpoints,
+                BastionHosts,
+                DdosPlans,
             ],
             ServiceType::Dns => &[PrivateDnsZones, DnsZones, DnsResolvers, DnsForwardingRulesets, DnsResolverPolicies],
             ServiceType::Edge => &[AppGateways, FrontDoorProfiles, WafPolicies],
@@ -718,6 +731,12 @@ impl ServiceType {
             "nat" | "natgw" | "natgateway" | "natgateways" => (ServiceType::Network, Some(JumpView::NatGateways)),
             "pe" | "pes" | "privateendpoint" | "privateendpoints" => {
                 (ServiceType::Network, Some(JumpView::PrivateEndpoints))
+            }
+            "bastion" | "bastions" | "bas" | "bastionhost" | "bastionhosts" => {
+                (ServiceType::Network, Some(JumpView::BastionHosts))
+            }
+            "ddos" | "ddosplan" | "ddosplans" | "ddosprotection" | "ddosprotectionplans" => {
+                (ServiceType::Network, Some(JumpView::DdosPlans))
             }
             "dns" => (ServiceType::Dns, None),
             "changes" | "change" | "changed" | "recent" => (ServiceType::Changes, None),
@@ -849,7 +868,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@vgw", "@cn", "@lgw", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@vgw", "@cn", "@lgw", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.

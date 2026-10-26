@@ -271,7 +271,7 @@ verbatim where the concept is unchanged.
 | `src/azure/service.rs` | `ServiceType`, `JumpView`, routing prefixes, `for_arm_id` |
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
-| `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid}.rs` | one file per service |
+| `src/azure/services/{subscriptions,compute,storage,network,network_edge,network_hub,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid}.rs` | one file per service |
 | `src/headless.rs`, `src/app/headless.rs` | `nebaz services / ls / get`: a terminal-less `App`, the output contract, `skills/nebaz/SKILL.md` |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/cli_actions.rs` | the `C` catalogue: every copyable `az` command per type, tiers; the one file the guard lets spell a Connect / Change verb |

@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, foundry,
-    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
+    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
 
@@ -267,6 +267,16 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                 "PrivateEndpointRow",
                 network_private::PrivateEndpointRow::from_json(&simple("Microsoft.Network/privateEndpoints/pe-1"), t),
             ),
+        ),
+        m(
+            JumpView::BastionHosts,
+            "BastionRow",
+            parse("BastionRow", network_hub::BastionRow::from_json(&simple("Microsoft.Network/bastionHosts/bas-1"), t)),
+        ),
+        m(
+            JumpView::DdosPlans,
+            "DdosPlanRow",
+            parse("DdosPlanRow", network_hub::DdosPlanRow::from_json(&simple("Microsoft.Network/ddosProtectionPlans/ddos-1"), t)),
         ),
         m(
             JumpView::PrivateDnsZones,

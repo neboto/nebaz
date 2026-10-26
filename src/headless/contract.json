@@ -283,7 +283,9 @@
       "load-balancers (lb)",
       "route-tables (rt)",
       "nat-gateways (nat)",
-      "private-endpoints (pe)"
+      "private-endpoints (pe)",
+      "bastion-hosts (bastion)",
+      "ddos-plans (ddos)"
     ]
   },
   "sections": {
@@ -349,6 +351,15 @@
       "Related",
       "Tags"
     ],
+    "Bastion": [
+      "Overview",
+      "Features",
+      "Network",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Container Apps environment": [
       "Overview",
       "Network",
@@ -400,6 +411,14 @@
       "Security",
       "Backup",
       "Databases",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "DDoS Protection Plan": [
+      "Overview",
+      "Protected",
       "Access",
       "Activity",
       "Related",
