@@ -192,7 +192,7 @@ strings, app settings and secret values are never fetched.
 |---|---|
 | `S` · `R` · `P` | service · location · subscription pickers |
 | `/` · `@svc text` | fuzzy search · switch service and search |
-| `⌫` / `Ctrl-O` · `` ` `` | history back · jump list |
+| `⌫` / `Ctrl-O` · `Ctrl-F` · `` ` `` | history back · forward · jump list (the `←` `→` left of the service tabs click the same) |
 | `B` · `'` | bookmark · bookmarks |
 | `,` | macros (record, replay; `--macro NAME` on startup) |
 | `M` · `b` · `?` · `q` | messages · banner · help · quit |

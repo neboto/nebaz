@@ -203,6 +203,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     // Each widget records its own mouse targets as it draws; start every
     // frame empty so a closed popup's rows can never take a click.
     app.mouse.begin_frame();
+    app.clear_click_regions();
     // A service with more than one sub-tab gets the sub-tab row.
     let sub_tabs = app.sub_tab_chips();
     let show_sub_tabs = !sub_tabs.is_empty();
@@ -213,7 +214,8 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     if let Some(banner_area) = layout.banner_area {
         banner::render_banner(banner_area, frame);
     }
-    service_tabs::render_service_tabs(app, layout.tabs_area, frame);
+    let tabs_area = render_nav_buttons(app, layout.tabs_area, frame);
+    service_tabs::render_service_tabs(app, tabs_area, frame);
     search_bar::render_search_bar(app, layout.search_area, frame);
     if let Some(area) = layout.sub_tabs_area {
         subtab_bar::render_subtab_bar(app, area, frame, &sub_tabs);
@@ -309,6 +311,36 @@ fn fit_hint_line(mut line: Line<'static>, max_width: usize) -> Line<'static> {
         line.spans.truncate(keep);
     }
     line
+}
+
+/// The browser-style `← →` at the service strip's left edge: history back
+/// and forward (`⌫` / `Ctrl-O`, `Ctrl-F`) for the mouse, dim when there is
+/// nowhere to go. Returns the rest of the strip.
+fn render_nav_buttons(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui::Frame) -> ratatui::layout::Rect {
+    const BUTTON: u16 = 3;
+    if app.current_service.is_none() || area.width < BUTTON * 2 + 20 {
+        return area;
+    }
+    let style = |live: bool| {
+        if live {
+            Style::default().fg(theme::accent()).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(theme::text_dim())
+        }
+    };
+    let back = app.nav_back_index().is_some();
+    let forward = app.nav_forward_index().is_some();
+    let line = Line::from(vec![
+        Span::styled(" ← ", style(back)),
+        Span::styled(" → ", style(forward)),
+        Span::styled("│", Style::default().fg(theme::text_dim())),
+    ]);
+    let width = line.width() as u16;
+    let button = |i: u16| ratatui::layout::Rect { x: area.x + i * BUTTON, y: area.y, width: BUTTON, height: 1 };
+    app.push_click_region(button(0), app::ClickAction::Back);
+    app.push_click_region(button(1), app::ClickAction::Forward);
+    frame.render_widget(Paragraph::new(line), ratatui::layout::Rect { width, ..area });
+    ratatui::layout::Rect { x: area.x + width, width: area.width - width, ..area }
 }
 
 fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui::Frame) {

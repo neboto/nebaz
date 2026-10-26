@@ -31,6 +31,7 @@ const LEFT_SECTIONS: &[Section] = &[
             ("l / → / ⏎", "open details"),
             ("h / ←", "back to the list"),
             ("⌫ / Ctrl-O", "history back"),
+            ("Ctrl-F", "history forward"),
             ("`", "jump list (history)"),
             ("B / '", "bookmark / bookmarks"),
             ("Tab · 1–9", "sub-tabs"),

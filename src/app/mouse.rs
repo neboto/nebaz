@@ -62,6 +62,9 @@ pub enum ClickAction {
     /// A key hint or a badge: press the key where focus already is, so the
     /// footer's `y` copies the body line and the status bar's `y` the id.
     Press(KeyCode),
+    /// The service strip's `←` / `→`: history back / forward, from either pane.
+    Back,
+    Forward,
 }
 
 /// A clickable region, recorded each frame by the (read-only) widgets.
@@ -350,6 +353,22 @@ impl App {
                     self.details_focused = true;
                 }
                 self.handle_key(press(code), event_tx);
+            }
+            ClickAction::Back | ClickAction::Forward => {
+                let back = action == ClickAction::Back;
+                let target = if back { self.nav_back_index() } else { self.nav_forward_index() };
+                if typing || target.is_none() {
+                    return;
+                }
+                // The filter belonged to the pane being left, as `⌫` does.
+                if self.details_focused {
+                    self.clear_detail_filter();
+                }
+                if back {
+                    self.nav_back(event_tx);
+                } else {
+                    self.nav_forward(event_tx);
+                }
             }
             ClickAction::Press(code) => {
                 if typing && matches!(code, KeyCode::Char(_)) {

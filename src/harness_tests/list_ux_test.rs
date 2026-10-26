@@ -248,3 +248,52 @@ async fn the_list_shows_the_summary_column() {
     assert!(list_side.contains("vm-1  Standard_B2s"), "{screen}");
     assert!(!list_side.contains("/subscriptions/"), "{screen}");
 }
+
+fn ctrl(c: char) -> KeyEvent {
+    KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
+}
+
+/// Ctrl-F undoes a back; navigating somewhere new drops what was ahead.
+#[tokio::test]
+async fn forward_undoes_back_until_you_go_somewhere_new() {
+    let mut h = two_vms().await;
+    assert_eq!(h.app.nav_forward_index(), None, "live: nothing ahead");
+    jump_to_nic_of(&mut h, "vm-a").await;
+    let nic = h.selected_id();
+    h.press(KeyCode::Backspace).await;
+    assert_eq!(h.selected_id().map(|id| name_of_id(&id).to_string()).as_deref(), Some("vm-a"));
+
+    h.press_key(ctrl('f')).await;
+    assert_eq!(h.selected_id(), nic, "forward returns to the NIC");
+    assert_eq!(h.app.nav_forward_index(), None, "at the newest entry");
+    h.press_key(ctrl('f')).await;
+    assert_eq!(h.selected_id(), nic, "nothing further ahead");
+
+    h.press(KeyCode::Backspace).await;
+    assert!(h.app.nav_forward_index().is_some());
+    h.press(KeyCode::Char('h')).await;
+    jump_to_nic_of(&mut h, "vm-b").await;
+    assert_eq!(h.app.nav_forward_index(), None, "a new place drops the forward branch");
+}
+
+/// The service strip's `←` / `→` are back and forward for the mouse.
+#[tokio::test]
+async fn the_strip_arrows_go_back_and_forward() {
+    let mut h = two_vms().await;
+    h.app.banner_visible = false;
+    let screen = h.render();
+    assert!(screen.lines().any(|l| l.starts_with(" ←  → │ nebaz")), "{screen}");
+    // Nothing behind: a click does nothing.
+    let at = h.region(ClickAction::Back);
+    h.click(at).await;
+    assert_eq!(h.app.current_view, JumpView::VirtualMachines);
+
+    jump_to_nic_of(&mut h, "vm-a").await;
+    let nic = h.selected_id();
+    let at = h.region(ClickAction::Back);
+    h.click(at).await;
+    assert_eq!(h.selected_id().map(|id| name_of_id(&id).to_string()).as_deref(), Some("vm-a"));
+    let at = h.region(ClickAction::Forward);
+    h.click(at).await;
+    assert_eq!(h.selected_id(), nic);
+}

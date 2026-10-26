@@ -28,10 +28,6 @@ const MARKER_W: u16 = 2;
 /// strip scrolls a window around the active chip with `‹`/`›` markers, like
 /// the sub-tab bars. Switch via S modal, @prefix search, or chip click.
 pub fn render_service_tabs(app: &App, area: Rect, frame: &mut Frame) {
-    // The service bar is the first tab strip drawn each frame — reset the
-    // mouse click-region list here so every bar can append fresh regions.
-    app.clear_click_regions();
-
     // ── Right side: badge parts in priority order ─────────────────────────
     // Demo mode (#45) takes the endpoint badge's slot and style: it is the
     // one thing a screenshot must never be mistaken for.
