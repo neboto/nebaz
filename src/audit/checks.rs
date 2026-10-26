@@ -8,7 +8,10 @@
 //! Owner); **high** removes a whole layer (anonymous pull, plain HTTP, no
 //! RBAC); **medium** widens the attack surface or weakens a control
 //! (public network with no rules, local auth, shared keys); **low** is
-//! hygiene; **info** is a configuration worth knowing about.
+//! hygiene; **info** is a configuration worth knowing about. Availability
+//! and cost findings (a link down, a plan protecting nothing) use the same
+//! scale by impact: **medium** when traffic stops, **low** when something
+//! bills for nothing or rides on one zone, **info** for leftovers.
 
 use std::collections::{HashMap, HashSet};
 
@@ -20,17 +23,22 @@ use crate::azure::resource::{name_of_id, Resource};
 use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::app_service::SiteRow;
-use crate::azure::services::compute::DiskRow;
+use crate::azure::services::compute::{DiskRow, NicRow};
 use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, JobRow, Workload};
 use crate::azure::services::container_registry::RegistryRow;
 use crate::azure::services::cosmos::CosmosAccountRow;
 use crate::azure::services::directory::{AppRegistrationRow, DirectoryBase, Expiry, ServicePrincipalRow};
 use crate::azure::services::edge::{WafKind, WafPolicyRow};
+use crate::azure::services::firewall::{AzureFirewallRow, CloudNgfwRow, FirewallPolicyRow};
+use crate::azure::services::hybrid::{CircuitRow, ConnectionRow, GatewayRow};
 use crate::azure::services::foundry::FoundryRow;
 use crate::azure::services::json;
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, Namespace, ServiceBusRow};
-use crate::azure::services::network::{NsgRow, SecurityRule, SubnetRow, VnetRow};
+use crate::azure::services::network::{NsgRow, Peering, SecurityRule, SubnetRow, VnetRow};
+use crate::azure::services::network_edge::{LoadBalancerRow, PublicIpRow};
+use crate::azure::services::network_hub::DdosPlanRow;
+use crate::azure::services::network_private::{PrivateEndpointRow, PrivateLinkConnection};
 use crate::azure::services::postgres_mysql::{Engine, FlexibleServerRow};
 use crate::azure::services::power_platform::{EnterprisePolicyRow, POWER_PLATFORM_DELEGATION};
 use crate::azure::services::redis::{ManagedRedisRow, RedisCacheRow};
@@ -63,9 +71,21 @@ const MYSQL: &[V] = &[V::MysqlServers];
 const FOUNDRY: &[V] = &[V::AiAccounts];
 const WAFS: &[V] = &[V::WafPolicies];
 const DISKS: &[V] = &[V::Disks];
+const VNETS: &[V] = &[V::VirtualNetworks];
+const PES: &[V] = &[V::PrivateEndpoints];
+const PIPS: &[V] = &[V::PublicIps];
+const NICS: &[V] = &[V::Nics];
+const LBS: &[V] = &[V::LoadBalancers];
+const DDOS: &[V] = &[V::DdosPlans];
+const CIRCUITS: &[V] = &[V::ExpressRouteCircuits];
+const GATEWAYS: &[V] = &[V::VnetGateways];
+const CONNECTIONS: &[V] = &[V::GatewayConnections];
+const AFWS: &[V] = &[V::AzureFirewalls];
+const FWPS: &[V] = &[V::FirewallPolicies];
+const NGFWS: &[V] = &[V::CloudNgfws];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 56] = [
+pub static CHECKS: [Check; 69] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -90,6 +110,112 @@ pub static CHECKS: [Check; 56] = [
         fix: "Review the WAF logs for false positives, add exclusions for them, then switch the policy to Prevention (Policy settings → Prevention mode) and make sure its state is Enabled.",
         sources: &[WAFS],
         run: waf_not_blocking,
+    },
+    Check {
+        id: "subnet-no-nsg",
+        title: "Subnet has no NSG",
+        why: "With no NSG on the subnet, nothing filters traffic into or out of it at the subnet boundary: every VNet, peered network and on-premises range reaches whatever lands there, and a NIC without its own NSG is open. Subnets that cannot carry one (GatewaySubnet, AzureFirewallSubnet, AzureFirewallManagementSubnet, RouteServerSubnet) and private-endpoint-only subnets with network policies off are skipped; AzureBastionSubnet supports one and is checked. A Power Platform subnet is subnet-pp-no-nsg instead.",
+        fix: "Associate an NSG with the subnet that allows only what its workloads need (for AzureBastionSubnet, Microsoft's required Bastion rules). Press N on the subnet for the effective access.",
+        sources: &[SUBNETS],
+        run: subnet_no_nsg,
+    },
+    Check {
+        id: "peering-not-connected",
+        title: "VNet peering not connected",
+        why: "A peering that is not Connected carries no traffic: Initiated means the other side was never created, Disconnected that it was deleted. Whatever is reached through the peer (a hub's firewall, a shared service, a failover VNet) is unreachable.",
+        fix: "Create the peering on the remote VNet; a Disconnected peering must be deleted and recreated on both sides.",
+        sources: &[VNETS],
+        run: peering_not_connected,
+    },
+    Check {
+        id: "pe-not-approved",
+        title: "Private endpoint connection not approved",
+        why: "Until the target's owner approves the connection, the endpoint's private IP carries nothing: clients whose DNS resolves to it fail, or fall back to the public endpoint. Rejected and Disconnected never recover on their own.",
+        fix: "Approve the connection on the target resource (Networking → Private endpoint connections), or delete the endpoint if it is no longer wanted and recreate it after a rejection.",
+        sources: &[PES],
+        run: pe_not_approved,
+    },
+    Check {
+        id: "pip-unattached",
+        title: "Public IP unattached",
+        why: "A static public IP bills whether or not anything uses it, and an address left allocated is one a later mistake can attach to something that should not face the internet. Not a weakness on its own: info, below the default --fail-on. A Cloud NGFW's public IPs show no attachment; they are skipped when the Cloud NGFW list is warm.",
+        fix: "Delete it if nothing needs the address, or attach it to the resource that should own it.",
+        sources: &[PIPS],
+        run: pip_unattached,
+    },
+    Check {
+        id: "nic-orphaned",
+        title: "Network interface attached to nothing",
+        why: "A NIC with no VM (and no private endpoint or private link service owning it) is usually left over from a deleted VM: it holds a private IP in its subnet and keeps its NSG and load balancer memberships. Hygiene: info.",
+        fix: "Delete it once nothing will reattach it.",
+        sources: &[NICS],
+        run: nic_orphaned,
+    },
+    Check {
+        id: "lb-empty-pool",
+        title: "Load balancer backend pool empty",
+        why: "A backend pool with no NIC and no address receives nothing: a rule using it drops every connection, and a Standard load balancer still bills for its rules. Often a leftover, sometimes a scale set that lost its pool membership. Info.",
+        fix: "Add the backends to the pool, or delete the empty pool (or the load balancer) if nothing uses it.",
+        sources: &[LBS],
+        run: lb_empty_pool,
+    },
+    Check {
+        id: "ddos-plan-unused",
+        title: "DDoS protection plan covers no VNet",
+        why: "A DDoS Network Protection plan bills a fixed monthly fee (about USD 2,900) from creation, whether or not a VNet is linked to it. With none, it protects nothing.",
+        fix: "Link the VNets with public endpoints to the plan (VNet → DDoS protection), or delete the plan; one plan can cover VNets across subscriptions in the tenant.",
+        sources: &[DDOS],
+        run: ddos_plan_unused,
+    },
+    // ── Hybrid ──
+    Check {
+        id: "er-connection-down",
+        title: "ExpressRoute connection not connected",
+        why: "A gateway connection to an ExpressRoute circuit that reads NotConnected carries no traffic: the private path to on-premises is down, and traffic falls back to a VPN if there is one, or fails.",
+        fix: "Check the circuit's private peering and provider state, then the connection's authorization; the circuit's and gateway's Connections sections show both sides.",
+        sources: &[CONNECTIONS],
+        run: er_connection_down,
+    },
+    Check {
+        id: "vpn-connection-down",
+        title: "VPN connection not connected",
+        why: "A site-to-site or VNet-to-VNet connection that reads NotConnected carries no traffic: the tunnel is down, so the site (or the backup path it provides) is unreachable.",
+        fix: "Compare the shared key and the IKE / IPsec policy with the on-premises device, and the local network gateway's address and prefixes with the site; the gateway's VPN diagnostics run in the portal.",
+        sources: &[CONNECTIONS],
+        run: vpn_connection_down,
+    },
+    Check {
+        id: "er-circuit-not-provisioned",
+        title: "ExpressRoute circuit enabled but not provisioned by the provider",
+        why: "A circuit bills from the moment it is created, but carries nothing until the connectivity provider provisions its side. NotProvisioned long after creation is usually an order never completed, or one cancelled with the circuit left behind.",
+        fix: "Give the service key to the provider (or chase the order); delete the circuit if it is no longer wanted.",
+        sources: &[CIRCUITS],
+        run: er_circuit_not_provisioned,
+    },
+    Check {
+        id: "gateway-not-zone-redundant",
+        title: "Virtual network gateway not zone-redundant",
+        why: "A non-AZ gateway SKU runs in one zone, so a zone outage takes the on-premises path down with it. ErGw*AZ, ErGwScale and VpnGw*AZ spread the instances across zones, and Microsoft is retiring the non-AZ VPN SKUs. Basic VPN gateways have no AZ variant and are skipped.",
+        fix: "Migrate the gateway to the matching AZ SKU (ErGw1AZ…, VpnGw1AZ…), which also needs a Standard, zone-redundant public IP.",
+        sources: &[GATEWAYS],
+        run: gateway_not_zone_redundant,
+    },
+    // ── Firewall ──
+    Check {
+        id: "fw-threat-intel-off",
+        title: "Azure Firewall threat intelligence off",
+        why: "Threat intelligence filtering alerts on (or denies) traffic to and from known malicious IPs and domains from Microsoft's feed; Off drops that layer. A firewall with a policy uses the policy's mode (its own setting is ignored), so the attached policy is judged, and a policy with no mode of its own takes its base policy's.",
+        fix: "Set threat intelligence to Alert, or Deny once the alerts are reviewed (the policy's Threat intelligence page, or the firewall's for classic rules).",
+        sources: &[AFWS, FWPS],
+        run: fw_threat_intel_off,
+    },
+    Check {
+        id: "ngfw-marketplace-not-subscribed",
+        title: "Cloud NGFW Marketplace subscription not active",
+        why: "A Palo Alto Networks Cloud NGFW runs on its Azure Marketplace subscription: Suspended (often an expired or unpaid offer) or Unsubscribed stops the firewall, and every route that sends traffic through it black-holes. A subscription still being fulfilled is not yet passing traffic either.",
+        fix: "Restore the Marketplace subscription (Azure portal → SaaS resources, or the Palo Alto Networks account), or move the routes off the firewall before removing it.",
+        sources: &[NGFWS],
+        run: ngfw_marketplace_not_subscribed,
     },
     // ── Storage ──
     Check {
@@ -774,6 +900,412 @@ fn waf_not_blocking(check: &'static Check, input: &AuditInput, out: &mut Vec<Aud
         ];
         evidence.extend(w.associations.iter().map(|a| format!("attached to: {}", a)));
         out.push(AuditFinding::about(check, Severity::Medium, w, reason).with_evidence(evidence));
+    }
+}
+
+/// Azure's own subnets that refuse (or must not have) an NSG.
+const NO_NSG_SUBNETS: &[&str] = &["GatewaySubnet", "AzureFirewallSubnet", "AzureFirewallManagementSubnet", "RouteServerSubnet"];
+
+/// Delegations whose subnets cannot take an NSG. Azure NetApp Files with
+/// Basic network features is the one left (Standard supports NSGs, and the
+/// subnet does not say which it is): skipped rather than guessed.
+const NO_NSG_DELEGATIONS: &[&str] = &["Microsoft.Netapp/volumes"];
+
+/// Every subnet with no NSG, except the ones Azure won't let carry one, a
+/// private-endpoint-only subnet whose network policies are off (an NSG
+/// would not apply to its endpoints) and a Power Platform subnet (its own,
+/// higher check, `subnet-pp-no-nsg`).
+fn subnet_no_nsg(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in subnets(input) {
+        if s.nsg_id.is_some() || NO_NSG_SUBNETS.iter().any(|n| s.name.eq_ignore_ascii_case(n)) {
+            continue;
+        }
+        let delegated = |names: &[&str]| s.delegations.iter().any(|d| names.iter().any(|n| d.eq_ignore_ascii_case(n)));
+        if delegated(NO_NSG_DELEGATIONS) || delegated(&[POWER_PLATFORM_DELEGATION]) {
+            continue;
+        }
+        let pe_policies_on = s
+            .private_endpoint_policies
+            .as_deref()
+            .is_some_and(|p| p.eq_ignore_ascii_case("Enabled") || p.to_ascii_lowercase().contains("networksecuritygroup"));
+        if s.private_endpoint_count > 0 && s.ip_configuration_count <= s.private_endpoint_count && !pe_policies_on {
+            continue;
+        }
+        let mut evidence = vec![
+            "networkSecurityGroup: none".to_string(),
+            format!("address prefixes: {}", json::join(&s.prefixes)),
+            format!("IP configurations: {}", s.ip_configuration_count),
+        ];
+        if !s.delegations.is_empty() {
+            evidence.push(format!("delegations: {}", s.delegations.join(", ")));
+        }
+        out.push(AuditFinding::about(check, Severity::Low, s, "no NSG on the subnet").with_evidence(evidence));
+    }
+}
+
+fn peering_not_connected(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for v in input.of::<VnetRow>(V::VirtualNetworks) {
+        let down: Vec<&Peering> = v
+            .peerings
+            .iter()
+            .filter(|p| p.state.as_deref().is_some_and(|s| !s.eq_ignore_ascii_case("Connected")))
+            .collect();
+        if down.is_empty() {
+            continue;
+        }
+        let what: Vec<String> = down
+            .iter()
+            .map(|p| format!("{} {}", p.name, p.state.as_deref().unwrap_or("-")))
+            .collect();
+        let evidence = down
+            .iter()
+            .map(|p| {
+                format!(
+                    "{}: peeringState {} → {}",
+                    p.name,
+                    p.state.as_deref().unwrap_or("-"),
+                    p.remote_id.as_deref().unwrap_or("-")
+                )
+            })
+            .collect();
+        out.push(
+            AuditFinding::about(check, Severity::Medium, v, format!("peering {}", what.join(", "))).with_evidence(evidence),
+        );
+    }
+}
+
+/// One finding per endpoint: Rejected or Disconnected (it will not come
+/// back) is medium, Pending (waiting on the owner) low.
+fn pe_not_approved(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for pe in input.of::<PrivateEndpointRow>(V::PrivateEndpoints) {
+        let bad: Vec<&PrivateLinkConnection> = pe
+            .connections
+            .iter()
+            .filter(|c| c.status.as_deref().is_some_and(|s| !s.eq_ignore_ascii_case("Approved")))
+            .collect();
+        if bad.is_empty() {
+            continue;
+        }
+        let severity = if bad.iter().all(|c| eq(c.status.as_deref(), "Pending")) { Severity::Low } else { Severity::Medium };
+        let statuses: Vec<String> = bad.iter().filter_map(|c| c.status.clone()).collect();
+        let evidence = bad
+            .iter()
+            .map(|c| {
+                let mut line = format!(
+                    "{}: {} → {}{}",
+                    c.name,
+                    c.status.as_deref().unwrap_or("-"),
+                    c.target_id.as_deref().map(name_of_id).unwrap_or("-"),
+                    if c.manual { " (manual approval)" } else { "" }
+                );
+                if let Some(d) = c.description.as_deref().filter(|d| !d.is_empty()) {
+                    line.push_str(&format!(" — {d}"));
+                }
+                line
+            })
+            .collect();
+        out.push(
+            AuditFinding::about(check, severity, pe, format!("connection {}", statuses.join(", "))).with_evidence(evidence),
+        );
+    }
+}
+
+/// The public IPs the warm Cloud NGFWs use (ids and addresses, lowercased):
+/// ARM shows them attached to nothing.
+fn ngfw_public_ips(input: &AuditInput) -> HashSet<String> {
+    input
+        .of::<CloudNgfwRow>(V::CloudNgfws)
+        .flat_map(|n| n.public_ips.iter().chain(n.egress_nat_ips.iter()))
+        .flat_map(|ip| [json::str_at(ip, "/resourceId"), json::str_at(ip, "/address")])
+        .flatten()
+        .map(|s| s.to_lowercase())
+        .collect()
+}
+
+fn pip_unattached(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let ngfw_warm = input.has_slot(NGFWS);
+    let ngfw_ips = ngfw_public_ips(input);
+    for p in input.of::<PublicIpRow>(V::PublicIps) {
+        if p.attached_to().is_some() {
+            continue;
+        }
+        // A dynamic IP with no address holds nothing and bills nothing.
+        if p.address.is_none() && eq(p.allocation.as_deref(), "Dynamic") {
+            continue;
+        }
+        let used_by_ngfw = ngfw_ips.contains(&p.base.id.to_lowercase())
+            || p.address.as_deref().is_some_and(|a| ngfw_ips.contains(&a.to_lowercase()));
+        if used_by_ngfw {
+            continue;
+        }
+        let mut evidence = vec![
+            "ipConfiguration: none · natGateway: none".to_string(),
+            format!(
+                "address: {} · {} · sku {}",
+                json::opt(p.address.clone()),
+                json::opt(p.allocation.clone()),
+                json::opt(p.sku.clone())
+            ),
+        ];
+        if !ngfw_warm {
+            evidence.push("the Cloud NGFW list isn't loaded: a Cloud NGFW's public IP also reads as attached to nothing (open @ngfw)".into());
+        }
+        let reason = match &p.address {
+            Some(a) => format!("{} attached to nothing", a),
+            None => "attached to nothing".to_string(),
+        };
+        out.push(AuditFinding::about(check, Severity::Info, p, reason).with_evidence(evidence));
+    }
+}
+
+fn nic_orphaned(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for n in input.of::<NicRow>(V::Nics) {
+        if n.vm_id.is_some() {
+            continue;
+        }
+        let v = raw(n);
+        let owned = ["/properties/privateEndpoint", "/properties/privateLinkService", "/properties/virtualMachine"]
+            .iter()
+            .any(|ptr| v.pointer(ptr).is_some_and(|o| !o.is_null()))
+            || !json::arr(&v, "/properties/hostedWorkloads").is_empty();
+        if owned {
+            continue;
+        }
+        let ips: Vec<String> = n.ip_configs.iter().filter_map(|c| c.private_ip.clone()).collect();
+        let subnets: Vec<String> = n
+            .ip_configs
+            .iter()
+            .filter_map(|c| c.subnet_id.as_deref())
+            .map(|s| {
+                let vnet = vnet_of_subnet(s).map(|v| name_of_id(&v).to_string()).unwrap_or_default();
+                format!("{}/{}", vnet, name_of_id(s))
+            })
+            .collect();
+        let mut evidence = vec![
+            "virtualMachine: none".to_string(),
+            format!("private IPs: {}", json::join(&ips)),
+            format!("subnets: {}", json::join(&subnets)),
+        ];
+        if let Some(nsg) = &n.nsg_id {
+            evidence.push(format!("NSG: {}", name_of_id(nsg)));
+        }
+        out.push(
+            AuditFinding::about(check, Severity::Info, n, format!("no VM, holds {}", json::join(&ips))).with_evidence(evidence),
+        );
+    }
+}
+
+fn lb_empty_pool(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for lb in input.of::<LoadBalancerRow>(V::LoadBalancers) {
+        // A cross-region (Global) load balancer's pools hold regional
+        // frontends, which the row does not read as addresses.
+        if eq(lb.tier.as_deref(), "Global") {
+            continue;
+        }
+        let empty: Vec<&str> = lb
+            .pools
+            .iter()
+            .filter(|p| p.ip_config_ids.is_empty() && p.addresses.is_empty())
+            .map(|p| p.name.as_str())
+            .collect();
+        let (reason, evidence) = if lb.pools.is_empty() {
+            if !lb.nat_rules.is_empty() {
+                continue;
+            }
+            ("no backend pool".to_string(), vec!["backendAddressPools: none · inboundNatRules: none".to_string()])
+        } else if empty.is_empty() {
+            continue;
+        } else {
+            (
+                format!("empty backend pool{} {}", if empty.len() == 1 { "" } else { "s" }, empty.join(", ")),
+                vec![
+                    format!("empty: {} of {} pool(s)", empty.len(), lb.pools.len()),
+                    format!("load-balancing rules: {}", lb.rules.len()),
+                ],
+            )
+        };
+        out.push(AuditFinding::about(check, Severity::Info, lb, reason).with_evidence(evidence));
+    }
+}
+
+fn ddos_plan_unused(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for d in input.of::<DdosPlanRow>(V::DdosPlans) {
+        if d.vnet_ids.is_empty() {
+            out.push(
+                AuditFinding::about(check, Severity::Low, d, "covers no VNet")
+                    .with_evidence(vec!["virtualNetworks: none".into(), format!("public IPs: {}", d.public_ip_ids.len())]),
+            );
+        }
+    }
+}
+
+// ── Hybrid ────────────────────────────────────────────────────────────
+
+/// The NotConnected connections of one family: ExpressRoute, or the VPN
+/// kinds (site-to-site, VNet-to-VNet).
+fn connection_down(check: &'static Check, input: &AuditInput, kinds: &[&str], out: &mut Vec<AuditFinding>) {
+    for c in input.of::<ConnectionRow>(V::GatewayConnections) {
+        let kind = c.connection_type.as_deref().unwrap_or("");
+        if !kinds.iter().any(|k| kind.eq_ignore_ascii_case(k)) || !eq(c.status.as_deref(), "NotConnected") {
+            continue;
+        }
+        let other = c
+            .circuit_id
+            .as_deref()
+            .or(c.local_gateway_id.as_deref())
+            .or(c.peer_gateway_id.as_deref())
+            .map(name_of_id)
+            .unwrap_or("-");
+        let gateway = c.gateway_id.as_deref().map(name_of_id).unwrap_or("-");
+        out.push(
+            AuditFinding::about(check, Severity::Medium, c, format!("NotConnected ({} ↔ {})", gateway, other)).with_evidence(vec![
+                format!("connectionType: {} · connectionStatus: NotConnected", kind),
+                format!("gateway: {} · other side: {}", gateway, other),
+                format!(
+                    "bytes in / out: {} / {}",
+                    c.ingress_bytes.map(|b| b.to_string()).unwrap_or_else(|| "-".into()),
+                    c.egress_bytes.map(|b| b.to_string()).unwrap_or_else(|| "-".into())
+                ),
+            ]),
+        );
+    }
+}
+
+fn er_connection_down(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    connection_down(check, input, &["ExpressRoute"], out);
+}
+
+fn vpn_connection_down(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    connection_down(check, input, &["IPsec", "Vnet2Vnet"], out);
+}
+
+/// Enabled on Azure's side, not Provisioned on the provider's. An
+/// ExpressRoute Direct circuit has no provider: skipped.
+fn er_circuit_not_provisioned(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for c in input.of::<CircuitRow>(V::ExpressRouteCircuits) {
+        let Some(state) = c.provider_state.as_deref() else { continue };
+        if !eq(c.circuit_state.as_deref(), "Enabled") || c.port_id.is_some() {
+            continue;
+        }
+        if state.eq_ignore_ascii_case("Provisioned") || state.eq_ignore_ascii_case("Deprovisioning") {
+            continue;
+        }
+        out.push(
+            AuditFinding::about(check, Severity::Low, c, format!("provider state {}", state)).with_evidence(vec![
+                format!("circuitProvisioningState: Enabled · serviceProviderProvisioningState: {}", state),
+                format!(
+                    "provider: {} · {} · {}",
+                    json::opt(c.provider.clone()),
+                    json::opt(c.peering_location.clone()),
+                    json::opt(c.sku_name.clone())
+                ),
+            ]),
+        );
+    }
+}
+
+fn gateway_not_zone_redundant(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for g in input.of::<GatewayRow>(V::VnetGateways) {
+        let kind = g.gateway_type.as_deref().unwrap_or("");
+        if !(kind.eq_ignore_ascii_case("Vpn") || kind.eq_ignore_ascii_case("ExpressRoute")) {
+            continue;
+        }
+        let Some(sku) = g.sku_name.as_deref() else { continue };
+        if sku.to_ascii_uppercase().ends_with("AZ") || sku.eq_ignore_ascii_case("ErGwScale") || sku.eq_ignore_ascii_case("Basic") {
+            continue;
+        }
+        out.push(
+            AuditFinding::about(check, Severity::Low, g, format!("{} is not an AZ SKU", sku)).with_evidence(vec![
+                format!("gatewayType: {} · sku: {}", kind, sku),
+                format!("zone redundant: {}", g.zone_redundancy()),
+            ]),
+        );
+    }
+}
+
+// ── Firewall ──────────────────────────────────────────────────────────
+
+/// A policy's threat intelligence mode: its own, else its base policy's
+/// (followed through the warm list), else Azure's default, Alert.
+fn effective_threat_intel(p: &FirewallPolicyRow, policies: &HashMap<String, &FirewallPolicyRow>) -> (String, Option<String>) {
+    let mut cur = p;
+    let mut seen = HashSet::new();
+    loop {
+        if let Some(m) = &cur.threat_intel_mode {
+            let from = (!std::ptr::eq(cur, p)).then(|| cur.base.name.clone());
+            return (m.clone(), from);
+        }
+        let Some(base) = cur.base_policy_id.as_deref().map(str::to_lowercase) else { break };
+        if !seen.insert(base.clone()) {
+            break;
+        }
+        match policies.get(&base) {
+            Some(b) => cur = b,
+            None => break,
+        }
+    }
+    ("Alert".into(), None)
+}
+
+/// Classic firewalls on their own mode, attached policies on theirs (with
+/// inheritance). A firewall whose policy is in the warm list is judged by
+/// it; one whose policy isn't (another subscription) is skipped. An
+/// unattached policy protects nothing: skipped.
+fn fw_threat_intel_off(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let policies: HashMap<String, &FirewallPolicyRow> = input
+        .of::<FirewallPolicyRow>(V::FirewallPolicies)
+        .map(|p| (p.base.id.to_lowercase(), p))
+        .collect();
+    for f in input.of::<AzureFirewallRow>(V::AzureFirewalls) {
+        if f.policy_id.is_some() || !eq(f.threat_intel_mode.as_deref(), "Off") {
+            continue;
+        }
+        out.push(
+            AuditFinding::about(check, Severity::Medium, f, "threat intelligence Off (classic rules)")
+                .with_evidence(vec!["threatIntelMode: Off".into(), "firewallPolicy: none".into()]),
+        );
+    }
+    let firewalls: Vec<&AzureFirewallRow> = input.of::<AzureFirewallRow>(V::AzureFirewalls).collect();
+    for p in policies.values() {
+        // The firewalls using it: the policy's own list, or a warm
+        // firewall that names it.
+        let mut users: Vec<String> = p.firewall_ids.iter().map(|id| name_of_id(id).to_string()).collect();
+        for f in &firewalls {
+            if f.policy_id.as_deref().is_some_and(|id| id.eq_ignore_ascii_case(&p.base.id)) && !users.contains(&f.base.name) {
+                users.push(f.base.name.clone());
+            }
+        }
+        if users.is_empty() {
+            continue;
+        }
+        let (mode, inherited) = effective_threat_intel(p, &policies);
+        if !mode.eq_ignore_ascii_case("Off") {
+            continue;
+        }
+        let mut evidence = vec![match &inherited {
+            Some(base) => format!("threatIntelMode: Off (inherited from base policy {})", base),
+            None => "threatIntelMode: Off".to_string(),
+        }];
+        evidence.push(format!("used by: {}", users.join(", ")));
+        out.push(AuditFinding::about(check, Severity::Medium, *p, "threat intelligence Off").with_evidence(evidence));
+    }
+}
+
+fn ngfw_marketplace_not_subscribed(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for n in input.of::<CloudNgfwRow>(V::CloudNgfws) {
+        let Some(status) = n.marketplace.as_ref().and_then(|m| json::str_at(m, "/marketplaceSubscriptionStatus")) else {
+            continue;
+        };
+        if status.eq_ignore_ascii_case("Subscribed") {
+            continue;
+        }
+        let stopped = status.eq_ignore_ascii_case("Suspended") || status.eq_ignore_ascii_case("Unsubscribed");
+        let severity = if stopped { Severity::Medium } else { Severity::Low };
+        let mut evidence = vec![format!("marketplaceSubscriptionStatus: {}", status)];
+        if let Some(offer) = n.marketplace.as_ref().and_then(|m| json::str_at(m, "/offerId")) {
+            evidence.push(format!("offer: {}", offer));
+        }
+        out.push(AuditFinding::about(check, severity, n, format!("Marketplace subscription {}", status)).with_evidence(evidence));
     }
 }
 

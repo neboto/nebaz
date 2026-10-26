@@ -1974,6 +1974,8 @@ impl App {
             nics: get(JumpView::Nics),
             load_balancers: get(JumpView::LoadBalancers),
             vms: get(JumpView::VirtualMachines),
+            firewalls: get(JumpView::AzureFirewalls),
+            ngfws: get(JumpView::CloudNgfws),
         })
     }
 

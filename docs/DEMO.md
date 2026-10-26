@@ -90,7 +90,10 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `cosmos-legacy`: public network, key auth on | `@audit` |
 | `redis-orders-cache`: non-TLS port 6379 enabled | `@audit` |
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
-| `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid |
+| `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
+| `nic-vm-legacy-batch-01` and `pip-vm-legacy-batch-01`, left behind by a deleted VM: a NIC attached to nothing, a static public IP attached to nothing | `@audit` (info) |
+| `snet-nva`, `snet-data`, `snet-dns-outbound`, `AzureBastionSubnet` and the Cloud NGFW's two subnets have no NSG (GatewaySubnet, AzureFirewallSubnet and the PE-only `snet-pe` are exempt) | `@audit` (low) |
+| `rt-spoke-egress` sends 0.0.0.0/0 to 10.10.11.4, `ngfw-hub-prod`'s trust IP: its Routes name the firewall and ⏎ opens it, once `@ngfw` is loaded | Network · Routes |
 | `afw-hub-prod` (Azure Firewall Premium) still runs after the cutover to `ngfw-hub-prod`: no route table sends traffic to it (its Network section, once `@rt` is loaded) | Firewall |
 | `mysql-reporting-legacy`: public access, `require_secure_transport` OFF | `@audit` |
 | `sb-orders-prod` queue `orders` has 1,284 dead-lettered messages; local auth on | Messaging |
@@ -177,7 +180,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
   - `snet-pe` 10.10.5.0/24, private endpoints
   - `snet-appgw` 10.10.6.0/24, `agw-contoso-prod`, NSG `nsg-appgw-prod`
   - `snet-data` 10.10.7.0/24, delegated `Microsoft.DBforPostgreSQL/flexibleServers`
-  - `snet-jump` 10.10.8.0/27, NSG `nsg-jump-prod`: `nic-vm-jump-01` 10.10.8.4, `nic-vm-legacy-app-01` 10.10.8.5, `lb-legacy-internal`'s frontend `fe-legacy-app` 10.10.8.10
+  - `snet-jump` 10.10.8.0/27, NSG `nsg-jump-prod`: `nic-vm-jump-01` 10.10.8.4, `nic-vm-legacy-app-01` 10.10.8.5, `nic-vm-legacy-batch-01` 10.10.8.6 (attached to nothing, below), `lb-legacy-internal`'s frontend `fe-legacy-app` 10.10.8.10
   - `snet-nva` 10.10.13.0/28: the FortiGate NVA `vm-nva-01` (marketplace plan `fortinet` / `fortinet_fortigate-vm_v5`, so its kind reads "Fortinet fortinet_fortigate-vm_v5"; `nic-vm-nva-01` 10.10.13.4, IP forwarding on) behind `lb-nva-internal`'s frontend `fe-nva` 10.10.13.10 (HA ports rule `lbr-ha-ports`); `rt-spoke-egress` sends 192.168.0.0/16 there, the hit path of the next-hop match
   - `AzureBastionSubnet` 10.10.12.0/26: `bas-hub-prod` (Standard, 2 scale units, native client, IP connect and file copy on; public IP `pip-bas-hub-prod` 20.103.45.16)
   - `AzureFirewallSubnet` 10.10.9.0/26: `afw-hub-prod` at 10.10.9.4
@@ -186,8 +189,8 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
   - `GatewaySubnet` 10.10.255.0/27: `vgw-er-hub-prod` and `vgw-vpn-hub-prod`
 - `vnet-pp-dr` (northeurope) 10.20.0.0/16, peered with `vnet-hub-prod`, subnet `snet-pp-injection-dr` 10.20.4.0/24 delegated `Microsoft.PowerPlatform/enterprisePolicies`, **no NSG**
 - NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`, "temp vendor access"; `AllowRdpFromOnPrem` 110 from 192.168.0.0/16), `nsg-appgw-prod` (GatewayManager 65200–65535, 443 from `AzureFrontDoor.Backend`)
-- Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12), `pip-afw-prod` (20.103.45.17, `afw-hub-prod`), `pip-ngfw-prod` (20.103.45.18, `ngfw-hub-prod`'s public and egress NAT IP), `pip-bas-hub-prod` (20.103.45.16), the gateways' (20.103.45.13–15, below)
-- `ng-prod` (NAT gateway), `rt-spoke-egress` (`default-to-firewall` 0.0.0.0/0 → 10.10.11.4, the Cloud NGFW's trust IP, `onprem-via-nva` 192.168.0.0/16 → 10.10.13.10), `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443), `lb-nva-internal` (internal LB in front of `vm-nva-01`: pool `be-nva`, HA ports)
+- Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12), `pip-afw-prod` (20.103.45.17, `afw-hub-prod`), `pip-ngfw-prod` (20.103.45.18, `ngfw-hub-prod`'s public and egress NAT IP), `pip-bas-hub-prod` (20.103.45.16), the gateways' (20.103.45.13–15, below), `pip-vm-legacy-batch-01` (20.103.45.19, static, attached to nothing)
+- `ng-prod` (NAT gateway), `rt-spoke-egress` (`default-to-firewall` 0.0.0.0/0 → 10.10.11.4, the Cloud NGFW's trust IP, which resolves to `ngfw-hub-prod` once `@ngfw` is loaded, `onprem-via-nva` 192.168.0.0/16 → 10.10.13.10), `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443), `lb-nva-internal` (internal LB in front of `vm-nva-01`: pool `be-nva`, HA ports)
 - `ddos-contoso` (DDoS protection plan covering `vnet-hub-prod`)
 - Firewall, the hub's security layer. **`ngfw-hub-prod`** (Palo Alto Networks Cloud NGFW, VNET, PAYG, Marketplace `Subscribed`) is the hub's firewall: trust / untrust subnets above, egress NAT on `pip-ngfw-prod`, DNS proxy on, a DNAT front end `dnat-sftp-partner` (20.103.45.18:22 → `vm-jump-01` 10.10.8.4:22), rules from the local rulestack **`lrs-hub-prod`** (IPS mode, BestPractice security profiles; rules 100 web egress to the FQDN list `fqdn-egress-allowed` from the prefix list `pl-spokes-prod`, 110 on-prem DNS, 200 the partner SFTP DNAT, 300 a country block (disabled), 1000 deny the rest); status GREEN. **`afw-hub-prod`** (Azure Firewall Premium, policy `fwp-hub-prod`, tag `retire = after-ngfw-cutover`) is the firewall it replaced: still running, nothing routes to it any more. `fwp-hub-prod` (IDPS Deny with one signature override and a bypass, DNS proxy) inherits from the base policy `fwp-platform-base` (threat intel Deny, IDPS Alert; group `rcg-platform-baseline`: Azure DNS, NTP); its own groups `rcg-hub-network` (200: corp DNS allowed, RDP/SSH to on-prem denied) and `rcg-hub-application` (300: ACR / MCR and Windows Update) use the IP group `ipg-spokes-prod` (four spoke prefixes)
 - Private endpoints (in `snet-pe`): `pe-kv-orders` (vault, 10.10.5.4), `pe-sql-orders` (sqlServer, 10.10.5.5), `pe-st-orders-blob` (blob, 10.10.5.6), `pe-acr-prod` (registry, 10.10.5.7 data endpoint + 10.10.5.8); their NICs `<pe>.nic.<guid>` in this group too
@@ -225,6 +228,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `vm-jump-01` (Standard_B2s, Ubuntu 22.04, running, zone 1, NIC `nic-vm-jump-01` (in `rg-legacy-prod`) in `snet-jump` with `pip-vm-jump-01`; OS disk `vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68`)
 - `vm-legacy-app-01` (Standard_D4s_v3, Windows Server 2019, deallocated 40 days, NIC `nic-vm-legacy-app-01` (in `rg-legacy-prod`) in `snet-jump` behind `lb-legacy-internal`; OS disk `vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13`, Reserved)
 - `disk-legacy-data-01` (1024 GiB Premium_LRS P30, Unattached; last owner change 40 days ago)
+- `nic-vm-legacy-batch-01` (in `snet-jump`, 10.10.8.6) and `pip-vm-legacy-batch-01` (in `rg-network-prod`): what was left of `vm-legacy-batch-01` when it was deleted, a NIC with no VM and a static public IP attached to nothing
 - `kv-legacy-prod` (access policies, public network on, purge protection off)
 - App Service plan `asp-legacy` (S1, Windows) with `app-legacy-portal` (.NET Framework 4, `config/web`: TLS 1.0, FTP `AllAllowed`) and Function app `func-legacy-reports` (HTTPS only, TLS 1.2, FTPS only)
 - `cosmos-legacy` (SQL API, public, key auth on)

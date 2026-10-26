@@ -1,0 +1,29 @@
+{
+  "name": "pip-vm-legacy-batch-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vm-legacy-batch-01",
+  "etag": "W/\"7a9c1e3f-5b2d-5c4e-8f6a-0b2d4f6a8c0e\"",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-apps@contoso.com"
+  },
+  "zones": [],
+  "type": "Microsoft.Network/publicIPAddresses",
+  "sku": {
+    "name": "Standard",
+    "tier": "Regional"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "4f6a8c0e-2b4d-5f6a-8c0e-2b4d6f8a0c2e",
+    "ipAddress": "20.103.45.19",
+    "publicIPAddressVersion": "IPv4",
+    "publicIPAllocationMethod": "Static",
+    "idleTimeoutInMinutes": 4,
+    "ipTags": [],
+    "ddosSettings": {
+      "protectionMode": "VirtualNetworkInherited"
+    }
+  }
+}

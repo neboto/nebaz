@@ -211,6 +211,9 @@
               "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-app-01/ipConfigurations/ipconfig1"
             },
             {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-batch-01/ipConfigurations/ipconfig1"
+            },
+            {
               "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-legacy-internal/frontendIPConfigurations/fe-legacy-app"
             }
           ]

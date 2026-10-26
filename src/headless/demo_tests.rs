@@ -92,7 +92,11 @@ const AUDIT_EXPECTED: &[&str] = &[
     // network
     "nsg-open-internet",
     "subnet-pp-no-nsg",
+    "subnet-no-nsg",
     "waf-not-blocking",
+    "pip-unattached",
+    "nic-orphaned",
+    "vpn-connection-down",
 ];
 
 /// Every listed sub-tab's `ls` prefix (the audit is computed, not listed).

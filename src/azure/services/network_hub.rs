@@ -2,12 +2,14 @@
 //! DDoS protection plans, one subscription-wide list each (sub-tabs of
 //! Network; `NetworkService` dispatches here), and the **next-hop
 //! resolver**: a route whose next hop is `VirtualAppliance` names only an
-//! IP, which [`NextHops`] matches against the warm NICs and load balancers
-//! (an NVA such as a VM-Series pair behind an internal LB with HA ports is
-//! the common shape). Matching reads rows already loaded: no call.
+//! IP, which [`NextHops`] matches against the warm NICs, load balancers,
+//! Azure Firewalls and Cloud NGFWs (an NVA such as a VM-Series pair behind
+//! an internal LB with HA ports, or the hub's firewall, is the common
+//! shape). Matching reads rows already loaded: no call.
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::services::compute::{NicRow, VmRow};
+use crate::azure::services::firewall::{udr_next_hops, AzureFirewallRow, CloudNgfwRow};
 use crate::azure::services::network::{parent_of, SubnetRow};
 use crate::azure::services::network_edge::{LoadBalancerRow, Route, RouteTableRow};
 use crate::azure::services::{arm_row, json, overview_rows, related_rows, tag_rows, ArmBase};
@@ -368,9 +370,12 @@ pub struct NextHopLists<'a> {
     pub nics: Option<&'a [Box<dyn Resource>]>,
     pub load_balancers: Option<&'a [Box<dyn Resource>]>,
     pub vms: Option<&'a [Box<dyn Resource>]>,
-    // A new source (Azure Firewall private IPs, a Cloud NGFW's
-    // `ipOfTrustSubnetForUdr`, once #136 lands) is one field here and one
-    // row in `NextHops::from_lists`'s `sources`.
+    /// Azure Firewalls: each one's private IP (or virtual hub private IP).
+    pub firewalls: Option<&'a [Box<dyn Resource>]>,
+    /// Cloud NGFWs: each one's `ipOfTrustSubnetForUdr`.
+    pub ngfws: Option<&'a [Box<dyn Resource>]>,
+    // A new source is one field here and one row in
+    // `NextHops::from_lists`'s `sources`.
 }
 
 /// What a next-hop IP is: the line's label and the ARM id ⏎ jumps to,
@@ -416,9 +421,11 @@ impl NextHops {
         }
         // One row per source: its list, its routing prefix, what a miss
         // names it, and how its rows index.
-        let sources: [Source<'_>; 2] = [
+        let sources: [Source<'_>; 4] = [
             (l.nics, "@nic", "NIC", index_nic),
             (l.load_balancers, "@lb", "load balancer", index_load_balancer),
+            (l.firewalls, "@fw", "Azure Firewall", index_firewall),
+            (l.ngfws, "@ngfw", "Cloud NGFW", index_firewall),
         ];
         let mut t = NextHops::default();
         for (list, prefix, what, index) in sources {
@@ -442,7 +449,7 @@ impl NextHops {
     /// The text for an IP no warm list knows.
     pub fn miss(&self, ip: &str) -> String {
         if self.cold.is_empty() {
-            format!("{} is not a {} in the warm lists", ip, self.searched.join(" or "))
+            format!("{} is not a {} in the warm lists", ip, either(&self.searched))
         } else {
             format!("{} not matched; not loaded: {} (open them to match more)", ip, self.cold.join(" "))
         }
@@ -515,6 +522,15 @@ pub fn subnet_next_hop_lines(
         .collect()
 }
 
+/// `a`, `a or b`, `a, b or c`.
+fn either(words: &[&str]) -> String {
+    match words.split_last() {
+        None => String::new(),
+        Some((last, [])) => last.to_string(),
+        Some((last, rest)) => format!("{} or {}", rest.join(", "), last),
+    }
+}
+
 fn is_appliance(route: &Route) -> bool {
     route.next_hop_type.eq_ignore_ascii_case("VirtualAppliance")
 }
@@ -564,6 +580,23 @@ fn index_load_balancer(r: &dyn Resource, _: &VmKinds, map: &mut HashMap<String, 
             if ha { " · HA ports" } else { "" }
         );
         map.entry(ip.to_string()).or_insert_with(|| NextHop { label, id: lb.base.id.clone(), warning: None });
+    }
+}
+
+/// A firewall's UDR next hops ([`udr_next_hops`]): an Azure Firewall's
+/// private IP, a Cloud NGFW's trust IP. A firewall forwards by design, so
+/// there is no warning.
+fn index_firewall(r: &dyn Resource, _: &VmKinds, map: &mut HashMap<String, NextHop>) {
+    let any = r.as_any();
+    let label = if let Some(f) = any.downcast_ref::<AzureFirewallRow>() {
+        format!("Azure Firewall {}", f.base.name)
+    } else if let Some(n) = any.downcast_ref::<CloudNgfwRow>() {
+        format!("Cloud NGFW {} · trust IP", n.base.name)
+    } else {
+        return;
+    };
+    for ip in udr_next_hops(r) {
+        map.entry(ip).or_insert_with(|| NextHop { label: label.clone(), id: r.id().to_string(), warning: None });
     }
 }
 
@@ -709,22 +742,61 @@ mod tests {
         assert!(off[1].1.starts_with("⚠ IP forwarding is off on NIC nic-off"), "{off:?}");
         // The load balancers were not loaded: a miss says so.
         let miss = hops.route_lines(&route("0.0.0.0/0", "10.0.9.4"), "");
-        assert_eq!(miss[0].1, "10.0.9.4 not matched; not loaded: @lb (open them to match more)");
+        assert_eq!(miss[0].1, "10.0.9.4 not matched; not loaded: @lb @fw @ngfw (open them to match more)");
     }
 
     #[test]
     fn a_next_hop_resolves_to_an_internal_load_balancer_frontend() {
         let lbs = [ilb()];
         let nics: [Box<dyn Resource>; 0] = [];
-        let hops = NextHops::from_lists(NextHopLists { nics: Some(&nics), load_balancers: Some(&lbs), vms: None });
+        let hops = NextHops::from_lists(NextHopLists {
+            nics: Some(&nics),
+            load_balancers: Some(&lbs),
+            firewalls: Some(&nics),
+            ngfws: Some(&nics),
+            vms: None,
+        });
         let lines = hops.route_lines(&route("0.0.0.0/0", "10.0.1.10"), "");
         assert_eq!(lines, vec![("→ Load balancer lb-nva · frontend fe-trust · HA ports".to_string(), id("Microsoft.Network/loadBalancers/lb-nva"))]);
-        // Both lists warm, no match: says what it is not.
+        // Every list warm, no match: says what it is not.
         let miss = hops.route_lines(&route("0.0.0.0/0", "10.0.9.4"), "");
-        assert_eq!(miss[0].1, "10.0.9.4 is not a NIC or load balancer in the warm lists");
+        assert_eq!(miss[0].1, "10.0.9.4 is not a NIC, load balancer, Azure Firewall or Cloud NGFW in the warm lists");
         // A route that is not VirtualAppliance gets no line.
         let local = Route { name: "l".into(), prefix: "10.0.0.0/8".into(), next_hop_type: "VnetLocal".into(), next_hop_ip: None };
         assert!(hops.route_lines(&local, "").is_empty());
+    }
+
+    #[test]
+    fn a_next_hop_resolves_to_the_azure_firewall_or_cloud_ngfw_it_names() {
+        let afw: [Box<dyn Resource>; 1] = [Box::new(
+            AzureFirewallRow::from_json(
+                &serde_json::json!({"id": id("Microsoft.Network/azureFirewalls/afw-hub"), "name": "afw-hub", "location": "westeurope",
+                    "properties": {"ipConfigurations": [{"name": "c", "properties": {"privateIPAddress": "10.0.9.4"}}]}}),
+                None,
+            )
+            .unwrap(),
+        )];
+        let ngfw: [Box<dyn Resource>; 1] = [Box::new(
+            CloudNgfwRow::from_json(
+                &serde_json::json!({"id": id("PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub"), "name": "ngfw-hub", "location": "westeurope",
+                    "properties": {"networkProfile": {"networkType": "VNET",
+                        "vnetConfiguration": {"ipOfTrustSubnetForUdr": {"address": "10.0.11.4"}}}}}),
+                None,
+            )
+            .unwrap(),
+        )];
+        let hops = NextHops::from_lists(NextHopLists { firewalls: Some(&afw), ngfws: Some(&ngfw), ..Default::default() });
+        assert_eq!(
+            hops.route_lines(&route("0.0.0.0/0", "10.0.11.4"), "  "),
+            vec![("  → Cloud NGFW ngfw-hub · trust IP".to_string(), id("PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub"))],
+            "a firewall forwards by design: no IP-forwarding warning"
+        );
+        assert_eq!(
+            hops.route_lines(&route("10.9.0.0/16", " 10.0.9.4"), ""),
+            vec![("→ Azure Firewall afw-hub".to_string(), id("Microsoft.Network/azureFirewalls/afw-hub"))]
+        );
+        // The NICs and load balancers were not loaded.
+        assert_eq!(hops.miss("10.0.0.1"), "10.0.0.1 not matched; not loaded: @nic @lb (open them to match more)");
     }
 
     #[test]

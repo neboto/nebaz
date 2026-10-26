@@ -5,8 +5,9 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, compute, container_apps, container_registry, cosmos, directory, edge, foundry, keyvault, messaging,
-    network, postgres_mysql, power_platform, redis, sql, storage,
+    aks, app_service, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
+    keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, sql,
+    storage,
 };
 use crate::lazy::LazyStore;
 use serde_json::json;
@@ -129,6 +130,346 @@ fn a_power_platform_subnet_without_an_nsg_is_medium() {
         ]))],
     )];
     assert_eq!(findings(&audit("subnet-pp-no-nsg", &lists, None)), vec![("vnet-pp/snet-pp".into(), Severity::Medium)]);
+}
+
+#[test]
+fn a_subnet_without_an_nsg_is_low_except_where_azure_forbids_one() {
+    let mut pe_only = subnet("snet-pe", None, None);
+    pe_only["properties"]["privateEndpointNetworkPolicies"] = json!("Disabled");
+    pe_only["properties"]["ipConfigurations"] = json!([{"id": "pe-nic-config"}]);
+    pe_only["properties"]["privateEndpoints"] = json!([{"id": id("Microsoft.Network/privateEndpoints/pe-a")}]);
+    let mut pe_guarded = pe_only.clone();
+    pe_guarded["id"] = json!(id("Microsoft.Network/virtualNetworks/vnet-pp/subnets/snet-pe-policies"));
+    pe_guarded["name"] = json!("snet-pe-policies");
+    pe_guarded["properties"]["privateEndpointNetworkPolicies"] = json!("NetworkSecurityGroupEnabled");
+    let lists = vec![(
+        V::VirtualNetworks,
+        vec![vnet_with_subnets(json!([
+            subnet("snet-app", None, None),
+            subnet("snet-web", Some("Microsoft.Web/serverFarms"), None),
+            subnet("snet-guarded", None, Some("nsg-app")),
+            subnet("snet-pp", Some("Microsoft.PowerPlatform/enterprisePolicies"), None),
+            subnet("snet-anf", Some("Microsoft.Netapp/volumes"), None),
+            subnet("GatewaySubnet", None, None),
+            subnet("AzureFirewallSubnet", None, None),
+            subnet("AzureFirewallManagementSubnet", None, None),
+            subnet("RouteServerSubnet", None, None),
+            subnet("AzureBastionSubnet", None, None),
+            pe_only,
+            pe_guarded,
+        ]))],
+    )];
+    let mut got = findings(&audit("subnet-no-nsg", &lists, None));
+    got.sort();
+    assert_eq!(
+        got,
+        vec![
+            ("vnet-pp/AzureBastionSubnet".into(), Severity::Low),
+            ("vnet-pp/snet-app".into(), Severity::Low),
+            ("vnet-pp/snet-pe-policies".into(), Severity::Low),
+            ("vnet-pp/snet-web".into(), Severity::Low),
+        ],
+        "Bastion supports an NSG; a Power Platform subnet is its own check; a PE-only subnet with policies off is skipped"
+    );
+}
+
+#[test]
+fn a_peering_that_is_not_connected_is_one_medium_finding_per_vnet() {
+    let peer = |name: &str, state: &str| {
+        json!({"name": name, "properties": {"peeringState": state,
+            "remoteVirtualNetwork": {"id": id(&format!("Microsoft.Network/virtualNetworks/{name}"))}}})
+    };
+    let vnet = |name: &str, peerings: Value| {
+        let v = body(&format!("Microsoft.Network/virtualNetworks/{name}"), json!({"virtualNetworkPeerings": peerings}));
+        boxed(network::VnetRow::from_json(&v, None))
+    };
+    let lists = vec![(
+        V::VirtualNetworks,
+        vec![
+            vnet("vnet-hub", json!([peer("to-a", "Connected"), peer("to-b", "Disconnected"), peer("to-c", "Initiated")])),
+            vnet("vnet-ok", json!([peer("to-hub", "Connected")])),
+        ],
+    )];
+    let rows = audit("peering-not-connected", &lists, None);
+    assert_eq!(findings(&rows), vec![("vnet-hub".into(), Severity::Medium)]);
+    assert_eq!(rows[0].reason, "peering to-b Disconnected, to-c Initiated");
+    assert_eq!(rows[0].evidence.len(), 2);
+}
+
+fn endpoint(name: &str, status: &str, manual: bool) -> Box<dyn Resource> {
+    let key = if manual { "manualPrivateLinkServiceConnections" } else { "privateLinkServiceConnections" };
+    let mut props = json!({});
+    props[key] = json!([{"name": format!("{name}-conn"), "properties": {
+        "privateLinkServiceId": id("Microsoft.KeyVault/vaults/kv"), "groupIds": ["vault"],
+        "privateLinkServiceConnectionState": {"status": status, "description": "awaiting owner"}}}]);
+    boxed(network_private::PrivateEndpointRow::from_json(&body(&format!("Microsoft.Network/privateEndpoints/{name}"), props), None))
+}
+
+#[test]
+fn a_private_endpoint_connection_not_approved_is_low_pending_medium_otherwise() {
+    let lists = vec![(
+        V::PrivateEndpoints,
+        vec![endpoint("pe-ok", "Approved", false), endpoint("pe-wait", "Pending", true), endpoint("pe-no", "Rejected", false)],
+    )];
+    let rows = audit("pe-not-approved", &lists, None);
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(got, vec![("pe-no".into(), Severity::Medium), ("pe-wait".into(), Severity::Low)]);
+    let wait = rows.iter().find(|f| f.resource_name == "pe-wait").unwrap();
+    assert_eq!(wait.evidence[0], "pe-wait-conn: Pending → kv (manual approval) — awaiting owner");
+}
+
+fn pip(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(network_edge::PublicIpRow::from_json(&body(&format!("Microsoft.Network/publicIPAddresses/{name}"), props), None))
+}
+
+fn ngfw(name: &str, marketplace: &str, public_ip: Option<&str>) -> Box<dyn Resource> {
+    let ips: Vec<Value> = public_ip
+        .map(|p| json!({"address": "20.0.0.9", "resourceId": id(&format!("Microsoft.Network/publicIPAddresses/{p}"))}))
+        .into_iter()
+        .collect();
+    let v = body(
+        &format!("PaloAltoNetworks.Cloudngfw/firewalls/{name}"),
+        json!({"networkProfile": {"networkType": "VNET", "publicIps": ips},
+            "marketplaceDetails": {"offerId": "pan_swfw_cloud_ngfw", "marketplaceSubscriptionStatus": marketplace}}),
+    );
+    boxed(firewall::CloudNgfwRow::from_json(&v, None))
+}
+
+#[test]
+fn an_unattached_public_ip_is_info_unless_a_cloud_ngfw_uses_it() {
+    let pips = || {
+        vec![
+            pip("pip-used", json!({"ipAddress": "20.0.0.1", "publicIPAllocationMethod": "Static",
+                "ipConfiguration": {"id": id("Microsoft.Network/networkInterfaces/nic/ipConfigurations/c")}})),
+            pip("pip-nat", json!({"ipAddress": "20.0.0.2", "natGateway": {"id": id("Microsoft.Network/natGateways/ng")}})),
+            pip("pip-left", json!({"ipAddress": "20.0.0.3", "publicIPAllocationMethod": "Static"})),
+            pip("pip-dynamic", json!({"publicIPAllocationMethod": "Dynamic"})),
+            pip("pip-ngfw", json!({"ipAddress": "20.0.0.9", "publicIPAllocationMethod": "Static"})),
+        ]
+    };
+    let cold = vec![(V::PublicIps, pips())];
+    let rows = audit("pip-unattached", &cold, None);
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(got, vec![("pip-left".into(), Severity::Info), ("pip-ngfw".into(), Severity::Info)]);
+    assert!(rows.iter().all(|f| f.evidence.iter().any(|e| e.contains("open @ngfw"))), "the cold NGFW list is named");
+
+    let warm = vec![(V::PublicIps, pips()), (V::CloudNgfws, vec![ngfw("ngfw-hub", "Subscribed", Some("pip-ngfw"))])];
+    let rows = audit("pip-unattached", &warm, None);
+    assert_eq!(findings(&rows), vec![("pip-left".into(), Severity::Info)]);
+    assert_eq!(rows[0].reason, "20.0.0.3 attached to nothing");
+}
+
+fn nic(name: &str, extra: Value) -> Box<dyn Resource> {
+    let mut props = json!({"ipConfigurations": [{"name": "c", "properties": {"privateIPAddress": "10.0.1.9",
+        "subnet": {"id": id("Microsoft.Network/virtualNetworks/vnet/subnets/app")}}}]});
+    for (k, v) in extra.as_object().unwrap() {
+        props[k] = v.clone();
+    }
+    boxed(compute::NicRow::from_json(&body(&format!("Microsoft.Network/networkInterfaces/{name}"), props), None))
+}
+
+#[test]
+fn a_nic_attached_to_nothing_is_info_and_an_endpoints_nic_is_not() {
+    let lists = vec![(
+        V::Nics,
+        vec![
+            nic("nic-vm", json!({"virtualMachine": {"id": id("Microsoft.Compute/virtualMachines/vm")}})),
+            nic("nic-pe", json!({"privateEndpoint": {"id": id("Microsoft.Network/privateEndpoints/pe")}})),
+            nic("nic-pls", json!({"privateLinkService": {"id": id("Microsoft.Network/privateLinkServices/pls")}})),
+            nic("nic-left", json!({"hostedWorkloads": []})),
+        ],
+    )];
+    let rows = audit("nic-orphaned", &lists, None);
+    assert_eq!(findings(&rows), vec![("nic-left".into(), Severity::Info)]);
+    assert!(rows[0].evidence.contains(&"subnets: vnet/app".to_string()), "{:?}", rows[0].evidence);
+}
+
+#[test]
+fn a_load_balancer_with_an_empty_pool_is_info() {
+    let lb = |name: &str, props: Value| {
+        boxed(network_edge::LoadBalancerRow::from_json(&body(&format!("Microsoft.Network/loadBalancers/{name}"), props), None))
+    };
+    let lists = vec![(
+        V::LoadBalancers,
+        vec![
+            lb("lb-ok", json!({"backendAddressPools": [{"name": "be", "properties": {"backendIPConfigurations": [{"id": "x"}]}}]})),
+            lb("lb-ip", json!({"backendAddressPools": [{"name": "be", "properties": {"loadBalancerBackendAddresses": [
+                {"name": "a", "properties": {"ipAddress": "10.0.0.4"}}]}}]})),
+            lb("lb-empty", json!({"backendAddressPools": [{"name": "be-ok", "properties": {"backendIPConfigurations": [{"id": "x"}]}},
+                {"name": "be-old", "properties": {}}]})),
+            lb("lb-none", json!({})),
+            lb("lb-nat", json!({"inboundNatRules": [{"name": "ssh"}]})),
+        ],
+    )];
+    let rows = audit("lb-empty-pool", &lists, None);
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(got, vec![("lb-empty".into(), Severity::Info), ("lb-none".into(), Severity::Info)]);
+    assert!(rows.iter().any(|f| f.reason == "empty backend pool be-old"));
+}
+
+#[test]
+fn a_ddos_plan_covering_no_vnet_is_low() {
+    let plan = |name: &str, vnets: Value| {
+        boxed(network_hub::DdosPlanRow::from_json(
+            &body(&format!("Microsoft.Network/ddosProtectionPlans/{name}"), json!({"virtualNetworks": vnets})),
+            None,
+        ))
+    };
+    let lists = vec![(
+        V::DdosPlans,
+        vec![plan("ddos-used", json!([{"id": id("Microsoft.Network/virtualNetworks/v")}])), plan("ddos-idle", json!([]))],
+    )];
+    assert_eq!(findings(&audit("ddos-plan-unused", &lists, None)), vec![("ddos-idle".into(), Severity::Low)]);
+}
+
+// ── Hybrid ──
+
+fn connection(name: &str, kind: &str, status: &str) -> Box<dyn Resource> {
+    let v = body(
+        &format!("Microsoft.Network/connections/{name}"),
+        json!({"connectionType": kind, "connectionStatus": status,
+            "virtualNetworkGateway1": {"id": id("Microsoft.Network/virtualNetworkGateways/vgw")},
+            "localNetworkGateway2": {"id": id("Microsoft.Network/localNetworkGateways/lgw-branch")}}),
+    );
+    boxed(hybrid::ConnectionRow::from_json(&v, None))
+}
+
+#[test]
+fn a_connection_not_connected_is_medium_under_its_own_family() {
+    let lists = vec![(
+        V::GatewayConnections,
+        vec![
+            connection("cn-er-up", "ExpressRoute", "Connected"),
+            connection("cn-er-down", "ExpressRoute", "NotConnected"),
+            connection("cn-vpn-down", "IPsec", "NotConnected"),
+            connection("cn-v2v-down", "Vnet2Vnet", "NotConnected"),
+            connection("cn-vpn-unknown", "IPsec", "Unknown"),
+        ],
+    )];
+    assert_eq!(findings(&audit("er-connection-down", &lists, None)), vec![("cn-er-down".into(), Severity::Medium)]);
+    let rows = audit("vpn-connection-down", &lists, None);
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(got, vec![("cn-v2v-down".into(), Severity::Medium), ("cn-vpn-down".into(), Severity::Medium)]);
+    assert!(rows.iter().any(|f| f.reason == "NotConnected (vgw ↔ lgw-branch)"), "{:?}", rows.iter().map(|f| &f.reason).collect::<Vec<_>>());
+}
+
+#[test]
+fn an_enabled_circuit_the_provider_has_not_provisioned_is_low() {
+    let circuit = |name: &str, circuit_state: &str, provider: &str, direct: bool| {
+        let mut props = json!({"circuitProvisioningState": circuit_state, "serviceProviderProvisioningState": provider,
+            "serviceProviderProperties": {"serviceProviderName": "Equinix", "peeringLocation": "Amsterdam", "bandwidthInMbps": 1000}});
+        if direct {
+            props["expressRoutePort"] = json!({"id": id("Microsoft.Network/expressRoutePorts/port")});
+        }
+        boxed(hybrid::CircuitRow::from_json(&body(&format!("Microsoft.Network/expressRouteCircuits/{name}"), props), None))
+    };
+    let lists = vec![(
+        V::ExpressRouteCircuits,
+        vec![
+            circuit("erc-up", "Enabled", "Provisioned", false),
+            circuit("erc-waiting", "Enabled", "NotProvisioned", false),
+            circuit("erc-off", "Disabled", "NotProvisioned", false),
+            circuit("erc-direct", "Enabled", "NotProvisioned", true),
+        ],
+    )];
+    assert_eq!(findings(&audit("er-circuit-not-provisioned", &lists, None)), vec![("erc-waiting".into(), Severity::Low)]);
+}
+
+#[test]
+fn a_gateway_on_a_non_az_sku_is_low_and_basic_is_skipped() {
+    let gw = |name: &str, kind: &str, sku: &str| {
+        boxed(hybrid::GatewayRow::from_json(
+            &body(&format!("Microsoft.Network/virtualNetworkGateways/{name}"), json!({"gatewayType": kind, "sku": {"name": sku, "tier": sku}})),
+            None,
+        ))
+    };
+    let lists = vec![(
+        V::VnetGateways,
+        vec![
+            gw("vgw-er-az", "ExpressRoute", "ErGw1AZ"),
+            gw("vgw-er-scale", "ExpressRoute", "ErGwScale"),
+            gw("vgw-er-legacy", "ExpressRoute", "Standard"),
+            gw("vgw-vpn-az", "Vpn", "VpnGw2AZ"),
+            gw("vgw-vpn", "Vpn", "VpnGw1"),
+            gw("vgw-basic", "Vpn", "Basic"),
+        ],
+    )];
+    let mut got = findings(&audit("gateway-not-zone-redundant", &lists, None));
+    got.sort();
+    assert_eq!(got, vec![("vgw-er-legacy".into(), Severity::Low), ("vgw-vpn".into(), Severity::Low)]);
+}
+
+// ── Firewall ──
+
+#[test]
+fn threat_intel_off_is_judged_on_the_policy_a_firewall_uses() {
+    let afw = |name: &str, mode: &str, policy: Option<&str>| {
+        let mut props = json!({"threatIntelMode": mode, "sku": {"name": "AZFW_VNet", "tier": "Standard"}});
+        if let Some(p) = policy {
+            props["firewallPolicy"] = json!({"id": id(&format!("Microsoft.Network/firewallPolicies/{p}"))});
+        }
+        boxed(firewall::AzureFirewallRow::from_json(&body(&format!("Microsoft.Network/azureFirewalls/{name}"), props), None))
+    };
+    let fwp = |name: &str, mode: Option<&str>, base: Option<&str>, firewalls: &[&str]| {
+        let mut props = json!({"firewalls": firewalls.iter().map(|f| json!({"id": id(&format!("Microsoft.Network/azureFirewalls/{f}"))})).collect::<Vec<_>>()});
+        if let Some(m) = mode {
+            props["threatIntelMode"] = json!(m);
+        }
+        if let Some(b) = base {
+            props["basePolicy"] = json!({"id": id(&format!("Microsoft.Network/firewallPolicies/{b}"))});
+        }
+        boxed(firewall::FirewallPolicyRow::from_json(&body(&format!("Microsoft.Network/firewallPolicies/{name}"), props), None))
+    };
+    let lists = vec![
+        (
+            V::AzureFirewalls,
+            vec![
+                afw("afw-classic-off", "Off", None),
+                afw("afw-classic-alert", "Alert", None),
+                // Its own Off is ignored: the policy (Deny) applies.
+                afw("afw-policy-deny", "Off", Some("fwp-deny")),
+                afw("afw-policy-off", "Alert", Some("fwp-off")),
+            ],
+        ),
+        (
+            V::FirewallPolicies,
+            vec![
+                fwp("fwp-deny", Some("Deny"), None, &["afw-policy-deny"]),
+                fwp("fwp-base-off", Some("Off"), None, &[]),
+                // No mode of its own: inherits Off from its base.
+                fwp("fwp-off", None, Some("fwp-base-off"), &["afw-policy-off"]),
+                fwp("fwp-unused-off", Some("Off"), None, &[]),
+            ],
+        ),
+    ];
+    let rows = audit("fw-threat-intel-off", &lists, None);
+    let mut got = findings(&rows);
+    got.sort();
+    assert_eq!(got, vec![("afw-classic-off".into(), Severity::Medium), ("fwp-off".into(), Severity::Medium)]);
+    let p = rows.iter().find(|f| f.resource_name == "fwp-off").unwrap();
+    assert_eq!(p.evidence, vec!["threatIntelMode: Off (inherited from base policy fwp-base-off)", "used by: afw-policy-off"]);
+    // Both lists are needed.
+    let only_fw = vec![(V::AzureFirewalls, vec![afw("afw-classic-off", "Off", None)])];
+    assert_eq!(notes(&audit("fw-threat-intel-off", &only_fw, None)), vec!["not checked — load @fw Policies"]);
+}
+
+#[test]
+fn a_cloud_ngfw_whose_marketplace_subscription_is_not_active_is_flagged() {
+    let lists = vec![(
+        V::CloudNgfws,
+        vec![
+            ngfw("ngfw-ok", "Subscribed", None),
+            ngfw("ngfw-suspended", "Suspended", None),
+            ngfw("ngfw-pending", "PendingFulfillmentStart", None),
+        ],
+    )];
+    let mut got = findings(&audit("ngfw-marketplace-not-subscribed", &lists, None));
+    got.sort();
+    assert_eq!(got, vec![("ngfw-pending".into(), Severity::Low), ("ngfw-suspended".into(), Severity::Medium)]);
 }
 
 // ── Storage ──

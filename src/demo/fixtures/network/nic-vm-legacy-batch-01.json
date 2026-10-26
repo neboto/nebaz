@@ -1,0 +1,52 @@
+{
+  "name": "nic-vm-legacy-batch-01",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-batch-01",
+  "etag": "W/\"5c1d7e2a-9b3f-5a4e-8c6d-2f1e0a9b8c7d\"",
+  "type": "Microsoft.Network/networkInterfaces",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "legacy",
+    "owner": "legacy-apps@contoso.com"
+  },
+  "kind": "Regular",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "resourceGuid": "8e2f4a6c-1b3d-5e7f-9a0c-2b4d6f8a0c1e",
+    "ipConfigurations": [
+      {
+        "name": "ipconfig1",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-legacy-batch-01/ipConfigurations/ipconfig1",
+        "etag": "W/\"0d4b6f8a-2c1e-5f3a-9b7d-6e8c0a2b4d6f\"",
+        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "privateIPAddress": "10.10.8.6",
+          "privateIPAllocationMethod": "Dynamic",
+          "subnet": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-jump"
+          },
+          "primary": true,
+          "privateIPAddressVersion": "IPv4"
+        }
+      }
+    ],
+    "dnsSettings": {
+      "dnsServers": [],
+      "appliedDnsServers": [],
+      "internalDomainNameSuffix": "3ee76804c92655a7b52f2d.ax.internal.cloudapp.net"
+    },
+    "enableAcceleratedNetworking": false,
+    "vnetEncryptionSupported": false,
+    "enableIPForwarding": false,
+    "disableTcpStateTracking": false,
+    "hostedWorkloads": [],
+    "tapConfigurations": [],
+    "nicType": "Standard",
+    "allowPort25Out": false,
+    "auxiliaryMode": "None",
+    "auxiliarySku": "None",
+    "macAddress": "00-0D-3A-36-4F-12",
+    "primary": true
+  }
+}

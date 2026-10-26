@@ -8,10 +8,10 @@
 //!
 //! **What a UDR points at** is the first thing each firewall shows: an
 //! Azure Firewall's private IP, a Cloud NGFW's `ipOfTrustSubnetForUdr`.
-//! [`udr_next_hops`] returns those addresses for any row, and
-//! [`firewall_for_next_hop`] finds the warm firewall a route's next hop
-//! names, so a route table can say which firewall its traffic goes through
-//! without a call.
+//! [`udr_next_hops`] returns those addresses for any row; the next-hop
+//! resolver (`network_hub::NextHops`) indexes the warm firewalls by them,
+//! so a route table says which firewall its traffic goes through without a
+//! call.
 //!
 //! **Never**: a Cloud NGFW's Panorama registration string (`configString`)
 //! or VM auth key (`vmAuthKey`), stripped before the row keeps its JSON.
@@ -300,24 +300,6 @@ pub fn routes_to(next_hops: &[String], route_tables: Option<&[Box<dyn Resource>]
         lines.push((String::new(), "No loaded route table sends traffic here".into()));
     }
     lines
-}
-
-/// The firewall among `lists` (the warm Firewalls and Cloud NGFW lists)
-/// whose UDR next hop is `ip`: what a route's `nextHopIpAddress` points
-/// at. No call.
-// The route-table side of the match: a follow-up names the firewall a
-// route's next hop is (Network · Routes).
-#[allow(dead_code)]
-pub fn firewall_for_next_hop<'a>(ip: &str, lists: &[&'a [Box<dyn Resource>]]) -> Option<&'a dyn Resource> {
-    let ip = ip.trim();
-    if ip.is_empty() {
-        return None;
-    }
-    lists
-        .iter()
-        .flat_map(|l| l.iter())
-        .find(|r| udr_next_hops(r.as_ref()).iter().any(|h| h == ip))
-        .map(|r| r.as_ref())
 }
 
 // ── Rule rendering (policies, classic collections) ────────────────────
@@ -2378,9 +2360,14 @@ mod tests {
         let ngfws: Vec<Box<dyn Resource>> = vec![Box::new(CloudNgfwRow::from_json(&ngfw_json(), None).unwrap())];
         assert_eq!(udr_next_hops(fws[0].as_ref()), vec!["10.10.9.4"]);
         assert_eq!(udr_next_hops(ngfws[0].as_ref()), vec!["10.10.11.4"]);
-        assert_eq!(firewall_for_next_hop("10.10.11.4", &[&fws, &ngfws]).map(|r| r.name()), Some("ngfw-hub"));
-        assert_eq!(firewall_for_next_hop(" 10.10.9.4", &[&fws, &ngfws]).map(|r| r.name()), Some("afw-hub"));
-        assert!(firewall_for_next_hop("10.0.0.1", &[&fws, &ngfws]).is_none());
+        let hops = crate::azure::services::network_hub::NextHops::from_lists(crate::azure::services::network_hub::NextHopLists {
+            firewalls: Some(&fws),
+            ngfws: Some(&ngfws),
+            ..Default::default()
+        });
+        assert!(hops.resolve("10.10.11.4").is_some_and(|h| h.id.ends_with("/ngfw-hub")));
+        assert!(hops.resolve(" 10.10.9.4").is_some_and(|h| h.id.ends_with("/afw-hub")));
+        assert!(hops.resolve("10.0.0.1").is_none());
         let g = IpGroupRow::from_json(&json!({"id": id("Microsoft.Network/ipGroups/g"), "name": "g"}), None).unwrap();
         assert!(udr_next_hops(&g).is_empty());
         // The reverse: which warm route tables send traffic here.

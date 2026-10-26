@@ -49,9 +49,11 @@ all it needs, and a test fails the build if that ever changes. See
 - **Metrics** (`m`): Azure Monitor charts in the pane, a curated set per type.
 - **Change timeline** (`W`) on any resource: the Activity Log, Resource Health
   and fired alerts, merged. **`@changes`** does it subscription-wide.
-- **`@audit`**: over 50 security checks (world-open NSG rules, public storage
-  and vaults, open SQL firewalls, expiring app credentials, privileged guests
-  and service principals, …) computed from what is already loaded.
+- **`@audit`**: over 60 checks (world-open NSG rules, subnets without an NSG,
+  public storage and vaults, open SQL firewalls, expiring app credentials,
+  privileged guests and service principals, VPN and ExpressRoute links down,
+  firewalls with threat intelligence off, …) computed from what is already
+  loaded.
 - **Directory**: service principals and app registrations from Microsoft
   Graph, with credential expiry.
 - **Referenced by** (`U`) and an **ownership ribbon**: what points at this
