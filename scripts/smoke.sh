@@ -146,7 +146,7 @@ run messaging-eh ok eh '[6.0]' \
 # The Edge tab loads through a routing prefix (WAF policies: two lists,
 # both failing is the one error).
 run edge-waf ok waf '[]' \
-  "App gateways, Front Door, WAF policies & Private Link services" \
+  "App gateways, Front Door, WAF & Private Link" \
   "3 WAF policies" \
   "cannot reach 127.0.0.1"
 
