@@ -490,16 +490,17 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `src/azure/services/network_hub.rs`, `NextHops`): a route whose next
     hop is `VirtualAppliance` names only an IP. It is compared with the
     warm NICs (each IP configuration's private IP → the NIC → its VM, the
-    VM's marketplace kind when the VMs list is warm) and load balancers
+    VM's marketplace kind when the VMs list is warm), load balancers
     (each private frontend; an `All`/port 0 rule on it is named "HA
-    ports", the shape an NVA pair sits behind). A match is a line under
+    ports", the shape an NVA pair sits behind), Azure Firewalls (each
+    private IP, or the virtual hub's) and Cloud NGFWs (the trust IP,
+    `ipOfTrustSubnetForUdr`; both through `firewall::udr_next_hops`). A match is a line under
     the route that jumps; a NIC hop without IP forwarding gets a ⚠ (it
     drops what is not addressed to it); a miss says the IP is not a NIC or
-    load balancer in the warm lists, or names the cold lists. The same
+    load balancer or firewall in the warm lists, or names the cold lists. The same
     matches are in the route table's Related and, through the warm route
     tables list, in each subnet's Related ("Next hop 0.0.0.0/0 → …"). No
-    call. Azure Firewall and Cloud NGFW private IPs are not matched yet
-    (#136): each is one more source in `NextHops::from_lists`. A VM with
+    call. Another appliance is one more source in `NextHops::from_lists`. A VM with
     a marketplace `plan` shows it as its kind in the list summary and
     Overview: `paloaltonetworks` reads "Palo Alto VM-Series"; Fortinet,
     Check Point and Cisco their vendor and product; any other publisher
@@ -545,8 +546,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     Network (already eight) would pass the ten number keys, rule 15 again.
     **The UDR next hop comes first** on both firewalls: an Azure Firewall's
     private IP, a Cloud NGFW's `ipOfTrustSubnetForUdr`
-    (`firewall::udr_next_hops`, a pure helper; `firewall_for_next_hop`
-    finds the warm firewall a route's next hop names), and each firewall's
+    (`firewall::udr_next_hops`, a pure helper; rule 27's `NextHops`
+    indexes the warm firewalls by it, so a route names its firewall), and each firewall's
     Network section lists the warm route tables whose routes point at it
     (`routes_to`, with the subnets they serve; "load @rt" when the list is
     cold). **Rules are lazy**: a policy's `ruleCollectionGroups` (one read
@@ -657,6 +658,18 @@ has a fixture test there.
 | `nsg-open-internet` | NSGs | a custom inbound Allow rule from `*` / `Internet` / `0.0.0.0/0` / `::/0` | critical: all ports, 22, 3389 · high: database, cache, SMB and control-plane ports · medium: others · low: 80 or 443 alone, ICMP |
 | `subnet-pp-no-nsg` | VNets or Subnets | a subnet delegated to `Microsoft.PowerPlatform/enterprisePolicies` with no NSG | medium |
 | `waf-not-blocking` | WAF policies (both kinds) | a policy attached to something (a gateway, listener, path rule, Front Door security policy) in Detection mode or disabled; an unattached policy is skipped | medium |
+| `subnet-no-nsg` | VNets or Subnets | any other subnet with no NSG. Skipped: GatewaySubnet, AzureFirewallSubnet, AzureFirewallManagementSubnet, RouteServerSubnet (Azure refuses or forbids one), a `Microsoft.Netapp/volumes` delegation (Basic network features take none), a Power Platform subnet (`subnet-pp-no-nsg`), a subnet holding only private endpoints with network policies off (an NSG would not apply to them). AzureBastionSubnet supports one and is checked | low |
+| `peering-not-connected` | VNets | a peering whose `peeringState` is not Connected (Initiated, Disconnected); one finding per VNet | medium |
+| `pe-not-approved` | Private endpoints | a connection whose status is not Approved; one finding per endpoint | medium: Rejected, Disconnected · low: Pending |
+| `pip-unattached` | Public IPs (+ Cloud NGFW when cached) | no IP configuration and no NAT gateway; a dynamic IP with no address (bills nothing) and the IPs a warm Cloud NGFW uses (ARM shows them attached to nothing) are skipped | info |
+| `nic-orphaned` | NICs | no VM, private endpoint, private link service or hosted workload | info |
+| `lb-empty-pool` | Load balancers | a backend pool with no NIC and no address, or no pool and no inbound NAT rule; Global (cross-region) load balancers skipped | info |
+| `ddos-plan-unused` | DDoS plans | no VNet linked (the plan bills a fixed monthly fee regardless) | low |
+| `er-connection-down` · `vpn-connection-down` | Connections | an ExpressRoute · IPsec or VNet-to-VNet connection whose `connectionStatus` is NotConnected | medium |
+| `er-circuit-not-provisioned` | ExpressRoute circuits | `circuitProvisioningState` Enabled and the provider state not Provisioned (nor Deprovisioning); ExpressRoute Direct skipped | low |
+| `gateway-not-zone-redundant` | VNet gateways | a VPN or ExpressRoute gateway on a non-AZ SKU (not `…AZ`, not ErGwScale); Basic (no AZ variant) skipped | low |
+| `fw-threat-intel-off` | Firewalls + Policies | threat intelligence Off: a firewall with classic rules on its own `threatIntelMode`; a firewall with a policy by the policy (its own setting is ignored), a policy with no mode by its base's; unattached policies skipped | medium |
+| `ngfw-marketplace-not-subscribed` | Cloud NGFW | `marketplaceSubscriptionStatus` Suspended or Unsubscribed (the firewall stops) · any other state but Subscribed | medium · low |
 | `storage-blob-public-access` | Storage | `allowBlobPublicAccess` true | high |
 | `storage-shared-key` | Storage | `allowSharedKeyAccess` true or unset | medium |
 | `storage-min-tls` | Storage | `minimumTlsVersion` below 1.2 | high |

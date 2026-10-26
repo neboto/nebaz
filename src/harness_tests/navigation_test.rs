@@ -312,7 +312,7 @@ async fn enter_on_a_resolved_next_hop_jumps_to_the_load_balancer() {
     let lines = h.app.get_detail_lines();
     assert!(lines.contains(&("  → Load balancer lb-nva · frontend fe-trust".to_string(), lb_id.clone())), "{lines:#?}");
     assert!(
-        lines.iter().any(|(_, v)| v == "10.0.9.4 not matched; not loaded: @nic (open them to match more)"),
+        lines.iter().any(|(_, v)| v == "10.0.9.4 not matched; not loaded: @nic @fw @ngfw (open them to match more)"),
         "the NICs were never opened: {lines:#?}"
     );
 
@@ -320,4 +320,45 @@ async fn enter_on_a_resolved_next_hop_jumps_to_the_load_balancer() {
     h.press(KeyCode::Enter).await;
     assert_eq!(h.app.current_view, JumpView::LoadBalancers);
     assert_eq!(h.selected_id().as_deref(), Some(lb_id.as_str()), "the warm list lands the jump at once");
+}
+
+/// A route to a Cloud NGFW's trust IP resolves against the warm Cloud NGFW
+/// list (the demo's `rt-spoke-egress` 0.0.0.0/0 → `ngfw-hub-prod`), and
+/// Enter on the line opens the firewall in its own tab.
+#[tokio::test]
+async fn enter_on_a_next_hop_to_a_cloud_ngfw_jumps_to_the_firewall() {
+    use crate::azure::services::firewall::CloudNgfwRow;
+    use crate::azure::services::network_edge::RouteTableRow;
+    let mut h = Harness::new().await;
+    let ngfw_id = arm_id("PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub");
+    let ngfw = CloudNgfwRow::from_json(
+        &serde_json::json!({"id": ngfw_id, "name": "ngfw-hub", "location": "westeurope",
+            "properties": {"networkProfile": {"networkType": "VNET",
+                "vnetConfiguration": {"ipOfTrustSubnetForUdr": {"address": "10.10.11.4"}}}}}),
+        Some(super::TENANT),
+    )
+    .unwrap();
+    h.open(JumpView::CloudNgfws).await;
+    h.land(vec![Box::new(ngfw)]).await;
+
+    let rt = RouteTableRow::from_json(
+        &serde_json::json!({"id": arm_id("Microsoft.Network/routeTables/rt-spoke"), "name": "rt-spoke", "location": "westeurope",
+            "properties": {"routes": [
+                {"name": "default", "properties": {"addressPrefix": "0.0.0.0/0", "nextHopType": "VirtualAppliance", "nextHopIpAddress": "10.10.11.4"}}]}}),
+        Some(super::TENANT),
+    )
+    .unwrap();
+    h.open(JumpView::RouteTables).await;
+    h.land(vec![Box::new(rt)]).await;
+    h.press(KeyCode::Enter).await;
+    let routes = h.section_labels().iter().position(|l| *l == "Routes").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(routes).unwrap())).await;
+
+    let lines = h.app.get_detail_lines();
+    assert!(lines.contains(&("  → Cloud NGFW ngfw-hub · trust IP".to_string(), ngfw_id.clone())), "{lines:#?}");
+
+    h.cursor_to_value(&ngfw_id).await;
+    h.press(KeyCode::Enter).await;
+    assert_eq!(h.app.current_view, JumpView::CloudNgfws);
+    assert_eq!(h.selected_id().as_deref(), Some(ngfw_id.as_str()), "the warm list lands the jump at once");
 }
