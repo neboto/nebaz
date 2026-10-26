@@ -155,6 +155,7 @@ all).
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`) |
 | `agw` | Edge | Application gateways, Front Door (`afd`), WAF policies (`waf`) |
 | `er` | Hybrid | ExpressRoute circuits, VNet gateways (`vgw`), Connections (`cn`), Local network gateways (`lgw`) |
+| `fw` | Firewall | Azure Firewalls, Firewall policies (`fwp`, rule collection groups), IP groups (`ipg`), Palo Alto Cloud NGFW (`ngfw`), Local rulestacks (`rulestack`, rules) |
 | `kv` | Key Vault | Vaults (secret and key *names*, never values) |
 | `id` | Identity | Managed identities, Service principals (`sp`), App registrations (`appreg`) |
 | `aks` | AKS | Clusters, Node pools (`pool`) |

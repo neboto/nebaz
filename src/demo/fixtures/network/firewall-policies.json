@@ -1,0 +1,128 @@
+{
+  "value": [
+    {
+      "name": "fwp-platform-base",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-platform-base",
+      "etag": "5f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      "type": "Microsoft.Network/FirewallPolicies",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "sku": {
+          "tier": "Premium"
+        },
+        "threatIntelMode": "Deny",
+        "threatIntelWhitelist": {
+          "ipAddresses": [],
+          "fqdns": [
+            "*.contoso.com"
+          ]
+        },
+        "intrusionDetection": {
+          "mode": "Alert",
+          "profile": "Standard",
+          "configuration": {
+            "signatureOverrides": [],
+            "bypassTrafficSettings": []
+          }
+        },
+        "dnsSettings": {
+          "servers": [],
+          "enableProxy": true
+        },
+        "snat": {
+          "privateRanges": [
+            "IANAPrivateRanges"
+          ]
+        },
+        "childPolicies": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod"
+          }
+        ],
+        "firewalls": [],
+        "ruleCollectionGroups": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-platform-base/ruleCollectionGroups/rcg-platform-baseline"
+          }
+        ]
+      }
+    },
+    {
+      "name": "fwp-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod",
+      "etag": "5f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      "type": "Microsoft.Network/FirewallPolicies",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "sku": {
+          "tier": "Premium"
+        },
+        "basePolicy": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-platform-base"
+        },
+        "threatIntelMode": "Deny",
+        "intrusionDetection": {
+          "mode": "Deny",
+          "profile": "Standard",
+          "configuration": {
+            "signatureOverrides": [
+              {
+                "id": "2024897",
+                "mode": "Alert"
+              }
+            ],
+            "bypassTrafficSettings": [
+              {
+                "name": "bypass-backup",
+                "protocol": "TCP",
+                "sourceAddresses": [
+                  "10.10.7.0/24"
+                ],
+                "destinationAddresses": [
+                  "10.40.0.10"
+                ],
+                "destinationPorts": [
+                  "445"
+                ]
+              }
+            ],
+            "privateRanges": []
+          }
+        },
+        "dnsSettings": {
+          "servers": [],
+          "enableProxy": true,
+          "requireProxyForNetworkRules": true
+        },
+        "childPolicies": [],
+        "firewalls": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-hub-prod"
+          }
+        ],
+        "ruleCollectionGroups": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod/ruleCollectionGroups/rcg-hub-network"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod/ruleCollectionGroups/rcg-hub-application"
+          }
+        ]
+      }
+    }
+  ]
+}

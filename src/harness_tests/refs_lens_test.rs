@@ -72,7 +72,7 @@ async fn u_on_a_subnet_lists_the_nic_environment_and_policy_pointing_at_it_and_j
     );
     let st = h.app.refs_lens.as_ref().unwrap();
     // The Subnets list is on screen and warm; PEs, Apps, NAT, the flexible
-    // servers, app gateways and VNet gateways are likely but cold.
+    // servers, app gateways VNet gateways and both firewalls are likely but cold.
     assert_eq!(
         st.coverage.likely_cold,
         vec![
@@ -82,7 +82,9 @@ async fn u_on_a_subnet_lists_the_nic_environment_and_policy_pointing_at_it_and_j
             JumpView::PostgresServers,
             JumpView::MysqlServers,
             JumpView::AppGateways,
-            JumpView::VnetGateways
+            JumpView::VnetGateways,
+            JumpView::AzureFirewalls,
+            JumpView::CloudNgfws
         ]
     );
     h.press(KeyCode::Char('Z')).await;

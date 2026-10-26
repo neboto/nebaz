@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, foundry,
+    aks, all_resources, app_service, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, sql, storage, subscriptions,
 };
 use serde_json::{json, Value};
@@ -820,6 +820,106 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "gatewayIpAddress": "203.0.113.10",
                             "localNetworkAddressSpace": {"addressPrefixes": ["192.168.0.0/16"]}
                         }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::AzureFirewalls,
+            "AzureFirewallRow",
+            parse(
+                "AzureFirewallRow",
+                firewall::AzureFirewallRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/azureFirewalls/afw-1"),
+                        "name": "afw-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "sku": {"name": "AZFW_VNet", "tier": "Premium"},
+                            "firewallPolicy": {"id": arm_id("Microsoft.Network/firewallPolicies/fwp-1")},
+                            "ipConfigurations": [{"name": "ipc", "properties": {"privateIPAddress": "10.0.9.4",
+                                "subnet": {"id": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/AzureFirewallSubnet")},
+                                "publicIPAddress": {"id": arm_id("Microsoft.Network/publicIPAddresses/pip-afw")}}}]
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::FirewallPolicies,
+            "FirewallPolicyRow",
+            parse(
+                "FirewallPolicyRow",
+                firewall::FirewallPolicyRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/firewallPolicies/fwp-1"),
+                        "name": "fwp-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "sku": {"tier": "Premium"}, "threatIntelMode": "Deny",
+                            "firewalls": [{"id": arm_id("Microsoft.Network/azureFirewalls/afw-1")}]}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::IpGroups,
+            "IpGroupRow",
+            parse(
+                "IpGroupRow",
+                firewall::IpGroupRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/ipGroups/ipg-1"),
+                        "name": "ipg-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "ipAddresses": ["10.1.0.0/16"]}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::CloudNgfws,
+            "CloudNgfwRow",
+            parse(
+                "CloudNgfwRow",
+                firewall::CloudNgfwRow::from_json(
+                    &json!({
+                        "id": arm_id("PaloAltoNetworks.Cloudngfw/firewalls/ngfw-1"),
+                        "name": "ngfw-1",
+                        "location": "eastus",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "networkProfile": {"networkType": "VNET", "enableEgressNat": "ENABLED", "publicIps": [],
+                                "vnetConfiguration": {"ipOfTrustSubnetForUdr": {"address": "10.0.11.4"},
+                                    "vnet": {"resourceId": arm_id("Microsoft.Network/virtualNetworks/vnet-1")},
+                                    "trustSubnet": {"resourceId": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/trust")},
+                                    "unTrustSubnet": {"resourceId": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/untrust")}}},
+                            "associatedRulestack": {"resourceId": arm_id("PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-1")},
+                            "dnsSettings": {"enableDnsProxy": "DISABLED"},
+                            "planData": {"billingCycle": "MONTHLY", "planId": "panw-cngfw-payg"},
+                            "marketplaceDetails": {"offerId": "pan_swfw_cloud_ngfw", "publisherId": "paloaltonetworks",
+                                "marketplaceSubscriptionStatus": "Subscribed"}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::NgfwRulestacks,
+            "RulestackRow",
+            parse(
+                "RulestackRow",
+                firewall::RulestackRow::from_json(
+                    &json!({
+                        "id": arm_id("PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-1"),
+                        "name": "lrs-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "scope": "LOCAL", "defaultMode": "IPS"}
                     }),
                     t,
                 ),

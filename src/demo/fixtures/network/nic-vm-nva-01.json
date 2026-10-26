@@ -22,7 +22,7 @@
         "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
         "properties": {
           "provisioningState": "Succeeded",
-          "privateIPAddress": "10.10.11.4",
+          "privateIPAddress": "10.10.13.4",
           "privateIPAllocationMethod": "Static",
           "subnet": {
             "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-nva"

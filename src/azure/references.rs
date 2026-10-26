@@ -236,6 +236,8 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             MysqlServers,
             AppGateways,
             VnetGateways,
+            AzureFirewalls,
+            CloudNgfws,
         ],
         VirtualNetworks => &[
             Nics,
@@ -249,6 +251,8 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             MysqlServers,
             AppGateways,
             VnetGateways,
+            AzureFirewalls,
+            CloudNgfws,
         ],
         Identities => &[
             VirtualMachines,
@@ -265,7 +269,7 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             FrontDoorProfiles,
         ],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
-        PublicIps => &[Nics, LoadBalancers, NatGateways, AppGateways, VnetGateways],
+        PublicIps => &[Nics, LoadBalancers, NatGateways, AppGateways, VnetGateways, AzureFirewalls, CloudNgfws],
         Disks => &[VirtualMachines],
         Nics => &[VirtualMachines, PrivateEndpoints, AppGateways],
         RouteTables | NatGateways => &[Subnets],
@@ -278,6 +282,10 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
         FrontDoorProfiles => &[WafPolicies],
         // A connection names its gateway, circuit and local gateway.
         ExpressRouteCircuits | VnetGateways | LocalGateways => &[GatewayConnections],
+        // A policy's firewalls and child policies; an IP group's rules.
+        FirewallPolicies => &[AzureFirewalls],
+        IpGroups => &[AzureFirewalls, FirewallPolicies],
+        NgfwRulestacks => &[CloudNgfws],
         LogWorkspaces => &[AppInsights, Clusters],
         Clusters => &[ResourceGroups, NodePools],
         PrivateEndpoints => &[

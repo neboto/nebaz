@@ -1,0 +1,18 @@
+{
+  "value": [
+    {
+      "name": "pl-spokes-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/prefixlists/pl-spokes-prod",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks/prefixlists",
+      "properties": {
+        "description": "The prod spokes",
+        "prefixList": [
+          "10.10.0.0/23",
+          "10.10.4.0/24",
+          "10.10.7.0/24"
+        ],
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}
