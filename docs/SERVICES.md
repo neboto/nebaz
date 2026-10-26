@@ -51,7 +51,7 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
    Resource group first, then the type's own targets; Enter on a line
    jumps, switching subscription (and tenant) and lifting the location
    filter if needed, with a toast. An id whose type nebaz does not browse
-   (public IP prefix, firewall) still lists; Enter copies it with a toast.
+   (public IP prefix, virtual hub) still lists; Enter copies it with a toast.
    Enter on any other ARM-id valued line in the pane does the same, so the
    Networking and Storage sections of a VM jump too.
 4. **Key Vault names come from ARM** (`Secrets_List`, `Keys_List`): the
@@ -209,7 +209,11 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `{version} · {sku} · {VNet|public|PE|public + PE|no access}`; application gateway `{tier} · {n} instances` or
     `autoscale {min}–{max}`; Front Door `Front Door {tier}`; WAF policy
     `{App Gateway | Front Door tier} · {mode}` (+ `· {n} custom`, `· not
-    attached`); All resources `→`/`·` and
+    attached`); Azure Firewall `{tier} · {private IP} · policy {name}` (or
+    `{n} classic rules`); firewall policy `{tier} · threat intel {mode} ·
+    IDPS {mode}` (+ `· base {name}`); IP group `{n} addresses · used by {n}`;
+    Cloud NGFW `{VNET|VWAN} · UDR {trust IP} · {local rulestack name |
+    Panorama | …}`; rulestack `{scope} · {default mode}`; All resources `→`/`·` and
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
@@ -234,8 +238,10 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     Cognitive Services account, Redis cache (the `all…` names, every
     shard), Managed Redis, Service Bus and Event Hubs namespace,
     PostgreSQL and MySQL flexible server, application gateway (healthy and unhealthy host counts: what backend
-    health would say, without its POST), Front Door profile
-    (`curated_metrics` is the list). Any other
+    health would say, without its POST), Front Door profile, Azure Firewall
+    (health, SNAT port utilisation, throughput, rule hits, latency probe;
+    Cloud NGFW has no curated set: the `a` picker lists what Azure Monitor
+    has for it) (`curated_metrics` is the list). Any other
     ARM resource opens on the `a` picker (its metric definitions);
     `supports_metrics` drives the status-bar hint, so the hint and the
     default set cannot drift. One call per aggregation (2–3 per open, no
@@ -301,7 +307,16 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     **WAF policy** custom rules (`--policy-name`; Front Door's from the
     `front-door` extension). **Front Door profile** endpoints, origin
     groups, custom domains, security policies (`--profile-name`, the `cdn`
-    extension); never `afd secret` or a purge. A list visual selection (#39) merged into one `--ids a b c` command
+    extension); never `afd secret` or a purge. **Azure Firewall / firewall
+    policy** the policy's rule collection groups (`az network firewall policy
+    rule-collection-group list --policy-name`, the `azure-firewall`
+    extension; `firewall show` and `policy show` take `--ids`). **IP group**
+    `az network ip-group show --ids` (the `ip-group` extension). **Cloud
+    NGFW** `firewall status list --firewall-name` and, with a local
+    rulestack, its `local-rule list --local-rulestack-name`; **rulestack**
+    `local-rule`, `prefixlist`, `fqdnlist list` (the `palo-alto-networks`
+    extension; `firewall show` and `local-rulestack show` take `--ids`,
+    `id_part='name'`). Reads only: no change verb on either firewall. A list visual selection (#39) merged into one `--ids a b c` command
     (neboto's batch mode) is not built yet: `C` acts on the cursor row.
 21. **Referenced by** (`U`, #49, `src/azure/references.rs`, keys and the
     cache walk in `src/app/refs_lens.rs`, drawn by
@@ -461,6 +476,43 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `Microsoft.Cdn/profiles` list; their ids land in All resources or are
     not found).
 
+27. **Firewall is its own tab** (#136, `src/azure/services/firewall.rs`,
+    glue `src/app/firewall.rs`): Azure Firewalls (`@fw`), firewall policies
+    (`@fwp`), IP groups (`@ipg`), Palo Alto Networks Cloud NGFW (`@ngfw`)
+    and its local rulestacks (`@rulestack`). The hub's security layer is
+    debugged as one workflow (which firewall a spoke's UDR points at, which
+    policy or rulestack decides, which rule matches) and five sub-tabs on
+    Network (already eight) would pass the ten number keys, rule 15 again.
+    **The UDR next hop comes first** on both firewalls: an Azure Firewall's
+    private IP, a Cloud NGFW's `ipOfTrustSubnetForUdr`
+    (`firewall::udr_next_hops`, a pure helper; `firewall_for_next_hop`
+    finds the warm firewall a route's next hop names), and each firewall's
+    Network section lists the warm route tables whose routes point at it
+    (`routes_to`, with the subnets they serve; "load @rt" when the list is
+    cold). **Rules are lazy**: a policy's `ruleCollectionGroups` (one read
+    per policy) render by group priority, then collection priority, each
+    rule's sources, destinations, ports, FQDNs, FQDN tags, TLS inspection and
+    translated address, every IP group a jumpable line; a child policy's
+    base groups come first, marked inherited (Azure applies them first,
+    then DNAT → network → application). An Azure Firewall's Rules read its
+    policy's groups (and the base's when the policy list is warm), or render
+    its classic collections. A Cloud NGFW's Rules read its local
+    rulestack's `localRules` by priority; Panorama- or Strata-managed, the
+    section says where the rules are instead of "No rules"; a global
+    rulestack is tenant-scoped (outside a subscription `Reader`) and named
+    as text. Firewalls using a policy and child policies come from the
+    body and the warm lists; a rulestack's firewalls from the warm Cloud
+    NGFW list (its own `listFirewalls` is a POST). **State**: an Azure
+    Firewall is `allocated` / `deallocated` (a stopped VNet firewall keeps
+    no IP configuration, a vWAN one no hub addresses) under the
+    provisioning rung; a Cloud NGFW is its Marketplace subscription status
+    (`Subscribed` → available, `Suspended` → stopped, `Unsubscribed` →
+    unavailable, the rest pending); policies, IP groups and rulestacks are
+    the ladder only. **Never**: the Panorama `configString` (it carries the
+    registration auth key) and `vmAuthKey`, stripped; every Cloud NGFW
+    `list…` / `get…` action and an Azure Firewall's `learnedIPPrefixes`
+    (POSTs; the guard refuses the literals).
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -494,6 +546,11 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Edge · App gateways (rule 26) | Frontends (public IP jumpable with its address from the warm list, or private IP + subnet; each frontend's listeners; the gateway subnet and its NSG requirement; private link configurations and endpoints) · Listeners (TLS policy; protocol, port, frontend, host names; certificate **name** and Key Vault secret id or "uploaded"; SNI; per-listener WAF policy; the rules using it, ⚠ when none) · Rules (by priority, the chain a request follows: listener → pool via settings, or path map → each path rule's pool, default, redirects; matched targets jumpable; ⚠ a Container App / App Service pool behind settings that keep the client's host) · Backends (pools with every address matched to a warm target or "not matched", backend NICs, empty pools flagged, which rules use each; HTTP and L4 settings: host name handling, path, affinity, probe, trusted roots, draining; probes; backend health is a POST, never sent) · WAF (gateway, listener and path-rule policies with mode and rule sets from the warm WAF list; classic WAF config; a policy on a non-WAF tier flagged) · (Overview: SKU, capacity or autoscale bounds, zones, HTTP/2, FIPS, counts) | ladder, then `operationalState` (`Running`, `Stopped`, else Pending) | gateway and frontend subnets, frontend public IPs, every WAF policy, backend NICs, private endpoints, user-assigned identities; then each matched backend | `az network application-gateway show` |
 | Edge · Front Door | Endpoints ⧗ (host name as text, enabled, deployment; each route: patterns, protocols → origin group, domains, forwarding protocol and HTTPS redirect, origin path, caching, rule sets, the group's origin hosts) · Origins ⧗ (per group: probe, load balancing, session affinity, origin auth identity, the routes using it; per origin by priority: host, priority, weight, ports, host header, certificate name check, the Azure resource (`azureOrigin`) or the warm-list match, host header warnings for Container Apps / App Service, Private Link target jumpable with status, ⚠ until approved) · Domains ⧗ (host name, validation state, ⚠ until approved, certificate type and secret **name**, min TLS, Azure DNS zone jumpable, routes and WAF using it; the DCV token is never shown) · Security ⧗ (each security policy's WAF policy jumpable, its mode from the warm WAF list, the domains and patterns it covers; ⚠ when none) · (Overview: SKU, resource state, Front Door id for `X-Azure-FDID`, origin response timeout, identity) | ladder, then `resourceState` (`Active` → available, `Disabled` → stopped); `location` is `global` | user-assigned identities; ⧗ WAF policies, Azure origins, Private Link targets, origin hosts matched in the warm lists, DNS zones, origin auth identities | `az afd profile show` (the `cdn` CLI extension) |
 | Edge · WAF policies | Settings (state, mode explained, request body inspection and limits, file upload limit, block response, log scrubbing) · Managed rules (each set and version, rule-group overrides with rule ids and state, exclusions) · Custom rules (by priority: action, type, rate limit, each condition with variable, selector, operator, negation, values, transforms) · Associations (gateways, listeners and path rules, Front Door security policies, classic endpoints; each jumps to its top resource) · (Overview: kind, resource state, mode, rule sets, counts) | ladder, then `resourceState` (`Enabled` → available, `Disabled` → stopped), else the policy's enabled state | each associated gateway or Front Door profile (classic Front Door lands in All resources) | `az network application-gateway waf-policy show`; Front Door: `az network front-door waf-policy show` (the `front-door` CLI extension) |
+| Firewall · Firewalls (rule 27) | Network (**UDR next hop**: the private IP; VNet and `AzureFirewallSubnet`, virtual hub, each IP configuration with its public IP, vWAN hub IPs, management IP configuration (forced tunnelling), zones; the warm route tables routing here with their subnets) · Policy (the policy jumpable with its tier, threat intel, IDPS, TLS inspection, DNS proxy and base from the warm policy list, a tier mismatch flagged; or the classic threat intel, DNS proxy and `additionalProperties`; IP groups) · Rules ⧗ (the policy's rule collection groups, rule 27; or the classic NAT, network and application collections) · (Overview: UDR next hop, SKU · tier, policy, threat intel, public IPs, forced tunnelling, zones, autoscale) | ladder, then `allocated` / `deallocated` | policy, VNet, subnet, virtual hub, public IPs, management subnet and IP, IP groups | `az network firewall show` (the `azure-firewall` CLI extension) |
+| Firewall · Policies | Settings (tier; threat intel and its allow-list; IDPS mode, profile, signature overrides, bypass rules, private ranges; TLS inspection CA name and its Key Vault secret id as text, the reading identity; DNS servers, proxy, proxy required for network rules; SNAT private ranges; explicit proxy; SQL redirect; policy analytics workspace) · Rule collection groups ⧗ (rule 27) · Hierarchy (base policy, child policies and firewalls from the body and the warm lists, each firewall with its private IP) · (Overview: tier, threat intel, IDPS, TLS, DNS proxy, base, counts) | ladder only | base and child policies, firewalls, identities, analytics workspace | `az network firewall policy show` (the `azure-firewall` extension) |
+| Firewall · IP groups | Addresses · Used by (firewalls and policies from the body) · (Overview: counts; addresses searchable) | ladder only | each firewall and policy using it | `az network ip-group show` (the `ip-group` extension) |
+| Firewall · Cloud NGFW | Network (**UDR next hop**: `ipOfTrustSubnetForUdr`; network type; VNet, trust and untrust subnets with their address spaces, or the vWAN hub and NVA; public IPs; egress NAT and its IPs; trusted ranges; private SNAT destinations; DNS proxy, type, servers; the warm route tables routing here) · Front end (DNAT: name, protocol, front-end IP:port → back-end IP:port, the front-end public IP jumpable) · Rules ⧗ (the local rulestack's rules, rule 27; or where Panorama / Strata keep them) · Management (local rulestack jumpable with its default mode, or Panorama servers, device group, template stack, collector group; Marketplace offer, subscription and status; plan, billing cycle, usage type) · Status ⧗ (health and reason, Panorama connection) · (Overview: UDR next hop, Marketplace status, network type, management, counts, plan) | ladder, then the Marketplace status | local rulestack, VNet, trust and untrust subnets (or vHub), public and egress NAT IPs, identities | `az palo-alto cloudngfw firewall show` (the `palo-alto-networks` extension) |
+| Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
 | Identity · App registrations (Graph, rule 13) | Credentials · Federated credentials ⧗ (issuer, subject, audiences) · API permissions (`requiredResourceAccess`, each API's service principal fetched by app id to name it and its permissions) · Redirect URIs (web, SPA, public client) · Owners ⧗ · Exposed API (identifier URIs, scopes, app roles) · Tags; no Access or Activity | worst credential expiry | its service principal (by app id) | `az ad app show --id {appId}` |
@@ -520,7 +577,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @agw @afd @waf @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @agw @afd @waf @fw @fwp @ipg @ngfw @rulestack @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -627,6 +684,11 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | WAF policies | 2 (one list; a failure of either beside the other is a warning) | `/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies` · `2025-09-01`; `/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies` · `2026-04-01` (its own spec) |
 | Front Door | 1 (classic CDN SKUs filtered out client-side) | `/providers/Microsoft.Cdn/profiles` · `2026-07-01` |
 | Front Door Endpoints, Origins, Domains, Security (and Related) | once per profile, on demand: `4 + endpoints + origin groups`, the first 50 of each followed; only the endpoints failing fails it, any other child is a warning line. Never `{profile}/secrets` | `{profile}/afdEndpoints` · `{endpoint}/routes` · `{profile}/originGroups` · `{group}/origins` · `{profile}/customDomains` · `{profile}/securityPolicies` · `2026-07-01` |
+| Firewalls, Policies, IP groups | 1 each (IP configurations and classic rules embedded) | `/providers/Microsoft.Network/azureFirewalls` · `firewallPolicies` · `ipGroups` · `2025-09-01` |
+| Rule collection groups (a policy's, a firewall's Rules) | 1 per policy, on demand, plus 1 for its base | `{policy}/ruleCollectionGroups` · `2025-09-01` |
+| Cloud NGFW, Rulestacks | 1 each | `/providers/PaloAltoNetworks.Cloudngfw/firewalls` · `localRulestacks` · `2025-10-08` (the CLI extension's; `2026-06-01` is newer, six weeks in the specs) |
+| Cloud NGFW Status | 1 per firewall, on demand | `{firewall}/statuses/default` · `2025-10-08` |
+| Rulestack Rules (and a Cloud NGFW's Rules), Objects | 1 per rulestack, on demand; Objects 2 | `{rulestack}/localRules` · `{rulestack}/prefixlists` · `{rulestack}/fqdnlists` · `2025-10-08` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
 | Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |
@@ -707,6 +769,22 @@ it; that floor is #63.
   `waf-policy show`, `az afd profile show` (cdn extension) and `az network
   front-door waf-policy show` (front-door extension) take `--ids` (all
   four name arguments carry `id_part='name'`); the Edge tab at 80×24.
+- Firewall (#136), built without an Azure login from azure-rest-api-specs
+  and the CLI sources (2026-10-26): Azure Firewall, policies and IP groups
+  on the Network version (`2025-09-01`, which the `azure-firewall`
+  extension pins), Cloud NGFW `2025-10-08` (the `palo-alto-networks`
+  extension's). To check: both providers' lists answer at subscription
+  scope (Cloud NGFW needs `PaloAltoNetworks.Cloudngfw` registered, else
+  the list errors); a VNet firewall that is stopped has no
+  `ipConfigurations` (the `deallocated` state); `additionalProperties`
+  carries `Network.DNS.EnableProxy` on a classic firewall; a Cloud NGFW GET
+  returns `panoramaConfig.configString` (stripped regardless); the
+  BooleanEnum and enum casing (`TRUE`, `ENABLED`, `VNET`) on a live body;
+  whether `statuses/default` answers for a local-rulestack firewall; that
+  `az network firewall show`, `firewall policy show`, `network ip-group
+  show`, `palo-alto cloudngfw firewall show` and `local-rulestack show`
+  take `--ids` (each name argument carries `id_part='name'`); the Azure
+  Firewall metric names; the Firewall tab at 80×24.
 - Messaging (#27), built without an Azure login from the
   `2026-01-01` specs (the newest stable for both providers on
   2026-10-24; `2024-01-01` is the previous). To check: the api-version

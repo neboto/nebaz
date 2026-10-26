@@ -2,9 +2,10 @@
 //! Virtual Network (VNets and their subnets, NSGs, public IPs, the load
 //! balancer, route table, NAT gateway, private endpoints), the NICs, DNS
 //! (private and public zones, the resolver, its ruleset, a DNS security
-//! policy) and Edge (the application gateway, Front Door, both WAF
-//! policies). Lists first, then each lazy child list, then a single GET
-//! per resource: `r` on a row, the `N` lens (a VNet for its subnets, an
+//! policy), Edge (the application gateway, Front Door, both WAF
+//! policies) and Firewall (the Cloud NGFW and its local rulestack, the
+//! Azure Firewall with its two policies and IP group). Lists first, then
+//! each lazy child list, then a single GET per resource: `r` on a row, the `N` lens (a VNet for its subnets, an
 //! NSG, a NIC) and jumps read those.
 
 use super::{fx, Fixture};
@@ -74,6 +75,24 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/customDomains", "afd-custom-domains.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso/securityPolicies", "afd-security-policies.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Cdn/profiles/afd-contoso", "afd-contoso.json"),
+    // Firewall: lists, then each lazy child list, then the single GETs
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/azureFirewalls", "azure-firewalls.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/firewallPolicies", "firewall-policies.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/ipGroups", "ip-groups.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/PaloAltoNetworks.Cloudngfw/firewalls", "ngfws.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/PaloAltoNetworks.Cloudngfw/localRulestacks", "ngfw-rulestacks.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-platform-base/ruleCollectionGroups", "fwp-platform-base-rcgs.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod/ruleCollectionGroups", "fwp-hub-prod-rcgs.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/localRules", "lrs-hub-prod-rules.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/prefixlists", "lrs-hub-prod-prefixlists.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/fqdnlists", "lrs-hub-prod-fqdnlists.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub-prod/statuses/default", "ngfw-hub-prod-status.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-hub-prod", "afw-hub-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-platform-base", "fwp-platform-base.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod", "fwp-hub-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ipGroups/ipg-spokes-prod", "ipg-spokes-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/firewalls/ngfw-hub-prod", "ngfw-hub-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod", "lrs-hub-prod.json"),
     // Single GETs (`r`, the `N` lens, jumps)
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod", "vnet-hub-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-aca", "vnet-hub-prod--snet-aca.json"),
@@ -83,6 +102,8 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-data", "vnet-hub-prod--snet-data.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-jump", "vnet-hub-prod--snet-jump.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/AzureFirewallSubnet", "vnet-hub-prod--AzureFirewallSubnet.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-ngfw-trust", "vnet-hub-prod--snet-ngfw-trust.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-ngfw-untrust", "vnet-hub-prod--snet-ngfw-untrust.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-dns-outbound", "vnet-hub-prod--snet-dns-outbound.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr", "vnet-pp-dr.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr/subnets/snet-pp-injection-dr", "vnet-pp-dr--snet-pp-injection-dr.json"),
@@ -103,6 +124,8 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-agw-prod", "pip-agw-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ng-prod", "pip-ng-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vm-jump-01", "pip-vm-jump-01.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-afw-prod", "pip-afw-prod.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-ngfw-prod", "pip-ngfw-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-legacy-internal", "lb-legacy-internal.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress", "rt-spoke-egress.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/natGateways/ng-prod", "ng-prod.json"),

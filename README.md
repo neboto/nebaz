@@ -154,6 +154,7 @@ all).
 | `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`), NAT gateways (`nat`), Private endpoints (`pe`) |
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`) |
 | `agw` | Edge | Application gateways, Front Door (`afd`), WAF policies (`waf`) |
+| `fw` | Firewall | Azure Firewalls, Firewall policies (`fwp`, rule collection groups), IP groups (`ipg`), Palo Alto Cloud NGFW (`ngfw`), Local rulestacks (`rulestack`, rules) |
 | `kv` | Key Vault | Vaults (secret and key *names*, never values) |
 | `id` | Identity | Managed identities, Service principals (`sp`), App registrations (`appreg`) |
 | `aks` | AKS | Clusters, Node pools (`pool`) |

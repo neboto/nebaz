@@ -17,6 +17,7 @@ pub mod container_registry;
 pub mod cosmos;
 pub mod directory;
 pub mod edge;
+pub mod firewall;
 pub mod foundry;
 pub mod identity;
 pub mod keyvault;

@@ -688,7 +688,8 @@ fn permissions_doc_grants_only_read_actions() {
     let doc = fs::read_to_string(root().join("PERMISSIONS.md")).expect("PERMISSIONS.md at the repo root");
     let mut actions = Vec::new();
     for (_, literal) in string_literals(&doc.replace('`', "\"")) {
-        if literal.starts_with("Microsoft.") && literal.contains('/') && !literal.contains(' ') {
+        let provider = literal.starts_with("Microsoft.") || literal.starts_with("PaloAltoNetworks.");
+        if provider && literal.contains('/') && !literal.contains(' ') {
             actions.push(literal);
         }
     }
@@ -702,11 +703,30 @@ fn permissions_doc_grants_only_read_actions() {
 
 /// ARM reads that are POSTs (a NIC's effective NSG rules and routes;
 /// `listKeys`, the access keys of Redis, Cosmos DB, storage and AI accounts;
-/// an application gateway's `backendhealth`):
+/// an application gateway's `backendhealth`; an Azure Firewall's
+/// `learnedIPPrefixes`; Cloud NGFW's `getGlobalRulestack`, `getLogProfile`,
+/// `getSupportInfo`, a rulestack's `listFirewalls`, `listAppIds`,
+/// `listSecurityServices`, `listAdvancedSecurityObjects`, `getChangeLog`
+/// and a rule's `getCounters`):
 /// `ReadOnlyPolicy` would refuse them at runtime anyway; the guard keeps
 /// them out of `src/`. The network lens (#50) computes NSG access
 /// client-side from GETs instead.
-const POST_ONLY_READS: &[&str] = &["effectivenetworksecuritygroups", "effectiveroutetable", "listkeys", "backendhealth"];
+const POST_ONLY_READS: &[&str] = &[
+    "effectivenetworksecuritygroups",
+    "effectiveroutetable",
+    "listkeys",
+    "backendhealth",
+    "learnedipprefixes",
+    "getglobalrulestack",
+    "getlogprofile",
+    "getsupportinfo",
+    "listfirewalls",
+    "listappids",
+    "listsecurityservices",
+    "listadvancedsecurityobjects",
+    "getchangelog",
+    "getcounters",
+];
 
 #[test]
 fn no_post_only_read_is_requested() {

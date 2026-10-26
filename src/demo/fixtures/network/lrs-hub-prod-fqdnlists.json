@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "name": "fqdn-egress-allowed",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod/fqdnlists/fqdn-egress-allowed",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks/fqdnlists",
+      "properties": {
+        "description": "What the spokes may reach",
+        "fqdnList": [
+          "*.azurecr.io",
+          "mcr.microsoft.com",
+          "login.microsoftonline.com",
+          "*.servicebus.windows.net"
+        ],
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

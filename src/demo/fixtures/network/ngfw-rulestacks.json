@@ -1,0 +1,33 @@
+{
+  "value": [
+    {
+      "name": "lrs-hub-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-hub-prod",
+      "type": "PaloAltoNetworks.Cloudngfw/localRulestacks",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "panEtag": "9c1e3a5b-7d2f-4b6a-8e0c-1f3a5b7d9e2c",
+        "panLocation": "westeurope",
+        "scope": "LOCAL",
+        "description": "Hub egress and spoke-to-spoke inspection",
+        "defaultMode": "IPS",
+        "minAppIdVersion": "8595-7473",
+        "securityServices": {
+          "vulnerabilityProfile": "BestPractice",
+          "antiSpywareProfile": "BestPractice",
+          "antiVirusProfile": "BestPractice",
+          "urlFilteringProfile": "BestPractice",
+          "fileBlockingProfile": "BestPractice",
+          "dnsSubscription": "BestPractice"
+        }
+      }
+    }
+  ]
+}

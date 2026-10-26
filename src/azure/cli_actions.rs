@@ -35,6 +35,7 @@ use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, Jo
 use crate::azure::services::container_registry::RegistryRow;
 use crate::azure::services::directory::{AppRegistrationRow, ServicePrincipalRow};
 use crate::azure::services::edge::{AppGatewayRow, FrontDoorProfileRow, WafKind, WafPolicyRow};
+use crate::azure::services::firewall::{AzureFirewallRow, CloudNgfwRow, FirewallPolicyRow, NgfwManagement, RulestackRow};
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SubnetRow};
@@ -230,6 +231,14 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         waf_policy_actions(w)
     } else if let Some(p) = any.downcast_ref::<FrontDoorProfileRow>() {
         front_door_actions(p)
+    } else if let Some(f) = any.downcast_ref::<AzureFirewallRow>() {
+        azure_firewall_actions(f)
+    } else if let Some(p) = any.downcast_ref::<FirewallPolicyRow>() {
+        firewall_policy_actions(p)
+    } else if let Some(n) = any.downcast_ref::<CloudNgfwRow>() {
+        cloud_ngfw_actions(n)
+    } else if let Some(r) = any.downcast_ref::<RulestackRow>() {
+        rulestack_actions(r)
     } else {
         None
     };
@@ -693,6 +702,60 @@ fn front_door_actions(p: &FrontDoorProfileRow) -> Option<Vec<CliAction>> {
     ])
 }
 
+// ── Firewall ─────────────────────────────────────────────────────────
+
+/// `--{flag} {name} -g {rg} --subscription {sub}` for the parent an id
+/// names: the list commands below declare it without an `id_part`.
+fn parent(flag: &str, id: &str) -> Option<String> {
+    Some(format!("{} {} {}", flag, shell_quote(crate::azure::resource::name_of_id(id)), rg_sub(id)?))
+}
+
+/// The rule collection groups of a firewall's policy (the `azure-firewall`
+/// CLI extension; `--policy-name` has no `id_part`). Reads only: an Azure
+/// Firewall's learned IP prefixes are a POST.
+fn azure_firewall_actions(f: &AzureFirewallRow) -> Option<Vec<CliAction>> {
+    let policy = f.policy_id.as_deref()?;
+    Some(vec![inspect(format!(
+        "az network firewall policy rule-collection-group list {}",
+        parent("--policy-name", policy)?
+    ))
+    .note("the azure-firewall CLI extension; the policy's rules")])
+}
+
+fn firewall_policy_actions(p: &FirewallPolicyRow) -> Option<Vec<CliAction>> {
+    Some(vec![inspect(format!(
+        "az network firewall policy rule-collection-group list {}",
+        parent("--policy-name", &p.base.id)?
+    ))
+    .note("the azure-firewall CLI extension")])
+}
+
+/// The `palo-alto-networks` CLI extension: the firewall's status, and its
+/// local rulestack's rules (`--local-rulestack-name`, no `id_part`). Never
+/// a support-info, log-profile or global-rulestack command (POSTs).
+fn cloud_ngfw_actions(n: &CloudNgfwRow) -> Option<Vec<CliAction>> {
+    let mut v = vec![inspect(format!(
+        "az palo-alto cloudngfw firewall status list {}",
+        parent("--firewall-name", &n.base.id)?
+    ))
+    .note("health and the Panorama connection")];
+    if let (NgfwManagement::LocalRulestack, Some(rs)) = (n.management(), n.rulestack_id()) {
+        if let Some(a) = parent("--local-rulestack-name", &rs) {
+            v.push(inspect(format!("az palo-alto cloudngfw local-rulestack local-rule list {}", a)));
+        }
+    }
+    Some(v)
+}
+
+fn rulestack_actions(r: &RulestackRow) -> Option<Vec<CliAction>> {
+    let a = parent("--local-rulestack-name", &r.base.id)?;
+    Some(vec![
+        inspect(format!("az palo-alto cloudngfw local-rulestack local-rule list {}", a)),
+        inspect(format!("az palo-alto cloudngfw local-rulestack prefixlist list {}", a)),
+        inspect(format!("az palo-alto cloudngfw local-rulestack fqdnlist list {}", a)),
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -954,6 +1017,24 @@ mod tests {
         }
         let p = actions_for(mock("FrontDoorProfileRow").as_ref());
         assert!(find(&p, "afd origin-group list").command.contains("--profile-name afd-1 -g "));
+    }
+
+    #[test]
+    fn firewall_rows_offer_reads_only_in_the_name_form() {
+        for label in ["AzureFirewallRow", "FirewallPolicyRow", "IpGroupRow", "CloudNgfwRow", "RulestackRow"] {
+            let a = actions_for(mock(label).as_ref());
+            assert!(a.iter().all(|x| x.tier == CliTier::Inspect), "{label}: reads only");
+        }
+        let f = actions_for(mock("AzureFirewallRow").as_ref());
+        assert!(f[0].command.starts_with("az network firewall show --ids "));
+        assert!(find(&f, "network firewall policy rule-collection-group list").command.contains("--policy-name fwp-1 -g "));
+        let n = actions_for(mock("CloudNgfwRow").as_ref());
+        assert!(n[0].command.starts_with("az palo-alto cloudngfw firewall show --ids "));
+        assert!(find(&n, "palo-alto cloudngfw firewall status list").command.contains("--firewall-name ngfw-1 -g "));
+        assert!(find(&n, "palo-alto cloudngfw local-rulestack local-rule list").command.contains("--local-rulestack-name lrs-1 -g "));
+        let r = actions_for(mock("RulestackRow").as_ref());
+        assert!(find(&r, "palo-alto cloudngfw local-rulestack fqdnlist list").command.contains("--local-rulestack-name lrs-1"));
+        assert!(actions_for(mock("IpGroupRow").as_ref())[0].command.starts_with("az network ip-group show --ids "));
     }
 
     #[test]

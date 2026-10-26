@@ -77,3 +77,37 @@ async fn the_edge_tab_fits_80_by_24() {
         h.press(KeyCode::Esc).await;
     }
 }
+
+/// The Firewall tab at 80×24 (#136): its five sub-tabs and every section
+/// of each row draw. Entering a rules section starts its lazy read: a
+/// policy's rule collection groups, a rulestack's (and an NGFW's
+/// rulestack's) local rules; Objects and Status theirs.
+#[tokio::test]
+async fn the_firewall_tab_fits_80_by_24_and_rules_sections_read_lazily() {
+    use crate::azure::services::firewall::rules_key;
+    let mut h = Harness::sized(80, 24).await;
+    for view in [
+        JumpView::AzureFirewalls,
+        JumpView::FirewallPolicies,
+        JumpView::IpGroups,
+        JumpView::CloudNgfws,
+        JumpView::NgfwRulestacks,
+    ] {
+        let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
+        h.install(mock).await;
+        let screen = h.render();
+        assert!(screen.contains(view.label()), "{view:?}:\n{screen}");
+        h.press(KeyCode::Enter).await;
+        for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] {
+            h.press(KeyCode::Char(c)).await;
+            h.render();
+        }
+        h.press(KeyCode::Esc).await;
+    }
+    let policy = mocks::arm_id("Microsoft.Network/firewallPolicies/fwp-1");
+    let rulestack = mocks::arm_id("PaloAltoNetworks.Cloudngfw/localRulestacks/lrs-1");
+    assert!(h.app.lazy.firewall_rule_collection_groups.contains(&rules_key(&policy)));
+    assert!(h.app.lazy.ngfw_local_rules.contains(&rules_key(&rulestack)));
+    assert!(h.app.lazy.ngfw_prefix_lists.contains(&rules_key(&rulestack)));
+    assert!(h.app.lazy.ngfw_status.contains(&mocks::arm_id("PaloAltoNetworks.Cloudngfw/firewalls/ngfw-1")));
+}

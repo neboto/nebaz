@@ -150,6 +150,12 @@ run edge-waf ok waf '[]' \
   "3 WAF policies" \
   "cannot reach 127.0.0.1"
 
+# The Firewall tab loads through a routing prefix (Cloud NGFW).
+run firewall-ngfw ok ngfw '[]' \
+  "Azure Firewall, policies, IP groups & Cloud NGFW" \
+  "4 Cloud NGFW" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

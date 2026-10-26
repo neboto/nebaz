@@ -321,6 +321,16 @@ const FRONT_DOOR: &[MetricSpec] = &[
     m("TotalLatency", "Total latency", Avg),
     m("WebApplicationFirewallRequestCount", "WAF matches", Total),
 ];
+/// Azure Firewall: health, SNAT port use (the exhaustion that drops
+/// outbound flows), throughput and rule hits.
+const AZURE_FIREWALL: &[MetricSpec] = &[
+    m("FirewallHealth", "Health %", Avg),
+    m("SNATPortUtilization", "SNAT ports used %", Max),
+    m("Throughput", "Throughput", Avg),
+    m("NetworkRuleHit", "Network rule hits", Total),
+    m("ApplicationRuleHit", "Application rule hits", Total),
+    m("FirewallLatencyPng", "Latency (probe)", Avg),
+];
 
 /// The default set for an ARM id, by its provider and type chain; empty
 /// for a type with none (the `a` picker still lists what it has).
@@ -353,6 +363,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.eventhub", ["namespaces"]) => EVENT_HUBS,
         ("microsoft.network", ["applicationgateways"]) => APP_GATEWAY,
         ("microsoft.cdn", ["profiles"]) => FRONT_DOOR,
+        ("microsoft.network", ["azurefirewalls"]) => AZURE_FIREWALL,
         _ => &[],
     }
 }
@@ -791,13 +802,15 @@ pub(crate) mod tests {
         assert!(!supports_metrics(&p("Microsoft.ServiceBus/namespaces/sb/queues/q")));
         assert!(names(&p("Microsoft.Network/applicationGateways/agw")).contains(&"UnhealthyHostCount"));
         assert!(names(&p("Microsoft.Cdn/profiles/afd")).contains(&"OriginHealthPercentage"));
+        assert!(names(&p("Microsoft.Network/azureFirewalls/afw")).contains(&"SNATPortUtilization"));
+        assert!(!supports_metrics(&p("Microsoft.Network/firewallPolicies/fwp")));
         assert!(!supports_metrics(&p("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/w")));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));
         assert!(is_arm_resource(&p("Microsoft.Network/virtualNetworks/v")));
         assert!(!is_arm_resource("/subscriptions/0000"));
-        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS, APP_GATEWAY, FRONT_DOOR] {
+        for set in [VM, AKS, CONTAINER_APP, WEB_SITE, SQL_DATABASE, POSTGRES_FLEXIBLE, MYSQL_FLEXIBLE, STORAGE, KEY_VAULT, COSMOS, LOAD_BALANCER, PUBLIC_IP, REDIS_CACHE, MANAGED_REDIS, SERVICE_BUS, EVENT_HUBS, APP_GATEWAY, FRONT_DOOR, AZURE_FIREWALL] {
             assert!((2..=6).contains(&set.len()));
         }
     }

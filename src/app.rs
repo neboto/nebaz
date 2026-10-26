@@ -138,6 +138,7 @@ mod metrics;
 mod command_picker;
 mod audit;
 mod network_lens;
+mod firewall;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
 mod refs_lens;
 /// The ownership ribbon (#48): what it says, the deployments trigger.
@@ -2842,6 +2843,9 @@ impl App {
         }
         if let Some(r) = any.downcast_ref::<RouteTableRow>() {
             return Some(route_table_section_lines(r, RouteTableDetailSection::from_index(idx)));
+        }
+        if let Some(lines) = self.firewall_section_lines(resource, idx) {
+            return Some(lines);
         }
         if let Some(r) = any.downcast_ref::<AppGatewayRow>() {
             let targets = self.backend_targets(r.id());

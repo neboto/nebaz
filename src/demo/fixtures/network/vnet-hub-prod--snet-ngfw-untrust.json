@@ -1,0 +1,26 @@
+{
+  "name": "snet-ngfw-untrust",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-ngfw-untrust",
+  "etag": "W/\"6e7f8a9b-0c1d-5e2f-3a4b-5c6d7e8f9a0b\"",
+  "type": "Microsoft.Network/virtualNetworks/subnets",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "addressPrefix": "10.10.11.64/26",
+    "delegations": [
+      {
+        "name": "PaloAltoNetworks.Cloudngfw.firewalls",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-ngfw-untrust/delegations/PaloAltoNetworks.Cloudngfw.firewalls",
+        "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "serviceName": "PaloAltoNetworks.Cloudngfw/firewalls",
+          "actions": [
+            "Microsoft.Network/virtualNetworks/subnets/join/action"
+          ]
+        }
+      }
+    ],
+    "privateEndpointNetworkPolicies": "Disabled",
+    "privateLinkServiceNetworkPolicies": "Enabled"
+  }
+}

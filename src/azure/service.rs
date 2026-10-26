@@ -28,6 +28,11 @@ pub enum ServiceType {
     /// Standard / Premium profiles and the WAF policies of both. Its own
     /// tab (SERVICES.md rule 26 says why); backend health is never read.
     Edge,
+    /// The hub's security layer: Azure Firewalls, firewall policies (rule
+    /// collection groups lazy), IP groups, and Palo Alto Networks Cloud
+    /// NGFW firewalls and local rulestacks (rules lazy). Its own tab
+    /// (SERVICES.md rule 27 says why).
+    Firewall,
     /// Key vaults — metadata and secret/key *names* only, never values.
     KeyVault,
     /// User-assigned managed identities (ARM); service principals and app
@@ -121,6 +126,17 @@ pub enum JumpView {
     FrontDoorProfiles,
     /// Application Gateway and Front Door WAF policies, one list of both.
     WafPolicies,
+    // Firewall
+    /// `Microsoft.Network/azureFirewalls`.
+    AzureFirewalls,
+    /// `Microsoft.Network/firewallPolicies`.
+    FirewallPolicies,
+    /// `Microsoft.Network/ipGroups`.
+    IpGroups,
+    /// Palo Alto Networks Cloud NGFW (`PaloAltoNetworks.Cloudngfw/firewalls`).
+    CloudNgfws,
+    /// Cloud NGFW local rulestacks (`PaloAltoNetworks.Cloudngfw/localRulestacks`).
+    NgfwRulestacks,
     // Key Vault
     KeyVaults,
     // Identity
@@ -192,6 +208,7 @@ impl JumpView {
             | NatGateways | PrivateEndpoints => ServiceType::Network,
             PrivateDnsZones | DnsZones | DnsResolvers | DnsForwardingRulesets | DnsResolverPolicies => ServiceType::Dns,
             AppGateways | FrontDoorProfiles | WafPolicies => ServiceType::Edge,
+            AzureFirewalls | FirewallPolicies | IpGroups | CloudNgfws | NgfwRulestacks => ServiceType::Firewall,
             KeyVaults => ServiceType::KeyVault,
             Identities | ServicePrincipals | AppRegistrations => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
@@ -238,6 +255,11 @@ impl JumpView {
             AppGateways => "app-gateways",
             FrontDoorProfiles => "front-door-profiles",
             WafPolicies => "waf-policies",
+            AzureFirewalls => "azure-firewalls",
+            FirewallPolicies => "firewall-policies",
+            IpGroups => "ip-groups",
+            CloudNgfws => "cloud-ngfws",
+            NgfwRulestacks => "ngfw-rulestacks",
             KeyVaults => "vaults",
             Identities => "identities",
             ServicePrincipals => "service-principals",
@@ -298,6 +320,11 @@ impl JumpView {
             AppGateways => "App gateways",
             FrontDoorProfiles => "Front Door",
             WafPolicies => "WAF policies",
+            AzureFirewalls => "Firewalls",
+            FirewallPolicies => "Policies",
+            IpGroups => "IP groups",
+            CloudNgfws => "Cloud NGFW",
+            NgfwRulestacks => "Rulestacks",
             KeyVaults => "Vaults",
             Identities => "Identities",
             ServicePrincipals => "Service principals",
@@ -368,6 +395,11 @@ impl JumpView {
             // Classic CDN profiles share the type; the list keeps Front
             // Door Standard / Premium only, so a classic one is not found.
             ("microsoft.cdn", ["profiles"]) => JumpView::FrontDoorProfiles,
+            ("microsoft.network", ["azurefirewalls"]) => JumpView::AzureFirewalls,
+            ("microsoft.network", ["firewallpolicies"]) => JumpView::FirewallPolicies,
+            ("microsoft.network", ["ipgroups"]) => JumpView::IpGroups,
+            ("paloaltonetworks.cloudngfw", ["firewalls"]) => JumpView::CloudNgfws,
+            ("paloaltonetworks.cloudngfw", ["localrulestacks"]) => JumpView::NgfwRulestacks,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
@@ -456,6 +488,7 @@ impl ServiceType {
             ServiceType::Network,
             ServiceType::Dns,
             ServiceType::Edge,
+            ServiceType::Firewall,
             ServiceType::KeyVault,
             ServiceType::Identity,
             ServiceType::Aks,
@@ -494,6 +527,7 @@ impl ServiceType {
             ServiceType::Network => "Networking",
             ServiceType::Dns => "Networking",
             ServiceType::Edge => "Networking",
+            ServiceType::Firewall => "Networking",
             ServiceType::KeyVault => "Security",
             ServiceType::Identity => "Security",
             ServiceType::Aks => "Containers",
@@ -521,6 +555,7 @@ impl ServiceType {
             ServiceType::Network => "Virtual Network",
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
+            ServiceType::Firewall => "Firewall",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Managed Identity",
             ServiceType::Aks => "AKS",
@@ -549,6 +584,7 @@ impl ServiceType {
             ServiceType::Network => "VNet",
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
+            ServiceType::Firewall => "Firewall",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Identity",
             ServiceType::Aks => "AKS",
@@ -576,6 +612,7 @@ impl ServiceType {
             ServiceType::Network => "VNets, NSGs, IPs, LBs & NAT",
             ServiceType::Dns => "DNS zones, Private Resolver & rulesets",
             ServiceType::Edge => "App gateways, Front Door & WAF policies",
+            ServiceType::Firewall => "Azure Firewall, policies, IP groups & Cloud NGFW",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Identity => "Managed identities, service principals & app registrations",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
@@ -615,6 +652,7 @@ impl ServiceType {
             ],
             ServiceType::Dns => &[PrivateDnsZones, DnsZones, DnsResolvers, DnsForwardingRulesets, DnsResolverPolicies],
             ServiceType::Edge => &[AppGateways, FrontDoorProfiles, WafPolicies],
+            ServiceType::Firewall => &[AzureFirewalls, FirewallPolicies, IpGroups, CloudNgfws, NgfwRulestacks],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Identity => &[Identities, ServicePrincipals, AppRegistrations],
             ServiceType::Aks => &[Clusters, NodePools],
@@ -708,6 +746,15 @@ impl ServiceType {
             }
             "afd" | "frontdoor" | "frontdoors" | "fd" => (ServiceType::Edge, Some(JumpView::FrontDoorProfiles)),
             "waf" | "wafs" | "wafpolicy" | "wafpolicies" => (ServiceType::Edge, Some(JumpView::WafPolicies)),
+            "fw" | "fws" | "firewall" | "firewalls" | "azfw" | "azurefirewall" | "azurefirewalls" => (ServiceType::Firewall, None),
+            "fwp" | "fwpolicy" | "fwpolicies" | "firewallpolicy" | "firewallpolicies" => {
+                (ServiceType::Firewall, Some(JumpView::FirewallPolicies))
+            }
+            "ipg" | "ipgroup" | "ipgroups" => (ServiceType::Firewall, Some(JumpView::IpGroups)),
+            "ngfw" | "cloudngfw" | "palo" | "paloalto" | "pan" => (ServiceType::Firewall, Some(JumpView::CloudNgfws)),
+            "rulestack" | "rulestacks" | "lrs" | "localrulestack" | "localrulestacks" => {
+                (ServiceType::Firewall, Some(JumpView::NgfwRulestacks))
+            }
             "kv" | "keyvault" | "keyvaults" | "vault" | "vaults" => (ServiceType::KeyVault, None),
             "id" | "ids" | "identity" | "identities" | "msi" | "uami" | "managedidentity" => (ServiceType::Identity, None),
             // `@app` is App Service's; app registrations are `@appreg`.
@@ -780,6 +827,7 @@ impl ServiceType {
             ServiceType::Network => "@vnet",
             ServiceType::Dns => "@dns",
             ServiceType::Edge => "@agw",
+            ServiceType::Firewall => "@fw",
             ServiceType::KeyVault => "@kv",
             ServiceType::Identity => "@id",
             ServiceType::Aks => "@aks",
@@ -802,12 +850,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@agw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@agw", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1075,6 +1123,20 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@agw"), Some((ServiceType::Edge, None)));
         assert_eq!(ServiceType::from_prefix("@afd"), Some((ServiceType::Edge, Some(JumpView::FrontDoorProfiles))));
         assert_eq!(ServiceType::from_prefix("@waf"), Some((ServiceType::Edge, Some(JumpView::WafPolicies))));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/azureFirewalls/afw")), Some(JumpView::AzureFirewalls));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/firewallPolicies/fwp")), Some(JumpView::FirewallPolicies));
+        assert_eq!(
+            JumpView::landing_for_arm_id(&p("Microsoft.Network/firewallPolicies/fwp/ruleCollectionGroups/g")),
+            None
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/ipGroups/ipg")), Some(JumpView::IpGroups));
+        assert_eq!(JumpView::for_arm_id(&p("PaloAltoNetworks.Cloudngfw/firewalls/ngfw")), Some(JumpView::CloudNgfws));
+        assert_eq!(JumpView::for_arm_id(&p("PaloAltoNetworks.Cloudngfw/localRulestacks/lrs")), Some(JumpView::NgfwRulestacks));
+        assert_eq!(ServiceType::from_prefix("@fw"), Some((ServiceType::Firewall, None)));
+        assert_eq!(ServiceType::from_prefix("@fwp"), Some((ServiceType::Firewall, Some(JumpView::FirewallPolicies))));
+        assert_eq!(ServiceType::from_prefix("@ipg"), Some((ServiceType::Firewall, Some(JumpView::IpGroups))));
+        assert_eq!(ServiceType::from_prefix("@ngfw"), Some((ServiceType::Firewall, Some(JumpView::CloudNgfws))));
+        assert_eq!(ServiceType::from_prefix("@rulestack"), Some((ServiceType::Firewall, Some(JumpView::NgfwRulestacks))));
         assert_eq!(JumpView::for_arm_id("garbage"), None);
     }
 

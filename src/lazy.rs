@@ -147,6 +147,21 @@ pub struct LazyStore {
     /// profile's `secrets`.
     pub afd_topology: LazyMap<crate::azure::services::edge::AfdTopology>,
 
+    // ── Firewall ─────────────────────────────────────────────────────────
+    /// `GET {policy}/ruleCollectionGroups`, keyed by the lowercased policy
+    /// id (`firewall::rules_key`): a policy's rules, and its base's.
+    pub firewall_rule_collection_groups: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {rulestack}/localRules`, keyed by the lowercased rulestack id:
+    /// read for the rulestack and for each Cloud NGFW that uses it.
+    pub ngfw_local_rules: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {rulestack}/prefixlists`, keyed like the rules.
+    pub ngfw_prefix_lists: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {rulestack}/fqdnlists`, keyed like the rules.
+    pub ngfw_fqdn_lists: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {firewall}/statuses/default`, keyed by Cloud NGFW id: health
+    /// and the Panorama connection.
+    pub ngfw_status: LazyMap<serde_json::Value>,
+
     // ── App Service ──────────────────────────────────────────────────────
     /// `GET {site}/config/web` — the Configuration section, keyed by site
     /// id. Never app settings or connection strings.
