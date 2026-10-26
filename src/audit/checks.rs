@@ -23,6 +23,7 @@ use crate::azure::resource::{name_of_id, Resource};
 use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::app_service::SiteRow;
+use crate::azure::services::backup::{self, BackupVaultRow, RecoveryVaultRow};
 use crate::azure::services::compute::{DiskRow, NicRow};
 use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, JobRow, Workload};
 use crate::azure::services::container_registry::RegistryRow;
@@ -83,9 +84,11 @@ const CONNECTIONS: &[V] = &[V::GatewayConnections];
 const AFWS: &[V] = &[V::AzureFirewalls];
 const FWPS: &[V] = &[V::FirewallPolicies];
 const NGFWS: &[V] = &[V::CloudNgfws];
+const RSVS: &[V] = &[V::RecoveryVaults];
+const BVS: &[V] = &[V::BackupVaults];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 69] = [
+pub static CHECKS: [Check; 72] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -257,6 +260,31 @@ pub static CHECKS: [Check; 69] = [
         fix: "Set the network default action to Deny and allow the VNets and IP ranges that need it, or disable public network access and use private endpoints.",
         sources: &[STORAGE],
         run: storage_public_network,
+    },
+    // ── Backup ──
+    Check {
+        id: "backup-soft-delete-off",
+        title: "Backup vault has soft delete off",
+        why: "With soft delete off, deleting a protected item's backup data (or the vault's last policy) removes the recovery points at once. Ransomware operators and a compromised admin delete backups first; soft delete keeps them recoverable for 14 days or more.",
+        fix: "Turn soft delete on (Recovery Services vault → Properties → Security settings; Backup vault → Properties → Soft delete), ideally Always On so it cannot be turned off again.",
+        sources: &[RSVS, BVS],
+        run: backup_soft_delete_off,
+    },
+    Check {
+        id: "backup-item-failing",
+        title: "Protected item's last backup failed or is overdue",
+        why: "A protected item whose last backup failed (or whose protection is in error) is only as recoverable as its last good recovery point, and the gap grows every day it goes unnoticed. Overdue means a Protected item with no backup for 36 hours (8 days on a weekly policy).",
+        fix: "Open the vault's Protected items (or Failed jobs) for the error; fix the cause (the VM agent or extension, network egress to the backup service, a missing permission), then run an on-demand backup and watch the job.",
+        sources: &[RSVS, BVS],
+        run: backup_item_failing,
+    },
+    Check {
+        id: "backup-vault-hardening",
+        title: "Backup vault without immutability or multi-user authorization",
+        why: "Immutability stops recovery points being deleted (or retention shortened) before they expire; multi-user authorization puts a resource guard, owned by someone else, in front of the critical operations (disabling soft delete, stopping protection). Without either, one compromised vault admin can destroy the backups.",
+        fix: "Enable immutability (and lock it once settled) and protect the vault with a resource guard in another subscription (Properties → Multi-user authorization).",
+        sources: &[RSVS, BVS],
+        run: backup_vault_hardening,
     },
     // ── Key Vault ──
     Check {
@@ -1370,6 +1398,118 @@ fn storage_public_network(check: &'static Check, input: &AuditInput, out: &mut V
                 ),
             );
         }
+    }
+}
+
+// ── Backup ────────────────────────────────────────────────────────────
+
+fn backup_soft_delete_off(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for v in input.of::<RecoveryVaultRow>(V::RecoveryVaults).filter(|v| v.soft_delete_off()) {
+        out.push(
+            AuditFinding::about(check, Severity::Medium, v, "soft delete disabled")
+                .with_evidence(vec![format!("softDeleteState: {}", json::opt(v.soft_delete.clone()))]),
+        );
+    }
+    for v in input.of::<BackupVaultRow>(V::BackupVaults).filter(|v| v.soft_delete_off()) {
+        out.push(
+            AuditFinding::about(check, Severity::Medium, v, "soft delete off")
+                .with_evidence(vec![format!("softDeleteSettings.state: {}", json::opt(v.soft_delete.clone()))]),
+        );
+    }
+}
+
+/// One finding per failing item, about its source resource (Enter opens
+/// it; its Related then names the vault), else the vault.
+fn item_finding(
+    check: &'static Check,
+    vault: &dyn Resource,
+    source: Option<String>,
+    name: &str,
+    flags: &[backup::ItemFlag],
+    out: &mut Vec<AuditFinding>,
+) {
+    let stale_only = flags.iter().all(|f| matches!(f, backup::ItemFlag::Stale(..) | backup::ItemFlag::Health(_)));
+    let severity = if stale_only { Severity::Low } else { Severity::Medium };
+    let id = source.unwrap_or_else(|| vault.id().to_string());
+    let mut evidence: Vec<String> = flags.iter().map(|f| f.text()).collect();
+    evidence.push(format!("vault: {}", vault.name()));
+    out.push(
+        AuditFinding::at(
+            check,
+            severity,
+            &id,
+            name,
+            vault.location(),
+            vault.tags().clone(),
+            format!("{} in {}", flags[0].text(), vault.name()),
+        )
+        .with_evidence(evidence),
+    );
+}
+
+fn backup_item_failing(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    let lazy = input.lazy();
+    for v in input.of::<RecoveryVaultRow>(V::RecoveryVaults) {
+        let Some(items) = gaps.see(&v.base.name, lazy.and_then(|l| l.backup_protected_items.get(&v.base.id))) else {
+            continue;
+        };
+        let policies = match lazy.and_then(|l| l.backup_policies.get(&v.base.id)) {
+            Some(Lazy::Loaded(p)) => p.as_slice(),
+            _ => &[],
+        };
+        for item in items {
+            let policy_id = json::str_at(item, "/properties/policyId");
+            let policy = policy_id
+                .as_deref()
+                .and_then(|pid| policies.iter().find(|p| json::str_at(p, "/id").is_some_and(|i| i.eq_ignore_ascii_case(pid))));
+            let flags = backup::item_flags(item, input.now(), backup::stale_hours(policy));
+            if !flags.is_empty() {
+                let name = json::str_at(item, "/properties/friendlyName").unwrap_or_else(|| json::text(item, "/name"));
+                item_finding(check, v, backup::item_source(item), &name, &flags, out);
+            }
+        }
+    }
+    for v in input.of::<BackupVaultRow>(V::BackupVaults) {
+        let Some(instances) = gaps.see(&v.base.name, lazy.and_then(|l| l.backup_instances.get(&v.base.id))) else {
+            continue;
+        };
+        let jobs = match lazy.and_then(|l| l.backup_jobs.get(&v.base.id)) {
+            Some(Lazy::Loaded(j)) => j.as_slice(),
+            _ => &[],
+        };
+        for i in instances {
+            let last = backup::last_backup_job(jobs, &json::text(i, "/id"));
+            let flags = backup::instance_flags(i, last);
+            if !flags.is_empty() {
+                let name = json::str_at(i, "/properties/friendlyName").unwrap_or_else(|| json::text(i, "/name"));
+                item_finding(check, v, backup::instance_source(i), &name, &flags, out);
+            }
+        }
+    }
+    gaps.note(check, "protected items", "Protected items", out);
+}
+
+fn backup_vault_hardening(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let mut push = |v: &dyn Resource, immutability: Option<&str>, mua: bool, mua_text: String| {
+        let immutable = immutability.is_some_and(|i| i.eq_ignore_ascii_case("Locked") || i.eq_ignore_ascii_case("Unlocked"));
+        let reason = match (immutable, mua) {
+            (true, true) => return,
+            (false, false) => "no immutability, no multi-user authorization",
+            (false, true) => "immutability off",
+            (true, false) => "no multi-user authorization",
+        };
+        out.push(AuditFinding::about(check, Severity::Info, v, reason).with_evidence(vec![
+            format!("immutability: {}", immutability.unwrap_or("-")),
+            format!("multi-user authorization: {}", mua_text),
+        ]));
+    };
+    for v in input.of::<RecoveryVaultRow>(V::RecoveryVaults) {
+        let mua = v.mua.as_deref().is_some_and(|m| m.eq_ignore_ascii_case("Enabled"));
+        push(v, v.immutability.as_deref(), mua, json::opt(v.mua.clone()));
+    }
+    for v in input.of::<BackupVaultRow>(V::BackupVaults) {
+        push(v, v.immutability.as_deref(), v.mua_on(), json::yes_no(v.resource_guard));
     }
 }
 

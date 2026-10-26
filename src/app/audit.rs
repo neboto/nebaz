@@ -186,7 +186,7 @@ impl App {
     /// users' directory objects, each cached SQL server's and Redis cache's firewall rules, each
     /// PostgreSQL and MySQL server's firewall rules, parameters and Entra admins, each
     /// messaging namespace's network rule set,
-    /// each cached site's config. Capped at `AUDIT_LAZY_MAX` per kind.
+    /// each cached site's config, each backup vault's protected items. Capped at `AUDIT_LAZY_MAX` per kind.
     fn trigger_audit_lazies(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         let sub = self.subscription_key();
         if sub.is_empty() {
@@ -238,6 +238,13 @@ impl App {
                 self.trigger_lazy(|s| &mut s.messaging_network_rules, id, event_tx, move || fut);
             }
         }
+        // A vault's protected items (and the policies that set how old a
+        // last backup may be) or its backup instances and jobs.
+        for view in [JumpView::RecoveryVaults, JumpView::BackupVaults] {
+            for id in self.cached_ids(view, &sub) {
+                self.trigger_backup_audit_reads(&id, event_tx);
+            }
+        }
         for id in self.cached_ids(JumpView::WebApps, &sub) {
             let fut = self.azure_clients.get_fetch(&site_config_path(&id), WEB_API_VERSION);
             self.trigger_lazy(|s| &mut s.site_configs, id, event_tx, move || fut);
@@ -259,6 +266,10 @@ impl App {
                 + l.flex_admins.loading_count()
                 + l.messaging_network_rules.loading_count()
                 + l.site_configs.loading_count()
+                + l.backup_protected_items.loading_count()
+                + l.backup_policies.loading_count()
+                + l.backup_instances.loading_count()
+                + l.backup_jobs.loading_count()
                 > 0
     }
 

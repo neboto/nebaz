@@ -30,6 +30,7 @@
 use crate::azure::resource::{name_of_id, resource_group_of, shell_quote, subscription_of, Resource};
 use crate::azure::services::aks::{ClusterRow, NodePoolRow};
 use crate::azure::services::app_service::SiteRow;
+use crate::azure::services::backup::{BackupVaultRow, RecoveryVaultRow};
 use crate::azure::services::compute::{NicRow, VmRow};
 use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, JobRow};
 use crate::azure::services::container_registry::RegistryRow;
@@ -246,6 +247,10 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         cloud_ngfw_actions(n)
     } else if let Some(r) = any.downcast_ref::<RulestackRow>() {
         rulestack_actions(r)
+    } else if let Some(v) = any.downcast_ref::<RecoveryVaultRow>() {
+        recovery_vault_actions(v)
+    } else if let Some(v) = any.downcast_ref::<BackupVaultRow>() {
+        backup_vault_actions(v)
     } else {
         None
     };
@@ -776,6 +781,36 @@ fn parent(flag: &str, id: &str) -> Option<String> {
     Some(format!("{} {} {}", flag, shell_quote(crate::azure::resource::name_of_id(id)), rg_sub(id)?))
 }
 
+// ── Backup ───────────────────────────────────────────────────────────
+
+/// A Recovery Services vault's items, policies and failed jobs (`backup
+/// item / policy / job list` take `--vault-name`, `id_part=None`) and its
+/// backup properties (`vault_name` has `id_part='name'`). Never a restore,
+/// `protection backup-now` or `disable`.
+fn recovery_vault_actions(v: &RecoveryVaultRow) -> Option<Vec<CliAction>> {
+    let id = &v.base.id;
+    Some(vec![
+        inspect(format!("az backup item list {}", parent("--vault-name", id)?)).note("the protected items (the Protected items section)"),
+        inspect(format!("az backup policy list {}", parent("--vault-name", id)?)),
+        inspect(format!("az backup job list {} --status Failed", parent("--vault-name", id)?))
+            .note("failed jobs (the Failed jobs section; add --start-date / --end-date for a window)"),
+        inspect(format!("az backup vault backup-properties show {}", ids(id)))
+            .note("soft delete, storage redundancy and cross-region restore as the backup service reports them"),
+    ])
+}
+
+/// A Backup vault's instances, policies and jobs (the `dataprotection`
+/// CLI extension; the list commands take `--vault-name`).
+fn backup_vault_actions(v: &BackupVaultRow) -> Option<Vec<CliAction>> {
+    let id = &v.base.id;
+    Some(vec![
+        inspect(format!("az dataprotection backup-instance list {}", parent("--vault-name", id)?))
+            .note("the dataprotection CLI extension; the Backup instances section"),
+        inspect(format!("az dataprotection backup-policy list {}", parent("--vault-name", id)?)),
+        inspect(format!("az dataprotection job list {}", parent("--vault-name", id)?)),
+    ])
+}
+
 /// The rule collection groups of a firewall's policy (the `azure-firewall`
 /// CLI extension; `--policy-name` has no `id_part`). Reads only: an Azure
 /// Firewall's learned IP prefixes are a POST.
@@ -1120,6 +1155,21 @@ mod tests {
         let r = actions_for(mock("RulestackRow").as_ref());
         assert!(find(&r, "palo-alto cloudngfw local-rulestack fqdnlist list").command.contains("--local-rulestack-name lrs-1"));
         assert!(actions_for(mock("IpGroupRow").as_ref())[0].command.starts_with("az network ip-group show --ids "));
+    }
+
+    #[test]
+    fn backup_vaults_offer_reads_only_in_the_name_form() {
+        let r = actions_for(mock("RecoveryVaultRow").as_ref());
+        assert!(r.iter().all(|x| x.tier == CliTier::Inspect));
+        assert!(r[0].command.starts_with("az backup vault show --ids "));
+        assert!(find(&r, "backup item list").command.contains("--vault-name rsv-1 -g "));
+        assert!(find(&r, "backup job list").command.ends_with("--status Failed"));
+        assert!(find(&r, "backup vault backup-properties show").command.contains("--ids "));
+        let b = actions_for(mock("BackupVaultRow").as_ref());
+        assert!(b.iter().all(|x| x.tier == CliTier::Inspect));
+        assert!(b[0].command.starts_with("az dataprotection backup-vault show --ids "));
+        assert!(find(&b, "dataprotection backup-instance list").command.contains("--vault-name bv-1 -g "));
+        assert!(find(&b, "dataprotection job list").command.contains("--vault-name bv-1"));
     }
 
     #[test]

@@ -1,8 +1,9 @@
 //! Demo fixtures: the `data` area (see `docs/DEMO.md` for who owns what):
-//! Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis and
-//! Messaging, in both subscriptions. Lists first, then each resource's
-//! lazy children (containers, secret and key names, databases, firewall
-//! rules, parameters, admins, queues, topics, hubs, network rule sets).
+//! Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis,
+//! Messaging and Backup, in both subscriptions. Lists first, then each
+//! resource's lazy children (containers, secret and key names, databases,
+//! firewall rules, parameters, admins, queues, topics, hubs, network rule
+//! sets, protected items, policies, jobs).
 
 use super::{fx, Fixture};
 
@@ -156,4 +157,13 @@ pub static FIXTURES: &[Fixture] = &[
         "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventHub/namespaces/evh-orders-prod/authorizationRules",
         "eh-orders-auth-rules.json"
     ),
+    // ── Backup: both vaults, then each one's lazy reads ──
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.RecoveryServices/vaults", "recovery-vaults-prod.json"),
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.DataProtection/backupVaults", "backup-vaults-prod.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupProtectedItems", "rsv-protected-items.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupPolicies", "rsv-policies.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.RecoveryServices/vaults/rsv-contoso-prod/backupJobs", when ["status eq 'Failed'"], "rsv-failed-jobs.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupInstances", "bvault-instances.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupPolicies", "bvault-policies.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod/backupJobs", "bvault-jobs.json"),
 ];

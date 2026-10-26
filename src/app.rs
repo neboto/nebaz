@@ -148,6 +148,7 @@ mod command_picker;
 mod audit;
 mod network_lens;
 mod firewall;
+mod backup;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
 mod refs_lens;
 /// The ownership ribbon (#48): what it says, the deployments trigger.
@@ -2788,6 +2789,18 @@ impl App {
     /// Section `idx` of a resource with a section descriptor: the one
     /// downcast per split-pane type. `None` for types without a descriptor.
     fn section_lines_for(&self, resource: &dyn Resource, idx: usize) -> Option<Vec<(String, String)>> {
+        let lines = self.type_section_lines(resource, idx)?;
+        // Every type's Related: the vault that backs it up, when a vault
+        // read this session says so (#32, no call).
+        let label = resource.detail_sections().and_then(|d| d.sections.get(idx)).map(|s| s.label);
+        if label == Some("Related") {
+            return Some(self.with_backup_protection(resource.id(), lines));
+        }
+        Some(lines)
+    }
+
+    /// `section_lines_for` before the cross-type additions.
+    fn type_section_lines(&self, resource: &dyn Resource, idx: usize) -> Option<Vec<(String, String)>> {
         let any = resource.as_any();
         // Access is the same for every type: rendered here, not per type.
         let label = resource.detail_sections().and_then(|d| d.sections.get(idx)).map(|s| s.label);
@@ -2888,6 +2901,9 @@ impl App {
             return Some(ddos_plan_section_lines(r, DdosPlanDetailSection::from_index(idx)));
         }
         if let Some(lines) = self.firewall_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.backup_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(r) = any.downcast_ref::<AppGatewayRow>() {

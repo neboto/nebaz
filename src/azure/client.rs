@@ -29,6 +29,7 @@ use crate::azure::services::network_dns::DnsService;
 use crate::azure::services::edge::EdgeService;
 use crate::azure::services::hybrid::HybridService;
 use crate::azure::services::firewall::FirewallService;
+use crate::azure::services::backup::BackupService;
 use crate::azure::services::power_platform::PowerPlatformService;
 use crate::azure::services::sql::SqlService;
 use crate::azure::services::postgres_mysql::FlexibleServersService;
@@ -366,6 +367,7 @@ impl AzureClients {
             ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Hybrid => Arc::new(HybridService::new(scope)),
             ServiceType::Firewall => Arc::new(FirewallService::new(scope)),
+            ServiceType::Backup => Arc::new(BackupService::new(scope)),
             ServiceType::Changes => Arc::new(ChangesService::new(scope, graph, ChangesWindow::default())),
             ServiceType::Audit => Arc::new(crate::audit::AuditService),
         }

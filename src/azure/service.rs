@@ -17,6 +17,11 @@ pub enum ServiceType {
     VirtualMachines,
     /// Storage accounts + blob containers (via ARM).
     Storage,
+    /// Recovery Services vaults and Backup vaults (`Microsoft.DataProtection`):
+    /// what is protected, by which policy, and whether the last backup
+    /// worked. Protected items, policies and jobs lazy. Its own tab
+    /// (SERVICES.md rule 31).
+    Backup,
     /// Virtual networks, subnets, NSGs, public IPs, load balancers, route
     /// tables, NAT gateways, private endpoints, Bastion hosts, DDoS
     /// protection plans.
@@ -157,6 +162,11 @@ pub enum JumpView {
     CloudNgfws,
     /// Cloud NGFW local rulestacks (`PaloAltoNetworks.Cloudngfw/localRulestacks`).
     NgfwRulestacks,
+    // Backup
+    /// `Microsoft.RecoveryServices/vaults`.
+    RecoveryVaults,
+    /// `Microsoft.DataProtection/backupVaults`.
+    BackupVaults,
     // Key Vault
     KeyVaults,
     // Identity
@@ -230,6 +240,7 @@ impl JumpView {
             AppGateways | FrontDoorProfiles | WafPolicies => ServiceType::Edge,
             ExpressRouteCircuits | VnetGateways | GatewayConnections | LocalGateways => ServiceType::Hybrid,
             AzureFirewalls | FirewallPolicies | IpGroups | CloudNgfws | NgfwRulestacks => ServiceType::Firewall,
+            RecoveryVaults | BackupVaults => ServiceType::Backup,
             KeyVaults => ServiceType::KeyVault,
             Identities | ServicePrincipals | AppRegistrations => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
@@ -287,6 +298,8 @@ impl JumpView {
             IpGroups => "ip-groups",
             CloudNgfws => "cloud-ngfws",
             NgfwRulestacks => "ngfw-rulestacks",
+            RecoveryVaults => "recovery-vaults",
+            BackupVaults => "backup-vaults",
             KeyVaults => "vaults",
             Identities => "identities",
             ServicePrincipals => "service-principals",
@@ -358,6 +371,8 @@ impl JumpView {
             IpGroups => "IP groups",
             CloudNgfws => "Cloud NGFW",
             NgfwRulestacks => "Rulestacks",
+            RecoveryVaults => "Recovery vaults",
+            BackupVaults => "Backup vaults",
             KeyVaults => "Vaults",
             Identities => "Identities",
             ServicePrincipals => "Service principals",
@@ -439,6 +454,8 @@ impl JumpView {
             ("microsoft.network", ["ipgroups"]) => JumpView::IpGroups,
             ("paloaltonetworks.cloudngfw", ["firewalls"]) => JumpView::CloudNgfws,
             ("paloaltonetworks.cloudngfw", ["localrulestacks"]) => JumpView::NgfwRulestacks,
+            ("microsoft.recoveryservices", ["vaults"]) => JumpView::RecoveryVaults,
+            ("microsoft.dataprotection", ["backupvaults"]) => JumpView::BackupVaults,
             ("microsoft.keyvault", ["vaults"]) => JumpView::KeyVaults,
             ("microsoft.managedidentity", ["userassignedidentities"]) => JumpView::Identities,
             ("microsoft.containerservice", ["managedclusters"]) => JumpView::Clusters,
@@ -524,6 +541,7 @@ impl ServiceType {
             ServiceType::Subscriptions,
             ServiceType::VirtualMachines,
             ServiceType::Storage,
+            ServiceType::Backup,
             ServiceType::Network,
             ServiceType::Dns,
             ServiceType::Edge,
@@ -564,6 +582,7 @@ impl ServiceType {
             ServiceType::Subscriptions => "Management",
             ServiceType::VirtualMachines => "Compute",
             ServiceType::Storage => "Storage",
+            ServiceType::Backup => "Storage",
             ServiceType::Network => "Networking",
             ServiceType::Dns => "Networking",
             ServiceType::Edge => "Networking",
@@ -593,6 +612,7 @@ impl ServiceType {
             ServiceType::Subscriptions => "Subscriptions",
             ServiceType::VirtualMachines => "Virtual Machines",
             ServiceType::Storage => "Storage",
+            ServiceType::Backup => "Backup",
             ServiceType::Network => "Virtual Network",
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
@@ -623,6 +643,7 @@ impl ServiceType {
             ServiceType::Subscriptions => "Subs",
             ServiceType::VirtualMachines => "VMs",
             ServiceType::Storage => "Storage",
+            ServiceType::Backup => "Backup",
             ServiceType::Network => "VNet",
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
@@ -652,6 +673,7 @@ impl ServiceType {
             ServiceType::Subscriptions => "Subscriptions, groups & all resources",
             ServiceType::VirtualMachines => "Virtual Machines, Disks & NICs",
             ServiceType::Storage => "Storage Accounts & Containers",
+            ServiceType::Backup => "Recovery Services & Backup vaults: protected items, policies, jobs",
             ServiceType::Network => "VNets, NSGs, IPs, LBs, NAT, Bastion & DDoS",
             ServiceType::Dns => "DNS zones, Private Resolver & rulesets",
             ServiceType::Edge => "App gateways, Front Door & WAF policies",
@@ -684,6 +706,7 @@ impl ServiceType {
             ServiceType::Subscriptions => &[Subscriptions, ResourceGroups, AllResources],
             ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics],
             ServiceType::Storage => &[StorageAccounts],
+            ServiceType::Backup => &[RecoveryVaults, BackupVaults],
             ServiceType::Network => &[
                 VirtualNetworks,
                 Subnets,
@@ -758,6 +781,10 @@ impl ServiceType {
             "disk" | "disks" => (ServiceType::VirtualMachines, Some(JumpView::Disks)),
             "nic" | "nics" => (ServiceType::VirtualMachines, Some(JumpView::Nics)),
             "st" | "storage" | "blob" | "blobs" | "storageaccounts" => (ServiceType::Storage, None),
+            "backup" | "backups" | "rsv" | "recoveryvault" | "recoveryvaults" | "recoveryservices" => (ServiceType::Backup, None),
+            "bvault" | "bvaults" | "backupvault" | "backupvaults" | "dataprotection" | "dpp" => {
+                (ServiceType::Backup, Some(JumpView::BackupVaults))
+            }
             "vnet" | "vnets" | "net" | "network" => (ServiceType::Network, None),
             "subnet" | "subnets" => (ServiceType::Network, Some(JumpView::Subnets)),
             "nsg" | "nsgs" => (ServiceType::Network, Some(JumpView::NetworkSecurityGroups)),
@@ -889,6 +916,7 @@ impl ServiceType {
             ServiceType::Subscriptions => "@sub",
             ServiceType::VirtualMachines => "@vm",
             ServiceType::Storage => "@storage",
+            ServiceType::Backup => "@backup",
             ServiceType::Network => "@vnet",
             ServiceType::Dns => "@dns",
             ServiceType::Edge => "@agw",
@@ -916,12 +944,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@bvault", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@afd", "@waf", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1213,6 +1241,15 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@ipg"), Some((ServiceType::Firewall, Some(JumpView::IpGroups))));
         assert_eq!(ServiceType::from_prefix("@ngfw"), Some((ServiceType::Firewall, Some(JumpView::CloudNgfws))));
         assert_eq!(ServiceType::from_prefix("@rulestack"), Some((ServiceType::Firewall, Some(JumpView::NgfwRulestacks))));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.RecoveryServices/vaults/rsv")), Some(JumpView::RecoveryVaults));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DataProtection/backupVaults/bv")), Some(JumpView::BackupVaults));
+        assert_eq!(
+            JumpView::landing_for_arm_id(&p("Microsoft.RecoveryServices/vaults/rsv/backupPolicies/DefaultPolicy")),
+            None
+        );
+        assert_eq!(ServiceType::from_prefix("@backup"), Some((ServiceType::Backup, None)));
+        assert_eq!(ServiceType::from_prefix("@rsv"), Some((ServiceType::Backup, None)));
+        assert_eq!(ServiceType::from_prefix("@bvault"), Some((ServiceType::Backup, Some(JumpView::BackupVaults))));
         assert_eq!(JumpView::for_arm_id("garbage"), None);
     }
 

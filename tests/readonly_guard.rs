@@ -723,7 +723,10 @@ fn permissions_doc_grants_only_read_actions() {
 /// `learnedIPPrefixes`; Cloud NGFW's `getGlobalRulestack`, `getLogProfile`,
 /// `getSupportInfo`, a rulestack's `listFirewalls`, `listAppIds`,
 /// `listSecurityServices`, `listAdvancedSecurityObjects`, `getChangeLog`
-/// and a rule's `getCounters`):
+/// and a rule's `getCounters`; Backup's `backupStatus` (is this resource
+/// protected, per location), a vault's `refreshContainers`, a resource
+/// guard's `backupSecurityPIN` and a Backup vault instance's
+/// `findRestorableTimeRanges`):
 /// `ReadOnlyPolicy` would refuse them at runtime anyway; the guard keeps
 /// them out of `src/`. The network lens (#50) computes NSG access
 /// client-side from GETs instead.
@@ -742,6 +745,11 @@ const POST_ONLY_READS: &[&str] = &[
     "listadvancedsecurityobjects",
     "getchangelog",
     "getcounters",
+    // The path segment: `lastBackupStatus` is a field every item carries.
+    "/backupstatus",
+    "refreshcontainers",
+    "backupsecuritypin",
+    "findrestorabletimeranges",
 ];
 
 /// GET reads that return a secret: a connection's pre-shared key

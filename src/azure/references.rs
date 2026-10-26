@@ -267,6 +267,8 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             MysqlServers,
             AppGateways,
             FrontDoorProfiles,
+            RecoveryVaults,
+            BackupVaults,
         ],
         KeyVaults => &[PrivateEndpoints, EnterprisePolicies],
         PublicIps => &[Nics, LoadBalancers, NatGateways, AppGateways, VnetGateways, AzureFirewalls, CloudNgfws],
@@ -303,7 +305,9 @@ pub fn likely_referrers(target: JumpView) -> &'static [JumpView] {
             ServiceBusNamespaces,
             EventHubNamespaces,
             AppGateways,
+            RecoveryVaults,
         ],
+        RecoveryVaults => &[PrivateEndpoints],
         StorageAccounts | Registries | SqlServers | CosmosAccounts | AiAccounts | RedisCaches | ManagedRedis
         | ServiceBusNamespaces | EventHubNamespaces => &[PrivateEndpoints],
         PostgresServers | MysqlServers => &[PrivateEndpoints],

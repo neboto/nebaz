@@ -213,7 +213,10 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `{n} classic rules`); firewall policy `{tier} · threat intel {mode} ·
     IDPS {mode}` (+ `· base {name}`); IP group `{n} addresses · used by {n}`;
     Cloud NGFW `{VNET|VWAN} · UDR {trust IP} · {local rulestack name |
-    Panorama | …}`; rulestack `{scope} · {default mode}`; All resources `→`/`·` and
+    Panorama | …}`; rulestack `{scope} · {default mode}`; Recovery Services
+    vault `{LRS|GRS|ZRS}[ + cross-region restore] · soft delete {state}` (+
+    `· immutable ({state})`, `· {n} PE`); Backup vault the same from its
+    storage settings (+ `· MUA`); All resources `→`/`·` and
     the ARM type. Everything else shows the id.
 18. **Cross-cache search** (`@* <text>`, #38, `src/app/all_search.rs`):
     one fuzzy search over every list of the current subscription that has
@@ -243,7 +246,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     gateway (ExpressRoute and VPN names in one set), gateway connection,
     Azure Firewall (health, SNAT port utilisation, throughput, rule hits,
     latency probe; Cloud NGFW has no curated set: the `a` picker lists what
-    Azure Monitor has for it) (`curated_metrics` is the list). Any other
+    Azure Monitor has for it), Recovery Services and Backup vaults (backup
+    and restore health events) (`curated_metrics` is the list). Any other
     ARM resource opens on the `a` picker (its metric definitions);
     `supports_metrics` drives the status-bar hint, so the hint and the
     default set cannot drift. One call per aggregation (2–3 per open, no
@@ -325,7 +329,13 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     rulestack, its `local-rule list --local-rulestack-name`; **rulestack**
     `local-rule`, `prefixlist`, `fqdnlist list` (the `palo-alto-networks`
     extension; `firewall show` and `local-rulestack show` take `--ids`,
-    `id_part='name'`). Reads only: no change verb on either firewall. A list visual selection (#39) merged into one `--ids a b c` command
+    `id_part='name'`). Reads only: no change verb on either firewall.
+    **Recovery Services vault** `az backup item list`, `policy list`, `job
+    list --status Failed` (`--vault-name`, `id_part=None`) and `vault
+    backup-properties show --ids`; **Backup vault** `az dataprotection
+    backup-instance list`, `backup-policy list`, `job list` (`--vault-name`,
+    the `dataprotection` extension). Never a restore, `protection
+    backup-now`, `disable` or `undelete`. A list visual selection (#39) merged into one `--ids a b c` command
     (neboto's batch mode) is not built yet: `C` acts on the cursor row.
 21. **Referenced by** (`U`, #49, `src/azure/references.rs`, keys and the
     cache walk in `src/app/refs_lens.rs`, drawn by
@@ -574,6 +584,46 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `list…` / `get…` action and an Azure Firewall's `learnedIPPrefixes`
     (POSTs; the guard refuses the literals).
 
+31. **Backup is its own tab** (#32, `src/azure/services/backup.rs`, glue
+    `src/app/backup.rs`): Recovery Services vaults (`@backup`, `@rsv`) and
+    Backup vaults (`@bvault`, `Microsoft.DataProtection`). The question is
+    "what is protected, by which policy, and did the last backup work",
+    asked of both vault kinds at once, and Storage has one sub-tab of a
+    different concern. **The vault body** answers the security half with
+    no further call: redundancy and cross-region restore, soft delete
+    (state, retention, Always On), immutability, multi-user authorization
+    (Recovery Services `multiUserAuthorization`; Backup vault
+    `isVaultProtectedByResourceGuard`), CMK (the key URI is text, never
+    requested), public network access and private endpoints, alert
+    settings. **Items are lazy**, one read per vault: a Recovery Services
+    vault's `backupProtectedItems` (each item's source resource jumpable,
+    workload, policy, protection state, health, last backup status and
+    time, latest recovery point; problems first), read together with its
+    `backupPolicies` so a weekly policy's items are judged overdue on 8
+    days, not 36 hours (`backup::stale_hours`). A Backup vault's
+    `backupInstances` carry no last-backup time: the vault's `backupJobs`
+    (its newest 100, no filter exists) give each instance its last
+    backup, and an operational-tier policy (retention only, blobs) says
+    so instead of "no job". Failed jobs (Recovery Services) are
+    `backupJobs?$filter=status eq 'Failed' and startTime eq '…' and
+    endTime eq '…'` over the last 7 days, in the service's own
+    `yyyy-MM-dd hh:mm:ss AM` time format. **The other half** (a VM's or
+    storage account's Related saying "Backed up by {vault}") is a reverse
+    look-up over the items and instances already in the lazy store
+    (`backup::protection_of`, spliced into every type's Related by
+    `App::section_lines_for`): no subscription-wide pass and no call, so
+    it knows the vaults opened this session or read by `r` in `@audit`.
+    The location `backupStatus` call that answers "is this VM protected"
+    directly is a POST. **State**: both vaults are the ladder only; an
+    item's failed or overdue backup, protection error or `ActionRequired`
+    health is a `⚠` line in Protected items and `backup-item-failing` in
+    `@audit`. **Never**: a backup instance's `datasourceAuthCredentials`
+    (a secret store reference whose `value` may be the secret), stripped
+    before the store keeps the body; `backupStatus`,
+    `refreshContainers`, `backupSecurityPIN` and
+    `findRestorableTimeRanges` (POSTs; the guard refuses the literals),
+    and every trigger, restore and validate operation.
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -617,6 +667,8 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Firewall · Policies | Settings (tier; threat intel and its allow-list; IDPS mode, profile, signature overrides, bypass rules, private ranges; TLS inspection CA name and its Key Vault secret id as text, the reading identity; DNS servers, proxy, proxy required for network rules; SNAT private ranges; explicit proxy; SQL redirect; policy analytics workspace) · Rule collection groups ⧗ (rule 29) · Hierarchy (base policy, child policies and firewalls from the body and the warm lists, each firewall with its private IP) · (Overview: tier, threat intel, IDPS, TLS, DNS proxy, base, counts) | ladder only | base and child policies, firewalls, identities, analytics workspace | `az network firewall policy show` (the `azure-firewall` extension) |
 | Firewall · IP groups | Addresses · Used by (firewalls and policies from the body) · (Overview: counts; addresses searchable) | ladder only | each firewall and policy using it | `az network ip-group show` (the `ip-group` extension) |
 | Firewall · Cloud NGFW | Network (**UDR next hop**: `ipOfTrustSubnetForUdr`; network type; VNet, trust and untrust subnets with their address spaces, or the vWAN hub and NVA; public IPs; egress NAT and its IPs; trusted ranges; private SNAT destinations; DNS proxy, type, servers; the warm route tables routing here) · Front end (DNAT: name, protocol, front-end IP:port → back-end IP:port, the front-end public IP jumpable) · Rules ⧗ (the local rulestack's rules, rule 29; or where Panorama / Strata keep them) · Management (local rulestack jumpable with its default mode, or Panorama servers, device group, template stack, collector group; Marketplace offer, subscription and status; plan, billing cycle, usage type) · Status ⧗ (health and reason, Panorama connection) · (Overview: UDR next hop, Marketplace status, network type, management, counts, plan) | ladder, then the Marketplace status | local rulestack, VNet, trust and untrust subnets (or vHub), public and egress NAT IPs, identities | `az palo-alto cloudngfw firewall show` (the `palo-alto-networks` extension) |
+| Backup · Recovery vaults (rule 31) | Security (soft delete state, retention, enhanced security, ⚠ when off; immutability; multi-user authorization; encryption: platform or the CMK key URI as text, the reading identity jumpable, infrastructure encryption; public network access, private endpoints for backup, each private endpoint jumpable with its status; storage redundancy, cross-region and cross-subscription restore; Azure Monitor and classic alerts; secure score, BCDR level) · Protected items ⧗ (count and how many need attention; each item: name · workload, protection state, last backup status and time with its age; source resource jumpable; policy; health and its first detail; latest recovery point; recovery point count and oldest; ⚠ for a failed last backup, an overdue one (36 h, weekly policy 8 days), a protection error, `ActionRequired` health, a soft-deleted item) · Policies ⧗ (schedule with time zone, retention daily / weekly / monthly / yearly, vault retention, instant restore days, V1 / V2 Enhanced, workload sub-policies Full / Differential / Log) · Failed jobs ⧗ (last 7 days, newest first: entity, operation, duration, error code and message) · (Overview: SKU, redundancy, soft delete, immutability, MUA, encryption, public access, private endpoints, alerts, identity) | ladder only | private endpoints, identities (system / user-assigned, the CMK identity); once Protected items loads, each protected source | `az backup vault show` |
+| Backup · Backup vaults (rule 31) | Security (soft delete state and retention, immutability, multi-user authorization (resource guard), encryption with the CMK key URI as text and the reading identity, infrastructure encryption, storage per datastore, cross-region and cross-subscription restore, replicated regions, alerts, secure score, BCDR level) · Backup instances ⧗ (each: name · data source kind, protection state; source resource jumpable; policy; last backup from the jobs list, or "continuous" for an operational-tier policy; ⚠ for a protection error or a failed last backup) · Policies ⧗ (data source types; backup rules: schedule, time zone, backup type, target store; retention rules: duration per datastore and copies) · Jobs ⧗ (newest first, failures counted: data source, operation, status, duration, error) · (Overview: redundancy, soft delete, immutability, MUA, encryption, alerts, identity) | ladder only | identities; once Backup instances loads, each protected source | `az dataprotection backup-vault show` (the `dataprotection` extension) |
 | Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
@@ -644,7 +696,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @agw @afd @waf @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @agw @afd @waf @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -670,6 +722,9 @@ has a fixture test there.
 | `gateway-not-zone-redundant` | VNet gateways | a VPN or ExpressRoute gateway on a non-AZ SKU (not `…AZ`, not ErGwScale); Basic (no AZ variant) skipped | low |
 | `fw-threat-intel-off` | Firewalls + Policies | threat intelligence Off: a firewall with classic rules on its own `threatIntelMode`; a firewall with a policy by the policy (its own setting is ignored), a policy with no mode by its base's; unattached policies skipped | medium |
 | `ngfw-marketplace-not-subscribed` | Cloud NGFW | `marketplaceSubscriptionStatus` Suspended or Unsubscribed (the firewall stops) · any other state but Subscribed | medium · low |
+| `backup-soft-delete-off` | Recovery vaults + Backup vaults | soft delete `Disabled` (Recovery Services) or `Off` (Backup vault) | medium |
+| `backup-item-failing` | Recovery vaults + Backup vaults + Protected items / Backup instances ⧗ (and their policies or jobs when warm) | a protected item whose last backup failed, whose protection is in error, or whose last backup is overdue (36 h; 8 days on a weekly policy); a Backup vault instance in protection error or whose newest backup job failed. The finding is about the source resource (Enter opens it) | medium · low when only overdue or unhealthy |
+| `backup-vault-hardening` | Recovery vaults + Backup vaults | immutability off, or no multi-user authorization (resource guard) | info |
 | `storage-blob-public-access` | Storage | `allowBlobPublicAccess` true | high |
 | `storage-shared-key` | Storage | `allowSharedKeyAccess` true or unset | medium |
 | `storage-min-tls` | Storage | `minimumTlsVersion` below 1.2 | high |
@@ -773,6 +828,10 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Cloud NGFW, Rulestacks | 1 each | `/providers/PaloAltoNetworks.Cloudngfw/firewalls` · `localRulestacks` · `2025-10-08` (the CLI extension's; `2026-06-01` is newer, six weeks in the specs) |
 | Cloud NGFW Status | 1 per firewall, on demand | `{firewall}/statuses/default` · `2025-10-08` |
 | Rulestack Rules (and a Cloud NGFW's Rules), Objects | 1 per rulestack, on demand; Objects 2 | `{rulestack}/localRules` · `{rulestack}/prefixlists` · `{rulestack}/fqdnlists` · `2025-10-08` |
+| Recovery vaults · Backup vaults (rule 31) | 1 each | `/providers/Microsoft.RecoveryServices/vaults` · `2026-07-01` · `/providers/Microsoft.DataProtection/backupVaults` · `2026-06-01` |
+| Protected items (+ Policies, read together) | 1 per Recovery Services vault, on demand (and by `r` in `@audit`) | `{vault}/backupProtectedItems` · `{vault}/backupPolicies` · `2026-08-01` (the backup children's spec version, not the vault's) |
+| Failed jobs | 1 per Recovery Services vault, on demand | `{vault}/backupJobs?$filter=status eq 'Failed' and startTime eq '{7 days ago}' and endTime eq '{now}'` · `2026-08-01` |
+| Backup instances (+ Jobs, Policies), Jobs, Policies | 1 per Backup vault each, on demand (instances and jobs also by `r` in `@audit`); jobs capped at 100 | `{vault}/backupInstances` · `{vault}/backupJobs` · `{vault}/backupPolicies` · `2026-06-01` |
 | Vaults | 1 | `/providers/Microsoft.KeyVault/vaults` · `2024-11-01` |
 | Identities | 1 | `/providers/Microsoft.ManagedIdentity/userAssignedIdentities` · `2024-11-30` |
 | Federated credentials | 1 per identity, on demand | `{identity}/federatedIdentityCredentials` · `2024-11-30` |
@@ -892,6 +951,22 @@ it; that floor is #63.
   show`, `palo-alto cloudngfw firewall show` and `local-rulestack show`
   take `--ids` (each name argument carries `id_part='name'`); the Azure
   Firewall metric names; the Firewall tab at 80×24.
+- Backup (#32), built without an Azure login from azure-rest-api-specs
+  and the CLI sources (2026-10-26): Recovery Services vaults `2026-07-01`,
+  their backup children `2026-08-01` (`2026-10-01` is newer, three weeks
+  in the specs), Data Protection `2026-06-01` (the `dataprotection`
+  extension's). To check: the versions are accepted; the vault list body
+  carries `securitySettings`, `redundancySettings` and
+  `monitoringSettings` (else the Security section reads `-`); the
+  `backupJobs` `$filter` time format (`2026-10-19 09:05:00 AM`) is
+  accepted and failed jobs come back; `lastBackupStatus` words on a live
+  VM, file share and SQL-in-VM item (`Completed`, `Failed`, `Healthy`,
+  `Unhealthy`); that a Backup vault's `backupJobs` list holds the recent
+  jobs within its first 100; a backup instance body's
+  `datasourceAuthCredentials` (stripped regardless); the
+  `BackupHealthEvent` / `RestoreHealthEvent` metric names on both vault
+  kinds; `az backup vault show` and `az dataprotection backup-vault show`
+  take `--ids` (`id_part='name'`); the Backup tab at 80×24.
 - Messaging (#27), built without an Azure login from the
   `2026-01-01` specs (the newest stable for both providers on
   2026-10-24; `2024-01-01` is the previous). To check: the api-version

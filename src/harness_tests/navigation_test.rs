@@ -124,6 +124,40 @@ async fn a_vnet_related_lists_its_dns_once_the_topology_lands() {
     assert_eq!(h.app.pending_jump, Some((resolver, true)));
 }
 
+/// A VM's Related names the vault that backs it up once that vault's
+/// protected items are in the lazy store (#32, no call), and Enter on the
+/// line opens the vault in the Backup tab.
+#[tokio::test]
+async fn a_vm_related_names_its_backup_vault_once_the_items_are_read() {
+    let mut h = Harness::new().await;
+    h.open(JumpView::VirtualMachines).await;
+    h.land(vec![vm("vm-1", "westeurope")]).await;
+    h.press(KeyCode::Enter).await;
+    let related = h.section_labels().iter().position(|l| *l == "Related").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(related).unwrap())).await;
+    assert!(!h.app.get_detail_lines().iter().any(|(k, _)| k.starts_with("Backed up by")));
+
+    let vault = arm_id("Microsoft.RecoveryServices/vaults/rsv-1");
+    let item = serde_json::json!({"name": "VM;iaasvmcontainerv2;rg-app;vm-1", "properties": {
+        "friendlyName": "vm-1", "sourceResourceId": arm_id("Microsoft.Compute/virtualMachines/vm-1"),
+        "protectionState": "Protected", "policyName": "DefaultPolicy", "lastBackupStatus": "Completed"}});
+    let key = vault.clone();
+    let apply: Box<dyn FnOnce(&mut App) + Send> =
+        Box::new(move |app: &mut App| app.lazy.backup_protected_items.apply(key, Ok(vec![item])));
+    let epoch = h.app.lazy.epoch();
+    h.send(Event::Lazy(LazyApply { epoch, apply })).await;
+
+    let lines = h.app.get_detail_lines();
+    assert!(
+        lines.contains(&("Backed up by rsv-1 · DefaultPolicy · last backup completed".to_string(), vault.clone())),
+        "{lines:#?}"
+    );
+    h.cursor_to_value(&vault).await;
+    h.press(KeyCode::Enter).await;
+    assert_eq!(h.app.current_service, Some(ServiceType::Backup));
+    assert_eq!(h.app.current_view, JumpView::RecoveryVaults);
+}
+
 /// A jump whose list ends without the row clears with a message.
 #[tokio::test]
 async fn a_jump_to_a_missing_row_clears_when_the_load_ends() {

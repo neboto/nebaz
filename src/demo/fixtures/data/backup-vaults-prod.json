@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DataProtection/backupVaults/bvault-contoso-prod",
+      "name": "bvault-contoso-prod",
+      "type": "Microsoft.DataProtection/backupVaults",
+      "location": "westeurope",
+      "tags": {"env": "prod", "team": "platform", "owner": "alex.kim@contoso.com"},
+      "identity": {"type": "SystemAssigned", "principalId": "8e3b5d71-2a9c-4f06-b1d4-6c8e0a2f4b97", "tenantId": "{{tenant}}"},
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceMoveState": "Unknown",
+        "storageSettings": [{"datastoreType": "VaultStore", "type": "ZoneRedundant"}],
+        "featureSettings": {
+          "crossRegionRestoreSettings": {"state": "Disabled"},
+          "crossSubscriptionRestoreSettings": {"state": "Enabled"}
+        },
+        "securitySettings": {
+          "softDeleteSettings": {"state": "On", "retentionDurationInDays": 14.0},
+          "immutabilitySettings": {"state": "Disabled"}
+        },
+        "monitoringSettings": {"azureMonitorAlertSettings": {"alertsForAllJobFailures": "Enabled"}},
+        "isVaultProtectedByResourceGuard": false,
+        "secureScore": "Minimum",
+        "bcdrSecurityLevel": "Fair"
+      }
+    }
+  ]
+}

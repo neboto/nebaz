@@ -156,6 +156,12 @@ run firewall-ngfw ok ngfw '[]' \
   "4 Cloud NGFW" \
   "cannot reach 127.0.0.1"
 
+# The Backup tab loads through a routing prefix (Backup vaults).
+run backup-bvault ok bvault '[]' \
+  "Recovery Services & Backup vaults" \
+  "2 Backup vaults" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

@@ -95,6 +95,26 @@ each one backs are in the catalog table
 - **Storage**: `Microsoft.Storage/storageAccounts/read`; the lazy
   Containers section: `Microsoft.Storage/storageAccounts/blobServices/containers/read`
   (container metadata through ARM, never a blob).
+- **Backup** (Recovery Services vaults, Backup vaults):
+  `Microsoft.RecoveryServices/vaults/read` (redundancy, soft delete,
+  immutability, multi-user authorization, encryption, private endpoints
+  and alert settings arrive on the list body); the lazy Protected items,
+  Policies and Failed jobs (`@audit`'s `r` reads the first two too):
+  `Microsoft.RecoveryServices/vaults/backupProtectedItems/read`,
+  `Microsoft.RecoveryServices/vaults/backupPolicies/read`,
+  `Microsoft.RecoveryServices/vaults/backupJobs/read`. Backup vaults
+  (`Microsoft.DataProtection`): `Microsoft.DataProtection/backupVaults/read`;
+  the lazy Backup instances, Policies and Jobs:
+  `Microsoft.DataProtection/backupVaults/backupInstances/read`,
+  `Microsoft.DataProtection/backupVaults/backupPolicies/read`,
+  `Microsoft.DataProtection/backupVaults/backupJobs/read`. `Reader`'s
+  `*/read` covers them all (Backup Reader is the narrower built-in role
+  for the vaults alone). Never sent, all `POST`s (the guard refuses each
+  literal): a location's `backupStatus`, a vault's `refreshContainers`, a
+  resource guard's `backupSecurityPIN`, a backup instance's
+  `findRestorableTimeRanges`, and every backup-now, restore, validate and
+  stop-protection operation. A backup instance's
+  `datasourceAuthCredentials` is stripped before the store keeps the body.
 - **Virtual Networks**: `Microsoft.Network/virtualNetworks/read` (subnets
   and peerings arrive embedded in the same list; the Subnets sub-tab needs
   nothing more); NSGs: `Microsoft.Network/networkSecurityGroups/read`;
