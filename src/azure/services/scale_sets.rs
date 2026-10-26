@@ -777,8 +777,8 @@ mod tests {
     fn extension_settings_and_custom_data_never_reach_the_raw_json() {
         let row = ScaleSetRow::from_json(&vmss_json("Uniform"), None).unwrap();
         let raw = row.raw_content().unwrap();
-        for secret in ["hunter2", "storageAccountKey", "customData", "userData", "c2VjcmV0", "\"port\""] {
-            assert!(!raw.contains(secret), "{secret} kept in the raw JSON");
+        for (i, needle) in ["hunter2", "storageAccountKey", "customData", "userData", "c2VjcmV0", "\"port\""].iter().enumerate() {
+            assert!(!raw.contains(needle), "fixture value {i} kept in the raw JSON");
         }
         assert!(raw.contains("CustomScript"), "the extension's name stays");
     }
