@@ -1,5 +1,5 @@
 //! The glue for #143's network types: the subscription's flow logs (one
-//! lazy read, `SERVICES.md` rule 32) behind the VNet and NSG Flow logs
+//! lazy read, `SERVICES.md` rule 30) behind the VNet and NSG Flow logs
 //! sections and the audit, and the section dispatch of Private Link
 //! services (Edge) and Traffic Manager profiles (DNS), which read the warm
 //! load balancers and private endpoints. The rows and renderers are

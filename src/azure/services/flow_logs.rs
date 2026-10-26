@@ -6,7 +6,7 @@
 //! subscription gathers them ([`fetch_flow_logs`]: list the watchers, then
 //! each watcher's `flowLogs`, all `GET`s) and the **Flow logs** sections of
 //! VNets and NSGs and the `flow-logs-missing` audit check read it
-//! (`SERVICES.md` rule 32).
+//! (`SERVICES.md` rule 30).
 //!
 //! Network Watcher's other flow-log calls (configure, query the status)
 //! are `POST`s, never sent; the guard refuses their names.
