@@ -29,7 +29,8 @@ async fn the_hint_goes_before_a_chip_hides() {
         assert!(line.contains(chip), "{chip:?} missing: {line}");
     }
 
-    let mut h = four_services(110).await;
+    // (117: 110 before the `← →` took 7 columns.)
+    let mut h = four_services(117).await;
     let line = strip(&mut h);
     for chip in ["VNet", "ACA", "Changes", "Audit", "Dev ("] {
         assert!(line.contains(chip), "{chip:?} missing: {line}");

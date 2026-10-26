@@ -170,6 +170,9 @@ fn action(key: KeyEvent, before: &View, after: &View) -> Option<String> {
     if matches!(key.code, KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL)) {
         return Some("back".into());
     }
+    if matches!(key.code, KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL)) {
+        return Some("forward".into());
+    }
     if after.overlay != before.overlay {
         return match (after.overlay, before.overlay) {
             (Some(opened), _) => Some(opened.to_string()),
@@ -386,5 +389,7 @@ mod tests {
         let ctrl_o = KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL);
         assert_eq!(key_label(ctrl_o).as_deref(), Some("Ctrl-O"));
         assert_eq!(classify(ctrl_o, &list(), &list()).unwrap().1.as_deref(), Some("back"));
+        let ctrl_f = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL);
+        assert_eq!(classify(ctrl_f, &list(), &list()).unwrap().1.as_deref(), Some("forward"));
     }
 }

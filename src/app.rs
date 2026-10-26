@@ -4168,6 +4168,9 @@ impl App {
             KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.nav_back(_event_tx)
             }
+            KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.nav_forward(_event_tx)
+            }
             KeyCode::Char('M') => {
                 self.message_history_visible = true;
                 self.message_history_selected = 0;
@@ -4190,7 +4193,7 @@ impl App {
     /// `⌫` / `Ctrl-O`: back one place. From live, "here" is recorded first
     /// (unless it already is the newest entry) and the cursor parks on the
     /// entry before it; parked, the cursor steps one older.
-    fn nav_back(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+    pub(crate) fn nav_back(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         if self.nav_back_index().is_none() {
             return;
         }
@@ -4208,9 +4211,28 @@ impl App {
         }
     }
 
+    /// `Ctrl-F`: forward one place, undoing a `nav_back`. Only parked
+    /// mid-history is there anywhere to go; navigating somewhere new drops
+    /// the forward entries (`push_nav_location`), as a browser does.
+    pub(crate) fn nav_forward(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(cursor) = self.nav_forward_index() else {
+            return;
+        };
+        self.nav_cursor = Some(cursor);
+        if let Some(loc) = self.nav_history.get(cursor).cloned() {
+            self.restore_nav_location(loc, event_tx);
+        }
+    }
+
+    /// The entry `nav_forward` would land on: the one after the parked
+    /// cursor, `None` live or at the newest entry.
+    pub(crate) fn nav_forward_index(&self) -> Option<usize> {
+        self.nav_cursor.map(|c| c + 1).filter(|&i| i < self.nav_history.len())
+    }
+
     /// The entry `nav_back` would land on, computed without recording
     /// anything (the footer hint asks it every frame).
-    fn nav_back_index(&self) -> Option<usize> {
+    pub(crate) fn nav_back_index(&self) -> Option<usize> {
         match self.nav_cursor {
             None => {
                 let here_is_top = self
