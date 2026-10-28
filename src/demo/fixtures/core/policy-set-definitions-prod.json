@@ -1,0 +1,23 @@
+{
+  "value": [
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso/providers/Microsoft.Authorization/policySetDefinitions/deploy-private-dns-zones",
+      "name": "deploy-private-dns-zones",
+      "type": "Microsoft.Authorization/policySetDefinitions",
+      "properties": {
+        "displayName": "Deploy private DNS zone records for private endpoints",
+        "policyType": "Custom",
+        "description": "A private endpoint's A record goes into the hub's private DNS zone, so every spoke resolves it privately.",
+        "metadata": {"category": "Network", "version": "2.0.0"},
+        "parameters": {
+          "privateDnsZoneSubscriptionId": {"type": "String"},
+          "privateDnsZoneResourceGroup": {"type": "String"}
+        },
+        "policyDefinitions": [
+          {"policyDefinitionReferenceId": "keyVaultPrivateDns", "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/ac673a9a-f77d-4846-b2d8-a57f8e1c01d4"},
+          {"policyDefinitionReferenceId": "blobPrivateDns", "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/75973700-529f-4de2-b794-fb9b6781b6b0"}
+        ]
+      }
+    }
+  ]
+}

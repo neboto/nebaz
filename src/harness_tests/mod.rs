@@ -46,6 +46,7 @@ mod directory_test;
 mod keycast_test;
 mod list_ux_test;
 mod export_test;
+mod governance_test;
 mod list_visual_test;
 mod load_stream_test;
 pub(crate) mod mocks;

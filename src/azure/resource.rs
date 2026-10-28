@@ -339,18 +339,27 @@ pub fn name_of_id(id: &str) -> &str {
 /// The resource-provider namespace and the type chain of an ARM id,
 /// lowercased: `…/providers/Microsoft.Network/virtualNetworks/v/subnets/s`
 /// → `("microsoft.network", ["virtualnetworks", "subnets"])`. `None` for
-/// subscription- and group-level ids.
+/// subscription- and group-level ids. An extension resource (a lock or a
+/// policy assignment on a resource, ADR 0009) is typed by its **last**
+/// `/providers/` segment: what comes before it is its scope
+/// ([`extension_scope`]).
 pub fn arm_type_chain(id: &str) -> Option<(String, Vec<String>)> {
-    let mut parts = id.split('/').filter(|p| !p.is_empty()).peekable();
-    while let Some(p) = parts.next() {
-        if p.eq_ignore_ascii_case("providers") {
-            let ns = parts.next()?.to_lowercase();
-            let rest: Vec<&str> = parts.collect();
-            let chain = rest.iter().step_by(2).map(|t| t.to_lowercase()).collect();
-            return Some((ns, chain));
-        }
-    }
-    None
+    let parts: Vec<&str> = id.split('/').filter(|p| !p.is_empty()).collect();
+    let at = parts.iter().rposition(|p| p.eq_ignore_ascii_case("providers"))?;
+    let ns = parts.get(at + 1)?.to_lowercase();
+    let chain = parts[at + 2..].iter().step_by(2).map(|t| t.to_lowercase()).collect();
+    Some((ns, chain))
+}
+
+/// What an id before its last `/providers/` segment names: the scope an
+/// extension resource was made at (a lock's resource, an assignment's
+/// management group or subscription). `None` when nothing precedes it (a
+/// built-in policy definition, at the tenant root) or the id has no
+/// `/providers/`.
+pub fn extension_scope(id: &str) -> Option<&str> {
+    let lower = id.to_ascii_lowercase();
+    let at = lower.rfind("/providers/")?;
+    Some(&id[..at]).filter(|s| !s.is_empty())
 }
 
 /// The two links every ARM row has: its subscription and, inside a group,
@@ -428,6 +437,16 @@ mod tests {
             Some(("microsoft.network".into(), vec!["virtualnetworks".into(), "subnets".into()]))
         );
         assert_eq!(arm_type_chain("/subscriptions/0000/resourceGroups/rg"), None);
+        // An extension resource is typed by its last `/providers/` (ADR 0009).
+        let lock = format!("{}/providers/Microsoft.Authorization/locks/l", id);
+        assert_eq!(arm_type_chain(&lock), Some(("microsoft.authorization".into(), vec!["locks".into()])));
+        assert_eq!(extension_scope(&lock), Some(id));
+        let mg = "/providers/Microsoft.Management/managementGroups/corp";
+        let pa = format!("{}/providers/Microsoft.Authorization/policyAssignments/a", mg);
+        assert_eq!(extension_scope(&pa), Some(mg));
+        assert_eq!(arm_type_chain(mg), Some(("microsoft.management".into(), vec!["managementgroups".into()])));
+        assert_eq!(extension_scope("/providers/Microsoft.Authorization/policyDefinitions/x"), None);
+        assert_eq!(extension_scope("/subscriptions/0000"), None);
         assert_eq!(subscription_of("not-an-id"), None);
         assert_eq!(
             scope_related(id),

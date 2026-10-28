@@ -150,6 +150,7 @@ mod audit;
 mod network_lens;
 mod firewall;
 mod flow_logs;
+mod governance;
 mod backup;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
 mod refs_lens;
@@ -1242,7 +1243,7 @@ impl App {
     /// list has it. An id nebaz does not browse is copied instead.
     pub fn jump_to_arm_id(&mut self, id: &str, event_tx: &mpsc::UnboundedSender<Event>) {
         let Some(view) = JumpView::landing_for_arm_id(id) else {
-            if id.starts_with("/subscriptions/") {
+            if is_arm_id(id) && !crate::azure::graph::is_row_id(id) {
                 self.copy_to_clipboard(id, "id (not a type nebaz browses)");
             }
             return;
@@ -2054,6 +2055,9 @@ impl App {
     /// On-enter hook for every type's Activity section: the last week of
     /// the subscription's activity log, filtered to the row.
     pub fn trigger_activity(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        if app.get_selected_resource_id().is_some_and(|id| activity_path(&id).is_none()) {
+            return;
+        }
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)
@@ -2824,6 +2828,14 @@ impl App {
         // Access is the same for every type: rendered here, not per type.
         let label = resource.detail_sections().and_then(|d| d.sections.get(idx)).map(|s| s.label);
         if label == Some(ACTIVITY_LABEL) {
+            // The Activity Log is per subscription: a row made at a
+            // management group has none (ADR 0009).
+            if activity_path(resource.id()).is_none() {
+                return Some(vec![(
+                    String::new(),
+                    "Made above the subscription: the Activity Log is per subscription, so its changes are in the management group's log".into(),
+                )]);
+            }
             return Some(activity_rows(resource.id(), self.lazy.activity.get(resource.id())));
         }
         if label == Some(ACCESS_LABEL) {
@@ -2834,6 +2846,9 @@ impl App {
                 roles,
                 &self.lazy.principals,
             ));
+        }
+        if let Some(lines) = self.governance_section_lines(resource, idx) {
+            return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {
             return Some(subscription_section_lines(
@@ -4537,8 +4552,14 @@ fn flat_section_header(name: &str) -> (String, String) {
 /// Whether a detail value is an id Enter acts on (a jump, or a copy when
 /// nebaz does not browse the type): an ARM id, or a directory row's
 /// synthetic `graph:/…` id (ADR 0004).
-fn is_arm_id(value: &str) -> bool {
-    value.starts_with("/subscriptions/") || crate::azure::graph::is_row_id(value)
+pub(crate) fn is_arm_id(value: &str) -> bool {
+    value.starts_with("/subscriptions/")
+        || crate::azure::graph::is_row_id(value)
+        // Above every subscription (ADR 0009): a management group and what
+        // is made at one, a built-in policy definition.
+        || ["/providers/microsoft.management/", "/providers/microsoft.authorization/"]
+            .iter()
+            .any(|p| value.to_ascii_lowercase().starts_with(p))
 }
 
 /// The view Enter on this detail value jumps to: `Some` exactly when the

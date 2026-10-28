@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry,
+    aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager,
 };
@@ -693,6 +693,85 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "kafkaEnabled": true,
                             "publicNetworkAccess": "Enabled"
                         }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::PolicyAssignments,
+            "PolicyAssignmentRow",
+            parse(
+                "PolicyAssignmentRow",
+                governance::PolicyAssignmentRow::from_json(
+                    &json!({
+                        "id": "/providers/Microsoft.Management/managementGroups/mg-1/providers/Microsoft.Authorization/policyAssignments/pa-1",
+                        "name": "pa-1",
+                        "location": "eastus",
+                        "identity": {"type": "SystemAssigned", "principalId": "p-1"},
+                        "properties": {
+                            "displayName": "Deny public IPs",
+                            "scope": "/providers/Microsoft.Management/managementGroups/mg-1",
+                            "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/00000000-0000-0000-0000-000000000001",
+                            "enforcementMode": "Default",
+                            "parameters": {"effect": {"value": "Deny"}}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::PolicyExemptions,
+            "PolicyExemptionRow",
+            parse(
+                "PolicyExemptionRow",
+                governance::PolicyExemptionRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Authorization/policyExemptions/ex-1"),
+                        "name": "ex-1",
+                        "properties": {
+                            "displayName": "Legacy jump box",
+                            "policyAssignmentId": "/providers/Microsoft.Management/managementGroups/mg-1/providers/Microsoft.Authorization/policyAssignments/pa-1",
+                            "exemptionCategory": "Waiver",
+                            "expiresOn": "2099-01-01T00:00:00Z"
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::PolicyDefinitions,
+            "PolicyDefinitionRow",
+            parse(
+                "PolicyDefinitionRow",
+                governance::PolicyDefinitionRow::from_json(
+                    &json!({
+                        "id": format!("/subscriptions/{}/providers/Microsoft.Authorization/policyDefinitions/pd-1", SUB_DEV),
+                        "name": "pd-1",
+                        "properties": {
+                            "displayName": "Deny public IP addresses",
+                            "policyType": "Custom",
+                            "mode": "All",
+                            "metadata": {"category": "Network"},
+                            "policyRule": {"if": {"field": "type", "equals": "Microsoft.Network/publicIPAddresses"}, "then": {"effect": "deny"}}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ResourceLocks,
+            "LockRow",
+            parse(
+                "LockRow",
+                governance::LockRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/virtualNetworks/vnet-1/providers/Microsoft.Authorization/locks/lock-1"),
+                        "name": "lock-1",
+                        "properties": {"level": "CanNotDelete", "notes": "hub"}
                     }),
                     t,
                 ),

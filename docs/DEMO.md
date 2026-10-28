@@ -111,6 +111,9 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `vnet-pp-dr` has no flow log (`vnet-hub-prod` has a VNet flow log with traffic analytics, and `nsg-jump-prod` an NSG flow log) | VNet Flow logs, `@audit` (low) |
 | `pls-orders-partner`: contoso-dev's endpoint `pe-orders-dev-pls` waits for approval (Fabrikam's is Approved) | Edge · Private Link |
 | `tm-contoso-api`: the on-premises DR endpoint `dr-onprem` is Degraded, so the profile is too | DNS · Traffic Manager |
+| Policy from the management groups `contoso` (Microsoft cloud security benchmark), `contoso-landingzones` (deny public IPs on NICs) and `contoso-corp` (deploy private DNS records, a custom initiative with an identity); `Allowed locations` on the subscription set to `DoNotEnforce` for the DR build 62 days ago and never set back | Governance · Assignments |
+| `jump-box-public-ip` exempts `nic-vm-jump-01` from the NIC public-IP deny until 6 days from now (made by alex 3 days ago, with the SSH rule); `legacy-mcsb` on `rg-legacy-prod` expired 20 days ago | Governance · Exemptions |
+| `CanNotDelete` locks on `rg-network-prod` and `kv-orders-prod` | Governance · Locks |
 
 ## Recordings
 

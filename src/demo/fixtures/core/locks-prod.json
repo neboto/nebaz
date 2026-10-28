@@ -1,0 +1,16 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Authorization/locks/hub-no-delete",
+      "name": "hub-no-delete",
+      "type": "Microsoft.Authorization/locks",
+      "properties": {"level": "CanNotDelete", "notes": "Hub network: change it through the platform pipeline."}
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod/providers/Microsoft.Authorization/locks/kv-no-delete",
+      "name": "kv-no-delete",
+      "type": "Microsoft.Authorization/locks",
+      "properties": {"level": "CanNotDelete", "notes": "Holds the orders signing keys."}
+    }
+  ]
+}

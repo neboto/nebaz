@@ -20,6 +20,7 @@ use crate::azure::services::compute::ComputeService;
 use crate::azure::services::container_apps::ContainerAppsService;
 use crate::azure::services::redis::RedisService;
 use crate::azure::services::messaging::MessagingService;
+use crate::azure::services::governance::GovernanceService;
 use crate::azure::services::app_service::AppServiceService;
 use crate::azure::services::foundry::FoundryService;
 use crate::azure::services::container_registry::ContainerRegistryService;
@@ -363,6 +364,7 @@ impl AzureClients {
             ServiceType::ContainerApps => Arc::new(ContainerAppsService::new(scope)),
             ServiceType::Redis => Arc::new(RedisService::new(scope)),
             ServiceType::Messaging => Arc::new(MessagingService::new(scope)),
+            ServiceType::Governance => Arc::new(GovernanceService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Hybrid => Arc::new(HybridService::new(scope)),
@@ -380,9 +382,18 @@ impl AzureClients {
     }
 
     /// The pipeline for the tenant an ARM path belongs to, resolved
-    /// synchronously so an auth condition surfaces as the fetch's error.
+    /// synchronously so an auth condition surfaces as the fetch's error. A
+    /// path above every subscription (a built-in policy definition, a
+    /// management group) is read through the current subscription's tenant
+    /// (ADR 0009, decision 4).
     pub fn arm_for_path(&self, path: &str) -> std::result::Result<Arc<ArmClient>, String> {
-        let sub = subscription_of(path).ok_or_else(|| format!("not an ARM path: {}", path))?;
+        let sub = match subscription_of(path) {
+            Some(sub) => sub,
+            None if path.starts_with("/providers/") => {
+                self.current_subscription().ok_or_else(|| format!("no subscription to read {} through", path))?
+            }
+            None => return Err(format!("not an ARM path: {}", path)),
+        };
         self.arm_for_subscription(sub).map_err(|e| e.to_string())
     }
 

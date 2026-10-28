@@ -235,7 +235,7 @@ fn service_key(service: ServiceType) -> String {
 
 /// Whether a `get` argument is an id (routes itself) rather than a name.
 fn is_id(arg: &str) -> bool {
-    arg.starts_with("/subscriptions/") || crate::azure::graph::is_row_id(arg)
+    crate::app::is_arm_id(arg)
 }
 
 // ── services ────────────────────────────────────────────────────────────────

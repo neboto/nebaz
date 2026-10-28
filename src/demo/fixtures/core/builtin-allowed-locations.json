@@ -1,0 +1,20 @@
+{
+  "id": "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c",
+  "name": "e56962a6-4747-49cd-b67b-bf8b01975c4c",
+  "type": "Microsoft.Authorization/policyDefinitions",
+  "properties": {
+    "displayName": "Allowed locations",
+    "policyType": "BuiltIn",
+    "mode": "Indexed",
+    "description": "This policy enables you to restrict the locations your organization can specify when deploying resources.",
+    "metadata": {"category": "General", "version": "1.0.0"},
+    "parameters": {"listOfAllowedLocations": {"type": "Array"}},
+    "policyRule": {
+      "if": {"allOf": [
+        {"field": "location", "notIn": "[parameters('listOfAllowedLocations')]"},
+        {"field": "location", "notEquals": "global"}
+      ]},
+      "then": {"effect": "deny"}
+    }
+  }
+}
