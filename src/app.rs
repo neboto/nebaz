@@ -150,6 +150,7 @@ mod audit;
 mod network_lens;
 mod firewall;
 mod flow_logs;
+mod defender;
 mod governance;
 mod backup;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
@@ -2848,6 +2849,9 @@ impl App {
             ));
         }
         if let Some(lines) = self.governance_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.defender_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {

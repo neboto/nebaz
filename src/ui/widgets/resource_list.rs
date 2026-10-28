@@ -205,6 +205,13 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
                 "No management groups readable with this account".to_string(),
                 "the assignments they make are still listed under Assignments · r refresh".to_string(),
             )
+        } else if app.resources.is_empty() && app.current_view == crate::azure::service::JumpView::DefenderAlerts {
+            // Alerts come only from the plans that are on: none is the
+            // usual answer on the Free tier, not a failure (ADR 0010).
+            (
+                "No Defender alerts".to_string(),
+                "alerts come from the Defender plans that are on: see Plans · r refresh".to_string(),
+            )
         } else if app.resources.is_empty() {
             (
                 "No resources found".to_string(),

@@ -21,6 +21,7 @@ pub mod edge;
 pub mod firewall;
 pub mod flow_logs;
 pub mod foundry;
+pub mod defender;
 pub mod governance;
 pub mod hybrid;
 pub mod identity;

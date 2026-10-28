@@ -190,6 +190,13 @@ run governance-mgs ok mg '[]' \
   "5 Management groups" \
   "cannot reach 127.0.0.1"
 
+# Defender reads Microsoft.Security under the subscription; the dead
+# endpoint names the host, so the list call went out.
+run defender-plans ok pricing '[]' \
+  "Recommendations, alerts, score & plans" \
+  "4 Plans" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

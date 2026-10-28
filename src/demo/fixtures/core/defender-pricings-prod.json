@@ -1,0 +1,207 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/VirtualMachines",
+      "name": "VirtualMachines",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Standard",
+        "freeTrialRemainingTime": "PT0S",
+        "subPlan": "P2",
+        "enablementTime": "{{iso:now-400d}}",
+        "extensions": [
+          {
+            "name": "MdeDesignatedSubscription",
+            "isEnabled": "False"
+          },
+          {
+            "name": "AgentlessVmScanning",
+            "isEnabled": "True",
+            "operationStatus": {
+              "code": "Succeeded"
+            }
+          }
+        ],
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/StorageAccounts",
+      "name": "StorageAccounts",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Standard",
+        "freeTrialRemainingTime": "PT0S",
+        "subPlan": "DefenderForStorageV2",
+        "enablementTime": "{{iso:now-300d}}",
+        "extensions": [
+          {
+            "name": "OnUploadMalwareScanning",
+            "isEnabled": "False"
+          },
+          {
+            "name": "SensitiveDataDiscovery",
+            "isEnabled": "True",
+            "operationStatus": {
+              "code": "Succeeded"
+            }
+          }
+        ],
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/SqlServers",
+      "name": "SqlServers",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Standard",
+        "freeTrialRemainingTime": "PT0S",
+        "enablementTime": "{{iso:now-300d}}",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/KeyVaults",
+      "name": "KeyVaults",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/Containers",
+      "name": "Containers",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/CloudPosture",
+      "name": "CloudPosture",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/AppServices",
+      "name": "AppServices",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/Arm",
+      "name": "Arm",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/CosmosDbs",
+      "name": "CosmosDbs",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/OpenSourceRelationalDatabases",
+      "name": "OpenSourceRelationalDatabases",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/SqlServerVirtualMachines",
+      "name": "SqlServerVirtualMachines",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/Api",
+      "name": "Api",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/AI",
+      "name": "AI",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/Dns",
+      "name": "Dns",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "deprecated": true,
+        "replacedBy": [
+          "Arm"
+        ],
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/KubernetesService",
+      "name": "KubernetesService",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "deprecated": true,
+        "replacedBy": [
+          "Containers"
+        ],
+        "inherited": "False"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings/ContainerRegistry",
+      "name": "ContainerRegistry",
+      "type": "Microsoft.Security/pricings",
+      "properties": {
+        "pricingTier": "Free",
+        "freeTrialRemainingTime": "PT0S",
+        "deprecated": true,
+        "replacedBy": [
+          "Containers"
+        ],
+        "inherited": "False"
+      }
+    }
+  ]
+}

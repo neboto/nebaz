@@ -1,0 +1,166 @@
+{
+  "value": [
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11",
+      "name": "d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "Management ports should be closed on your virtual machines",
+        "severity": "High",
+        "categories": [
+          "Networking"
+        ],
+        "description": "Open remote management ports expose your VM to a high level of risk from Internet-based attacks. These attacks attempt to brute force credentials to gain admin access to the machine.",
+        "remediationDescription": "Restrict access to the ports with an NSG rule, or use <b>just-in-time</b> VM access.<br>Prefer Azure Bastion for interactive sessions.",
+        "threats": [
+          "BruteForce",
+          "AccountBreach"
+        ],
+        "userImpact": "High",
+        "implementationEffort": "Low",
+        "assessmentType": "BuiltIn"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/e2c7b2f1-8d30-4d6f-ab52-1a4f9b3c7d22",
+      "name": "e2c7b2f1-8d30-4d6f-ab52-1a4f9b3c7d22",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "Accounts with owner permissions on Azure resources should be MFA enabled",
+        "severity": "High",
+        "categories": [
+          "IdentityAndAccess"
+        ],
+        "description": "Multi-Factor Authentication should be enabled for all subscription accounts with owner permissions to prevent a breach of accounts or resources.",
+        "remediationDescription": "Require MFA for the accounts with Owner through Conditional Access.",
+        "threats": [
+          "AccountBreach"
+        ],
+        "userImpact": "Moderate",
+        "implementationEffort": "Low",
+        "assessmentType": "BuiltIn"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33",
+      "name": "f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "Storage account public access should be disallowed",
+        "severity": "Medium",
+        "categories": [
+          "Data"
+        ],
+        "description": "Anonymous public read access to containers and blobs is a convenient way to share data but might present security risks.",
+        "remediationDescription": "Set <code>allowBlobPublicAccess</code> to false on the storage account.",
+        "threats": [
+          "DataExfiltration"
+        ],
+        "userImpact": "High",
+        "implementationEffort": "Low",
+        "assessmentType": "BuiltIn"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44",
+      "name": "a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "Key vaults should have deletion protection enabled",
+        "severity": "Medium",
+        "categories": [
+          "Data"
+        ],
+        "description": "Malicious deletion of a key vault can lead to permanent data loss. Purge protection enforces a mandatory retention period for soft deleted key vaults.",
+        "remediationDescription": "Enable soft delete and purge protection on the vault.",
+        "threats": [
+          "DataSpillage"
+        ],
+        "userImpact": "Low",
+        "implementationEffort": "Low",
+        "assessmentType": "BuiltIn"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/b5f0e5c4-1063-4092-9e85-4d7c2e6f0a55",
+      "name": "b5f0e5c4-1063-4092-9e85-4d7c2e6f0a55",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "Kubernetes Services should be upgraded to a non-vulnerable Kubernetes version",
+        "severity": "High",
+        "categories": [
+          "Compute"
+        ],
+        "description": "Upgrade your Kubernetes service cluster to a later Kubernetes version to protect against known vulnerabilities in your current version.",
+        "remediationDescription": "Upgrade the cluster's control plane and node pools to a supported version.",
+        "threats": [
+          "ElevationOfPrivilege"
+        ],
+        "userImpact": "Moderate",
+        "implementationEffort": "Moderate",
+        "assessmentType": "BuiltIn"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/c6a1f6d5-2174-41a3-8f96-5e8d3f7a1b66",
+      "name": "c6a1f6d5-2174-41a3-8f96-5e8d3f7a1b66",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "Container registries should have local admin account disabled",
+        "severity": "Medium",
+        "categories": [
+          "Container"
+        ],
+        "description": "Disable the admin account on your registry and use Microsoft Entra identities instead.",
+        "remediationDescription": "Turn off the admin user (Access keys \u2192 Admin user).",
+        "threats": [
+          "AccountBreach"
+        ],
+        "userImpact": "Low",
+        "implementationEffort": "Low",
+        "assessmentType": "BuiltIn"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/d7b2a7e6-3285-42b4-90a7-6f9e4a8b2c77",
+      "name": "d7b2a7e6-3285-42b4-90a7-6f9e4a8b2c77",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "SQL servers should have an Azure Active Directory administrator provisioned",
+        "severity": "High",
+        "categories": [
+          "IdentityAndAccess"
+        ],
+        "description": "Provision a Microsoft Entra administrator for your SQL server to enable Entra authentication.",
+        "remediationDescription": "Set a Microsoft Entra admin on the server.",
+        "threats": [
+          "AccountBreach"
+        ],
+        "userImpact": "Low",
+        "implementationEffort": "Low",
+        "assessmentType": "BuiltIn"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Security/assessmentMetadata/e8c3b8f7-4396-43c5-a1b8-7a0f5b9c3d88",
+      "name": "e8c3b8f7-4396-43c5-a1b8-7a0f5b9c3d88",
+      "type": "Microsoft.Security/assessmentMetadata",
+      "properties": {
+        "displayName": "Endpoint protection should be installed on your machines",
+        "severity": "High",
+        "categories": [
+          "Compute"
+        ],
+        "description": "To protect your machines from threats and vulnerabilities, install a supported endpoint protection solution.",
+        "remediationDescription": "Onboard the machine to Defender for Endpoint.",
+        "threats": [
+          "DataExfiltration",
+          "MaliciousInsider"
+        ],
+        "userImpact": "Low",
+        "implementationEffort": "Low",
+        "assessmentType": "BuiltIn"
+      }
+    }
+  ]
+}

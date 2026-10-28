@@ -221,6 +221,12 @@
     "cosmos": [
       "cosmos-accounts (cosmos)"
     ],
+    "defender": [
+      "defender-recommendations (defender)",
+      "defender-alerts (secalert)",
+      "secure-score (score)",
+      "defender-plans (pricing)"
+    ],
     "dns": [
       "private-dns-zones (dns)",
       "dns-zones (dnsz)",
@@ -524,6 +530,27 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Defender alert": [
+      "Overview",
+      "Alert",
+      "Entities",
+      "Activity",
+      "Related"
+    ],
+    "Defender plan": [
+      "Overview",
+      "Plan",
+      "Extensions",
+      "Activity",
+      "Related"
+    ],
+    "Defender recommendation": [
+      "Overview",
+      "Recommendation",
+      "Resources",
+      "Activity",
+      "Related"
     ],
     "Deployment": [
       "Overview",
@@ -863,6 +890,13 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Secure score control": [
+      "Overview",
+      "Control",
+      "Recommendations",
+      "Activity",
+      "Related"
     ],
     "Service Bus namespace": [
       "Overview",

@@ -1,0 +1,114 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Security/locations/westeurope/alerts/2516962819999999999_1a2b3c4d",
+      "name": "2516962819999999999_1a2b3c4d",
+      "type": "Microsoft.Security/Locations/alerts",
+      "properties": {
+        "alertDisplayName": "Failed SSH brute force attack",
+        "alertType": "SSH_BruteForce",
+        "severity": "High",
+        "status": "Active",
+        "description": "Failed brute force attacks were detected from 185.220.101.4: 2,341 failed sign-ins to root and admin over 40 minutes.",
+        "remediationSteps": [
+          "Close port 22 to the Internet: remove the temp vendor access rule from <b>nsg-jump-prod</b>.",
+          "Use just-in-time access or Azure Bastion.",
+          "Make sure the machine uses SSH keys, not passwords."
+        ],
+        "intent": "PreAttack",
+        "compromisedEntity": "vm-jump-01",
+        "productName": "Microsoft Defender for Cloud",
+        "vendorName": "Microsoft",
+        "isIncident": false,
+        "startTimeUtc": "{{iso:now-2d}}",
+        "endTimeUtc": "{{iso:now-2d}}",
+        "timeGeneratedUtc": "{{iso:now-2d}}",
+        "techniques": [
+          "T1110"
+        ],
+        "resourceIdentifiers": [
+          {
+            "type": "AzureResource",
+            "azureResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01"
+          }
+        ],
+        "entities": [
+          {
+            "$id": "2",
+            "type": "host",
+            "hostName": "vm-jump-01",
+            "osFamily": "Linux"
+          },
+          {
+            "$id": "3",
+            "type": "ip",
+            "address": "185.220.101.4"
+          },
+          {
+            "$id": "4",
+            "type": "account",
+            "accountName": "root"
+          },
+          {
+            "$id": "5",
+            "type": "process",
+            "commandLine": "sshd: root [priv]",
+            "processId": "0x1f2a"
+          }
+        ],
+        "extendedProperties": {
+          "Top user names with failed sign in attempts": "root:1802, admin:539",
+          "Number of failed authentication attempts": "2341"
+        },
+        "alertUri": "https://portal.azure.com/#blade/Microsoft_Azure_Security_AzureDefenderForData/AlertBlade/alertId/2516962819999999999_1a2b3c4d"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Security/locations/westeurope/alerts/2516979999999999999_5e6f7a8b",
+      "name": "2516979999999999999_5e6f7a8b",
+      "type": "Microsoft.Security/Locations/alerts",
+      "properties": {
+        "alertDisplayName": "Access from a suspicious IP address",
+        "alertType": "Storage.Blob_SuspiciousIp",
+        "severity": "Medium",
+        "status": "Resolved",
+        "description": "Someone has accessed your Azure Storage account from a suspicious IP address.",
+        "remediationSteps": [
+          "Limit access to the storage account with the firewall.",
+          "Rotate the account's access keys if the access was not expected."
+        ],
+        "intent": "Exfiltration",
+        "compromisedEntity": "stcontosoordersprod",
+        "productName": "Microsoft Defender for Cloud",
+        "vendorName": "Microsoft",
+        "isIncident": false,
+        "startTimeUtc": "{{iso:now-12d}}",
+        "endTimeUtc": "{{iso:now-12d}}",
+        "timeGeneratedUtc": "{{iso:now-12d}}",
+        "resourceIdentifiers": [
+          {
+            "type": "AzureResource",
+            "azureResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod"
+          }
+        ],
+        "entities": [
+          {
+            "$id": "2",
+            "type": "azure-resource",
+            "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod"
+          },
+          {
+            "$id": "3",
+            "type": "ip",
+            "address": "45.155.205.233"
+          },
+          {
+            "$id": "4",
+            "type": "blob-container",
+            "name": "orders-export"
+          }
+        ]
+      }
+    }
+  ]
+}

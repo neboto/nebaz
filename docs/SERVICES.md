@@ -699,6 +699,26 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     **Never**: compliance (`Microsoft.PolicyInsights` `queryResults` and
     `summarize` are POSTs; `C` carries `az policy state list`), and the
     tenant's built-in definitions as a list.
+33. **Defender is what Defender for Cloud says, beside `@audit`, never in
+    it** (#156, ADR 0010, `src/azure/services/defender.rs`, glue
+    `src/app/defender.rs`): recommendations (`@defender`), alerts
+    (`@secalert`), the secure score and its controls (`@score`, one sub-tab
+    of two lists) and the plans (`@pricing`). **Recommendations** are the
+    assessments, one row per recommendation and resource, joined
+    client-side with the assessment metadata (the tenant's built-in plus
+    the subscription's custom) for severity, description and remediation;
+    a failed metadata read is a warning, the rows list without severities.
+    Healthy and not-applicable rows are noise (`a`). State: unhealthy rows
+    read their severity (`high` red, the rest amber), healthy green, not
+    applicable grey. **Alerts** are sanitized before the raw JSON is kept:
+    no `extendedProperties`, no `supportingEvidence`, entities cut to an
+    allowlist of names and addresses (never a command line or a URL); an
+    empty list says alerts need a plan on. **Plans**: `Standard` is on,
+    `Free` off; retired plans are noise. No region, no RBAC or tags of
+    their own: the tail is Activity, Related, as for governance.
+    **Never**: Defender findings as `@audit` rows (the same issue twice),
+    regulatory compliance (#156 leaves it out), anything that changes a
+    plan or an alert's state.
 
 ## The catalog
 
@@ -752,6 +772,10 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Governance · Exemptions | Exemption (category, expiry with days left, scope, the assignment by display name from the warm list, the reference ids it exempts or every policy, description, created / updated) | active; expiring (30 days, pending); expired (stopped) | what it exempts (a resource, group or the subscription), the assignment | `az policy exemption show --name {name} --scope {scope}` |
 | Governance · Definitions | Definition (display name, type, policy or initiative, stored at, category, version, mode and effect, the effect's parameter default resolved; an initiative's policy count) · Rule (a policy's rule as JSON; an initiative's member policies by reference id) · Parameters (type, default, allowed values) · Assignments (the warm assignments of it) | stateless | where it is stored, an initiative's member policies | `az policy definition show` / `set-definition show --name {name}` with `--management-group` or `--subscription` |
 | Governance · Locks | Lock (level explained, what it is on, inherited below, notes, owners) | stateless | what it locks | `az lock show --ids {id}` |
+| Defender · Recommendations (rule 33; tail Activity, Related) | Recommendation (status with cause, severity, risk, the resource as a name and an id, category, threats, user impact, effort, kind, first evaluated, status changed, description, remediation, policy, portal link) · Resources (every resource the same recommendation is about in the warm list, unhealthy first) | unhealthy by severity (`high` unavailable, else pending), `healthy`, `not applicable` (stopped); healthy and not applicable are noise | the resource it is about | `az security assessment show --name {key} --assessed-resource-id {resource}` |
+| Defender · Alerts (rule 33) | Alert (severity, status, alert or incident, type, intent, techniques, entity, started, ended, generated, product, description, remediation steps, portal link) · Entities (type and name or address, from the sanitized body) | `active` (high unavailable, else pending), `in progress` pending, `resolved` available, `dismissed` stopped | the resources it names | `az security alert show --name {name} --location {asc location} [--resource-group {rg}]` |
+| Defender · Secure score (rule 33) | Score (percentage, points, weight) · a control's Control (points, potential gain, unhealthy / healthy / not applicable counts, source, description) and Recommendations (the warm unhealthy recommendations it is made of) | the score stateless; a control `gaps` (pending) or `met`, stateless when it carries no points | a control's score | `az security secure-scores show --name {name}`; a control: `az security secure-score-controls list` |
+| Defender · Plans (rule 33) | Plan (portal name and API name, tier with what Free means, sub-plan, on since, trial left, coverage, enforced below, inherited and from where, retired and its replacement) · Extensions (each on or off, with its status) | `on` (Standard, available) or `off` (Free, stopped); retired plans are noise | the scope it is inherited from | `az security pricing show --name {plan}` |
 | Governance · Management groups (rule 32; tail Activity, Related) | Group ⧗ (parent, direct children: groups and subscriptions, the current one marked; updated when and by whom) · Assignments (the warm Assignments made at the group) · (Overview: display name, group name, tenant; the root group reads `tenant root`) | stateless | none (the Group section's lines jump) | `az account management-group show --name {name} --expand` |
 | Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
@@ -780,7 +804,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -922,6 +946,10 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Cloud NGFW, Rulestacks | 1 each | `/providers/PaloAltoNetworks.Cloudngfw/firewalls` · `localRulestacks` · `2025-10-08` (the CLI extension's; `2026-06-01` is newer, six weeks in the specs) |
 | Cloud NGFW Status | 1 per firewall, on demand | `{firewall}/statuses/default` · `2025-10-08` |
 | Rulestack Rules (and a Cloud NGFW's Rules), Objects | 1 per rulestack, on demand; Objects 2 | `{rulestack}/localRules` · `{rulestack}/prefixlists` · `{rulestack}/fqdnlists` · `2025-10-08` |
+| Recommendations (rule 33) | 3: the metadata twice (tenant root and subscription), then the assessments | `/providers/Microsoft.Security/assessmentMetadata` (as written and under the subscription) · `/providers/Microsoft.Security/assessments` · `2025-05-04` |
+| Alerts (rule 33) | 1 | `/providers/Microsoft.Security/alerts` · `2022-01-01` |
+| Secure score (rule 33) | 2 | `/providers/Microsoft.Security/secureScores` · `/providers/Microsoft.Security/secureScoreControls?$expand=definition` · `2020-01-01` |
+| Plans (rule 33) | 1 | `/providers/Microsoft.Security/pricings` · `2024-01-01` |
 | Assignments · Exemptions · Locks (rule 32) | 1 each, unfiltered | `/providers/Microsoft.Authorization/policyAssignments` · `2025-03-01` · `/providers/Microsoft.Authorization/policyExemptions` · `2022-07-01-preview` (no stable version) · `/providers/Microsoft.Authorization/locks` · `2020-05-01` |
 | Management groups (rule 32) | 1, above the subscription | `/providers/Microsoft.Management/managementGroups` · `2023-04-01` |
 | A management group's Group | 1 per group, on demand | `/providers/Microsoft.Management/managementGroups/{name}?$expand=children` · `2023-04-01` |

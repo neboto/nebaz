@@ -154,6 +154,7 @@ all).
 | `vm` | Virtual Machines | VMs, Disks (`disk`), NICs (`nic`), Scale sets (`vmss`, instances lazy; a Flexible set's VMs are in VMs) |
 | `storage` | Storage | Accounts (blob containers lazy) |
 | `gov` | Governance | Policy assignments (management groups' included), exemptions (`exempt`), custom definitions and initiatives (`pdef`), resource locks (`lock`), the management groups you can read (`mg`); never compliance (a POST) |
+| `defender` | Defender | Defender for Cloud recommendations with their severity, alerts (`secalert`, never a command line), the secure score and its controls (`score`), which plans are on (`pricing`); beside `@audit`, never in it |
 | `backup` | Backup | Recovery Services vaults (protected items, policies, failed jobs), Backup vaults (`bvault`: backup instances, policies, jobs) |
 | `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`, appliance next hops matched to their NIC / VM or load balancer), NAT gateways (`nat`), Private endpoints (`pe`), Bastion hosts (`bastion`), DDoS protection plans (`ddos`); VNets and NSGs show their Network Watcher flow logs |
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`), Traffic Manager profiles (`tm`, endpoints) |

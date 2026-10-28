@@ -110,6 +110,14 @@ each one backs are in the catalog table
   role is assigned at a group; none is not an error). All in
   `Reader` at subscription scope. Never sent: Policy Insights'
   `queryResults` and `summarize` (compliance; `POST`s).
+- **Defender** (ADR 0010): `Microsoft.Security/assessments/read`,
+  `Microsoft.Security/assessmentMetadata/read` (the built-in metadata at
+  the tenant root, which anyone signed in may read, and the
+  subscription's custom metadata), `Microsoft.Security/alerts/read`,
+  `Microsoft.Security/secureScores/read`,
+  `Microsoft.Security/secureScoreControls/read`,
+  `Microsoft.Security/pricings/read`. All in `Reader` at subscription
+  scope. Never sent: anything that changes a plan or an alert's state.
 - **Backup** (Recovery Services vaults, Backup vaults):
   `Microsoft.RecoveryServices/vaults/read` (redundancy, soft delete,
   immutability, multi-user authorization, encryption, private endpoints
