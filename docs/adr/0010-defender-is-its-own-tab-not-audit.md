@@ -34,6 +34,12 @@ anyone) plus the subscription's custom metadata. It then streams the
 assessments, joining each one by its name, which is the metadata's name.
 If the metadata read fails, that costs only the severities: the load warns
 and the rows list without them. It is never the list's error.
+The built-in metadata is the same for every subscription and changes over
+days, while a session lasts hours. So it is read **once per tenant per
+session** and kept in memory: loads that miss together (the `P` fan-out)
+wait on one read, a failed read is not kept, and `r` does not re-read it.
+There is no TTL and no disk cache. The custom metadata is small and
+differs per subscription, so it is read on every load.
 Healthy and not-applicable assessments far outnumber unhealthy ones, so
 they are noise (`a`). The unhealthy subset is normally non-empty, which is
 the condition `is_noise` requires.

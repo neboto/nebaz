@@ -705,8 +705,9 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     (`@secalert`), the secure score and its controls (`@score`, one sub-tab
     of two lists) and the plans (`@pricing`). **Recommendations** are the
     assessments, one row per recommendation and resource, joined
-    client-side with the assessment metadata (the tenant's built-in plus
-    the subscription's custom) for severity, description and remediation;
+    client-side with the assessment metadata (the tenant's built-in, read
+    once per tenant per session, plus the subscription's custom, read every
+    load) for severity, description and remediation;
     a failed metadata read is a warning, the rows list without severities.
     Healthy and not-applicable rows are noise (`a`). State: unhealthy rows
     read their severity (`high` red, the rest amber), healthy green, not
@@ -946,7 +947,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Cloud NGFW, Rulestacks | 1 each | `/providers/PaloAltoNetworks.Cloudngfw/firewalls` · `localRulestacks` · `2025-10-08` (the CLI extension's; `2026-06-01` is newer, six weeks in the specs) |
 | Cloud NGFW Status | 1 per firewall, on demand | `{firewall}/statuses/default` · `2025-10-08` |
 | Rulestack Rules (and a Cloud NGFW's Rules), Objects | 1 per rulestack, on demand; Objects 2 | `{rulestack}/localRules` · `{rulestack}/prefixlists` · `{rulestack}/fqdnlists` · `2025-10-08` |
-| Recommendations (rule 33) | 3: the metadata twice (tenant root and subscription), then the assessments | `/providers/Microsoft.Security/assessmentMetadata` (as written and under the subscription) · `/providers/Microsoft.Security/assessments` · `2025-05-04` |
+| Recommendations (rule 33) | 2, plus the tenant root's metadata once per tenant per session: the subscription's custom metadata, then the assessments | `/providers/Microsoft.Security/assessmentMetadata` (as written and under the subscription) · `/providers/Microsoft.Security/assessments` · `2025-05-04` |
 | Alerts (rule 33) | 1 | `/providers/Microsoft.Security/alerts` · `2022-01-01` |
 | Secure score (rule 33) | 2 | `/providers/Microsoft.Security/secureScores` · `/providers/Microsoft.Security/secureScoreControls?$expand=definition` · `2020-01-01` |
 | Plans (rule 33) | 1 | `/providers/Microsoft.Security/pricings` · `2024-01-01` |

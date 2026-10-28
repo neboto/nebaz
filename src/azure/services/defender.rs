@@ -21,6 +21,7 @@
 //! pass every `R` filter.
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::azure::resource::{
     extension_scope, name_of_id, resource_group_of, scope_related, shell_quote, state_ladder, Resource, ResourceState,
@@ -1024,8 +1025,48 @@ pub fn defender_section_lines(r: &dyn Resource, idx: usize, recommendations: War
 
 // ── Provider ──────────────────────────────────────────────────────────
 
-/// The joined metadata, keyed by lowercased assessment key.
+/// Assessment metadata (its `properties`), keyed by lowercased name.
 type Metadata = HashMap<String, Value>;
+
+/// What a recommendation is joined with: the subscription's custom
+/// metadata first, then the tenant's built-ins.
+#[derive(Default)]
+struct Catalogue {
+    custom: Metadata,
+    built_in: Option<Arc<Metadata>>,
+}
+
+impl Catalogue {
+    fn get(&self, key: &str) -> Option<&Value> {
+        self.custom.get(key).or_else(|| self.built_in.as_deref()?.get(key))
+    }
+}
+
+/// One tenant's built-in metadata, read at most once a session.
+type BuiltIns = Arc<tokio::sync::OnceCell<Arc<Metadata>>>;
+
+/// The built-in metadata per tenant, kept for the session (ADR 0010):
+/// Microsoft's catalogue, the same for every subscription and changing
+/// over days, while a session lasts hours, so no TTL and `r` does not
+/// re-read it. Loads that miss together (the `P` fan-out) wait on one
+/// read; a failed read is not kept, so the next load tries again.
+static BUILT_INS: OnceLock<Mutex<HashMap<String, BuiltIns>>> = OnceLock::new();
+
+fn built_ins_cell(tenant: &str) -> BuiltIns {
+    let map = BUILT_INS.get_or_init(Default::default);
+    let mut map = map.lock().unwrap_or_else(|e| e.into_inner());
+    map.entry(tenant.to_ascii_lowercase()).or_default().clone()
+}
+
+fn index(items: Vec<Value>) -> Metadata {
+    items
+        .into_iter()
+        .filter_map(|m| {
+            let name = json::text(&m, "/name").to_ascii_lowercase();
+            m.get("properties").cloned().map(|p| (name, p))
+        })
+        .collect()
+}
 
 pub struct DefenderService {
     scope: Scope,
@@ -1040,7 +1081,7 @@ impl DefenderService {
         rows.into_iter().map(|r| Box::new(r) as Box<dyn Resource>).collect()
     }
 
-    fn rows(view: JumpView, page: &[Value], md: &Metadata, tenant: Option<&str>) -> Vec<Box<dyn Resource>> {
+    fn rows(view: JumpView, page: &[Value], md: &Catalogue, tenant: Option<&str>) -> Vec<Box<dyn Resource>> {
         match view {
             JumpView::DefenderAlerts => Self::boxed(page.iter().filter_map(|v| AlertRow::from_json(v, tenant)).collect()),
             JumpView::DefenderPlans => Self::boxed(page.iter().filter_map(|v| PlanRow::from_json(v, tenant)).collect()),
@@ -1079,27 +1120,34 @@ impl DefenderService {
         }
     }
 
-    /// The assessment metadata, built-in (tenant root) and the
-    /// subscription's custom, keyed by name. A failure only costs the
-    /// severities: the recommendations still list.
-    async fn metadata(&self) -> (Metadata, Vec<Error>) {
-        let mut md = Metadata::new();
-        let mut errors = Vec::new();
-        let tenant = self.scope.list_query_at(METADATA_PATH, ASSESSMENTS_API_VERSION, &[]).await;
-        let custom = self.scope.list_query(METADATA_PATH, ASSESSMENTS_API_VERSION, &[]).await;
-        for r in [tenant, custom] {
-            match r {
-                Ok(items) => {
-                    for m in items {
-                        if let Some(p) = m.get("properties") {
-                            md.insert(json::text(&m, "/name").to_ascii_lowercase(), p.clone());
-                        }
-                    }
-                }
-                Err(e) => errors.push(e),
-            }
+    /// The tenant's built-in metadata (at the tenant root), from the
+    /// session cache or one read.
+    async fn built_ins(&self) -> Result<Arc<Metadata>> {
+        let read = || async {
+            let items = self.scope.list_query_at(METADATA_PATH, ASSESSMENTS_API_VERSION, &[]).await?;
+            Ok::<_, Error>(Arc::new(index(items)))
+        };
+        match self.scope.tenant() {
+            Some(t) => built_ins_cell(t).get_or_try_init(read).await.cloned(),
+            None => read().await,
         }
-        (md, errors)
+    }
+
+    /// The metadata a Recommendations load joins with: the built-ins
+    /// (cached) and the subscription's custom metadata (read every load:
+    /// small, and it differs per subscription). A failure only costs the
+    /// severities: the recommendations still list.
+    async fn metadata(&self) -> (Catalogue, Vec<Error>) {
+        let mut errors = Vec::new();
+        let built_in = self.built_ins().await.map_err(|e| errors.push(e)).ok();
+        let custom = match self.scope.list_query(METADATA_PATH, ASSESSMENTS_API_VERSION, &[]).await {
+            Ok(items) => index(items),
+            Err(e) => {
+                errors.push(e);
+                Metadata::new()
+            }
+        };
+        (Catalogue { custom, built_in }, errors)
     }
 
     pub fn api_version_for(id: &str) -> &'static str {
@@ -1128,7 +1176,7 @@ impl AzureService for DefenderService {
 
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
         let tenant = self.scope.tenant();
-        let md = if view == JumpView::DefenderRecommendations { self.metadata().await.0 } else { Metadata::new() };
+        let md = if view == JumpView::DefenderRecommendations { self.metadata().await.0 } else { Catalogue::default() };
         let mut out = Vec::new();
         let mut first_err = None;
         for (path, version, query, _) in Self::lists_of(view) {
@@ -1157,7 +1205,7 @@ impl AzureService for DefenderService {
             }
             md
         } else {
-            Metadata::new()
+            Catalogue::default()
         };
         let lists = Self::lists_of(view);
         let mut total = 0usize;
@@ -1184,7 +1232,7 @@ impl AzureService for DefenderService {
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
         let v = self.scope.get(id, Self::api_version_for(id)).await?;
         let view = JumpView::for_arm_id(id).unwrap_or(JumpView::DefenderRecommendations);
-        Self::rows(view, std::slice::from_ref(&v), &Metadata::new(), self.scope.tenant())
+        Self::rows(view, std::slice::from_ref(&v), &Catalogue::default(), self.scope.tenant())
             .pop()
             .ok_or_else(|| Error::ResourceNotFound(id.to_string()))
     }
@@ -1315,6 +1363,19 @@ mod tests {
         assert!(!kv.is_noise());
         assert!(p("KubernetesService", "Free", true).is_noise());
         assert_eq!(JumpView::for_arm_id(&vm.base.id), Some(JumpView::DefenderPlans));
+    }
+
+    #[test]
+    fn custom_metadata_wins_and_built_ins_are_one_cell_per_tenant() {
+        let built_in: Metadata = [("k".to_string(), json!({"severity": "Low"}))].into();
+        let mut cat = Catalogue { custom: Metadata::new(), built_in: Some(Arc::new(built_in)) };
+        assert_eq!(cat.get("k").and_then(|m| m["severity"].as_str()), Some("Low"));
+        cat.custom.insert("k".into(), json!({"severity": "High"}));
+        assert_eq!(cat.get("k").and_then(|m| m["severity"].as_str()), Some("High"));
+        assert!(cat.get("other").is_none());
+
+        assert!(Arc::ptr_eq(&built_ins_cell("Tenant-A"), &built_ins_cell("tenant-a")), "one read per tenant");
+        assert!(!Arc::ptr_eq(&built_ins_cell("tenant-a"), &built_ins_cell("tenant-b")));
     }
 
     #[test]
