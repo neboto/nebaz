@@ -9,7 +9,8 @@ use super::App;
 use crate::azure::resource::Resource;
 use crate::azure::service::{JumpView, ServiceType};
 use crate::azure::services::governance::{
-    governance_section_lines, is_builtin_definition, GovernanceContext, PolicyAssignmentRow, Warm, POLICY_API_VERSION,
+    governance_section_lines, is_builtin_definition, GovernanceContext, ManagementGroupRow, PolicyAssignmentRow, Warm,
+    EXPAND_CHILDREN, MANAGEMENT_GROUPS_API_VERSION, POLICY_API_VERSION,
 };
 use crate::event::Event;
 use crate::lazy::Lazy;
@@ -57,11 +58,17 @@ impl App {
             .downcast_ref::<PolicyAssignmentRow>()
             .and_then(|a| a.definition_id.as_deref())
             .and_then(|d| self.lazy.policy_definitions.get(d));
+        let management_group = resource
+            .as_any()
+            .downcast_ref::<ManagementGroupRow>()
+            .and_then(|g| self.lazy.management_groups.get(&g.base.id));
         let cx = GovernanceContext {
             assignments: self.governance_list(JumpView::PolicyAssignments),
             exemptions: self.governance_list(JumpView::PolicyExemptions),
             definitions: self.governance_list(JumpView::PolicyDefinitions),
             builtin_definition: builtin,
+            management_group,
+            subscription: self.subscription_id.as_deref(),
         };
         governance_section_lines(resource, idx, &cx)
     }
@@ -85,12 +92,27 @@ impl App {
         app.trigger_lazy(|s| &mut s.policy_definitions, def, event_tx, move || fut);
     }
 
+    /// On-enter hook for a management group's Group section: its own GET
+    /// with the parent and children (`$expand=children`).
+    pub fn trigger_management_group(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(id) = app
+            .get_selected_resource()
+            .and_then(|r| r.as_any().downcast_ref::<ManagementGroupRow>())
+            .map(|g| g.base.id.clone())
+        else {
+            return;
+        };
+        let fut = app.azure_clients.get_fetch_query(&id, MANAGEMENT_GROUPS_API_VERSION, EXPAND_CHILDREN);
+        app.trigger_lazy(|s| &mut s.management_groups, id, event_tx, move || fut);
+    }
+
     /// On-enter hook for an assignment's Exemptions.
     pub fn trigger_policy_exemptions(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         app.trigger_governance_list(JumpView::PolicyExemptions, event_tx);
     }
 
-    /// On-enter hook for a definition's Assignments.
+    /// On-enter hook for a definition's (or a management group's)
+    /// Assignments.
     pub fn trigger_policy_assignments(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         app.trigger_governance_list(JumpView::PolicyAssignments, event_tx);
     }

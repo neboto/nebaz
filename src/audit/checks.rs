@@ -34,6 +34,7 @@ use crate::azure::services::firewall::{AzureFirewallRow, CloudNgfwRow, FirewallP
 use crate::azure::services::hybrid::{CircuitRow, ConnectionRow, GatewayRow};
 use crate::azure::services::flow_logs::FlowLog;
 use crate::azure::services::foundry::FoundryRow;
+use crate::azure::services::governance::{scope_words, PolicyAssignmentRow, PolicyExemptionRow};
 use crate::azure::services::json;
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, Namespace, ServiceBusRow};
@@ -89,9 +90,11 @@ const FWPS: &[V] = &[V::FirewallPolicies];
 const NGFWS: &[V] = &[V::CloudNgfws];
 const RSVS: &[V] = &[V::RecoveryVaults];
 const BVS: &[V] = &[V::BackupVaults];
+const ASSIGNMENTS: &[V] = &[V::PolicyAssignments];
+const EXEMPTIONS: &[V] = &[V::PolicyExemptions];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 74] = [
+pub static CHECKS: [Check; 76] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -703,6 +706,23 @@ pub static CHECKS: [Check; 74] = [
         fix: "Scope the assignment to the resource groups the principal works in, or replace it with the narrower built-in roles it needs; use PIM for standing access.",
         sources: &[],
         run: sub_contributor_guest_or_sp,
+    },
+    // ── Governance ──
+    Check {
+        id: "policy-not-enforced",
+        title: "Policy assignment not enforced",
+        why: "An assignment in DoNotEnforce mode evaluates compliance but never applies its effect: a Deny lets the deployment through, a DeployIfNotExists deploys nothing. It reads as a guardrail that isn't one. That is right for a staged rollout and wrong when it is left that way.",
+        fix: "Review the non-compliant resources the assignment reports, then set its enforcement mode to Default at the scope it was made at (Policy → Assignments → Edit assignment). An assignment inherited from a management group is changed there, not on the subscription.",
+        sources: &[ASSIGNMENTS],
+        run: policy_not_enforced,
+    },
+    Check {
+        id: "policy-exemption-expiry",
+        title: "Policy exemption expired or expiring",
+        why: "When an exemption ends, the policy it waived applies again: a Deny starts blocking the deployments it let through, and the resources show as non-compliant. One ending soon is a change on a date nobody may be watching; an expired one is a leftover that no longer exempts anything.",
+        fix: "Fix what the exemption covered and let it lapse, or extend expiresOn if the waiver is still agreed. Delete an expired exemption so the list shows only waivers in force.",
+        sources: &[EXEMPTIONS],
+        run: policy_exemption_expiry,
     },
 ];
 
@@ -2613,6 +2633,40 @@ pub fn privileged_user_ids(items: &[Value]) -> Vec<String> {
         }
     }
     out
+}
+
+// ── Governance ────────────────────────────────────────────────────────
+
+/// Low: a control that reads as present and isn't. Inherited assignments
+/// count too: they apply to this subscription all the same.
+fn policy_not_enforced(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for a in input.of::<PolicyAssignmentRow>(V::PolicyAssignments).filter(|a| !a.is_enforced()) {
+        out.push(
+            AuditFinding::about(check, Severity::Low, a, format!("DoNotEnforce · made at {}", scope_words(a.scope.as_deref())))
+                .with_evidence(vec![
+                    "enforcementMode: DoNotEnforce".into(),
+                    format!("scope: {}", json::opt(a.scope.clone())),
+                    format!("policyDefinitionId: {}", json::opt(a.definition_id.clone())),
+                ]),
+        );
+    }
+}
+
+/// Low when ending within 30 days (the policy applies again on a date);
+/// info when already ended (a leftover). No `expiresOn` never ends.
+fn policy_exemption_expiry(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for e in input.of::<PolicyExemptionRow>(V::PolicyExemptions) {
+        let (sev, reason) = match e.expiry(input.now()) {
+            Some(Expiry::Expired) => (Severity::Info, "exemption expired".to_string()),
+            Some(Expiry::Expiring(d)) => (Severity::Low, format!("exemption ends in {} day(s)", d)),
+            _ => continue,
+        };
+        out.push(AuditFinding::about(check, sev, e, reason).with_evidence(vec![
+            format!("expiresOn: {}", json::opt(e.expires_on.clone())),
+            format!("exemptionCategory: {}", json::opt(e.category.clone())),
+            format!("policyAssignmentId: {}", json::opt(e.assignment_id.clone())),
+        ]));
+    }
 }
 
 #[cfg(test)]

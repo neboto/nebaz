@@ -778,6 +778,22 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             ),
         ),
         m(
+            JumpView::ManagementGroups,
+            "ManagementGroupRow",
+            parse(
+                "ManagementGroupRow",
+                governance::ManagementGroupRow::from_json(
+                    &json!({
+                        "id": "/providers/Microsoft.Management/managementGroups/mg-1",
+                        "name": "mg-1",
+                        "type": "Microsoft.Management/managementGroups",
+                        "properties": {"displayName": "Landing zones", "tenantId": "t"}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
             JumpView::AppGateways,
             "AppGatewayRow",
             parse(

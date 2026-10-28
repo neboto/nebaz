@@ -237,6 +237,10 @@ pub enum JumpView {
     PolicyDefinitions,
     /// Every resource lock in the subscription (`Microsoft.Authorization/locks`).
     ResourceLocks,
+    /// The management groups the caller can read (`GET
+    /// /providers/Microsoft.Management/managementGroups`, ADR 0009
+    /// decision 3): above the subscription, cached per subscription.
+    ManagementGroups,
     // Changes: one list per window; the sub-tabs filter it by source.
     ChangesAll,
     ChangesActivity,
@@ -278,7 +282,7 @@ impl JumpView {
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
-            PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks => ServiceType::Governance,
+            PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups => ServiceType::Governance,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
             Audit => ServiceType::Audit,
         }
@@ -356,6 +360,7 @@ impl JumpView {
             PolicyExemptions => "policy-exemptions",
             PolicyDefinitions => "policy-definitions",
             ResourceLocks => "resource-locks",
+            ManagementGroups => "management-groups",
             ChangesAll => "changes",
             ChangesActivity => "changes-activity",
             ChangesDeployments => "changes-deployments",
@@ -436,6 +441,7 @@ impl JumpView {
             PolicyExemptions => "Exemptions",
             PolicyDefinitions => "Definitions",
             ResourceLocks => "Locks",
+            ManagementGroups => "Management groups",
             ChangesAll => "All",
             ChangesActivity => "Activity",
             ChangesDeployments => "Deployments",
@@ -530,6 +536,7 @@ impl JumpView {
                 JumpView::PolicyDefinitions
             }
             ("microsoft.authorization", ["locks"]) => JumpView::ResourceLocks,
+            ("microsoft.management", ["managementgroups"]) => JumpView::ManagementGroups,
             _ => return None,
         })
     }
@@ -579,8 +586,9 @@ impl JumpView {
 
     /// Whether listing this sub-tab once per subscription means something
     /// (the `P` counts and `ls --subscriptions`, #62). Not for the tenant's
-    /// lists (subscriptions, and the directory's service principals and app
-    /// registrations: the same rows from every subscription of a tenant),
+    /// lists (subscriptions, the directory's service principals and app
+    /// registrations, the management groups: the same rows from every
+    /// subscription of a tenant),
     /// nor `@changes` (one list per time window, its sub-tabs filter it,
     /// and each subscription's Activity Log read is the costliest list),
     /// nor a virtual service's (`@audit`: computed, never listed).
@@ -590,7 +598,13 @@ impl JumpView {
             && !self.service().is_virtual()
             && !matches!(
                 self,
-                ServicePrincipals | AppRegistrations | ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth
+                ServicePrincipals
+                    | AppRegistrations
+                    | ManagementGroups
+                    | ChangesAll
+                    | ChangesActivity
+                    | ChangesDeployments
+                    | ChangesHealth
             )
     }
 }
@@ -757,7 +771,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "Container apps, environments & jobs",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
-            ServiceType::Governance => "Policy assignments, exemptions, definitions & locks",
+            ServiceType::Governance => "Policy, locks & management groups",
             ServiceType::Changes => "What changed recently, subscription-wide",
             ServiceType::Audit => "Security findings from what's loaded (no API calls)",
         }
@@ -809,7 +823,7 @@ impl ServiceType {
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
-            ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks],
+            ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
             ServiceType::Audit => &[Audit],
         }
@@ -986,6 +1000,7 @@ impl ServiceType {
                 (ServiceType::Governance, Some(JumpView::PolicyDefinitions))
             }
             "lock" | "locks" | "resourcelock" | "resourcelocks" => (ServiceType::Governance, Some(JumpView::ResourceLocks)),
+            "mg" | "mgs" | "managementgroup" | "managementgroups" => (ServiceType::Governance, Some(JumpView::ManagementGroups)),
             "audit" | "findings" | "security" => (ServiceType::Audit, None),
             _ => return None,
         };
@@ -1033,7 +1048,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1183,6 +1198,11 @@ mod tests {
         assert_eq!(JumpView::landing_for_arm_id(&format!("{}/providers/Microsoft.Insights/diagnosticSettings/d", vm)), None);
         assert_eq!(ServiceType::from_prefix("@gov"), Some((ServiceType::Governance, None)));
         assert_eq!(ServiceType::from_prefix("@lock"), Some((ServiceType::Governance, Some(JumpView::ResourceLocks))));
+        assert_eq!(ServiceType::from_prefix("@mg"), Some((ServiceType::Governance, Some(JumpView::ManagementGroups))));
+        let corp = "/providers/Microsoft.Management/managementGroups/corp";
+        assert_eq!(JumpView::landing_for_arm_id(corp), Some(JumpView::ManagementGroups));
+        assert_eq!(JumpView::for_arm_id(&format!("{corp}/subscriptions/s")), None, "a membership, not a group");
+        assert!(!JumpView::ManagementGroups.fans_out(), "the tenant's groups: the same rows from every subscription");
         assert_eq!(ServiceType::from_prefix("@exempt"), Some((ServiceType::Governance, Some(JumpView::PolicyExemptions))));
         assert_eq!(ServiceType::from_prefix("@pdef"), Some((ServiceType::Governance, Some(JumpView::PolicyDefinitions))));
     }

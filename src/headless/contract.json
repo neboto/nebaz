@@ -249,7 +249,8 @@
       "policy-assignments (gov)",
       "policy-exemptions (exempt)",
       "policy-definitions (pdef)",
-      "resource-locks (lock)"
+      "resource-locks (lock)",
+      "management-groups (mg)"
     ],
     "id": [
       "identities (id)",
@@ -673,6 +674,13 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Management group": [
+      "Overview",
+      "Group",
+      "Assignments",
+      "Activity",
+      "Related"
     ],
     "Microsoft.Network/publicIPPrefixes": [
       "Overview",

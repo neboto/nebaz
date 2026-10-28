@@ -1,0 +1,28 @@
+{
+  "id": "/providers/Microsoft.Management/managementGroups/contoso-corp",
+  "type": "Microsoft.Management/managementGroups",
+  "name": "contoso-corp",
+  "properties": {
+    "tenantId": "{{tenant}}",
+    "displayName": "Corp",
+    "details": {
+      "version": 3,
+      "updatedTime": "2025-03-14T09:00:00Z",
+      "updatedBy": "Contoso Platform Admins",
+      "parent": {
+        "id": "/providers/Microsoft.Management/managementGroups/contoso-landingzones",
+        "name": "contoso-landingzones",
+        "displayName": "Landing zones"
+      }
+    },
+    "children": [
+      {
+        "type": "/subscriptions",
+        "id": "/subscriptions/{{prod}}",
+        "name": "{{prod}}",
+        "displayName": "contoso-prod",
+        "children": null
+      }
+    ]
+  }
+}

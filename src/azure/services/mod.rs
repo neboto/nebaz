@@ -250,10 +250,14 @@ impl Scope {
 
     /// One whole collection with extra query pairs (`statusOnly=true`).
     pub async fn list_query(&self, suffix: &str, api_version: &str, query: &[(&str, &str)]) -> Result<Vec<Value>> {
+        self.list_query_at(&self.path(suffix)?, api_version, query).await
+    }
+
+    /// [`list_query`](Self::list_query) at a whole path: a collection above
+    /// the subscription (management groups), read with its pipeline.
+    pub async fn list_query_at(&self, path: &str, api_version: &str, query: &[(&str, &str)]) -> Result<Vec<Value>> {
         let mut all = Vec::new();
-        self.arm()?
-            .list_pages(&self.path(suffix)?, api_version, query, |page| all.extend(page))
-            .await?;
+        self.arm()?.list_pages(path, api_version, query, |page| all.extend(page)).await?;
         Ok(all)
     }
 
@@ -274,15 +278,32 @@ impl Scope {
         service: ServiceType,
         message: &str,
         event_tx: &mpsc::UnboundedSender<Event>,
+        rows: F,
+    ) -> Result<usize>
+    where
+        F: FnMut(Vec<Value>) -> Vec<Box<dyn Resource>> + Send,
+    {
+        self.stream_at(&self.path(suffix)?, api_version, query, service, message, event_tx, rows).await
+    }
+
+    /// [`stream`](Self::stream) at a whole path (management groups).
+    #[allow(clippy::too_many_arguments)]
+    pub async fn stream_at<F>(
+        &self,
+        path: &str,
+        api_version: &str,
+        query: &[(&str, &str)],
+        service: ServiceType,
+        message: &str,
+        event_tx: &mpsc::UnboundedSender<Event>,
         mut rows: F,
     ) -> Result<usize>
     where
         F: FnMut(Vec<Value>) -> Vec<Box<dyn Resource>> + Send,
     {
-        let path = self.path(suffix)?;
         let arm = self.arm()?;
         let mut loaded = 0usize;
-        arm.list_pages(&path, api_version, query, |page| {
+        arm.list_pages(path, api_version, query, |page| {
             let resources = rows(page);
             loaded += resources.len();
             let _ = event_tx.send(Event::ResourcesPartiallyLoaded {

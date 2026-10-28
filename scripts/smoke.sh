@@ -180,8 +180,14 @@ run backup-bvault ok bvault '[]' \
 
 # The Governance tab loads through a routing prefix (Locks).
 run governance-locks ok lock '[]' \
-  "Policy assignments, exemptions, definitions & locks" \
+  "Policy, locks & management groups" \
   "4 Locks" \
+  "cannot reach 127.0.0.1"
+
+# Management groups are read above the subscription; the dead endpoint
+# still names the host, so the list call went out.
+run governance-mgs ok mg '[]' \
+  "5 Management groups" \
   "cannot reach 127.0.0.1"
 
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
