@@ -154,11 +154,12 @@ pub struct LazyStore {
     /// definition a GET reads, since a custom one comes from the warm list
     /// (ADR 0009, decision 2).
     pub policy_definitions: LazyMap<serde_json::Value>,
-    /// A governance list a section reads while its own sub-tab is cold
-    /// (an assignment's Definition and Exemptions, a definition's
-    /// Assignments), keyed `{subscription}|{sub-tab}`: loaded by the same
-    /// provider stream the tab uses, never instead of the list cache.
-    pub governance_lists: LazyMap<Vec<Box<dyn crate::azure::resource::Resource>>>,
+    /// A list a section reads while its own sub-tab is cold (an
+    /// assignment's Definition and Exemptions, a definition's Assignments,
+    /// a Defender control's Recommendations), keyed
+    /// `{subscription}|{sub-tab}`: loaded by the same provider call the tab
+    /// uses, never instead of the list cache.
+    pub section_lists: LazyMap<Vec<Box<dyn crate::azure::resource::Resource>>>,
     /// A management group with its parent and children
     /// (`?$expand=children`), keyed by its id.
     pub management_groups: LazyMap<serde_json::Value>,

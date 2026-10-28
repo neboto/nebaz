@@ -86,6 +86,10 @@ pub enum ServiceType {
     /// resource locks (#155, ADR 0009): the subscription's view with what it
     /// inherits from the management groups above. Never compliance (POST).
     Governance,
+    /// Microsoft Defender for Cloud (#156, ADR 0010): recommendations,
+    /// alerts, the secure score and which plans are on. Its own findings,
+    /// never `@audit` rows.
+    Defender,
     /// What changed recently, subscription-wide (#61, ADR 0006): the
     /// Activity Log's changes, deployments and health transitions over a
     /// `[` / `]` window. A service that fetches, not a view over caches.
@@ -241,6 +245,16 @@ pub enum JumpView {
     /// /providers/Microsoft.Management/managementGroups`, ADR 0009
     /// decision 3): above the subscription, cached per subscription.
     ManagementGroups,
+    // Defender
+    /// Defender's assessments, one row per recommendation and resource;
+    /// healthy and not-applicable ones are noise.
+    DefenderRecommendations,
+    /// Defender's security alerts.
+    DefenderAlerts,
+    /// The secure score and its controls, one list of both.
+    SecureScore,
+    /// The Defender plans (`pricings`): which are on.
+    DefenderPlans,
     // Changes: one list per window; the sub-tabs filter it by source.
     ChangesAll,
     ChangesActivity,
@@ -283,6 +297,7 @@ impl JumpView {
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
             PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups => ServiceType::Governance,
+            DefenderRecommendations | DefenderAlerts | SecureScore | DefenderPlans => ServiceType::Defender,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
             Audit => ServiceType::Audit,
         }
@@ -361,6 +376,10 @@ impl JumpView {
             PolicyDefinitions => "policy-definitions",
             ResourceLocks => "resource-locks",
             ManagementGroups => "management-groups",
+            DefenderRecommendations => "defender-recommendations",
+            DefenderAlerts => "defender-alerts",
+            SecureScore => "secure-score",
+            DefenderPlans => "defender-plans",
             ChangesAll => "changes",
             ChangesActivity => "changes-activity",
             ChangesDeployments => "changes-deployments",
@@ -442,6 +461,10 @@ impl JumpView {
             PolicyDefinitions => "Definitions",
             ResourceLocks => "Locks",
             ManagementGroups => "Management groups",
+            DefenderRecommendations => "Recommendations",
+            DefenderAlerts => "Alerts",
+            SecureScore => "Secure score",
+            DefenderPlans => "Plans",
             ChangesAll => "All",
             ChangesActivity => "Activity",
             ChangesDeployments => "Deployments",
@@ -537,6 +560,12 @@ impl JumpView {
             }
             ("microsoft.authorization", ["locks"]) => JumpView::ResourceLocks,
             ("microsoft.management", ["managementgroups"]) => JumpView::ManagementGroups,
+            // Defender (ADR 0010): an assessment is an extension resource
+            // on what it assessed.
+            ("microsoft.security", ["assessments"]) => JumpView::DefenderRecommendations,
+            ("microsoft.security", ["locations", "alerts"]) => JumpView::DefenderAlerts,
+            ("microsoft.security", ["securescores"] | ["securescores", "securescorecontrols"]) => JumpView::SecureScore,
+            ("microsoft.security", ["pricings"]) => JumpView::DefenderPlans,
             _ => return None,
         })
     }
@@ -636,6 +665,7 @@ impl ServiceType {
             ServiceType::Redis,
             ServiceType::Messaging,
             ServiceType::Governance,
+            ServiceType::Defender,
             ServiceType::Changes,
             ServiceType::Audit,
         ]
@@ -678,6 +708,7 @@ impl ServiceType {
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
             ServiceType::Governance => "Management",
+            ServiceType::Defender => "Security",
             ServiceType::Changes => "Monitoring",
             ServiceType::Audit => "Security",
         }
@@ -709,6 +740,7 @@ impl ServiceType {
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
             ServiceType::Governance => "Governance",
+            ServiceType::Defender => "Defender",
             ServiceType::Changes => "Changes",
             ServiceType::Audit => "Audit",
         }
@@ -741,6 +773,7 @@ impl ServiceType {
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
             ServiceType::Governance => "Governance",
+            ServiceType::Defender => "Defender",
             ServiceType::Changes => "Changes",
             ServiceType::Audit => "Audit",
         }
@@ -772,6 +805,7 @@ impl ServiceType {
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
             ServiceType::Governance => "Policy, locks & management groups",
+            ServiceType::Defender => "Recommendations, alerts, score & plans",
             ServiceType::Changes => "What changed recently, subscription-wide",
             ServiceType::Audit => "Security findings from what's loaded (no API calls)",
         }
@@ -824,6 +858,7 @@ impl ServiceType {
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
             ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups],
+            ServiceType::Defender => &[DefenderRecommendations, DefenderAlerts, SecureScore, DefenderPlans],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
             ServiceType::Audit => &[Audit],
         }
@@ -1001,6 +1036,10 @@ impl ServiceType {
             }
             "lock" | "locks" | "resourcelock" | "resourcelocks" => (ServiceType::Governance, Some(JumpView::ResourceLocks)),
             "mg" | "mgs" | "managementgroup" | "managementgroups" => (ServiceType::Governance, Some(JumpView::ManagementGroups)),
+            "defender" | "mdc" | "asc" | "rec" | "recs" | "recommendation" | "recommendations" => (ServiceType::Defender, None),
+            "secalert" | "secalerts" | "defenderalert" | "defenderalerts" => (ServiceType::Defender, Some(JumpView::DefenderAlerts)),
+            "score" | "securescore" => (ServiceType::Defender, Some(JumpView::SecureScore)),
+            "pricing" | "pricings" | "defenderplan" | "defenderplans" => (ServiceType::Defender, Some(JumpView::DefenderPlans)),
             "audit" | "findings" | "security" => (ServiceType::Audit, None),
             _ => return None,
         };
@@ -1040,6 +1079,7 @@ impl ServiceType {
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
             ServiceType::Governance => "@gov",
+            ServiceType::Defender => "@defender",
             ServiceType::Changes => "@changes",
             ServiceType::Audit => "@audit",
         }
@@ -1048,12 +1088,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@defender", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1199,6 +1239,10 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@gov"), Some((ServiceType::Governance, None)));
         assert_eq!(ServiceType::from_prefix("@lock"), Some((ServiceType::Governance, Some(JumpView::ResourceLocks))));
         assert_eq!(ServiceType::from_prefix("@mg"), Some((ServiceType::Governance, Some(JumpView::ManagementGroups))));
+        assert_eq!(ServiceType::from_prefix("@defender"), Some((ServiceType::Defender, None)));
+        assert_eq!(ServiceType::from_prefix("@secalert"), Some((ServiceType::Defender, Some(JumpView::DefenderAlerts))));
+        assert_eq!(ServiceType::from_prefix("@score"), Some((ServiceType::Defender, Some(JumpView::SecureScore))));
+        assert_eq!(ServiceType::from_prefix("@pricing"), Some((ServiceType::Defender, Some(JumpView::DefenderPlans))));
         let corp = "/providers/Microsoft.Management/managementGroups/corp";
         assert_eq!(JumpView::landing_for_arm_id(corp), Some(JumpView::ManagementGroups));
         assert_eq!(JumpView::for_arm_id(&format!("{corp}/subscriptions/s")), None, "a membership, not a group");

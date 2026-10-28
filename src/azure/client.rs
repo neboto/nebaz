@@ -20,6 +20,7 @@ use crate::azure::services::compute::ComputeService;
 use crate::azure::services::container_apps::ContainerAppsService;
 use crate::azure::services::redis::RedisService;
 use crate::azure::services::messaging::MessagingService;
+use crate::azure::services::defender::DefenderService;
 use crate::azure::services::governance::GovernanceService;
 use crate::azure::services::app_service::AppServiceService;
 use crate::azure::services::foundry::FoundryService;
@@ -365,6 +366,7 @@ impl AzureClients {
             ServiceType::Redis => Arc::new(RedisService::new(scope)),
             ServiceType::Messaging => Arc::new(MessagingService::new(scope)),
             ServiceType::Governance => Arc::new(GovernanceService::new(scope)),
+            ServiceType::Defender => Arc::new(DefenderService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Hybrid => Arc::new(HybridService::new(scope)),

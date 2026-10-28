@@ -63,6 +63,15 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("core", "/providers/Microsoft.Management/managementGroups/contoso-landingzones", "management-group-contoso-landingzones.json"),
     fx!("core", "/providers/Microsoft.Management/managementGroups/contoso-sandbox", "management-group-contoso-sandbox.json"),
     fx!("core", "/providers/Microsoft.Management/managementGroups/contoso-corp", "management-group-contoso-corp.json"),
+    // Defender for Cloud (#156): recommendations joined with the tenant's
+    // assessment metadata, alerts, the secure score and its controls, the
+    // plans. contoso-dev has none (an empty list answers).
+    fx!("core", "/providers/Microsoft.Security/assessmentMetadata", "defender-assessment-metadata.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/assessments", "defender-assessments-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/alerts", "defender-alerts-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores", "defender-secure-scores-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScoreControls", "defender-score-controls-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings", "defender-pricings-prod.json"),
     // Resources no service browses: All resources lists them (the alert
     // rules behind the fired alerts, their action groups, the watchers).
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/metricAlerts", "metric-alerts.json"),

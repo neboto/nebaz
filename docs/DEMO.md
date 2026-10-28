@@ -115,6 +115,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `jump-box-public-ip` exempts `nic-vm-jump-01` from the NIC public-IP deny until 6 days from now (made by alex 3 days ago, with the SSH rule); `legacy-mcsb` on `rg-legacy-prod` expired 20 days ago | Governance · Exemptions, `@audit` (low · info) |
 | `CanNotDelete` locks on `rg-network-prod` and `kv-orders-prod` | Governance · Locks |
 | The hierarchy: Tenant Root Group → `contoso` → `contoso-platform`, `contoso-landingzones` → `contoso-corp` (contoso-prod), `contoso-sandbox` (contoso-dev) | Governance · Management groups |
+| Defender: an active High alert, a failed SSH brute force on `vm-jump-01` from 185.220.101.4 two days ago (the same open port `@audit` flags); a resolved suspicious-IP access on `stcontosoordersprod`. Six unhealthy recommendations (management ports on `vm-jump-01`, MFA for owners, storage public access, `kv-legacy-prod`'s deletion protection, `aks-platform-prod`'s Kubernetes version, the ACR admin user), two healthy and one not applicable (hidden until `a`). Secure score 31% (11 of 36). Plans: Servers P2, Storage and SQL on, the rest Free, three retired | Defender, every sub-tab |
 
 ## Recordings
 
