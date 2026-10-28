@@ -82,6 +82,10 @@ pub enum ServiceType {
     /// Service Bus and Event Hubs namespaces; queues, topics, event hubs,
     /// the network rule set and access policy names lazy. Never a key.
     Messaging,
+    /// Policy assignments, exemptions, custom definitions and initiatives,
+    /// resource locks (#155, ADR 0009): the subscription's view with what it
+    /// inherits from the management groups above. Never compliance (POST).
+    Governance,
     /// What changed recently, subscription-wide (#61, ADR 0006): the
     /// Activity Log's changes, deployments and health transitions over a
     /// `[` / `]` window. A service that fetches, not a view over caches.
@@ -223,6 +227,16 @@ pub enum JumpView {
     // Messaging
     ServiceBusNamespaces,
     EventHubNamespaces,
+    // Governance
+    /// Every policy assignment that applies to the subscription or to
+    /// anything in it, management groups' included (unfiltered list).
+    PolicyAssignments,
+    /// Policy exemptions, the same way.
+    PolicyExemptions,
+    /// Custom policy definitions and initiatives, one list of both.
+    PolicyDefinitions,
+    /// Every resource lock in the subscription (`Microsoft.Authorization/locks`).
+    ResourceLocks,
     // Changes: one list per window; the sub-tabs filter it by source.
     ChangesAll,
     ChangesActivity,
@@ -264,6 +278,7 @@ impl JumpView {
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
+            PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks => ServiceType::Governance,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
             Audit => ServiceType::Audit,
         }
@@ -337,6 +352,10 @@ impl JumpView {
             ManagedRedis => "managed-redis",
             ServiceBusNamespaces => "servicebus-namespaces",
             EventHubNamespaces => "eventhub-namespaces",
+            PolicyAssignments => "policy-assignments",
+            PolicyExemptions => "policy-exemptions",
+            PolicyDefinitions => "policy-definitions",
+            ResourceLocks => "resource-locks",
             ChangesAll => "changes",
             ChangesActivity => "changes-activity",
             ChangesDeployments => "changes-deployments",
@@ -413,6 +432,10 @@ impl JumpView {
             ManagedRedis => "Managed Redis",
             ServiceBusNamespaces => "Service Bus",
             EventHubNamespaces => "Event Hubs",
+            PolicyAssignments => "Assignments",
+            PolicyExemptions => "Exemptions",
+            PolicyDefinitions => "Definitions",
+            ResourceLocks => "Locks",
             ChangesAll => "All",
             ChangesActivity => "Activity",
             ChangesDeployments => "Deployments",
@@ -497,6 +520,16 @@ impl JumpView {
             ("microsoft.cache", ["redisenterprise"]) => JumpView::ManagedRedis,
             ("microsoft.servicebus", ["namespaces"]) => JumpView::ServiceBusNamespaces,
             ("microsoft.eventhub", ["namespaces"]) => JumpView::EventHubNamespaces,
+            // Governance (ADR 0009): wherever made, management groups
+            // included. A built-in definition is in no list (custom only).
+            ("microsoft.authorization", ["policyassignments"]) => JumpView::PolicyAssignments,
+            ("microsoft.authorization", ["policyexemptions"]) => JumpView::PolicyExemptions,
+            ("microsoft.authorization", ["policydefinitions" | "policysetdefinitions"])
+                if !crate::azure::services::governance::is_builtin_definition(id) =>
+            {
+                JumpView::PolicyDefinitions
+            }
+            ("microsoft.authorization", ["locks"]) => JumpView::ResourceLocks,
             _ => return None,
         })
     }
@@ -522,8 +555,17 @@ impl JumpView {
         if let Some(view) = JumpView::for_graph_id(id) {
             return Some(view);
         }
+        // All resources lists top-level resources only: never an extension
+        // resource (a role assignment, a lock on something).
         JumpView::for_arm_id(id).or_else(|| match arm_type_chain(id) {
-            Some((_, chain)) if chain.len() == 1 && resource_group_of(id).is_some() => Some(JumpView::AllResources),
+            Some((ns, chain))
+                if chain.len() == 1
+                    && resource_group_of(id).is_some()
+                    && ns != "microsoft.authorization"
+                    && id.to_ascii_lowercase().matches("/providers/").count() == 1 =>
+            {
+                Some(JumpView::AllResources)
+            }
             _ => None,
         })
     }
@@ -579,6 +621,7 @@ impl ServiceType {
             ServiceType::ContainerApps,
             ServiceType::Redis,
             ServiceType::Messaging,
+            ServiceType::Governance,
             ServiceType::Changes,
             ServiceType::Audit,
         ]
@@ -620,6 +663,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "Containers",
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
+            ServiceType::Governance => "Management",
             ServiceType::Changes => "Monitoring",
             ServiceType::Audit => "Security",
         }
@@ -650,6 +694,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "Container Apps",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
+            ServiceType::Governance => "Governance",
             ServiceType::Changes => "Changes",
             ServiceType::Audit => "Audit",
         }
@@ -681,6 +726,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "ACA",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
+            ServiceType::Governance => "Governance",
             ServiceType::Changes => "Changes",
             ServiceType::Audit => "Audit",
         }
@@ -711,6 +757,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "Container apps, environments & jobs",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
+            ServiceType::Governance => "Policy assignments, exemptions, definitions & locks",
             ServiceType::Changes => "What changed recently, subscription-wide",
             ServiceType::Audit => "Security findings from what's loaded (no API calls)",
         }
@@ -762,6 +809,7 @@ impl ServiceType {
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
+            ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
             ServiceType::Audit => &[Audit],
         }
@@ -932,6 +980,12 @@ impl ServiceType {
             "amr" | "managedredis" | "redisenterprise" => (ServiceType::Redis, Some(JumpView::ManagedRedis)),
             "sb" | "servicebus" | "messaging" | "msg" => (ServiceType::Messaging, None),
             "eh" | "eventhub" | "eventhubs" | "kafka" => (ServiceType::Messaging, Some(JumpView::EventHubNamespaces)),
+            "gov" | "governance" | "policy" | "policies" | "pa" | "assignment" | "assignments" => (ServiceType::Governance, None),
+            "exempt" | "exemption" | "exemptions" => (ServiceType::Governance, Some(JumpView::PolicyExemptions)),
+            "pdef" | "definition" | "definitions" | "initiative" | "initiatives" | "policyset" | "policysets" => {
+                (ServiceType::Governance, Some(JumpView::PolicyDefinitions))
+            }
+            "lock" | "locks" | "resourcelock" | "resourcelocks" => (ServiceType::Governance, Some(JumpView::ResourceLocks)),
             "audit" | "findings" | "security" => (ServiceType::Audit, None),
             _ => return None,
         };
@@ -970,6 +1024,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "@aca",
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
+            ServiceType::Governance => "@gov",
             ServiceType::Changes => "@changes",
             ServiceType::Audit => "@audit",
         }
@@ -978,12 +1033,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1106,6 +1161,30 @@ mod tests {
     fn audit_never_fans_out_across_subscriptions() {
         assert!(!JumpView::Audit.fans_out(), "@audit is computed, never listed per subscription");
         assert!(JumpView::VirtualMachines.fans_out());
+    }
+
+    #[test]
+    fn governance_ids_route_wherever_they_were_made() {
+        let rg = "/subscriptions/0/resourceGroups/rg";
+        let mg = "/providers/Microsoft.Management/managementGroups/corp";
+        let auth = |scope: &str, t: &str| format!("{}/providers/Microsoft.Authorization/{}", scope, t);
+        assert_eq!(JumpView::for_arm_id(&auth(mg, "policyAssignments/a")), Some(JumpView::PolicyAssignments));
+        assert_eq!(JumpView::for_arm_id(&auth(rg, "policyExemptions/e")), Some(JumpView::PolicyExemptions));
+        assert_eq!(JumpView::for_arm_id(&auth(mg, "policySetDefinitions/d")), Some(JumpView::PolicyDefinitions));
+        assert_eq!(JumpView::for_arm_id(&auth("/subscriptions/0", "policyDefinitions/d")), Some(JumpView::PolicyDefinitions));
+        // A built-in is in no list: copied, not jumped to.
+        assert_eq!(JumpView::landing_for_arm_id(&auth("", "policyDefinitions/d")), None);
+        let vm = format!("{}/providers/Microsoft.Compute/virtualMachines/vm", rg);
+        assert_eq!(JumpView::for_arm_id(&auth(&vm, "locks/l")), Some(JumpView::ResourceLocks));
+        assert_eq!(JumpView::for_arm_id(&vm), Some(JumpView::VirtualMachines), "one /providers/: unchanged");
+        // Other extension resources are in no list, All resources included.
+        assert_eq!(JumpView::landing_for_arm_id(&auth(&vm, "roleAssignments/r")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&auth(rg, "roleAssignments/r")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&format!("{}/providers/Microsoft.Insights/diagnosticSettings/d", vm)), None);
+        assert_eq!(ServiceType::from_prefix("@gov"), Some((ServiceType::Governance, None)));
+        assert_eq!(ServiceType::from_prefix("@lock"), Some((ServiceType::Governance, Some(JumpView::ResourceLocks))));
+        assert_eq!(ServiceType::from_prefix("@exempt"), Some((ServiceType::Governance, Some(JumpView::PolicyExemptions))));
+        assert_eq!(ServiceType::from_prefix("@pdef"), Some((ServiceType::Governance, Some(JumpView::PolicyDefinitions))));
     }
 
     #[test]

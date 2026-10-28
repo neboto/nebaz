@@ -1,0 +1,31 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Network/networkInterfaces/nic-vm-jump-01/providers/Microsoft.Authorization/policyExemptions/jump-box-public-ip",
+      "name": "jump-box-public-ip",
+      "type": "Microsoft.Authorization/policyExemptions",
+      "properties": {
+        "displayName": "Jump box public IP (vendor access)",
+        "description": "Temporary, for the Fabrikam vendor session. Remove once Bastion is in use.",
+        "policyAssignmentId": "/providers/Microsoft.Management/managementGroups/contoso-landingzones/providers/Microsoft.Authorization/policyAssignments/deny-pip-on-nic",
+        "policyDefinitionReferenceIds": [],
+        "exemptionCategory": "Waiver",
+        "expiresOn": "{{iso:now+6d}}",
+        "metadata": {"createdBy": "alex.kim@contoso.com", "createdOn": "{{iso:now-3d}}"}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Authorization/policyExemptions/legacy-mcsb",
+      "name": "legacy-mcsb",
+      "type": "Microsoft.Authorization/policyExemptions",
+      "properties": {
+        "displayName": "Legacy apps: TLS findings mitigated by the app gateway",
+        "policyAssignmentId": "/providers/Microsoft.Management/managementGroups/contoso/providers/Microsoft.Authorization/policyAssignments/mcsb",
+        "policyDefinitionReferenceIds": ["webAppMinTls", "functionAppMinTls"],
+        "exemptionCategory": "Mitigated",
+        "expiresOn": "{{iso:now-20d}}",
+        "metadata": {"createdBy": "alex.kim@contoso.com", "createdOn": "2025-09-01T12:00:00Z"}
+      }
+    }
+  ]
+}

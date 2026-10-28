@@ -103,6 +103,13 @@ fn inherited_from(scope: &str, here: &str) -> Option<String> {
     })
 }
 
+/// A scope in words, the way Access names where an assignment comes
+/// from: `management group corp`, `subscription`, `resource group rg`, or
+/// a resource's name. The Governance rows' Scope column (ADR 0009).
+pub fn scope_words(scope: &str) -> String {
+    inherited_from(scope, "").unwrap_or_else(|| "-".into())
+}
+
 /// How many principals one Access section resolves to names: a bound on
 /// the Graph GETs a busy scope (a subscription with hundreds of
 /// assignments) can trigger.

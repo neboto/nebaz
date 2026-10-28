@@ -68,10 +68,10 @@ run flat-and-select ok sub '[{"wait": "Partner Dev"}, "\r", "\\", "V", "J", "J",
 
 # Ctrl-N moves down in a picker (it used to type `n` into the filter).
 # The picker lists services by category (`ServiceType::CATEGORIES`), then
-# in `ServiceType::all()` order: Subscriptions → Power Platform (both
-# Management) → Virtual Machines → Storage, then Enter. A new service in
-# Management or Compute needs one more press here.
-run picker-ctrl-n ok sub '[{"wait": "Partner Dev"}, "S", "\u000e", "\u000e", "\u000e", "\r"]' \
+# in `ServiceType::all()` order: Subscriptions → Power Platform →
+# Governance (all Management) → Virtual Machines → Storage, then Enter. A
+# new service in Management or Compute needs one more press here.
+run picker-ctrl-n ok sub '[{"wait": "Partner Dev"}, "S", "\u000e", "\u000e", "\u000e", "\u000e", "\r"]' \
   "Loading Storage…"
 
 # A seventh tab still fits, and the Foundry list goes to ARM like the rest.
@@ -176,6 +176,12 @@ run vm-scale-sets ok vmss '[]' \
 run backup-bvault ok bvault '[]' \
   "Recovery Services & Backup vaults" \
   "2 Backup vaults" \
+  "cannot reach 127.0.0.1"
+
+# The Governance tab loads through a routing prefix (Locks).
+run governance-locks ok lock '[]' \
+  "Policy assignments, exemptions, definitions & locks" \
+  "4 Locks" \
   "cannot reach 127.0.0.1"
 
 # The Monitor tab loads through a routing prefix (the sub-tab it picks

@@ -1,0 +1,78 @@
+{
+  "value": [
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso/providers/Microsoft.Authorization/policyAssignments/mcsb",
+      "name": "mcsb",
+      "type": "Microsoft.Authorization/policyAssignments",
+      "properties": {
+        "displayName": "Microsoft cloud security benchmark",
+        "scope": "/providers/Microsoft.Management/managementGroups/contoso",
+        "notScopes": [],
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/1f3afdf9-d0c9-4c3d-847f-89da613e70a8",
+        "enforcementMode": "Default",
+        "parameters": {},
+        "metadata": {"assignedBy": "Contoso Platform Admins", "createdOn": "2025-03-14T09:12:00Z"}
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso-landingzones/providers/Microsoft.Authorization/policyAssignments/deny-pip-on-nic",
+      "name": "deny-pip-on-nic",
+      "type": "Microsoft.Authorization/policyAssignments",
+      "properties": {
+        "displayName": "Deny public IPs on network interfaces",
+        "scope": "/providers/Microsoft.Management/managementGroups/contoso-landingzones",
+        "notScopes": [],
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/contoso/providers/Microsoft.Authorization/policyDefinitions/deny-pip-on-nic",
+        "enforcementMode": "Default",
+        "parameters": {"effect": {"value": "Deny"}},
+        "nonComplianceMessages": [{"message": "Public IPs on NICs need a platform exemption: raise it in #platform-help"}],
+        "metadata": {"assignedBy": "Contoso Platform Admins", "createdOn": "2025-03-14T09:15:00Z"}
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso-corp/providers/Microsoft.Authorization/policyAssignments/deploy-pdns",
+      "name": "deploy-pdns",
+      "type": "Microsoft.Authorization/policyAssignments",
+      "location": "westeurope",
+      "identity": {"type": "SystemAssigned", "principalId": "c4e8a2f6-1b3d-4f5a-9e7c-2d4f6a8b0c13", "tenantId": "{{tenant}}"},
+      "properties": {
+        "displayName": "Deploy private DNS zone records for private endpoints",
+        "scope": "/providers/Microsoft.Management/managementGroups/contoso-corp",
+        "notScopes": [],
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/contoso/providers/Microsoft.Authorization/policySetDefinitions/deploy-private-dns-zones",
+        "enforcementMode": "Default",
+        "parameters": {"privateDnsZoneSubscriptionId": {"value": "{{prod}}"}, "privateDnsZoneResourceGroup": {"value": "rg-network-prod"}},
+        "metadata": {"assignedBy": "Contoso Platform Admins", "createdOn": "2025-04-02T11:40:00Z"}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Authorization/policyAssignments/allowed-locations",
+      "name": "allowed-locations",
+      "type": "Microsoft.Authorization/policyAssignments",
+      "properties": {
+        "displayName": "Allowed locations",
+        "description": "Switched to DoNotEnforce for the northeurope DR build; never switched back.",
+        "scope": "/subscriptions/{{prod}}",
+        "notScopes": [],
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c",
+        "enforcementMode": "DoNotEnforce",
+        "parameters": {"listOfAllowedLocations": {"value": ["westeurope", "northeurope"]}},
+        "metadata": {"assignedBy": "alex.kim@contoso.com", "createdOn": "2025-06-20T08:00:00Z", "updatedBy": "alex.kim@contoso.com", "updatedOn": "{{iso:now-62d}}"}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Authorization/policyAssignments/require-team-tag",
+      "name": "require-team-tag",
+      "type": "Microsoft.Authorization/policyAssignments",
+      "properties": {
+        "displayName": "Require a team tag on resource groups",
+        "scope": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod",
+        "notScopes": [],
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025",
+        "enforcementMode": "Default",
+        "parameters": {"tagName": {"value": "team"}},
+        "metadata": {"assignedBy": "alex.kim@contoso.com", "createdOn": "2025-08-01T10:00:00Z"}
+      }
+    }
+  ]
+}

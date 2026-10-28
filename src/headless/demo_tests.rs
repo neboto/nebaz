@@ -44,6 +44,9 @@ const PLANTED: &[(&str, &str)] = &[
     // degraded.
     ("/privateLinkServices/pls-orders-partner", "Pending"),
     ("/trafficManagerProfiles/tm-contoso-api", "Degraded"),
+    // governance: Allowed locations was set to DoNotEnforce for the DR
+    // build and never set back.
+    ("/policyAssignments/allowed-locations", "DoNotEnforce"),
     // compute: caj-nightly-export's last execution failed (its Executions section).
     ("/jobs/caj-nightly-export", "caj-nightly-export-q7k2m9x"),
     // compute: vmss-legacy-web's instance 2 still runs the old image.

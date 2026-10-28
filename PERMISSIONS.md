@@ -99,6 +99,15 @@ each one backs are in the catalog table
 - **Storage**: `Microsoft.Storage/storageAccounts/read`; the lazy
   Containers section: `Microsoft.Storage/storageAccounts/blobServices/containers/read`
   (container metadata through ARM, never a blob).
+- **Governance** (ADR 0009): `Microsoft.Authorization/policyAssignments/read`,
+  `Microsoft.Authorization/policyExemptions/read`,
+  `Microsoft.Authorization/policyDefinitions/read`,
+  `Microsoft.Authorization/policySetDefinitions/read` (the subscription's
+  lists carry what the management groups above assign and store; a
+  built-in definition is read by id at the tenant root, which anyone
+  signed in may read), `Microsoft.Authorization/locks/read`. All in
+  `Reader` at subscription scope. Never sent: Policy Insights'
+  `queryResults` and `summarize` (compliance; `POST`s).
 - **Backup** (Recovery Services vaults, Backup vaults):
   `Microsoft.RecoveryServices/vaults/read` (redundancy, soft delete,
   immutability, multi-user authorization, encryption, private endpoints

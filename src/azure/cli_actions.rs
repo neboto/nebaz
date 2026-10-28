@@ -49,6 +49,7 @@ use crate::azure::services::scale_sets::ScaleSetRow;
 use crate::azure::services::sql::SqlServerRow;
 use crate::azure::services::storage::StorageAccountRow;
 use crate::azure::services::traffic_manager::TrafficManagerRow;
+use crate::azure::services::governance::PolicyAssignmentRow;
 
 /// How much a command can do: drives grouping, colour and the toast.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -171,8 +172,13 @@ fn generic_actions(r: &dyn Resource) -> Vec<CliAction> {
         return Vec::new();
     }
     let q = shell_quote(id);
-    let mut out = vec![inspect(format!("az role assignment list --scope {} --include-inherited", q))
-        .note("role assignments at this scope and inherited from above (the Access section)")];
+    let mut out = Vec::new();
+    if !crate::azure::services::governance::is_governance_id(id) {
+        out.push(
+            inspect(format!("az role assignment list --scope {} --include-inherited", q))
+                .note("role assignments at this scope and inherited from above (the Access section)"),
+        );
+    }
     if id.contains("/providers/") {
         out.push(
             inspect(format!("az monitor activity-log list --resource-id {} --offset 7d", q))
@@ -262,6 +268,8 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         recovery_vault_actions(v)
     } else if let Some(v) = any.downcast_ref::<BackupVaultRow>() {
         backup_vault_actions(v)
+    } else if let Some(a) = any.downcast_ref::<PolicyAssignmentRow>() {
+        policy_assignment_actions(a)
     } else {
         None
     };
@@ -705,6 +713,32 @@ fn power_platform_actions(p: &EnterprisePolicyRow) -> Option<Vec<CliAction>> {
     Some(subnets)
 }
 
+// ── Governance ───────────────────────────────────────────────────────
+
+/// What an assignment finds non-compliant: Policy Insights, a POST nebaz
+/// never sends (ADR 0009), so the user's to run. `az policy state list`
+/// takes the scope as its own flags, no `--ids`.
+fn policy_assignment_actions(a: &PolicyAssignmentRow) -> Option<Vec<CliAction>> {
+    let scope = a.scope.as_deref()?;
+    let at = match (subscription_of(scope), resource_group_of(scope)) {
+        (Some(_), Some(_)) if scope.to_ascii_lowercase().contains("/providers/") => format!("--resource {}", shell_quote(scope)),
+        (Some(sub), Some(rg)) => format!("--resource-group {} --subscription {}", shell_quote(rg), shell_quote(sub)),
+        (Some(sub), None) => format!("--subscription {}", shell_quote(sub)),
+        (None, _) => format!("--management-group {}", shell_quote(name_of_id(scope))),
+    };
+    let name = shell_quote(name_of_id(&a.base.id));
+    Some(vec![
+        inspect(format!(
+            "az policy state list --policy-assignment {} {} --filter \"complianceState eq 'NonCompliant'\"",
+            name, at
+        ))
+        .label("policy state list (non-compliant)")
+        .note("what the assignment finds non-compliant; compliance is a POST nebaz never sends"),
+        inspect(format!("az policy exemption list --scope {}", shell_quote(scope)))
+            .note("the exemptions made at the assignment's scope"),
+    ])
+}
+
 // ── Messaging ────────────────────────────────────────────────────────
 
 /// Reads only: a namespace has nothing to start or stop. The entity,
@@ -1021,6 +1055,20 @@ mod tests {
         assert!(a.iter().all(|x| x.label != "network bastion rdp"), "Linux VM: no RDP");
         assert!(find(&a, "monitor activity-log list").command.contains("--offset 7d"));
         assert!(find(&a, "role assignment list").command.ends_with("--include-inherited"));
+    }
+
+    #[test]
+    fn a_policy_assignment_reads_its_compliance_at_its_scope() {
+        let a = actions_for(mock("PolicyAssignmentRow").as_ref());
+        assert_eq!(a[0].command, "az policy assignment show --name pa-1 --scope /providers/Microsoft.Management/managementGroups/mg-1");
+        assert_eq!(
+            find(&a, "policy state list (non-compliant)").command,
+            "az policy state list --policy-assignment pa-1 --management-group mg-1 --filter \"complianceState eq 'NonCompliant'\""
+        );
+        assert!(a.iter().all(|x| x.label != "role assignment list"), "no RBAC of its own");
+        let lock = actions_for(mock("LockRow").as_ref());
+        assert!(lock.iter().all(|x| x.label != "role assignment list"));
+        assert!(find(&lock, "monitor activity-log list").command.contains("/locks/lock-1"));
     }
 
     #[test]

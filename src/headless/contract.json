@@ -208,6 +208,10 @@
     "audit": [
       "audit (audit)"
     ],
+    "backup": [
+      "recovery-vaults (backup)",
+      "backup-vaults (bvault)"
+    ],
     "changes": [
       "changes (changes)",
       "changes-activity (activity)",
@@ -233,6 +237,19 @@
     ],
     "foundry": [
       "ai-accounts (foundry)"
+    ],
+    "fw": [
+      "azure-firewalls (fw)",
+      "firewall-policies (fwp)",
+      "ip-groups (ipg)",
+      "cloud-ngfws (ngfw)",
+      "ngfw-rulestacks (rulestack)"
+    ],
+    "gov": [
+      "policy-assignments (gov)",
+      "policy-exemptions (exempt)",
+      "policy-definitions (pdef)",
+      "resource-locks (lock)"
     ],
     "id": [
       "identities (id)",
@@ -289,17 +306,6 @@
       "private-endpoints (pe)",
       "bastion-hosts (bastion)",
       "ddos-plans (ddos)"
-    ],
-    "fw": [
-      "azure-firewalls (fw)",
-      "firewall-policies (fwp)",
-      "ip-groups (ipg)",
-      "cloud-ngfws (ngfw)",
-      "ngfw-rulestacks (rulestack)"
-    ],
-    "backup": [
-      "recovery-vaults (backup)",
-      "backup-vaults (bvault)"
     ]
   },
   "sections": {
@@ -365,10 +371,54 @@
       "Related",
       "Tags"
     ],
+    "Azure Firewall": [
+      "Overview",
+      "Network",
+      "Policy",
+      "Rules",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Backup vault": [
+      "Overview",
+      "Security",
+      "Backup instances",
+      "Policies",
+      "Jobs",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Bastion": [
       "Overview",
       "Features",
       "Network",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Cloud NGFW": [
+      "Overview",
+      "Network",
+      "Front end",
+      "Rules",
+      "Management",
+      "Status",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Cloud NGFW rulestack": [
+      "Overview",
+      "Rules",
+      "Objects",
+      "Security services",
+      "Firewalls",
       "Access",
       "Activity",
       "Related",
@@ -518,6 +568,16 @@
       "Related",
       "Tags"
     ],
+    "Firewall policy": [
+      "Overview",
+      "Settings",
+      "Rule collection groups",
+      "Hierarchy",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Front Door profile": [
       "Overview",
       "Endpoints",
@@ -533,6 +593,15 @@
       "Overview",
       "Configuration",
       "IPsec",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "IP group": [
+      "Overview",
+      "Addresses",
+      "Used by",
       "Access",
       "Activity",
       "Related",
@@ -658,6 +727,30 @@
       "Related",
       "Tags"
     ],
+    "Policy assignment": [
+      "Overview",
+      "Assignment",
+      "Definition",
+      "Parameters",
+      "Exemptions",
+      "Activity",
+      "Related"
+    ],
+    "Policy definition": [
+      "Overview",
+      "Definition",
+      "Rule",
+      "Parameters",
+      "Assignments",
+      "Activity",
+      "Related"
+    ],
+    "Policy exemption": [
+      "Overview",
+      "Exemption",
+      "Activity",
+      "Related"
+    ],
     "PostgreSQL server": [
       "Overview",
       "Networking",
@@ -706,6 +799,17 @@
       "Related",
       "Tags"
     ],
+    "Recovery Services vault": [
+      "Overview",
+      "Security",
+      "Protected items",
+      "Policies",
+      "Failed jobs",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Redis cache": [
       "Overview",
       "Security",
@@ -725,6 +829,12 @@
     ],
     "Resource Health": [
       "Overview",
+      "Related"
+    ],
+    "Resource lock": [
+      "Overview",
+      "Lock",
+      "Activity",
       "Related"
     ],
     "Route Table": [
@@ -804,6 +914,17 @@
       "Related",
       "Tags"
     ],
+    "VM Scale Set": [
+      "Overview",
+      "Model",
+      "Scaling",
+      "Network",
+      "Instances",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Virtual Machine": [
       "Overview",
       "Instance view",
@@ -842,91 +963,6 @@
       "Managed rules",
       "Custom rules",
       "Associations",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Azure Firewall": [
-      "Overview",
-      "Network",
-      "Policy",
-      "Rules",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Cloud NGFW": [
-      "Overview",
-      "Network",
-      "Front end",
-      "Rules",
-      "Management",
-      "Status",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Cloud NGFW rulestack": [
-      "Overview",
-      "Rules",
-      "Objects",
-      "Security services",
-      "Firewalls",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Firewall policy": [
-      "Overview",
-      "Settings",
-      "Rule collection groups",
-      "Hierarchy",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "IP group": [
-      "Overview",
-      "Addresses",
-      "Used by",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "VM Scale Set": [
-      "Overview",
-      "Model",
-      "Scaling",
-      "Network",
-      "Instances",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Recovery Services vault": [
-      "Overview",
-      "Security",
-      "Protected items",
-      "Policies",
-      "Failed jobs",
-      "Access",
-      "Activity",
-      "Related",
-      "Tags"
-    ],
-    "Backup vault": [
-      "Overview",
-      "Security",
-      "Backup instances",
-      "Policies",
-      "Jobs",
       "Access",
       "Activity",
       "Related",

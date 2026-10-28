@@ -43,6 +43,17 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("core", "/subscriptions/{{prod}}/resourcegroups/rg-platform-prod/providers/Microsoft.Resources/deployments", "deployments-rg-platform-prod.json"),
     fx!("core", "/subscriptions/{{prod}}/resourcegroups/rg-ai-prod/providers/Microsoft.Resources/deployments", "deployments-rg-ai-prod.json"),
     fx!("core", "/subscriptions/{{dev}}/resourcegroups/rg-dev/providers/Microsoft.Resources/deployments", "deployments-rg-dev.json"),
+    // Governance (#155): the subscription's view, management groups'
+    // assignments and definitions included; the built-ins an assignment
+    // applies, read by id.
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Authorization/policyAssignments", "policy-assignments-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Authorization/policyExemptions", "policy-exemptions-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Authorization/policyDefinitions", "policy-definitions-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Authorization/policySetDefinitions", "policy-set-definitions-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Authorization/locks", "locks-prod.json"),
+    fx!("core", "/providers/Microsoft.Authorization/policySetDefinitions/1f3afdf9-d0c9-4c3d-847f-89da613e70a8", "builtin-mcsb.json"),
+    fx!("core", "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c", "builtin-allowed-locations.json"),
+    fx!("core", "/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025", "builtin-require-rg-tag.json"),
     // Resources no service browses: All resources lists them (the alert
     // rules behind the fired alerts, their action groups, the watchers).
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/metricAlerts", "metric-alerts.json"),

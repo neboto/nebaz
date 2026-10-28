@@ -19,9 +19,10 @@ subscription scope (`PERMISSIONS.md`).
 
 **1. Every governance list is the subscription's view, with what it
 inherits.** The assignment and exemption lists are fetched at subscription
-scope with `$filter=atScope()`, which returns what was made on the
-subscription, on its resource groups and resources, and on every
-management group above it. Subscription `Reader` can read all of that,
+scope **unfiltered**, which returns what was made on the subscription, on
+its resource groups and resources, and on every management group above
+it. (`$filter=atScope()` drops the ones made on the groups and resources
+inside it; the spec's description of each list says so.) Subscription `Reader` can read all of that,
 because it is what applies to the subscription. The definition and
 initiative lists are fetched at subscription scope as well (custom only,
 `$filter=policyType eq 'Custom'`; the built-ins are thousands of rows). So
@@ -136,8 +137,8 @@ resource groups follow.
   any change to ADR 0007.
 - To verify on a live CAF tenant before the PR that adds the lists
   merges (this dev machine has no `az`):
-  - that `atScope()` on the subscription returns assignments made at
-    management groups;
+  - that the unfiltered list on the subscription returns assignments
+    made at management groups;
   - that the subscription's definition list includes custom definitions
     stored at management groups;
   - what `GET …/managementGroups` returns for an account that is

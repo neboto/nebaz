@@ -148,6 +148,18 @@ pub struct LazyStore {
     /// the `flow-logs-missing` audit check read (`flow_logs.rs`).
     pub flow_logs: LazyMap<crate::azure::services::flow_logs::FlowLogs>,
 
+    // ── Governance ───────────────────────────────────────────────────────
+    /// A built-in policy definition or initiative an assignment applies,
+    /// keyed by its id (`/providers/Microsoft.Authorization/…`): the one
+    /// definition a GET reads, since a custom one comes from the warm list
+    /// (ADR 0009, decision 2).
+    pub policy_definitions: LazyMap<serde_json::Value>,
+    /// A governance list a section reads while its own sub-tab is cold
+    /// (an assignment's Definition and Exemptions, a definition's
+    /// Assignments), keyed `{subscription}|{sub-tab}`: loaded by the same
+    /// provider stream the tab uses, never instead of the list cache.
+    pub governance_lists: LazyMap<Vec<Box<dyn crate::azure::resource::Resource>>>,
+
     // ── Edge ─────────────────────────────────────────────────────────────
     /// A Front Door profile's endpoints with their routes, origin groups
     /// with their origins, custom domains and security policies, keyed by

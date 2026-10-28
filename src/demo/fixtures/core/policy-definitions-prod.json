@@ -1,0 +1,24 @@
+{
+  "value": [
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso/providers/Microsoft.Authorization/policyDefinitions/deny-pip-on-nic",
+      "name": "deny-pip-on-nic",
+      "type": "Microsoft.Authorization/policyDefinitions",
+      "properties": {
+        "displayName": "Deny public IPs on network interfaces",
+        "policyType": "Custom",
+        "mode": "All",
+        "description": "Network interfaces may not carry a public IP; ingress goes through the app gateway or Bastion.",
+        "metadata": {"category": "Network", "version": "1.1.0", "createdBy": "8851538f-3984-4858-a0fd-773a4f49a810", "createdOn": "2025-03-14T09:10:00Z"},
+        "parameters": {"effect": {"type": "String", "defaultValue": "Deny", "allowedValues": ["Audit", "Deny", "Disabled"]}},
+        "policyRule": {
+          "if": {"allOf": [
+            {"field": "type", "equals": "Microsoft.Network/networkInterfaces"},
+            {"field": "Microsoft.Network/networkInterfaces/ipconfigurations[*].publicIpAddress.id", "exists": "true"}
+          ]},
+          "then": {"effect": "[parameters('effect')]"}
+        }
+      }
+    }
+  ]
+}
