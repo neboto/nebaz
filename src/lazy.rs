@@ -159,6 +159,9 @@ pub struct LazyStore {
     /// Assignments), keyed `{subscription}|{sub-tab}`: loaded by the same
     /// provider stream the tab uses, never instead of the list cache.
     pub governance_lists: LazyMap<Vec<Box<dyn crate::azure::resource::Resource>>>,
+    /// A management group with its parent and children
+    /// (`?$expand=children`), keyed by its id.
+    pub management_groups: LazyMap<serde_json::Value>,
 
     // ── Edge ─────────────────────────────────────────────────────────────
     /// A Front Door profile's endpoints with their routes, origin groups

@@ -6,7 +6,7 @@ use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
     aks, app_service, backup, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
-    keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
+    governance, keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
     sql, storage,
 };
 use crate::lazy::LazyStore;
@@ -1461,4 +1461,49 @@ fn a_failing_or_overdue_protected_item_is_flagged_on_its_source() {
     assert_eq!(failed.reason, "last backup Failed in rsv-good");
     // rsv-weak and bv-good were never read: a note, not a pass.
     assert_eq!(notes(&rows), vec!["2 of 4 not checked — r fetches protected items".to_string()]);
+}
+
+// ── Governance ──
+
+#[test]
+fn an_assignment_in_do_not_enforce_is_a_finding_wherever_it_was_made() {
+    let a = |scope: &str, name: &str, mode: &str| {
+        let v = json!({"id": format!("{}/providers/Microsoft.Authorization/policyAssignments/{}", scope, name), "name": name,
+            "properties": {"scope": scope, "enforcementMode": mode,
+                "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/d"}});
+        boxed(governance::PolicyAssignmentRow::from_json(&v, Some("t")))
+    };
+    let lists = vec![(
+        V::PolicyAssignments,
+        vec![
+            a("/providers/Microsoft.Management/managementGroups/corp", "mg-audit-only", "DoNotEnforce"),
+            a(&format!("/subscriptions/{}", SUB), "sub-enforced", "Default"),
+            a(&format!("/subscriptions/{}/resourceGroups/rg", SUB), "rg-no-mode", ""),
+        ],
+    )];
+    let rows = audit("policy-not-enforced", &lists, None);
+    assert_eq!(findings(&rows), vec![("mg-audit-only".into(), Severity::Low)]);
+    assert!(rows[0].reason.contains("management group corp"), "{}", rows[0].reason);
+    assert_eq!(notes(&audit("policy-not-enforced", &[], None)).len(), 1, "no list: not checked, never a pass");
+}
+
+#[test]
+fn an_exemption_is_graded_by_when_it_ends() {
+    let e = |name: &str, expires: Option<i64>| {
+        let mut props = json!({"exemptionCategory": "Waiver",
+            "policyAssignmentId": "/providers/Microsoft.Management/managementGroups/corp/providers/Microsoft.Authorization/policyAssignments/a"});
+        if let Some(t) = expires {
+            props["expiresOn"] = json!(iso(t));
+        }
+        let v = json!({"id": id(&format!("Microsoft.Authorization/policyExemptions/{}", name)), "name": name, "properties": props});
+        boxed(governance::PolicyExemptionRow::from_json(&v, Some("t")))
+    };
+    let lists = vec![(
+        V::PolicyExemptions,
+        vec![e("ended", Some(NOW - 1)), e("soon", Some(NOW + 86_400)), e("later", Some(NOW + 400 * 86_400)), e("forever", None)],
+    )];
+    assert_eq!(
+        findings(&audit("policy-exemption-expiry", &lists, None)),
+        vec![("soon".into(), Severity::Low), ("ended".into(), Severity::Info)]
+    );
 }

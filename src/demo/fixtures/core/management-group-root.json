@@ -1,0 +1,28 @@
+{
+  "id": "/providers/Microsoft.Management/managementGroups/{{tenant}}",
+  "type": "Microsoft.Management/managementGroups",
+  "name": "{{tenant}}",
+  "properties": {
+    "tenantId": "{{tenant}}",
+    "displayName": "Tenant Root Group",
+    "details": {
+      "version": 3,
+      "updatedTime": "2025-03-14T09:00:00Z",
+      "updatedBy": "Contoso Platform Admins",
+      "parent": {
+        "id": null,
+        "name": null,
+        "displayName": null
+      }
+    },
+    "children": [
+      {
+        "type": "Microsoft.Management/managementGroups",
+        "id": "/providers/Microsoft.Management/managementGroups/contoso",
+        "name": "contoso",
+        "displayName": "Contoso",
+        "children": null
+      }
+    ]
+  }
+}

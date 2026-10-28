@@ -197,6 +197,14 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
                 "Not in the demo dataset yet".to_string(),
                 "this tab has no made-up rows · S another service".to_string(),
             )
+        } else if app.resources.is_empty() && app.current_view == crate::azure::service::JumpView::ManagementGroups {
+            // The list holds only the groups the caller can read: empty is
+            // the usual answer for subscription Reader, not a failure
+            // (ADR 0009, decision 3).
+            (
+                "No management groups readable with this account".to_string(),
+                "the assignments they make are still listed under Assignments · r refresh".to_string(),
+            )
         } else if app.resources.is_empty() {
             (
                 "No resources found".to_string(),

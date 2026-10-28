@@ -669,7 +669,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     ADR 0009, `src/azure/services/governance.rs`, glue
     `src/app/governance.rs`): policy assignments (`@gov`), exemptions
     (`@exempt`), custom definitions and initiatives (`@pdef`, one sub-tab
-    of two lists) and resource locks (`@lock`). Every list is fetched at
+    of two lists), resource locks (`@lock`) and management groups
+    (`@mg`). Every policy and lock list is fetched at
     subscription scope and **unfiltered**, so it carries what the
     management groups above assign and store as well as what was made on
     the subscription, its groups and resources (`$filter=atScope()` would
@@ -686,6 +687,15 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     days (pending) or expired (stopped); definitions and locks are
     stateless. No region (an assignment's `location` is its identity's)
     and no RBAC or tags of their own: the tail is Activity, Related.
+    **Management groups** are the groups the caller can read
+    (`GET /providers/Microsoft.Management/managementGroups`, above the
+    subscription, cached per subscription, never fanned out): empty for a
+    subscription Reader with nothing at a group, which the list says in one
+    line, never a `⚠`. A group's Group section is its own GET with
+    `$expand=children` (parent and direct children, each jumpable, the
+    current subscription marked); its Assignments are the warm ones made
+    at it. **`@audit`** reads the lists: `policy-not-enforced` and
+    `policy-exemption-expiry`.
     **Never**: compliance (`Microsoft.PolicyInsights` `queryResults` and
     `summarize` are POSTs; `C` carries `az policy state list`), and the
     tenant's built-in definitions as a list.
@@ -742,6 +752,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Governance · Exemptions | Exemption (category, expiry with days left, scope, the assignment by display name from the warm list, the reference ids it exempts or every policy, description, created / updated) | active; expiring (30 days, pending); expired (stopped) | what it exempts (a resource, group or the subscription), the assignment | `az policy exemption show --name {name} --scope {scope}` |
 | Governance · Definitions | Definition (display name, type, policy or initiative, stored at, category, version, mode and effect, the effect's parameter default resolved; an initiative's policy count) · Rule (a policy's rule as JSON; an initiative's member policies by reference id) · Parameters (type, default, allowed values) · Assignments (the warm assignments of it) | stateless | where it is stored, an initiative's member policies | `az policy definition show` / `set-definition show --name {name}` with `--management-group` or `--subscription` |
 | Governance · Locks | Lock (level explained, what it is on, inherited below, notes, owners) | stateless | what it locks | `az lock show --ids {id}` |
+| Governance · Management groups (rule 32; tail Activity, Related) | Group ⧗ (parent, direct children: groups and subscriptions, the current one marked; updated when and by whom) · Assignments (the warm Assignments made at the group) · (Overview: display name, group name, tenant; the root group reads `tenant root`) | stateless | none (the Group section's lines jump) | `az account management-group show --name {name} --expand` |
 | Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
@@ -769,7 +780,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -843,6 +854,8 @@ has a fixture test there.
 | `pp-policy-unhealthy` | Enterprise policies | `healthStatus` not Healthy | medium |
 | `appreg-credential-expiry` | App registrations | a secret or certificate expired · expiring within 30 days | medium · low |
 | `sp-credential-expiry` | Service principals (managed identities skipped) | the same | medium · low |
+| `policy-not-enforced` | Policy assignments (inherited ones included) | `enforcementMode` `DoNotEnforce` | low |
+| `policy-exemption-expiry` | Policy exemptions (no `expiresOn` never ends) | ends within 30 days · has ended | low · info |
 | `sub-privileged-guest-or-sp` | the subscription's Access ⧗ (+ principals ⧗; a service principal is named from them, else from the cached Service principals list, else by object id) | Owner or User Access Administrator at or above the subscription (assigned on it or a management group, not a resource group) held by a guest user (`userType` Guest or `#EXT#`) · a service principal | critical · high |
 | `sub-contributor-guest-or-sp` | the same | Contributor at or above the subscription held by a guest user · a service principal (a separate check: Contributor cannot grant access, so one severity lower) | high · medium |
 
@@ -910,6 +923,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Cloud NGFW Status | 1 per firewall, on demand | `{firewall}/statuses/default` · `2025-10-08` |
 | Rulestack Rules (and a Cloud NGFW's Rules), Objects | 1 per rulestack, on demand; Objects 2 | `{rulestack}/localRules` · `{rulestack}/prefixlists` · `{rulestack}/fqdnlists` · `2025-10-08` |
 | Assignments · Exemptions · Locks (rule 32) | 1 each, unfiltered | `/providers/Microsoft.Authorization/policyAssignments` · `2025-03-01` · `/providers/Microsoft.Authorization/policyExemptions` · `2022-07-01-preview` (no stable version) · `/providers/Microsoft.Authorization/locks` · `2020-05-01` |
+| Management groups (rule 32) | 1, above the subscription | `/providers/Microsoft.Management/managementGroups` · `2023-04-01` |
+| A management group's Group | 1 per group, on demand | `/providers/Microsoft.Management/managementGroups/{name}?$expand=children` · `2023-04-01` |
 | Definitions (rule 32) | 2 | `/providers/Microsoft.Authorization/policyDefinitions?$filter=policyType eq 'Custom'` · `/providers/Microsoft.Authorization/policySetDefinitions?$filter=policyType eq 'Custom'` · `2025-03-01` |
 | An assignment's built-in Definition | 1 per built-in, on demand (tenant root, not under a subscription) | `/providers/Microsoft.Authorization/policyDefinitions/{id}` or `policySetDefinitions/{id}` · `2025-03-01` |
 | Recovery vaults · Backup vaults (rule 31) | 1 each | `/providers/Microsoft.RecoveryServices/vaults` · `2026-07-01` · `/providers/Microsoft.DataProtection/backupVaults` · `2026-06-01` |

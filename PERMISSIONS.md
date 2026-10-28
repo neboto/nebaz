@@ -105,7 +105,9 @@ each one backs are in the catalog table
   `Microsoft.Authorization/policySetDefinitions/read` (the subscription's
   lists carry what the management groups above assign and store; a
   built-in definition is read by id at the tenant root, which anyone
-  signed in may read), `Microsoft.Authorization/locks/read`. All in
+  signed in may read), `Microsoft.Authorization/locks/read`,
+  `Microsoft.Management/managementGroups/read` (only the groups where the
+  role is assigned at a group; none is not an error). All in
   `Reader` at subscription scope. Never sent: Policy Insights'
   `queryResults` and `summarize` (compliance; `POST`s).
 - **Backup** (Recovery Services vaults, Backup vaults):

@@ -54,6 +54,15 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("core", "/providers/Microsoft.Authorization/policySetDefinitions/1f3afdf9-d0c9-4c3d-847f-89da613e70a8", "builtin-mcsb.json"),
     fx!("core", "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c", "builtin-allowed-locations.json"),
     fx!("core", "/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025", "builtin-require-rg-tag.json"),
+    // The management groups this account can read (all of them in the
+    // demo), and each group's own GET with its parent and children.
+    fx!("core", "/providers/Microsoft.Management/managementGroups", "management-groups.json"),
+    fx!("core", "/providers/Microsoft.Management/managementGroups/{{tenant}}", "management-group-root.json"),
+    fx!("core", "/providers/Microsoft.Management/managementGroups/contoso", "management-group-contoso.json"),
+    fx!("core", "/providers/Microsoft.Management/managementGroups/contoso-platform", "management-group-contoso-platform.json"),
+    fx!("core", "/providers/Microsoft.Management/managementGroups/contoso-landingzones", "management-group-contoso-landingzones.json"),
+    fx!("core", "/providers/Microsoft.Management/managementGroups/contoso-sandbox", "management-group-contoso-sandbox.json"),
+    fx!("core", "/providers/Microsoft.Management/managementGroups/contoso-corp", "management-group-contoso-corp.json"),
     // Resources no service browses: All resources lists them (the alert
     // rules behind the fired alerts, their action groups, the watchers).
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/metricAlerts", "metric-alerts.json"),

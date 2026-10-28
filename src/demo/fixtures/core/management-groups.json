@@ -1,0 +1,58 @@
+{
+  "value": [
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/{{tenant}}",
+      "type": "Microsoft.Management/managementGroups",
+      "name": "{{tenant}}",
+      "properties": {
+        "tenantId": "{{tenant}}",
+        "displayName": "Tenant Root Group"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso",
+      "type": "Microsoft.Management/managementGroups",
+      "name": "contoso",
+      "properties": {
+        "tenantId": "{{tenant}}",
+        "displayName": "Contoso"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso-platform",
+      "type": "Microsoft.Management/managementGroups",
+      "name": "contoso-platform",
+      "properties": {
+        "tenantId": "{{tenant}}",
+        "displayName": "Platform"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso-landingzones",
+      "type": "Microsoft.Management/managementGroups",
+      "name": "contoso-landingzones",
+      "properties": {
+        "tenantId": "{{tenant}}",
+        "displayName": "Landing zones"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso-sandbox",
+      "type": "Microsoft.Management/managementGroups",
+      "name": "contoso-sandbox",
+      "properties": {
+        "tenantId": "{{tenant}}",
+        "displayName": "Sandbox"
+      }
+    },
+    {
+      "id": "/providers/Microsoft.Management/managementGroups/contoso-corp",
+      "type": "Microsoft.Management/managementGroups",
+      "name": "contoso-corp",
+      "properties": {
+        "tenantId": "{{tenant}}",
+        "displayName": "Corp"
+      }
+    }
+  ]
+}

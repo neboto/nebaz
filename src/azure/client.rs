@@ -412,6 +412,22 @@ impl AzureClients {
         }
     }
 
+    /// `GET {path}?{query}` as a future the lazy store can own (a
+    /// management group with `$expand=children`).
+    pub fn get_fetch_query(
+        &self,
+        path: &str,
+        api_version: &'static str,
+        query: &'static [(&'static str, &'static str)],
+    ) -> impl Future<Output = std::result::Result<serde_json::Value, String>> + Send + 'static {
+        let arm = self.arm_for_path(path);
+        let path = path.to_string();
+        async move {
+            let arm = arm?;
+            arm.get_query(&path, api_version, query).await.map_err(|e| e.to_string())
+        }
+    }
+
     /// `GET {path}` as a whole collection, for the lazy children
     /// (containers, secret and key names).
     pub fn list_fetch(

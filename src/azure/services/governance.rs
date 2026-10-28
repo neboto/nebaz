@@ -39,6 +39,8 @@ pub const EXEMPTIONS_PATH: &str = "/providers/Microsoft.Authorization/policyExem
 pub const DEFINITIONS_PATH: &str = "/providers/Microsoft.Authorization/policyDefinitions";
 pub const SET_DEFINITIONS_PATH: &str = "/providers/Microsoft.Authorization/policySetDefinitions";
 pub const LOCKS_PATH: &str = "/providers/Microsoft.Authorization/locks";
+/// Above the subscription: the whole path, not a suffix.
+pub const MANAGEMENT_GROUPS_PATH: &str = "/providers/Microsoft.Management/managementGroups";
 /// Policy's stable spec: `2025-03-01` (azure-rest-api-specs, 2026-10-28;
 /// `2025-11-01` and later are a few months old and add nothing shown here).
 pub const POLICY_API_VERSION: &str = "2025-03-01";
@@ -47,6 +49,10 @@ pub const POLICY_API_VERSION: &str = "2025-03-01";
 pub const EXEMPTIONS_API_VERSION: &str = "2022-07-01-preview";
 /// Locks' newest stable (`2020-05-01`).
 pub const LOCKS_API_VERSION: &str = "2020-05-01";
+/// Management groups' newest stable (`2023-04-01`).
+pub const MANAGEMENT_GROUPS_API_VERSION: &str = "2023-04-01";
+/// A group's parent and direct children, on its own GET.
+pub const EXPAND_CHILDREN: &[(&str, &str)] = &[("$expand", "children")];
 /// The definitions filter: custom only.
 const CUSTOM: (&str, &str) = ("$filter", "policyType eq 'Custom'");
 
@@ -87,6 +93,17 @@ crate::sections! {
 }
 
 crate::sections! {
+    pub enum ManagementGroupDetailSection,
+    pub static MANAGEMENT_GROUP_SECTIONS = [
+        Overview "Overview",
+        Group "Group" => crate::app::App::trigger_management_group,
+        Assignments "Assignments" => crate::app::App::trigger_policy_assignments,
+        Activity "Activity" => crate::app::App::trigger_activity,
+        Related "Related",
+    ]
+}
+
+crate::sections! {
     pub enum LockDetailSection,
     pub static LOCK_SECTIONS = [
         Overview "Overview",
@@ -97,12 +114,20 @@ crate::sections! {
 }
 
 /// Whether an id is a governance row's: an Authorization policy, exemption
-/// or lock, wherever it was made: no RBAC of its own, so neither an Access
-/// section nor the `C` picker's role-assignment read.
+/// or lock, wherever it was made, or a management group: no Access section
+/// (a group's role assignments need read at the group, and the Access
+/// section reads at subscription scope and below) and no `C`
+/// role-assignment read.
 pub fn is_governance_id(id: &str) -> bool {
     matches!(
         JumpView::for_arm_id(id),
-        Some(JumpView::PolicyAssignments | JumpView::PolicyExemptions | JumpView::PolicyDefinitions | JumpView::ResourceLocks)
+        Some(
+            JumpView::PolicyAssignments
+                | JumpView::PolicyExemptions
+                | JumpView::PolicyDefinitions
+                | JumpView::ResourceLocks
+                | JumpView::ManagementGroups
+        )
     )
 }
 
@@ -928,6 +953,130 @@ impl Resource for LockRow {
     }
 }
 
+// ── Management groups ─────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct ManagementGroupRow {
+    pub base: ArmBase,
+    pub tenant_id: Option<String>,
+}
+
+impl ManagementGroupRow {
+    pub fn from_json(v: &Value, tenant: Option<&str>) -> Option<ManagementGroupRow> {
+        let base = display_base(v, tenant)?;
+        Some(ManagementGroupRow { tenant_id: json::str_at(v, "/properties/tenantId"), base })
+    }
+
+    /// The group's name (its id's last segment); `name()` is the display
+    /// name.
+    pub fn group_name(&self) -> &str {
+        arm_name(&self.base.id)
+    }
+
+    /// The tenant root group is named after the tenant.
+    pub fn is_root(&self) -> bool {
+        self.tenant_id.as_deref().is_some_and(|t| t.eq_ignore_ascii_case(self.group_name()))
+    }
+}
+
+/// One child or the parent of a group, as two lines: what it is, then its
+/// id (Enter jumps to it).
+fn member_lines(label: &str, m: &Value, current_subscription: Option<&str>) -> Vec<(String, String)> {
+    let id = json::text(m, "/id");
+    let display = json::str_at(m, "/displayName").or_else(|| json::str_at(m, "/name")).unwrap_or_else(|| name_of_id(&id).to_string());
+    let is_sub = id.to_ascii_lowercase().starts_with("/subscriptions/");
+    let kind = if is_sub { "subscription" } else { "management group" };
+    let this = current_subscription.is_some_and(|c| is_sub && name_of_id(&id).eq_ignore_ascii_case(c));
+    vec![
+        (label.to_string(), format!("{} ({}){}", display, kind, if this { " · this subscription" } else { "" })),
+        (String::new(), id),
+    ]
+}
+
+/// The Group section: the parent and the direct children, from the group's
+/// own GET with `$expand=children`.
+pub fn management_group_rows(lazy: Option<&Lazy<Value>>, current_subscription: Option<&str>) -> Vec<(String, String)> {
+    let v = match lazy {
+        Some(Lazy::Loaded(v)) => v,
+        Some(Lazy::Error(e)) => return crate::azure::services::error_rows(e),
+        _ => return vec![(String::new(), "Loading…".into())],
+    };
+    let mut lines = Vec::new();
+    match v.pointer("/properties/details/parent").filter(|p| p.get("id").is_some_and(|i| !i.is_null())) {
+        Some(p) => lines.extend(member_lines("Parent", p, current_subscription)),
+        None => lines.push(("Parent".into(), "none: the tenant root".into())),
+    }
+    lines.push((String::new(), String::new()));
+    let children = json::arr(v, "/properties/children");
+    if children.is_empty() {
+        lines.push(("Children".into(), "none".into()));
+    }
+    for (i, c) in children.iter().enumerate() {
+        lines.extend(member_lines(if i == 0 { "Children" } else { "" }, c, current_subscription));
+    }
+    lines.push((String::new(), String::new()));
+    lines.push(("Updated".into(), json::time(json::str_at(v, "/properties/details/updatedTime"))));
+    lines.push(("Updated by".into(), json::opt(json::str_at(v, "/properties/details/updatedBy"))));
+    lines
+}
+
+/// The Assignments section: the warm assignments made at this group.
+pub fn group_assignment_rows(g: &ManagementGroupRow, assignments: Warm) -> Vec<(String, String)> {
+    let Some(rows) = assignments.rows() else {
+        return assignments.waiting("Assignments");
+    };
+    let mine: Vec<&PolicyAssignmentRow> = rows
+        .iter()
+        .filter_map(|a| a.as_any().downcast_ref::<PolicyAssignmentRow>())
+        .filter(|a| a.scope.as_deref().is_some_and(|s| s.eq_ignore_ascii_case(&g.base.id)))
+        .collect();
+    if mine.is_empty() {
+        return vec![(String::new(), "No assignment made here applies to this subscription".into())];
+    }
+    mine.into_iter()
+        .map(|a| {
+            let enforced = if a.is_enforced() { "" } else { " · not enforced" };
+            (format!("{}{}", a.base.name, enforced), a.base.id.clone())
+        })
+        .collect()
+}
+
+impl Resource for ManagementGroupRow {
+    arm_row!("Management group");
+    fn filter_location(&self) -> Option<&str> {
+        None
+    }
+    /// `contoso-corp` (the group's name, when it differs from the display
+    /// name) or `tenant root`.
+    fn list_summary(&self) -> Option<String> {
+        if self.is_root() {
+            return Some("tenant root".into());
+        }
+        Some(self.group_name().to_string()).filter(|n| !n.eq_ignore_ascii_case(&self.base.name))
+    }
+    fn state(&self) -> ResourceState {
+        ResourceState::stateless()
+    }
+    fn detail_sections(&self) -> Option<&'static crate::sections::SectionDescriptor> {
+        Some(&MANAGEMENT_GROUP_SECTIONS)
+    }
+    fn details(&self) -> Vec<(String, String)> {
+        vec![
+            ("Name".into(), self.base.name.clone()),
+            ("Group name".into(), self.group_name().to_string()),
+            ("Id".into(), self.base.id.clone()),
+            ("Tenant".into(), json::opt(self.tenant_id.clone())),
+        ]
+    }
+    fn related(&self) -> Vec<(String, String)> {
+        scope_related(&self.base.id)
+    }
+    /// `az account management-group show` takes `--name`, no `--ids`.
+    fn cli_command(&self) -> Option<String> {
+        Some(format!("az account management-group show --name {} --expand", shell_quote(self.group_name())))
+    }
+}
+
 // ── Section dispatch ──────────────────────────────────────────────────
 
 /// What the governance sections read besides the row: the warm lists of
@@ -937,6 +1086,10 @@ pub struct GovernanceContext<'a> {
     pub exemptions: Warm<'a>,
     pub definitions: Warm<'a>,
     pub builtin_definition: Option<&'a Lazy<Value>>,
+    /// The selected management group's own GET, children expanded.
+    pub management_group: Option<&'a Lazy<Value>>,
+    /// The current subscription's id, to mark it among a group's children.
+    pub subscription: Option<&'a str>,
 }
 
 /// Every governance type's section body, or `None` for another type.
@@ -975,6 +1128,16 @@ pub fn governance_section_lines(r: &dyn Resource, idx: usize, cx: &GovernanceCon
             S::Related => related_lines(d.related()),
         });
     }
+    if let Some(g) = any.downcast_ref::<ManagementGroupRow>() {
+        use ManagementGroupDetailSection as S;
+        return Some(match S::from_index(idx) {
+            S::Overview => overview_rows(g),
+            S::Group => management_group_rows(cx.management_group, cx.subscription),
+            S::Assignments => group_assignment_rows(g, cx.assignments),
+            S::Activity => crate::azure::services::rendered_by_app(),
+            S::Related => related_lines(g.related()),
+        });
+    }
     if let Some(l) = any.downcast_ref::<LockRow>() {
         use LockDetailSection as S;
         return Some(match S::from_index(idx) {
@@ -1007,6 +1170,7 @@ impl GovernanceService {
             JumpView::PolicyExemptions => Self::boxed(page.iter().filter_map(|v| PolicyExemptionRow::from_json(v, tenant)).collect()),
             JumpView::PolicyDefinitions => Self::boxed(page.iter().filter_map(|v| PolicyDefinitionRow::from_json(v, tenant)).collect()),
             JumpView::ResourceLocks => Self::boxed(page.iter().filter_map(|v| LockRow::from_json(v, tenant)).collect()),
+            JumpView::ManagementGroups => Self::boxed(page.iter().filter_map(|v| ManagementGroupRow::from_json(v, tenant)).collect()),
             _ => Self::boxed(page.iter().filter_map(|v| PolicyAssignmentRow::from_json(v, tenant)).collect()),
         }
     }
@@ -1021,7 +1185,20 @@ impl GovernanceService {
                 (SET_DEFINITIONS_PATH, POLICY_API_VERSION, &[CUSTOM], "Listing custom initiatives…"),
             ],
             JumpView::ResourceLocks => &[(LOCKS_PATH, LOCKS_API_VERSION, &[], "Listing resource locks…")],
+            JumpView::ManagementGroups => {
+                &[(MANAGEMENT_GROUPS_PATH, MANAGEMENT_GROUPS_API_VERSION, &[], "Listing management groups…")]
+            }
             _ => &[(ASSIGNMENTS_PATH, POLICY_API_VERSION, &[], "Listing policy assignments…")],
+        }
+    }
+
+    /// Where a list lives: under the subscription, or (management groups)
+    /// above it, at the path as written.
+    fn full_path(&self, view: JumpView, path: &str) -> Result<String> {
+        if view == JumpView::ManagementGroups {
+            Ok(path.to_string())
+        } else {
+            self.scope.path(path)
         }
     }
 
@@ -1031,6 +1208,8 @@ impl GovernanceService {
             EXEMPTIONS_API_VERSION
         } else if lower.contains("/locks/") {
             LOCKS_API_VERSION
+        } else if JumpView::for_arm_id(id) == Some(JumpView::ManagementGroups) {
+            MANAGEMENT_GROUPS_API_VERSION
         } else {
             POLICY_API_VERSION
         }
@@ -1052,7 +1231,11 @@ impl AzureService for GovernanceService {
         let mut out = Vec::new();
         let mut first_err = None;
         for (path, version, query, _) in Self::lists_of(view) {
-            match self.scope.list_query(path, version, query).await {
+            let r = match self.full_path(view, path) {
+                Ok(p) => self.scope.list_query_at(&p, version, query).await,
+                Err(e) => Err(e),
+            };
+            match r {
                 Ok(page) => out.extend(Self::rows(view, &page, tenant)),
                 Err(e) => first_err = first_err.or(Some(e)),
             }
@@ -1074,10 +1257,16 @@ impl AzureService for GovernanceService {
         let mut total = 0usize;
         let mut failures = Vec::new();
         for (path, version, query, label) in lists {
-            let r = self
-                .scope
-                .stream(path, version, query, service_type, label, &event_tx, |page| Self::rows(view, &page, tenant.as_deref()))
-                .await;
+            let r = match self.full_path(view, path) {
+                Ok(p) => {
+                    self.scope
+                        .stream_at(&p, version, query, service_type, label, &event_tx, |page| {
+                            Self::rows(view, &page, tenant.as_deref())
+                        })
+                        .await
+                }
+                Err(e) => Err(e),
+            };
             match r {
                 Ok(n) => total += n,
                 Err(e) => failures.push(e),
@@ -1289,5 +1478,6 @@ mod tests {
             ["Overview", "Definition", "Rule", "Parameters", "Assignments", "Activity", "Related"]
         );
         assert_eq!(labels(&LOCK_SECTIONS), ["Overview", "Lock", "Activity", "Related"]);
+        assert_eq!(labels(&MANAGEMENT_GROUP_SECTIONS), ["Overview", "Group", "Assignments", "Activity", "Related"]);
     }
 }

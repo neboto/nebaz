@@ -71,6 +71,10 @@ const AUDIT_EXPECTED: &[&str] = &[
     // Contributor on the subscription.
     "sub-privileged-guest-or-sp",
     "sub-contributor-guest-or-sp",
+    // core: the allowed-locations assignment is DoNotEnforce, one
+    // exemption ends in six days and one has ended.
+    "policy-not-enforced",
+    "policy-exemption-expiry",
     // compute
     "aks-public-api",
     "aks-local-accounts",
