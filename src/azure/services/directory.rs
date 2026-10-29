@@ -222,7 +222,7 @@ impl DirectoryBase {
 
 /// The `Resource` methods both directory rows answer the same way.
 macro_rules! directory_row {
-    ($kind:expr) => {
+    ($kind:expr, $search:expr) => {
         fn id(&self) -> &str {
             &self.base.id
         }
@@ -254,14 +254,17 @@ macro_rules! directory_row {
         fn list_cell(&self) -> String {
             self.base.app_id.clone()
         }
+        /// Also the row's URIs and URLs, so an obscurely named app is
+        /// found by the host it signs in to.
         fn search_text(&self) -> String {
             format!(
-                "{} {} {} {} {}",
+                "{} {} {} {} {} {}",
                 self.base.name,
                 self.base.object_id,
                 self.base.app_id,
                 $kind,
-                json::strings_at(&self.base.json, "/tags").join(" ")
+                json::strings_at(&self.base.json, "/tags").join(" "),
+                search_fields(&self.base.json, $search)
             )
         }
         fn clone_box(&self) -> Box<dyn Resource> {
@@ -272,6 +275,49 @@ macro_rules! directory_row {
         }
     };
 }
+
+/// The text at each pointer, string or string list, space-joined.
+fn search_fields(v: &Value, pointers: &[&str]) -> String {
+    let mut out: Vec<String> = Vec::new();
+    for ptr in pointers {
+        match v.pointer(ptr) {
+            Some(Value::String(s)) => out.push(s.clone()),
+            Some(Value::Array(_)) => out.extend(json::strings_at(v, ptr)),
+            _ => {}
+        }
+    }
+    out.join(" ")
+}
+
+/// What an app registration's search reads beyond the shared fields.
+const APP_REGISTRATION_SEARCH: &[&str] = &[
+    "/web/redirectUris",
+    "/spa/redirectUris",
+    "/publicClient/redirectUris",
+    "/identifierUris",
+    "/web/homePageUrl",
+    "/web/logoutUrl",
+    "/info/marketingUrl",
+    "/info/privacyStatementUrl",
+    "/info/supportUrl",
+    "/info/termsOfServiceUrl",
+    "/publisherDomain",
+    "/uniqueName",
+    "/description",
+    "/notes",
+];
+
+/// What a service principal's search reads beyond the shared fields.
+const SERVICE_PRINCIPAL_SEARCH: &[&str] = &[
+    "/replyUrls",
+    "/servicePrincipalNames",
+    "/homepage",
+    "/loginUrl",
+    "/logoutUrl",
+    "/appDisplayName",
+    "/description",
+    "/notes",
+];
 
 #[derive(Debug, Clone)]
 pub struct ServicePrincipalRow {
@@ -310,7 +356,7 @@ impl ServicePrincipalRow {
 }
 
 impl Resource for ServicePrincipalRow {
-    directory_row!("Service Principal");
+    directory_row!("Service Principal", SERVICE_PRINCIPAL_SEARCH);
 
     fn detail_sections(&self) -> Option<&'static crate::sections::SectionDescriptor> {
         Some(&SERVICE_PRINCIPAL_SECTIONS)
@@ -387,7 +433,7 @@ impl AppRegistrationRow {
 }
 
 impl Resource for AppRegistrationRow {
-    directory_row!("App Registration");
+    directory_row!("App Registration", APP_REGISTRATION_SEARCH);
 
     fn detail_sections(&self) -> Option<&'static crate::sections::SectionDescriptor> {
         Some(&APP_REGISTRATION_SECTIONS)
@@ -1087,6 +1133,26 @@ mod tests {
 
     fn empty_lazy<'a>(children: &'a LazyMap<Vec<Value>>, objects: &'a LazyMap<Value>, by_app_id: &'a LazyMap<Value>) -> DirectoryLazy<'a> {
         DirectoryLazy { children, objects, by_app_id, azure_roles: None, role_definitions: None, subscription_scope: Some("/subscriptions/0000") }
+    }
+
+    #[test]
+    fn search_reads_redirect_and_identifier_uris() {
+        let matcher = crate::search::fuzzy::FuzzyMatcher::new();
+        let mut v = app_json();
+        v["displayName"] = "xq-7".into();
+        v["web"]["homePageUrl"] = "https://zephyr.example".into();
+        let mut sp = sp_json();
+        sp["displayName"] = "xq-7".into();
+        sp["replyUrls"] = serde_json::json!(["https://quokka.example/auth"]);
+        let rows: Vec<Box<dyn Resource>> = vec![
+            Box::new(AppRegistrationRow::from_json(&v, Some(TENANT), NOW).unwrap()),
+            Box::new(ServicePrincipalRow::from_json(&sp, Some(TENANT), NOW).unwrap()),
+        ];
+        let hits = |q: &str| matcher.filter_resources(q, &rows).into_iter().map(|(i, _)| i).collect::<Vec<_>>();
+        assert_eq!(hits("orders.example/signin"), vec![0], "a web redirect URI");
+        assert_eq!(hits("api://orders"), vec![0, 1], "an identifier URI, which the service principal also names");
+        assert_eq!(hits("zephyr"), vec![0], "the home page");
+        assert_eq!(hits("quokka"), vec![1], "a service principal's reply URL");
     }
 
     #[test]
