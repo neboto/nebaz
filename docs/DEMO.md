@@ -149,6 +149,8 @@ Directory objects (Graph object ids; `appId` where it has one):
 | its service principal | `f5233913-f487-4d23-b621-98c7511347d1` | `edc89266-a363-4046-9c6e-e0629dfedbad` |
 | app registration `orders-api-client` | `65269b0d-f929-40b3-a28d-a281b6b6503b` | `7b985643-85cc-4880-8e95-9dac694b9dfc` |
 | its service principal | `47302d33-ba06-4194-bc89-bec920f2a564` | `7b985643-85cc-4880-8e95-9dac694b9dfc` |
+| app registration `expenses-sso` | `e80d58c4-d7e1-4ade-83a3-c14fab07fdec` | `2306f346-508b-45ba-86a5-3f31b5509d25` |
+| its service principal | `cb637341-a93c-4494-bac6-3fa4363387f2` | `2306f346-508b-45ba-86a5-3f31b5509d25` |
 | service principal `Fabrikam Orders Connector` (multi-tenant, owned by the Fabrikam tenant) | `80303294-4904-46c2-87a0-d8cb283aa2a9` | `600d5263-b150-479c-ab05-60929b2edcbd` |
 | user-assigned identity `id-orders-api` (principal) | `535edf48-335f-4761-b6ed-e0613ed690b3` | client id `a486b752-7257-42ba-bc16-23a4e0381f56` |
 | `ca-orders-worker`'s system-assigned identity | `51b687b3-bdb3-4408-b436-500e659cc8cb` | `8587b0bc-6107-463b-a8d3-278472a07067` |
@@ -168,6 +170,9 @@ In the directory: `github-actions-deploy` has two GitHub Actions federated
 credentials (`repo:contoso/orders-platform:environment:production` and
 `…:pull_request`) and owner alex; `orders-api-client` requests delegated
 Microsoft Graph scopes, which its service principal holds by admin consent.
+`expenses-sso` is a non-gallery SAML app: its service principal's Single
+sign-on section shows the entity id, ACS URL, sign-on URL, relay state and
+the active signing certificate (ok, about 17 months left).
 `id-orders-api` federates `system:serviceaccount:orders:orders-migrations`
 from `aks-platform-prod`'s OIDC issuer. The Fabrikam connector is not owned
 by Contoso, so the `sp` list (managed identities + this tenant's apps) does

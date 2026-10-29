@@ -879,6 +879,7 @@
     "Service Principal": [
       "Overview",
       "Credentials",
+      "Single sign-on",
       "App role assignments",
       "OAuth2 grants",
       "Owners",

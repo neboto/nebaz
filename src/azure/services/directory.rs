@@ -43,6 +43,7 @@ crate::sections! {
     pub static SERVICE_PRINCIPAL_SECTIONS = [
         Overview "Overview",
         Credentials "Credentials",
+        SingleSignOn "Single sign-on",
         AppRoleAssignments "App role assignments" => crate::app::App::trigger_sp_app_role_assignments,
         OAuth2Grants "OAuth2 grants" => crate::app::App::trigger_sp_oauth2_grants,
         Owners "Owners" => crate::app::App::trigger_directory_owners,
@@ -555,6 +556,70 @@ pub fn credential_rows(v: &Value, now: i64) -> Vec<(String, String)> {
     lines
 }
 
+/// A certificate's thumbprint as Graph's `preferredTokenSigningKeyThumbprint`
+/// spells it (upper hex), from its base64 `customKeyIdentifier`.
+fn key_thumbprint(c: &Value) -> Option<String> {
+    use base64::Engine;
+    let raw = base64::engine::general_purpose::STANDARD.decode(json::str_at(c, "/customKeyIdentifier")?).ok()?;
+    Some(raw.iter().map(|b| format!("{:02X}", b)).collect())
+}
+
+/// The Single sign-on section: the enterprise app's SAML settings, all
+/// from the list's own JSON. The signing certificate is the credential
+/// whose thumbprint is `preferredTokenSigningKeyThumbprint` (a Sign key
+/// before its Verify twin).
+fn single_sign_on_rows(r: &ServicePrincipalRow, now: i64) -> Vec<(String, String)> {
+    let v = &r.base.json;
+    let mode = json::str_at(v, "/preferredSingleSignOnMode");
+    let mut lines = vec![("Mode".to_string(), mode.clone().filter(|m| !m.is_empty()).unwrap_or_else(|| "not set".into()))];
+    if mode.as_deref() != Some("saml") {
+        lines.push((String::new(), "· not SAML-based: no SAML settings".into()));
+        return lines;
+    }
+    let identifiers: Vec<String> = json::strings_at(v, "/servicePrincipalNames")
+        .into_iter()
+        .filter(|n| !n.eq_ignore_ascii_case(&r.base.app_id))
+        .collect();
+    let reply_urls = json::strings_at(v, "/replyUrls");
+    for (label, items) in [("Identifier (entity id)", identifiers), ("Reply URL (ACS)", reply_urls)] {
+        if items.is_empty() {
+            lines.push((label.into(), "-".into()));
+        }
+        lines.extend(items.into_iter().map(|i| (label.to_string(), i)));
+    }
+    lines.push(("Sign-on URL".into(), json::text(v, "/loginUrl")));
+    lines.push(("Logout URL".into(), json::text(v, "/logoutUrl")));
+    lines.push(("Relay state".into(), json::text(v, "/samlSingleSignOnSettings/relayState")));
+    lines.push((String::new(), String::new()));
+    match json::str_at(v, "/preferredTokenSigningKeyThumbprint").filter(|t| !t.is_empty()) {
+        None => lines.push(("Signing certificate".into(), "-".into())),
+        Some(thumb) => {
+            let mut keys: Vec<Value> = json::arr(v, "/keyCredentials")
+                .into_iter()
+                .filter(|c| key_thumbprint(c).is_some_and(|t| t.eq_ignore_ascii_case(&thumb)))
+                .collect();
+            keys.sort_by_key(|c| json::str_at(c, "/usage").as_deref() != Some("Sign"));
+            match keys.first() {
+                Some(c) => {
+                    let name = json::str_at(c, "/displayName").filter(|s| !s.is_empty()).unwrap_or_else(|| "(no name)".into());
+                    let expiry = Expiry::of(json::str_at(c, "/endDateTime").as_deref(), now);
+                    lines.push(("Signing certificate".into(), format!("{} · {}", name, expiry.describe())));
+                    lines.push(("  Thumbprint".into(), thumb));
+                    lines.push(("  End".into(), json::time(json::str_at(c, "/endDateTime"))));
+                }
+                None => {
+                    lines.push(("Signing certificate".into(), thumb));
+                    lines.push((String::new(), "· not among this principal's certificates".into()));
+                }
+            }
+        }
+    }
+    lines.push(("Expiry notifications".into(), json::join(&json::strings_at(v, "/notificationEmailAddresses"))));
+    lines.push((String::new(), String::new()));
+    lines.push((String::new(), "· which attributes go out as claims is a claims-mapping policy, not read here".into()));
+    lines
+}
+
 /// An owner or other directory object as a line; a service principal's
 /// value is its row id, so Enter jumps.
 fn object_line(o: &Value) -> (String, String) {
@@ -760,6 +825,7 @@ pub fn service_principal_section_lines(
     match section {
         S::Overview => overview_rows(r),
         S::Credentials => credential_rows(&r.base.json, now),
+        S::SingleSignOn => single_sign_on_rows(r, now),
         S::AppRoleAssignments => graph_list_rows(child("appRoleAssignments"), "App role assignments", |items| {
             app_role_assignment_rows(items, lazy.objects)
         }),
@@ -1123,12 +1189,59 @@ mod tests {
     #[test]
     fn section_labels() {
         let sp: Vec<&str> = SERVICE_PRINCIPAL_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(sp, ["Overview", "Credentials", "App role assignments", "OAuth2 grants", "Owners", "Azure roles", "Related", "Tags"]);
+        assert_eq!(sp, ["Overview", "Credentials", "Single sign-on", "App role assignments", "OAuth2 grants", "Owners", "Azure roles", "Related", "Tags"]);
         let app: Vec<&str> = APP_REGISTRATION_SECTIONS.sections.iter().map(|s| s.label).collect();
         assert_eq!(
             app,
             ["Overview", "Credentials", "Federated credentials", "API permissions", "Redirect URIs", "Owners", "Exposed API", "Related", "Tags"]
         );
+    }
+
+    fn saml_sp_json() -> Value {
+        let mut v = sp_json();
+        v["preferredSingleSignOnMode"] = "saml".into();
+        v["servicePrincipalNames"] = serde_json::json!(["11111111-2222-3333-4444-555555555555", "https://sso.expenses.example/saml"]);
+        v["replyUrls"] = serde_json::json!(["https://expenses.example/saml/acs"]);
+        v["loginUrl"] = "https://expenses.example/login".into();
+        v["samlSingleSignOnSettings"] = serde_json::json!({"relayState": "/dashboard"});
+        v["notificationEmailAddresses"] = serde_json::json!(["it-ops@contoso.example"]);
+        v["preferredTokenSigningKeyThumbprint"] = "a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4".into();
+        let cert = |usage: &str| serde_json::json!({
+            "displayName": "CN=Microsoft Azure Federated SSO Certificate", "keyId": format!("k-{usage}"), "type": "AsymmetricX509Cert",
+            "usage": usage, "customKeyIdentifier": "oaKjpKWmp6ipqqusra6vsLGys7Q=",
+            "startDateTime": "2025-01-01T00:00:00Z", "endDateTime": "2026-01-15T00:00:00Z", "key": null
+        });
+        v["keyCredentials"] = serde_json::json!([cert("Verify"), cert("Sign")]);
+        v
+    }
+
+    #[test]
+    fn single_sign_on_reads_the_saml_settings_and_finds_the_signing_certificate() {
+        let (children, objects, by_app_id) = (LazyMap::default(), LazyMap::default(), LazyMap::default());
+        let lazy = empty_lazy(&children, &objects, &by_app_id);
+        let sp = ServicePrincipalRow::from_json(&saml_sp_json(), Some(TENANT), NOW).unwrap();
+        let lines = service_principal_section_lines(&sp, ServicePrincipalDetailSection::SingleSignOn, &lazy, NOW);
+        let get = |k: &str| lines.iter().find(|(l, _)| l == k).map(|(_, v)| v.as_str());
+        assert_eq!(get("Mode"), Some("saml"));
+        assert_eq!(get("Identifier (entity id)"), Some("https://sso.expenses.example/saml"), "the app id is not an identifier");
+        assert_eq!(get("Reply URL (ACS)"), Some("https://expenses.example/saml/acs"));
+        assert_eq!(get("Sign-on URL"), Some("https://expenses.example/login"));
+        assert_eq!(get("Logout URL"), Some("-"));
+        assert_eq!(get("Relay state"), Some("/dashboard"));
+        assert_eq!(get("Signing certificate"), Some("CN=Microsoft Azure Federated SSO Certificate · expires in 14 d"));
+        assert_eq!(get("Expiry notifications"), Some("it-ops@contoso.example"));
+
+        let mut v = saml_sp_json();
+        v["preferredTokenSigningKeyThumbprint"] = "FFFF".into();
+        let sp = ServicePrincipalRow::from_json(&v, Some(TENANT), NOW).unwrap();
+        let lines = service_principal_section_lines(&sp, ServicePrincipalDetailSection::SingleSignOn, &lazy, NOW);
+        assert!(lines.contains(&("Signing certificate".into(), "FFFF".into())));
+        assert!(lines.iter().any(|(_, v)| v == "· not among this principal's certificates"));
+
+        let plain = ServicePrincipalRow::from_json(&sp_json(), Some(TENANT), NOW).unwrap();
+        let lines = service_principal_section_lines(&plain, ServicePrincipalDetailSection::SingleSignOn, &lazy, NOW);
+        assert_eq!(lines[0], ("Mode".into(), "not set".into()));
+        assert_eq!(lines.len(), 2, "no SAML settings without the saml mode");
     }
 
     fn empty_lazy<'a>(children: &'a LazyMap<Vec<Value>>, objects: &'a LazyMap<Value>, by_app_id: &'a LazyMap<Value>) -> DirectoryLazy<'a> {
