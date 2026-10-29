@@ -16,6 +16,10 @@ use serde_json::Value;
 /// restricts members' directory access).
 pub const DIRECTORY_READ_DENIED: &str = "directory read not allowed for this account";
 
+/// The section-level wording for a 403 on a service principal's claims
+/// policies: they need a directory role, not plain directory read.
+pub const CLAIMS_READ_DENIED: &str = "reading claims policies needs Global Reader or Application Administrator";
+
 /// The Graph base URL for an ARM endpoint, by cloud. `None` for an
 /// endpoint whose cloud has no known Graph (a test endpoint, Azure Stack):
 /// Graph sections then say so and nothing is requested.
@@ -104,6 +108,25 @@ pub fn object_path(row_id: &str, child: Option<&str>) -> Option<String> {
         Some(c) => format!("{}/{}", base, c),
         None => base,
     })
+}
+
+/// The lazy child a service principal's claims-mapping policies load
+/// under: `GET /v1.0/servicePrincipals/{id}/claimsMappingPolicies`
+/// (through [`object_path`]).
+pub const CLAIMS_MAPPING_CHILD: &str = "claimsMappingPolicies";
+
+/// The lazy child its custom claims policy loads under.
+pub const CLAIMS_POLICY_CHILD: &str = "claimsPolicy";
+
+/// `GET /beta/servicePrincipals/{id}/claimsPolicy`: the custom claims
+/// policy, which is what the portal's Attributes & Claims edits. Beta only,
+/// and the one `/beta` path nebaz reads (ADR 0004's amendment). `None`
+/// for anything but a service principal row.
+pub fn claims_policy_path(row_id: &str) -> Option<String> {
+    match parse_row_id(row_id)? {
+        (DirectoryKind::ServicePrincipal, oid) => Some(format!("/beta/servicePrincipals/{}/{}", oid, CLAIMS_POLICY_CHILD)),
+        _ => None,
+    }
 }
 
 /// `GET /v1.0/servicePrincipals(appId='{appId}')`: an API's service
@@ -267,6 +290,11 @@ mod tests {
         assert_eq!(object_path(&id, Some("owners")).as_deref(), Some("/v1.0/servicePrincipals/00af5dfb-85da-4b41-a677-0c6b86dd34f8/owners"));
         let app = row_id(DirectoryKind::Application, oid);
         assert_eq!(object_path(&app, None).as_deref(), Some("/v1.0/applications/00af5dfb-85da-4b41-a677-0c6b86dd34f8"));
+        assert_eq!(
+            claims_policy_path(&id).as_deref(),
+            Some("/beta/servicePrincipals/00af5dfb-85da-4b41-a677-0c6b86dd34f8/claimsPolicy")
+        );
+        assert_eq!(claims_policy_path(&app), None, "an app registration has no claims policy");
         let alias = row_alias(DirectoryKind::Application, "11111111-2222-3333-4444-555555555555");
         assert_eq!(alias, "graph:/applications(appId='11111111-2222-3333-4444-555555555555')");
         assert_eq!(parse_row_id(&alias), None, "an alias is not fetchable by object id");

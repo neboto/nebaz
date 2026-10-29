@@ -75,3 +75,24 @@ registrations. Graph is a second host behind the **same** machinery as ARM
 - Rows from Graph have no ARM id. They key on a synthetic id
   (`graph:/servicePrincipals/{id}`); see issue #78's second half for the
   sub-tabs that need it.
+
+## Amendment (2026-10-30): one beta path
+
+A service principal's Claims section reads its custom claims policy,
+`GET /beta/servicePrincipals/{id}/claimsPolicy`. That policy is what the
+portal's Attributes & Claims edits, and Graph has it in beta only; the
+v1.0 `claimsMappingPolicies` holds only policies made through PowerShell
+or Graph, so a v1.0-only section would say "none" for nearly every SAML
+app. nebaz reads both.
+
+- The path is built in `src/azure/graph.rs` like every other
+  (`claims_policy_path`), a `GET` through the same pipeline; every other
+  Graph path stays `/v1.0`. Another beta path needs the same argument:
+  the data exists nowhere in v1.0.
+- Beta can change shape. The section renders known fields and falls back
+  to the raw JSON of anything it does not recognise, so a change degrades
+  to less tidy lines, never a failure.
+- Reading policies needs a directory role (Global Reader or Application
+  Administrator), not plain directory read: a 403 is the section's
+  warning naming the role, as with any Graph 403.
+
