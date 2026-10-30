@@ -93,7 +93,7 @@
       "createdDateTime": "{{iso:now-402d}}",
       "displayName": "orders-api-client",
       "description": "Confidential client the back office uses to call the orders API.",
-      "groupMembershipClaims": null,
+      "groupMembershipClaims": "SecurityGroup",
       "identifierUris": [
         "api://7b985643-85cc-4880-8e95-9dac694b9dfc"
       ],
@@ -110,7 +110,16 @@
       "samlMetadataUrl": null,
       "defaultRedirectUri": null,
       "certification": null,
-      "optionalClaims": null,
+      "optionalClaims": {
+        "idToken": [
+          {"name": "email", "source": null, "essential": false, "additionalProperties": []},
+          {"name": "upn", "source": null, "essential": false, "additionalProperties": ["include_externally_authenticated_upn"]}
+        ],
+        "accessToken": [
+          {"name": "groups", "source": null, "essential": false, "additionalProperties": ["emit_as_roles"]}
+        ],
+        "saml2Token": []
+      },
       "requestSignatureVerification": null,
       "addIns": [],
       "api": {
