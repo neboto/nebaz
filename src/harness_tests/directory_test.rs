@@ -87,3 +87,28 @@ async fn a_managed_identity_sp_jumps_to_its_arm_identity() {
     assert_eq!(h.app.current_view, JumpView::Identities);
     assert_eq!(h.app.pending_jump, Some((identity, true)));
 }
+
+/// Claims fires both policy reads (v1.0 mapping, beta custom) and renders
+/// what lands, the beta 404 as "none".
+#[tokio::test]
+async fn claims_fetches_both_policies_and_a_missing_custom_policy_reads_none() {
+    use crate::azure::graph::{CLAIMS_MAPPING_CHILD, CLAIMS_POLICY_CHILD};
+    let mut h = Harness::new().await;
+    h.install(mock(JumpView::ServicePrincipals, "ServicePrincipalRow", sp_application())).await;
+    let id = row_id(DirectoryKind::ServicePrincipal, SP_OBJECT_ID);
+    h.press(KeyCode::Enter).await;
+    open_section(&mut h, "Claims").await;
+    for child in [CLAIMS_POLICY_CHILD, CLAIMS_MAPPING_CHILD] {
+        assert!(
+            matches!(h.app.lazy.directory_children.get(&child_key(&id, child)), Some(crate::lazy::Lazy::Loading)),
+            "{child} in flight"
+        );
+    }
+    assert!(h.app.get_detail_lines().iter().any(|(_, v)| v == "Loading…"));
+
+    h.app.lazy.directory_children.apply(child_key(&id, CLAIMS_POLICY_CHILD), Ok(Vec::new()));
+    h.app.lazy.directory_children.apply(child_key(&id, CLAIMS_MAPPING_CHILD), Ok(Vec::new()));
+    let lines = h.app.get_detail_lines();
+    assert!(lines.contains(&(String::new(), "none: the default claims".into())), "{lines:#?}");
+    assert!(!h.render().contains("Loading…"));
+}

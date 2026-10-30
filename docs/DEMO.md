@@ -172,7 +172,11 @@ credentials (`repo:contoso/orders-platform:environment:production` and
 Microsoft Graph scopes, which its service principal holds by admin consent.
 `expenses-sso` is a non-gallery SAML app: its service principal's Single
 sign-on section shows the entity id, ACS URL, sign-on URL, relay state and
-the active signing certificate (ok, about 17 months left).
+the active signing certificate (ok, about 17 months left); its Claims
+section is the portal's default SAML claims plus `department` and an
+`approver` claim that is `true` for members of Contoso Platform Admins
+(the beta `claimsPolicy` fixture). Every other principal has no claims
+policy (`…/claimsPolicy` is single-valued, so unmatched it is a 404).
 `id-orders-api` federates `system:serviceaccount:orders:orders-migrations`
 from `aks-platform-prod`'s OIDC issuer. The Fabrikam connector is not owned
 by Contoso, so the `sp` list (managed identities + this tenant's apps) does

@@ -43,6 +43,7 @@ pub static FIXTURES: &[Fixture] = &[
         "/v1.0/servicePrincipals/47302d33-ba06-4194-bc89-bec920f2a564/oauth2PermissionGrants",
         "sp-orders-api-client-grants.json"
     ),
+    fx!("identity", "/beta/servicePrincipals/cb637341-a93c-4494-bac6-3fa4363387f2/claimsPolicy", "sp-expenses-sso-claims.json"),
     fx!("identity", "/v1.0/servicePrincipals/80303294-4904-46c2-87a0-d8cb283aa2a9", "sp-fabrikam-connector.json"),
     fx!(
         "identity",
