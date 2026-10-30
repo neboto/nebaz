@@ -266,6 +266,7 @@ nebaz get /subscriptions/…/virtualMachines/vm-1          # every section, lazy
 nebaz get vm-1 --in vm --section access --section related
 nebaz changes --since 6h                    # what changed, subscription-wide
 nebaz audit --fail-on high                  # exit 3 on a finding at or above high
+nebaz doctor -o md                          # proxy, certificates, az login, ARM, Graph, GitHub: each failure in full
 ```
 
 `get` shows what the detail pane shows, driving the same app without a
@@ -296,6 +297,11 @@ for one run.
 - **Update check:** once a day nebaz asks GitHub for its latest release and
   shows a dim `↑ vX.Y.Z` when it is newer. `update_check = false`,
   `--no-update-check` or `NEBAZ_NO_UPDATE_CHECK=1` turn it off.
+- **Behind a proxy:** nebaz reads `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY`,
+  not the macOS or Windows system proxy settings or a PAC file, and trusts
+  the OS certificate store (so a TLS-inspecting proxy's root CA that IT
+  installed is trusted; on Linux and WSL, the system CA bundle or
+  `SSL_CERT_FILE`). `nebaz doctor -o md` shows what fails and why.
 
 ---
 

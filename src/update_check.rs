@@ -75,17 +75,36 @@ impl UpdateState {
 /// Whether the check may run at all: `config` is `update_check` after the
 /// CLI overlay (`None` = default on), the other two the environment.
 pub fn enabled(config: Option<bool>) -> bool {
-    allowed(config, std::env::var_os("NEBAZ_NO_UPDATE_CHECK"), std::env::var_os("CI"))
+    off_reason(config).is_none()
+}
+
+/// Why the check is off, if it is (what `nebaz doctor` names).
+pub fn off_reason(config: Option<bool>) -> Option<&'static str> {
+    reason(config, std::env::var_os("NEBAZ_NO_UPDATE_CHECK"), std::env::var_os("CI"))
+}
+
+/// [`off_reason`] over explicit values.
+fn reason(config: Option<bool>, no_update_check: Option<OsString>, ci: Option<OsString>) -> Option<&'static str> {
+    if config == Some(false) {
+        Some("turned off: update_check = false, --no-update-check or --demo")
+    } else if !no_update_check.is_none_or(|v| v.is_empty() || v == "0") {
+        Some("turned off: NEBAZ_NO_UPDATE_CHECK is set")
+    } else if ci.is_some() {
+        Some("turned off: CI is set")
+    } else {
+        None
+    }
 }
 
 /// [`enabled`] over explicit values, for the tests.
+#[cfg(test)]
 fn allowed(config: Option<bool>, no_update_check: Option<OsString>, ci: Option<OsString>) -> bool {
-    config != Some(false) && no_update_check.is_none_or(|v| v.is_empty() || v == "0") && ci.is_none()
+    reason(config, no_update_check, ci).is_none()
 }
 
 /// `$NEBAZ_UPDATE_STATE`, then `$XDG_CACHE_HOME/nebaz/update-check.json`
 /// (default `~/.cache/…`).
-fn state_path() -> Option<PathBuf> {
+pub fn state_path() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("NEBAZ_UPDATE_STATE") {
         return Some(PathBuf::from(p));
     }
