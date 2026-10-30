@@ -3,7 +3,7 @@
 // from 1ebd69f as `ls --subscriptions`, #62; audit from neboto-tui @
 // 693449a, driven through the TUI's own `r`)
 //! Headless subcommands (`nebaz services`, `ls`, `get`, `changes`,
-//! `audit`): run once, print,
+//! `audit`, `doctor`): run once, print,
 //! exit, no terminal UI (#44). `ls` and `get` drive a terminal-less `App`
 //! (`src/app/headless.rs`) over the same `AzureClients` and `arm.rs` the
 //! TUI uses, so the read-only guard covers them like everything else under
@@ -86,6 +86,7 @@ pub async fn run(cli: Cli) -> i32 {
         Some(Command::Get(args)) => ok(get(&cli, args, format).await),
         Some(Command::Changes(args)) => ok(changes(&cli, args, format).await),
         Some(Command::Audit(args)) => audit(&cli, args, format).await,
+        Some(Command::Doctor) => doctor::doctor(&cli, format).await,
         None => Ok((String::new(), 0)),
     };
     match result {
@@ -1039,6 +1040,8 @@ pub(crate) fn render_detail(subscription: &str, items: &[Captured], format: Outp
 fn pretty(v: &Value) -> String {
     serde_json::to_string_pretty(v).unwrap_or_default()
 }
+
+mod doctor;
 
 #[cfg(test)]
 mod tests;

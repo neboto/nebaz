@@ -39,7 +39,8 @@
     ],
     "audit": [
       "--fail-on"
-    ]
+    ],
+    "doctor": []
   },
   "exit_codes": {
     "ok": 0,
@@ -179,6 +180,26 @@
       "medium",
       "low",
       "info"
+    ]
+  },
+  "doctor": {
+    "envelope": [
+      "schema",
+      "ok",
+      "checks"
+    ],
+    "check": [
+      "name",
+      "status",
+      "detail",
+      "hint"
+    ],
+    "statuses": [
+      "ok",
+      "info",
+      "warn",
+      "fail",
+      "skip"
     ]
   },
   "prefixes": {

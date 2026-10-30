@@ -29,6 +29,7 @@ nebaz get vm-1 --in vm --section networking --section access -o json
 nebaz get graph:/servicePrincipals/00000000-0000-0000-0000-000000000000 -o md
 nebaz changes --since 6h --hide-noise -o json
 nebaz audit --fail-on high -o json
+nebaz doctor -o json
 ```
 
 ## `services` — the catalogue
@@ -132,6 +133,7 @@ Pass `-o json` (the default) or `-o md` for text to reason over.
 - `get`, one id: `{"schema", "subscription", "service", "subtab", "resource": {"type", "id", "name", "state", "location", "resource_group"}, "sections": {…}, "tags": {…}}`
 - `get`, several ids: `{"schema", "subscription", "count", "resources": [ <the one-id shape without schema/subscription> ]}`
 - `audit`: `{"schema", "subscription", "location", "count", "findings": [{"severity", "check", "title", "resource_id", "resource_name", "location", "reason", "evidence", "remediation"}], "not_checked": [{"check", "title", "status", "reason"}]}`
+- `doctor`: `{"schema", "ok", "checks": [{"name", "status", "detail", "hint"}]}`: status is ok, info, warn, fail or skip; exit 1 when one failed. Run it when every other command fails with a connection or certificate error.
 
 Section values mirror the UI: human-readable labels and formatted values,
 not raw ARM fields. A group heading becomes a nested object, verbatim text
