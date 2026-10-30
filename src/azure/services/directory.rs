@@ -60,6 +60,7 @@ crate::sections! {
         Overview "Overview",
         Credentials "Credentials",
         FederatedCredentials "Federated credentials" => crate::app::App::trigger_app_federated_credentials,
+        TokenConfiguration "Token configuration",
         ApiPermissions "API permissions" => crate::app::App::trigger_app_api_permissions,
         RedirectUris "Redirect URIs",
         Owners "Owners" => crate::app::App::trigger_directory_owners,
@@ -943,6 +944,56 @@ fn api_permission_rows(r: &AppRegistrationRow, by_app_id: &LazyMap<Value>) -> Ve
     lines
 }
 
+/// The Token configuration section (the portal's page of that name): the
+/// group claims setting, the access token version and the optional claims
+/// per token, all from the list's own JSON. A SAML enterprise app's claims
+/// are mostly its service principal's claims policy, not these.
+fn token_configuration_rows(v: &Value) -> Vec<(String, String)> {
+    let groups = json::str_at(v, "/groupMembershipClaims").filter(|g| !g.is_empty() && !g.eq_ignore_ascii_case("None"));
+    let version = match json::int_at(v, "/api/requestedAccessTokenVersion") {
+        Some(n) => format!("v{}", n),
+        None => "v1 (default)".into(),
+    };
+    let mut lines = vec![
+        ("Group claims".to_string(), groups.clone().unwrap_or_else(|| "none".into())),
+        ("Access token version".into(), version),
+        ("Accept mapped claims".into(), json::yes_no(json::bool_at(v, "/api/acceptMappedClaims"))),
+    ];
+    let tokens = [("ID token", "/optionalClaims/idToken"), ("Access token", "/optionalClaims/accessToken"), ("SAML token", "/optionalClaims/saml2Token")];
+    let mut any = false;
+    let mut groups_claim = false;
+    for (label, ptr) in tokens {
+        let claims = json::arr(v, ptr);
+        if claims.is_empty() {
+            continue;
+        }
+        any = true;
+        lines.push((String::new(), String::new()));
+        lines.push((format!("{} ({})", label, claims.len()), String::new()));
+        for c in &claims {
+            let name = json::text(c, "/name");
+            groups_claim |= name == "groups";
+            let mut parts: Vec<String> = json::str_at(c, "/source").filter(|s| !s.is_empty()).map(|s| format!("from {}", s)).into_iter().collect();
+            parts.extend(json::strings_at(c, "/additionalProperties"));
+            if json::bool_at(c, "/essential") == Some(true) {
+                parts.push("essential".into());
+            }
+            let value = if parts.is_empty() { "-".to_string() } else { parts.join(" · ") };
+            lines.push((format!("  {}", name), value));
+        }
+    }
+    if !any {
+        lines.push((String::new(), String::new()));
+        lines.push(("Optional claims".into(), "none".into()));
+    }
+    lines.push((String::new(), String::new()));
+    if groups_claim && groups.is_none() {
+        lines.push((String::new(), "· ⚠ a groups optional claim does nothing until Group claims is set".into()));
+    }
+    lines.push((String::new(), "· a SAML enterprise app's claims: its service principal's Claims section".into()));
+    lines
+}
+
 fn redirect_uri_rows(v: &Value) -> Vec<(String, String)> {
     let groups = [("Web", "/web/redirectUris"), ("SPA", "/spa/redirectUris"), ("Public client", "/publicClient/redirectUris")];
     let mut lines = Vec::new();
@@ -1056,6 +1107,7 @@ pub fn app_registration_section_lines(
         S::Overview => overview_rows(r),
         S::Credentials => credential_rows(&r.base.json, now),
         S::FederatedCredentials => graph_list_rows(child("federatedIdentityCredentials"), "Federated credentials", federated_rows),
+        S::TokenConfiguration => token_configuration_rows(&r.base.json),
         S::ApiPermissions => api_permission_rows(r, lazy.by_app_id),
         S::RedirectUris => redirect_uri_rows(&r.base.json),
         S::Owners => graph_list_rows(child("owners"), "Owners", owner_rows),
@@ -1398,8 +1450,36 @@ mod tests {
         let app: Vec<&str> = APP_REGISTRATION_SECTIONS.sections.iter().map(|s| s.label).collect();
         assert_eq!(
             app,
-            ["Overview", "Credentials", "Federated credentials", "API permissions", "Redirect URIs", "Owners", "Exposed API", "Related", "Tags"]
+            ["Overview", "Credentials", "Federated credentials", "Token configuration", "API permissions", "Redirect URIs", "Owners", "Exposed API", "Related", "Tags"]
         );
+    }
+
+    #[test]
+    fn token_configuration_lists_optional_claims_per_token() {
+        let mut v = app_json();
+        let plain = token_configuration_rows(&v);
+        assert!(plain.contains(&("Group claims".into(), "none".into())));
+        assert!(plain.contains(&("Access token version".into(), "v1 (default)".into())));
+        assert!(plain.contains(&("Optional claims".into(), "none".into())));
+
+        v["api"]["requestedAccessTokenVersion"] = 2.into();
+        v["optionalClaims"] = serde_json::json!({
+            "idToken": [{"name": "email", "source": null, "essential": false, "additionalProperties": []}],
+            "accessToken": [{"name": "groups", "source": null, "essential": true, "additionalProperties": ["sam_account_name", "emit_as_roles"]}],
+            "saml2Token": []
+        });
+        let lines = token_configuration_rows(&v);
+        assert!(lines.contains(&("Access token version".into(), "v2".into())));
+        assert!(lines.contains(&("ID token (1)".into(), String::new())));
+        assert!(lines.contains(&("  email".into(), "-".into())));
+        assert!(lines.contains(&("  groups".into(), "sam_account_name · emit_as_roles · essential".into())));
+        assert!(!lines.iter().any(|(k, _)| k.starts_with("SAML token")));
+        assert!(lines.iter().any(|(_, t)| t.contains("does nothing until Group claims is set")));
+
+        v["groupMembershipClaims"] = "SecurityGroup".into();
+        let set = token_configuration_rows(&v);
+        assert!(set.contains(&("Group claims".into(), "SecurityGroup".into())));
+        assert!(!set.iter().any(|(_, t)| t.contains("does nothing")));
     }
 
     fn saml_sp_json() -> Value {

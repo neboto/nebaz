@@ -169,7 +169,9 @@ A new object id: any fresh `uuid4`, added to this table.
 In the directory: `github-actions-deploy` has two GitHub Actions federated
 credentials (`repo:contoso/orders-platform:environment:production` and
 `…:pull_request`) and owner alex; `orders-api-client` requests delegated
-Microsoft Graph scopes, which its service principal holds by admin consent.
+Microsoft Graph scopes, which its service principal holds by admin consent,
+and its Token configuration sends security groups, `email` and `upn` in the
+ID token and `groups` (as roles) in the access token.
 `expenses-sso` is a non-gallery SAML app: its service principal's Single
 sign-on section shows the entity id, ACS URL, sign-on URL, relay state and
 the active signing certificate (ok, about 17 months left); its Claims

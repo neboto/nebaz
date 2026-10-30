@@ -329,6 +329,7 @@
       "Overview",
       "Credentials",
       "Federated credentials",
+      "Token configuration",
       "API permissions",
       "Redirect URIs",
       "Owners",
