@@ -45,6 +45,7 @@ mod audit_test;
 mod directory_test;
 mod keycast_test;
 mod list_ux_test;
+mod search_edit_test;
 mod export_test;
 mod defender_test;
 mod governance_test;
@@ -357,6 +358,18 @@ impl Harness {
             }
         }
         panic!("{text:?} (#{n}) is not on screen:\n{screen}");
+    }
+
+    /// The terminal cursor after a fresh draw (where the search bar edits).
+    pub fn cursor(&mut self) -> (u16, u16) {
+        self.draw();
+        self.terminal.get_cursor().expect("cursor")
+    }
+
+    /// Whether the cell at `(x, y)` is drawn reverse-video, after a fresh draw.
+    pub fn reversed_at(&mut self, (x, y): (u16, u16)) -> bool {
+        self.draw();
+        self.terminal.backend().buffer().get(x, y).modifier.contains(ratatui::style::Modifier::REVERSED)
     }
 
     /// The first recorded click region with `action` (its left cell).
