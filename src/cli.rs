@@ -102,6 +102,11 @@ pub enum Command {
     /// them, prints the findings and what could not be checked. Exits 3 on
     /// a finding at or above `--fail-on`.
     Audit(AuditArgs),
+    /// Check what nebaz needs on this machine and print each failure in
+    /// full: the proxy and certificate settings, `az` login, one ARM and
+    /// one Graph read, and the release check (which the TUI runs silently).
+    /// Exits 1 when a check fails.
+    Doctor,
 }
 
 #[derive(Debug, clap::Args)]

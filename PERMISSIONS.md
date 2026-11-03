@@ -401,7 +401,10 @@ retries; a failure is silent. The answer is cached in
 `~/.cache/nebaz/update-check.json`. It needs no Azure permission. Turn it
 off with `update_check = false` in the config, `--no-update-check`, or
 `NEBAZ_NO_UPDATE_CHECK=1`; it never runs with `CI` set or for the headless
-subcommands.
+subcommands, except `nebaz doctor`, which makes it once on request (and
+skips it when it is turned off) to print the error the TUI swallows.
+`doctor`'s other requests are reads nebaz makes anyway: `az account list`,
+the subscription's locations, and one Graph `GET /v1.0/applications?$top=1`.
 
 ## Local commands
 

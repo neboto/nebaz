@@ -132,6 +132,9 @@ async fn current() -> Value {
     let audit_rows = crate::audit::run(&input);
     let audit: Value = serde_json::from_str(&render_audit("sub", &Location::All, &audit_rows, OutputFormat::Json)).unwrap();
 
+    let doctor_checks = [super::doctor::Check { name: "proxy", status: super::doctor::Status::Info, detail: "none".into(), hint: None }];
+    let doctor: Value = serde_json::from_str(&super::doctor::render(&doctor_checks, OutputFormat::Json)).unwrap();
+
     let mut prefixes = BTreeMap::new();
     for s in ServiceType::all() {
         let subtabs: Vec<String> = s.views().iter().map(|v| format!("{} ({})", v.as_str(), view_prefix(*v))).collect();
@@ -164,6 +167,11 @@ async fn current() -> Value {
             "finding": keys(&audit["findings"][0]),
             "not_checked": keys(&audit["not_checked"][0]),
             "severities": ["critical", "high", "medium", "low", "info"],
+        },
+        "doctor": {
+            "envelope": keys(&doctor),
+            "check": keys(&doctor["checks"][0]),
+            "statuses": ["ok", "info", "warn", "fail", "skip"],
         },
         "prefixes": prefixes,
         "sections": sections_by_type(),

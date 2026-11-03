@@ -34,6 +34,7 @@ Prefer a grep the reader can run over a count they have to trust.
 cargo build                         # debug
 cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / vmss / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca / redis / amr / pg / mysql / sb / eh / agw / afd / waf / pls / tm / er / vgw / cn / lgw / fw / fwp / ipg / ngfw / rulestack / backup / bvault / gov / mg / changes
 cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to stdout, exit codes in src/headless/contract.json
+cargo run -- doctor -o md           # proxy, certificates, az login, ARM, Graph, the release check: each failure in full
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 NEBAZ_BLESS=1 cargo test contract   # record an addition to the headless output contract
 cargo test --test readonly_guard    # just the guard
