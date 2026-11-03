@@ -152,6 +152,12 @@ impl App {
         st.set_rows(rows, coverage);
     }
 
+    /// Whether `U` has a row to look up (the status-bar hint): any selected
+    /// row can be the target of a referenced-by lookup.
+    pub fn supports_refs_lens(&self) -> bool {
+        self.selected_index.is_some()
+    }
+
     /// `U`: open the lens on the selected row.
     pub(super) fn open_refs_lens(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         let Some(r) = self.get_selected_resource() else {

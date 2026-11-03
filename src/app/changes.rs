@@ -9,6 +9,12 @@ use crate::azure::services::changes::ChangesWindow;
 pub(super) use crate::azure::services::changes::{time_of, view_admits};
 
 impl App {
+    /// Whether `[` / `]` step the `@changes` window here (the status-bar
+    /// hint): the open service is `@changes`.
+    pub fn supports_changes_window(&self) -> bool {
+        self.current_service == Some(crate::azure::service::ServiceType::Changes)
+    }
+
     /// `[` / `]` on the list: a narrower or wider window, served from the
     /// cache when that window was loaded before, else loaded.
     pub(super) fn step_changes_window(&mut self, wider: bool) {

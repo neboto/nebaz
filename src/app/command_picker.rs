@@ -11,6 +11,12 @@ use crate::ui::widgets::command_picker::CommandPickerState;
 use crossterm::event::{KeyCode, KeyEvent};
 
 impl App {
+    /// Whether `C` has an `az` command for the selected row (the status-bar
+    /// hint).
+    pub fn supports_cli_commands(&self) -> bool {
+        self.get_selected_resource().is_some_and(|r| !actions_for(r).is_empty())
+    }
+
     /// `C`: the selected row's commands. One command copies straight away
     /// (what `C` always did); more open the picker on the read command.
     pub(super) fn open_command_picker(&mut self) {

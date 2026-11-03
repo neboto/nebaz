@@ -6,6 +6,7 @@ mod audit;
 mod azure;
 mod bookmarks;
 mod cli;
+mod commands;
 mod config;
 mod demo;
 mod editor;
@@ -34,7 +35,7 @@ use tui::Tui;
 use ui::layout::AppLayout;
 use ui::theme;
 use ui::widgets::{
-    banner, command_picker, details_pane, help_overlay, jump_list, keycast_box, location_selector, macro_picker,
+    banner, command_picker, details_pane, help_overlay, jump_list, key_picker, keycast_box, location_selector, macro_picker,
     message_log, resource_list, search_bar, service_selector, service_tabs, splash,
     subscription_selector, subtab_bar,
 };
@@ -284,6 +285,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     if app.command_picker.is_some() {
         command_picker::render_command_picker(app, frame);
     }
+    key_picker::render_key_picker(app, frame);
     // Last, so a recording sees the key above whatever it opened.
     keycast_box::render_keycast(app, layout.status_area, frame);
 }
@@ -346,6 +348,10 @@ fn render_nav_buttons(app: &App, area: ratatui::layout::Rect, frame: &mut ratatu
 fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui::Frame) {
     // Left segment: transient message (error/success/loading) or contextual key hints
     let mut left_is_hints = false;
+    // The hints on screen, in order; each chip is made clickable below.
+    let mut main_hints: Vec<(&str, &str)> = Vec::new();
+    let mut pinned_hints: Vec<(&str, &str)> = Vec::new();
+    let unchecked = if app.all_search_mode { app.all_search_unchecked_hint() } else { String::new() };
     let left: Line = if let Some(auth) = &app.auth_error {
         // The one app-wide auth line, ahead of everything else.
         Line::from(vec![
@@ -414,93 +420,72 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
         ))
     } else {
         left_is_hints = true;
-        let mut line = if app.search_active {
-            theme::hint_line(&[("⏎", "confirm"), ("Esc", "cancel"), ("@service", "switch")])
+        // Hints come in two parts. `pinned` (the way into everything else:
+        // `:`, `?`, quit) is never trimmed; `main` yields from its end when
+        // the bar is narrow. The selection's own keys (`N`, `m`, `W`...)
+        // come right after search / open and before the keys that are the
+        // same on every row (`y`), since nothing else on screen says this
+        // row has them. Every key dropped here is still in `?` and `:`.
+        if app.search_active {
+            main_hints = vec![("⏎", "confirm"), ("Esc", "cancel"), ("@service", "switch")];
         } else if app.network_lens.is_some() {
-            theme::hint_line(&[
+            main_hints = vec![
                 ("j/k", "select"),
                 ("⏎", "go to NSG"),
                 ("t", "direction"),
                 ("e", "editor"),
                 ("Esc", "close"),
-            ])
+            ];
         } else if app.refs_lens.is_some() {
-            theme::hint_line(&[
+            main_hints = vec![
                 ("j/k", "select"),
                 ("⏎", "go to"),
                 ("f", "service"),
                 ("L", "load likely"),
                 ("Esc", "close"),
-            ])
+            ];
         } else if app.timeline.is_some() {
-            theme::hint_line(&[
+            main_hints = vec![
                 ("j/k", "select"),
                 ("⏎", "open"),
                 ("f", "sources"),
                 ("[/]", "window"),
                 ("Esc", "close"),
-            ])
+            ];
         } else if app.metrics.is_some() {
-            theme::hint_line(&[
+            main_hints = vec![
                 ("j/k", "select"),
                 ("[/]", "range"),
                 ("a", "all metrics"),
                 ("e", "editor"),
                 ("Esc", "close"),
-            ])
+            ];
         } else if app.details_focused {
-            theme::hint_line(&[
-                ("j/k", "scroll"),
-                ("y", "copy"),
-                ("e", "editor"),
-                ("r", "refresh"),
-                ("Esc", "back"),
-                ("?", "help"),
-            ])
+            // Kept short and stable: the detail-pane footer carries the
+            // pane-specific hints.
+            main_hints = commands::status_hints(app, true);
+            main_hints.extend_from_slice(&[("y", "copy"), ("e", "editor"), ("r", "refresh"), ("Esc", "back")]);
+            pinned_hints = vec![(":", "commands"), ("?", "help")];
         } else if app.all_search_mode {
-            // @* rows: ⏎ opens one in its tab, l peeks; then what it skipped.
-            let unchecked = app.all_search_unchecked_hint();
-            let mut hints: Vec<(&str, &str)> = vec![
-                ("⏎", "open in its tab"),
-                ("l", "peek"),
-                ("/", "edit query"),
-                ("Esc", "clear"),
-            ];
+            // @* rows: ⏎ opens one in its tab, l peeks; then what it
+            // skipped, ahead of the keys every bar has so a narrow bar
+            // trims those first.
+            main_hints = vec![("⏎", "open"), ("l", "peek")];
             if !unchecked.is_empty() {
-                hints.push(("not checked:", unchecked.as_str()));
+                main_hints.push(("not checked:", unchecked.as_str()));
             }
-            theme::hint_line(&hints)
+            main_hints.extend_from_slice(&[("/", "edit"), ("Esc", "clear")]);
+            pinned_hints = vec![(":", "commands"), ("?", "help"), ("q", "quit")];
         } else {
-            let mut hints: Vec<(&str, &str)> = vec![
-                ("j/k", "move"),
-                ("/", "search"),
-                ("⏎", "details"),
-                ("y", "copy id"),
-            ];
-            if app.supports_network_lens() {
-                hints.push(("N", "access"));
-            }
-            if app.supports_metrics() {
-                hints.push(("m", "metrics"));
-            }
-            if app.selected_index.is_some() {
-                hints.push(("U", "refs"));
-            }
-            if app.supports_timeline() {
-                hints.push(("W", "changes"));
-            }
-            if app.current_service == Some(crate::azure::service::ServiceType::Changes) {
-                hints.push(("[/]", "window"));
-            }
+            main_hints = vec![("/", "search"), ("⏎", "details")];
+            main_hints.extend(commands::status_hints(app, false));
+            main_hints.push(("y", "copy id"));
             if app.noise_in_view {
-                hints.push(("a", if app.hide_noise { "show all" } else { "hide noise" }));
+                main_hints.push(("a", if app.hide_noise { "show all" } else { "hide noise" }));
             }
-            hints.push(("'", "bookmarks"));
-            hints.extend_from_slice(&[("?", "help"), ("q", "quit")]);
-            theme::hint_line(&hints)
-        };
-        line.spans.insert(0, Span::raw(" "));
-        line
+            pinned_hints = vec![(":", "commands"), ("?", "help"), ("q", "quit")];
+        }
+        Line::default()
     };
 
     // Right segment: recording/playback chips, watch chip, data age, location,
@@ -566,7 +551,22 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
         .split(area);
 
     let left = if left_is_hints {
-        fit_hint_line(left, chunks[0].width.saturating_sub(1) as usize)
+        let budget = chunks[0].width.saturating_sub(1) as usize;
+        let build = |hints: &[(&str, &str)]| {
+            let mut line = theme::hint_line(hints);
+            line.spans.insert(0, Span::raw(" "));
+            line
+        };
+        let mut hints: Vec<(&str, &str)>;
+        loop {
+            hints = main_hints.iter().chain(&pinned_hints).copied().collect();
+            if main_hints.is_empty() || build(&hints).width() <= budget {
+                break;
+            }
+            main_hints.pop();
+        }
+        // Even the pinned hints don't fit: trim those too, from the end.
+        fit_hint_line(build(&hints), budget)
     } else {
         left
     };
