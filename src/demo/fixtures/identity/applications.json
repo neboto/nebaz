@@ -93,7 +93,7 @@
       "createdDateTime": "{{iso:now-402d}}",
       "displayName": "orders-api-client",
       "description": "Confidential client the back office uses to call the orders API.",
-      "groupMembershipClaims": null,
+      "groupMembershipClaims": "SecurityGroup",
       "identifierUris": [
         "api://7b985643-85cc-4880-8e95-9dac694b9dfc"
       ],
@@ -110,7 +110,16 @@
       "samlMetadataUrl": null,
       "defaultRedirectUri": null,
       "certification": null,
-      "optionalClaims": null,
+      "optionalClaims": {
+        "idToken": [
+          {"name": "email", "source": null, "essential": false, "additionalProperties": []},
+          {"name": "upn", "source": null, "essential": false, "additionalProperties": ["include_externally_authenticated_upn"]}
+        ],
+        "accessToken": [
+          {"name": "groups", "source": null, "essential": false, "additionalProperties": ["emit_as_roles"]}
+        ],
+        "saml2Token": []
+      },
       "requestSignatureVerification": null,
       "addIns": [],
       "api": {
@@ -226,6 +235,93 @@
             "index": null
           }
         ]
+      },
+      "servicePrincipalLockConfiguration": {
+        "isEnabled": true,
+        "allProperties": true,
+        "credentialsWithUsageVerify": true,
+        "credentialsWithUsageSign": true,
+        "identifierUris": false,
+        "tokenEncryptionKeyId": true
+      },
+      "spa": {
+        "redirectUris": []
+      }
+    },
+    {
+      "@odata.type": "#microsoft.graph.application",
+      "id": "e80d58c4-d7e1-4ade-83a3-c14fab07fdec",
+      "deletedDateTime": null,
+      "appId": "2306f346-508b-45ba-86a5-3f31b5509d25",
+      "applicationTemplateId": null,
+      "disabledByMicrosoftStatus": null,
+      "createdDateTime": "{{iso:now-200d}}",
+      "displayName": "expenses-sso",
+      "description": null,
+      "groupMembershipClaims": null,
+      "identifierUris": [
+        "https://expenses.contoso.com/saml/metadata"
+      ],
+      "isDeviceOnlyAuthSupported": null,
+      "isFallbackPublicClient": false,
+      "nativeAuthenticationApisEnabled": null,
+      "notes": "Expenses portal, SAML SSO. Owned by IT ops.",
+      "publisherDomain": "contoso.onmicrosoft.com",
+      "serviceManagementReference": null,
+      "signInAudience": "AzureADMyOrg",
+      "tags": [
+        "WindowsAzureActiveDirectoryCustomSingleSignOnApplication",
+        "WindowsAzureActiveDirectoryIntegratedApp"
+      ],
+      "tokenEncryptionKeyId": null,
+      "uniqueName": null,
+      "samlMetadataUrl": null,
+      "defaultRedirectUri": null,
+      "certification": null,
+      "optionalClaims": null,
+      "requestSignatureVerification": null,
+      "addIns": [],
+      "api": {
+        "acceptMappedClaims": null,
+        "knownClientApplications": [],
+        "requestedAccessTokenVersion": 2,
+        "oauth2PermissionScopes": [],
+        "preAuthorizedApplications": []
+      },
+      "appRoles": [],
+      "info": {
+        "logoUrl": null,
+        "marketingUrl": null,
+        "privacyStatementUrl": null,
+        "supportUrl": null,
+        "termsOfServiceUrl": null
+      },
+      "keyCredentials": [],
+      "parentalControlSettings": {
+        "countriesBlockedForMinors": [],
+        "legalAgeGroupRule": "Allow"
+      },
+      "passwordCredentials": [],
+      "publicClient": {
+        "redirectUris": []
+      },
+      "requiredResourceAccess": [],
+      "verifiedPublisher": {
+        "displayName": null,
+        "verifiedPublisherId": null,
+        "addedDateTime": null
+      },
+      "web": {
+        "homePageUrl": "https://expenses.contoso.com/",
+        "logoutUrl": null,
+        "redirectUris": [
+          "https://expenses.contoso.com/saml/acs"
+        ],
+        "implicitGrantSettings": {
+          "enableAccessTokenIssuance": false,
+          "enableIdTokenIssuance": false
+        },
+        "redirectUriSettings": []
       },
       "servicePrincipalLockConfiguration": {
         "isEnabled": true,

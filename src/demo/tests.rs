@@ -68,6 +68,7 @@ fn unmatched_collections_are_empty_and_single_resources_404() {
         "/subscriptions/x/resourceGroups/rg/providers/Microsoft.Web/sites/app/providers/Microsoft.Insights/metrics",
         "/v1.0/servicePrincipals",
         "/v1.0/applications/abc/owners",
+        "/v1.0/servicePrincipals/abc/claimsMappingPolicies",
         "/v1.0/servicePrincipals(appId='00000000-0000-0000-0000-000000000000')/owners",
     ] {
         assert!(is_collection(coll), "{coll} is a collection");
@@ -79,6 +80,7 @@ fn unmatched_collections_are_empty_and_single_resources_404() {
         "/subscriptions/x/resourceGroups/rg/providers/Microsoft.Web/sites/app",
         "/subscriptions/x/resourceGroups/rg/providers/Microsoft.Web/sites/app/config/web",
         "/v1.0/servicePrincipals/abc",
+        "/beta/servicePrincipals/abc/claimsPolicy",
         "/v1.0/servicePrincipals(appId='00000000-0000-0000-0000-000000000000')",
     ] {
         assert!(!is_collection(one), "{one} is one resource");

@@ -335,6 +335,7 @@
       "Overview",
       "Credentials",
       "Federated credentials",
+      "Token configuration",
       "API permissions",
       "Redirect URIs",
       "Owners",
@@ -913,6 +914,8 @@
     "Service Principal": [
       "Overview",
       "Credentials",
+      "Single sign-on",
+      "Claims",
       "App role assignments",
       "OAuth2 grants",
       "Owners",

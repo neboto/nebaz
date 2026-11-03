@@ -48,7 +48,7 @@ used). Guests, and tenants that restrict members' directory access, get a
 `403`: the section says "directory read not allowed for this account" and
 shows object ids, and nothing else is affected.
 
-The Graph calls (all `GET`, all under `/v1.0`):
+The Graph calls (all `GET`, all under `/v1.0` but one under `/beta`):
 
 - `directoryObjects/{id}`: one per principal id in an Access section,
   cached for the session, at most 50 per section (and the APIs a service
@@ -65,6 +65,13 @@ The Graph calls (all `GET`, all under `/v1.0`):
 - `servicePrincipals(appId='{appId}')`: an app registration's APIs, named,
   and (with `directoryObjects/{id}`) an `@changes` caller's kind: at most
   50 per load.
+- `servicePrincipals/{id}/claimsMappingPolicies` and
+  `/beta/servicePrincipals/{id}/claimsPolicy` (Graph has the custom claims
+  policy, what the portal's Attributes & Claims edits, in beta only): a
+  service principal's Claims section. These read policy objects, which
+  plain directory read does not cover: the signed-in user needs the
+  **Global Reader** or **Application Administrator** directory role.
+  Without it the section says so and nothing else is affected.
 
 A credential's value is never shown: Graph returns no `secretText` to a
 `GET`, nebaz never `$select`s (so a certificate's `key` stays null), and
