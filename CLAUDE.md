@@ -155,6 +155,14 @@ browse yet; a child of an unbrowsed type is in no list, so its id is
 copied instead. In All resources, Enter on a browsed row opens it in its
 typed tab.
 
+**Keys, help and hints** (`src/commands.rs`, #149): one table of rows
+(section, key, label, optional gate) is the `?` help, help's **Here**
+section, the status bar's conditional hints and the `:` key picker
+(`src/ui/widgets/key_picker.rs`; not `C`, the az-command picker). A new
+`App::supports_*` gate goes on its row (a test fails until it does); `⏎` in
+`:` replays the row's key through the event channel. `: ? q` are pinned on
+the bar and never trimmed.
+
 **Copy** (`src/clipboard.rs`): OSC 52 to the terminal (tmux passthrough)
 plus one long-lived arboard handle; `y` copies the id. `C` opens the
 command picker (#47; catalogue `src/azure/cli_actions.rs`, glue
@@ -281,6 +289,7 @@ verbatim where the concept is unchanged.
 | `src/audit.rs`, `src/audit/checks.rs` | `@audit`: the finding row, `run`, and every check (pure, fixture-tested) |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |
+| `src/commands.rs` | the command table: help rows, status-bar gates and hints, the `:` picker's rows |
 | `src/clipboard.rs` | OSC 52 + arboard |
 | `tests/readonly_guard.rs` | the guard |
 | `src/harness_tests/` | the offline wiring harness (`Harness`), its mocks and tests |

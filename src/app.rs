@@ -611,6 +611,8 @@ pub struct App {
     pub network_lens: Option<crate::ui::widgets::network_lens::NetworkLensState>,
     /// The `C` command picker (#47): `Some` while open.
     pub command_picker: Option<crate::ui::widgets::command_picker::CommandPickerState>,
+    /// The `:` key picker (rows from `src/commands.rs`); not the `C` one.
+    pub key_picker: crate::ui::widgets::key_picker::KeyPickerState,
     /// Bumped per lens fetch; a result for an older one is dropped.
     network_lens_generation: u64,
     /// "Referenced by" lens (`U`, #49): owns the detail pane while open.
@@ -803,6 +805,7 @@ impl App {
             metrics_generation: 0,
             metrics_window: Default::default(),
             command_picker: None,
+            key_picker: Default::default(),
             timeline: None,
             timeline_generation: 0,
             timeline_window: Default::default(),
@@ -3416,6 +3419,38 @@ impl App {
         self.help_query.clear();
     }
 
+    /// Keys while the `:` picker is open: type to filter, arrows move, `⏎`
+    /// closes it and replays the row's key through the event channel, so
+    /// the key lands exactly as if pressed (keycast and macros included).
+    fn handle_key_picker_key(&mut self, key: KeyEvent, event_tx: &mpsc::UnboundedSender<Event>) {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        let alt = key.modifiers.contains(KeyModifiers::ALT);
+        let rows = crate::commands::picker_rows(self, &self.key_picker.query);
+        let len = rows.len();
+        let picker = &mut self.key_picker;
+        match key.code {
+            KeyCode::Down => picker.next(len),
+            KeyCode::Up => picker.previous(),
+            KeyCode::Char('n') if ctrl => picker.next(len),
+            KeyCode::Char('p') if ctrl => picker.previous(),
+            KeyCode::Char('d') if ctrl => picker.page_down(len),
+            KeyCode::Char('u') if ctrl => picker.page_up(),
+            KeyCode::PageDown => picker.page_down(len),
+            KeyCode::PageUp => picker.page_up(),
+            KeyCode::Enter => {
+                let run = rows.get(picker.selected_index.min(len.saturating_sub(1))).and_then(|c| c.run());
+                if let Some(run) = run {
+                    picker.hide();
+                    let _ = event_tx.send(Event::Key(run.key_event()));
+                }
+            }
+            KeyCode::Esc => picker.hide(),
+            KeyCode::Backspace => picker.pop_char(),
+            KeyCode::Char(c) if !ctrl && !alt => picker.push_char(c),
+            _ => {}
+        }
+    }
+
     fn any_modal_open(&self) -> bool {
         self.help_visible
             || self.service_selector.visible
@@ -3426,6 +3461,7 @@ impl App {
             || self.message_history_visible
             || self.macro_picker_visible
             || self.command_picker.is_some()
+            || self.key_picker.visible
     }
 
     /// Recording (classify the key just dispatched by diffing state) and
@@ -3778,6 +3814,11 @@ impl App {
                     }
                 }
                 KeyCode::Char('?') if self.help_query.is_empty() => self.toggle_help(),
+                // The help's call-out: `:` hands over to the key picker.
+                KeyCode::Char(':') if self.help_query.is_empty() => {
+                    self.help_visible = false;
+                    self.key_picker.show();
+                }
                 KeyCode::Char('d') if ctrl => self.help_scroll = (self.help_scroll + 10).min(max),
                 KeyCode::Char('u') if ctrl => self.help_scroll = self.help_scroll.saturating_sub(10),
                 KeyCode::Char(c) if !ctrl && !key.modifiers.contains(KeyModifiers::ALT) => {
@@ -3842,6 +3883,10 @@ impl App {
         }
         if self.command_picker.is_some() {
             self.handle_command_picker_key(key);
+            return;
+        }
+        if self.key_picker.visible {
+            self.handle_key_picker_key(key, event_tx);
             return;
         }
 
@@ -4189,6 +4234,10 @@ impl App {
             }
             KeyCode::Char('X') => self.export_current(_event_tx),
             KeyCode::Char('?') => self.toggle_help(),
+            // The key picker, from either pane. Text inputs (search, the
+            // detail filter, the macro name) return before this arm, so a
+            // `:` typed there stays a literal `:`.
+            KeyCode::Char(':') => self.key_picker.show(),
             KeyCode::Char('S') => self.service_selector.show(self.current_service),
             KeyCode::Char('R') if self.auth_error.is_some() => {
                 let _ = _event_tx.send(Event::AuthRetryRequested);

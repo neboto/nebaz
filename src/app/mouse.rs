@@ -220,6 +220,8 @@ enum Modal {
     /// The `C` command picker (#47): its rows are recorded by
     /// `render_command_picker` (wrapped, between tier headings).
     Commands,
+    /// The `:` key picker: its rows are recorded by `render_key_picker`.
+    Keys,
 }
 
 fn press(code: KeyCode) -> KeyEvent {
@@ -461,6 +463,8 @@ impl App {
             Modal::Macros
         } else if self.command_picker.is_some() {
             Modal::Commands
+        } else if self.key_picker.visible {
+            Modal::Keys
         } else {
             return None;
         })
@@ -491,6 +495,10 @@ impl App {
                 let p = self.command_picker.as_mut()?;
                 let len = p.visible().len();
                 (&mut p.selected, len)
+            }
+            Modal::Keys => {
+                let len = crate::commands::picker_rows(self, &self.key_picker.query).len();
+                (&mut self.key_picker.selected_index, len)
             }
             Modal::Help => return None,
         };
@@ -558,6 +566,8 @@ impl App {
     fn close_modal_by_mouse(&mut self, modal: Modal, event_tx: &mpsc::UnboundedSender<Event>) {
         if modal == Modal::Commands {
             self.command_picker = None;
+        } else if modal == Modal::Keys {
+            self.key_picker.hide();
         } else {
             self.handle_key(press(KeyCode::Esc), event_tx);
         }

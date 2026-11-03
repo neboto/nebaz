@@ -29,6 +29,8 @@ impl App {
             Some("macros")
         } else if self.command_picker.is_some() {
             Some("CLI commands")
+        } else if self.key_picker.visible {
+            Some("commands")
         } else if self.network_lens.is_some() {
             Some("network access")
         } else if self.refs_lens.is_some() {
@@ -50,6 +52,7 @@ impl App {
             || self.service_selector.visible
             || self.location_selector.visible
             || self.subscription_selector.visible
+            || self.key_picker.visible
             || self.command_picker.as_ref().is_some_and(|p| p.filtering)
         {
             Some(Input::Picker)

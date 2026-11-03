@@ -87,3 +87,44 @@ async fn help_counts_as_a_picker_for_keycast() {
         h.app.keycast.as_ref().unwrap().entries.iter().map(|e| e.key.clone()).collect();
     assert!(!echoed.iter().any(|k| k == "z"), "typed text is not echoed: {echoed:?}");
 }
+
+/// The rows under help's "Here" title: up to the next blank line, left
+/// column only.
+fn here_rows(h: &mut Harness) -> Vec<String> {
+    let screen = h.render();
+    let lines: Vec<&str> = screen.lines().collect();
+    let Some(start) = lines.iter().position(|l| l.contains("  Here ")) else {
+        return Vec::new();
+    };
+    let byte = lines[start].find("Here").unwrap();
+    let col = lines[start][..byte].chars().count();
+    lines[start + 1..]
+        .iter()
+        .map(|l| l.chars().skip(col).take(38).collect::<String>().trim().to_string())
+        .take_while(|l| !l.is_empty())
+        .collect()
+}
+
+#[tokio::test]
+async fn help_leads_with_what_works_on_the_selection() {
+    let mut h = Harness::sized(160, 60).await;
+    h.open(JumpView::VirtualMachines).await;
+    h.land(vec![mocks::vm("vm-1", "westeurope")]).await;
+    h.press(KeyCode::Char('?')).await;
+    let here = here_rows(&mut h);
+    for key in ["m ", "W ", "U ", "C "] {
+        assert!(here.iter().any(|r| r.starts_with(key)), "{key:?} missing from {here:?}");
+    }
+    assert!(!here.iter().any(|r| r.starts_with("[ / ]")), "{here:?}");
+
+    // Filtering drops "Here": its rows are listed in their own sections.
+    h.type_str("metrics").await;
+    assert!(here_rows(&mut h).is_empty());
+    h.press(KeyCode::Esc).await;
+    h.press(KeyCode::Esc).await;
+
+    // No selection: no "Here".
+    let mut h = Harness::sized(160, 60).await;
+    h.press(KeyCode::Char('?')).await;
+    assert!(here_rows(&mut h).is_empty());
+}

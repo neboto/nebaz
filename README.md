@@ -197,7 +197,8 @@ strings, app settings and secret values are never fetched.
 | `⌫` / `Ctrl-O` · `Ctrl-F` · `` ` `` | history back · forward · jump list (the `←` `→` left of the service tabs click the same) |
 | `B` · `'` | bookmark · bookmarks |
 | `,` | macros (record, replay; `--macro NAME` on startup) |
-| `M` · `b` · `?` · `q` | messages · banner · help (type to filter it: `log`, `copy`, `mouse`) · quit |
+| `:` | command picker: run any key by name (`:m` metrics; the keys that work on the selection lead; `⏎` presses the key) |
+| `M` · `b` · `?` · `q` | messages · banner · help (type to filter it: `log`, `copy`, `mouse`; leads with **Here**, the keys that work on the selection) · quit |
 
 **List pane**
 
