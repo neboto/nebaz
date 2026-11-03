@@ -68,6 +68,10 @@ pub struct Config {
     /// Start with long detail values wrapped onto continuation rows instead
     /// of clipped at the pane edge. `Ctrl-W` toggles it at runtime.
     pub detail_wrap: Option<bool>,
+    /// Colour the code the detail pane shows (policy rules, manifests,
+    /// templates, custom data: JSON, YAML and shell, recognised from the
+    /// text). Default true.
+    pub syntax_highlight: Option<bool>,
     /// Which files `X` / `Ctrl-X` write: any of `"json"`, `"csv"`, `"md"`
     /// (`"markdown"` also works). Default all three. Unknown values warn at
     /// startup and are ignored; a list with no valid value writes all three.
@@ -280,6 +284,7 @@ default_location = "WestEurope"
         assert_eq!(config.default_location.as_deref(), Some("westeurope"));
         assert_eq!(config.endpoint_url.as_deref(), Some("https://management.usgovcloudapi.net"));
         assert_eq!(config.theme.as_deref(), Some("gruvbox-dark"));
+        assert_eq!(config.syntax_highlight, Some(false));
         assert_eq!(config.export_formats.as_ref().map(Vec::len), Some(3));
         assert_eq!(config.export_dir.as_deref(), Some("~/nebaz-exports"));
         assert_eq!(config.cache_ttls.as_ref().and_then(|m| m.get("storage")), Some(&600));

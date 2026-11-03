@@ -64,6 +64,11 @@
 # continuation rows instead of clipped at the pane edge. `Ctrl-W` toggles it.
 # detail_wrap = true
 
+# Colour code in the detail pane (a policy rule's JSON, YAML, shell scripts)
+# from the theme palette. Display only: copy, export and `nebaz get` stay
+# plain text. On by default; set false to turn it off.
+# syntax_highlight = false
+
 # The ownership ribbon on the detail pane's top border: owner-ish tags,
 # ARM's managedBy, IaC hints, and the deployment that last touched the
 # resource (one lazy read of its group's deployments when the pane is
