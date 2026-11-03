@@ -512,6 +512,9 @@ pub struct App {
     /// continue on hanging-indent rows instead of clipping at the pane
     /// edge. Render-only: the cursor, `y` and `V` stay on logical rows.
     pub detail_wrap: bool,
+    /// Whether code in the detail body is syntax-coloured (config
+    /// `syntax_highlight`, default true; `ui::syntax`).
+    pub syntax_highlight: bool,
     /// The ownership ribbon on the detail pane (config `ownership_ribbon`).
     pub ownership_ribbon: bool,
     /// The tag keys it reads (config `ownership_tags`).
@@ -741,6 +744,7 @@ impl App {
             detail_search_active: false,
             detail_search_query: String::new(),
             detail_wrap: config.detail_wrap.unwrap_or(false),
+            syntax_highlight: config.syntax_highlight.unwrap_or(true),
             ownership_ribbon: config.ownership_ribbon.unwrap_or(true),
             ownership_tags: config.ownership_tags.clone().unwrap_or_else(|| {
                 crate::azure::ownership::DEFAULT_OWNERSHIP_TAGS.iter().map(|s| s.to_string()).collect()

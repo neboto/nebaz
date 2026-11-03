@@ -115,6 +115,11 @@ index `get_detail_lines` with the cursor. `[[`/`]]` jump group headers;
 pane (from the detail pane the new tab's first row opens there, via
 `pending_detail_focus`).
 
+**Syntax colours** (`src/ui/syntax.rs`, config `syntax_highlight`):
+render-only. `CodeBlocks` in `details_pane.rs` finds runs of plain content
+rows that read as JSON / YAML / shell, so a pane emits code as plain rows
+and declares nothing; the rows stay plain text for copy, export and `/`.
+
 **Lazy loading** (`src/lazy.rs`): `LazyStore` owns every `LazyMap`
 (instance views, containers, vault secrets, vault keys) keyed by ARM id,
 stamped with an **epoch**, and is replaced wholesale on subscription

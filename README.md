@@ -293,6 +293,10 @@ for one run.
   URL.
 - **Themes:** `theme = "gruvbox-dark"` (`--theme`): dark, light,
   solarized, gruvbox, dracula, nord and catppuccin presets.
+- **Syntax colours:** JSON, YAML and shell blocks in the detail pane (a
+  policy definition's rule, say) are coloured from the theme.
+  `syntax_highlight = false` turns it off. Display only: copy, export and
+  `nebaz get` stay plain text.
 - **Recordings:** `--show-keys` names each key in a corner box as it's
   pressed, with what it did.
 - **Update check:** once a day nebaz asks GitHub for its latest release and
