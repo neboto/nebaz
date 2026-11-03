@@ -538,6 +538,8 @@ pub struct App {
     pub help_visible: bool,
     pub help_scroll: u16,
     pub help_max_scroll: Cell<u16>,
+    /// Type-to-filter text in the help overlay (empty = the full table).
+    pub help_query: String,
     pub service_selector: ServiceSelectorState,
     pub location_selector: LocationSelectorState,
     pub subscription_selector: SubscriptionSelectorState,
@@ -759,6 +761,7 @@ impl App {
             help_visible: false,
             help_scroll: 0,
             help_max_scroll: Cell::new(0),
+            help_query: String::new(),
             service_selector: ServiceSelectorState::new(),
             location_selector: LocationSelectorState::new(),
             subscription_selector: SubscriptionSelectorState::new(),
@@ -3405,6 +3408,14 @@ impl App {
         !self.loading
     }
 
+    /// `?`: open or close the help overlay, always from the top with no
+    /// filter.
+    fn toggle_help(&mut self) {
+        self.help_visible = !self.help_visible;
+        self.help_scroll = 0;
+        self.help_query.clear();
+    }
+
     fn any_modal_open(&self) -> bool {
         self.help_visible
             || self.service_selector.visible
@@ -3751,13 +3762,38 @@ impl App {
         // unmapped, they typed `n` / `p` into a picker's filter and Ctrl-N
         // started a macro recording from the macro picker.
         let key = if self.any_modal_open() { overlay_nav_key(key) } else { key };
+        // Help filters as you type, like the pickers: letters are text (`j`,
+        // `k` and `q` included); the arrows and page keys scroll. `Esc` clears
+        // a filter, then closes; `?` closes only while the filter is empty.
         if self.help_visible {
+            let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+            let max = self.help_max_scroll.get();
             match key.code {
-                KeyCode::Esc | KeyCode::Char('?') | KeyCode::Char('q') => self.help_visible = false,
-                KeyCode::Char('j') | KeyCode::Down => {
-                    self.help_scroll = (self.help_scroll + 1).min(self.help_max_scroll.get())
+                KeyCode::Esc => {
+                    if self.help_query.is_empty() {
+                        self.help_visible = false;
+                    } else {
+                        self.help_query.clear();
+                        self.help_scroll = 0;
+                    }
                 }
-                KeyCode::Char('k') | KeyCode::Up => self.help_scroll = self.help_scroll.saturating_sub(1),
+                KeyCode::Char('?') if self.help_query.is_empty() => self.toggle_help(),
+                KeyCode::Char('d') if ctrl => self.help_scroll = (self.help_scroll + 10).min(max),
+                KeyCode::Char('u') if ctrl => self.help_scroll = self.help_scroll.saturating_sub(10),
+                KeyCode::Char(c) if !ctrl && !key.modifiers.contains(KeyModifiers::ALT) => {
+                    self.help_query.push(c);
+                    self.help_scroll = 0;
+                }
+                KeyCode::Backspace => {
+                    self.help_query.pop();
+                    self.help_scroll = 0;
+                }
+                KeyCode::Down => self.help_scroll = (self.help_scroll + 1).min(max),
+                KeyCode::Up => self.help_scroll = self.help_scroll.saturating_sub(1),
+                KeyCode::PageDown => self.help_scroll = (self.help_scroll + 10).min(max),
+                KeyCode::PageUp => self.help_scroll = self.help_scroll.saturating_sub(10),
+                KeyCode::Home => self.help_scroll = 0,
+                KeyCode::End => self.help_scroll = max,
                 _ => {}
             }
             return;
@@ -4152,10 +4188,7 @@ impl App {
                 self.export_list()
             }
             KeyCode::Char('X') => self.export_current(_event_tx),
-            KeyCode::Char('?') => {
-                self.help_visible = true;
-                self.help_scroll = 0;
-            }
+            KeyCode::Char('?') => self.toggle_help(),
             KeyCode::Char('S') => self.service_selector.show(self.current_service),
             KeyCode::Char('R') if self.auth_error.is_some() => {
                 let _ = _event_tx.send(Event::AuthRetryRequested);

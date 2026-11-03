@@ -48,6 +48,7 @@ mod list_ux_test;
 mod export_test;
 mod defender_test;
 mod governance_test;
+mod help_filter_test;
 mod list_visual_test;
 mod load_stream_test;
 pub(crate) mod mocks;

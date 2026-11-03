@@ -189,6 +189,7 @@ pub(super) fn smash_sequence() -> Vec<KeyEvent> {
         key(KeyCode::Char('?')),
         key(KeyCode::Char('j')),
         key(KeyCode::Esc),
+        key(KeyCode::Esc), // the first clears the filter `j` typed
         key(KeyCode::Char('S')),
         key(KeyCode::Down),
         key(KeyCode::Esc),

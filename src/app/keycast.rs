@@ -46,7 +46,8 @@ impl App {
             Some(Input::Filter)
         } else if self.macro_picker_visible && self.macro_name_input.is_some() {
             Some(Input::Name)
-        } else if self.service_selector.visible
+        } else if self.help_visible
+            || self.service_selector.visible
             || self.location_selector.visible
             || self.subscription_selector.visible
             || self.command_picker.as_ref().is_some_and(|p| p.filtering)
