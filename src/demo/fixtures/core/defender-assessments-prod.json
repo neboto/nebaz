@@ -1,0 +1,186 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.Security/assessments/d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11",
+      "name": "d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Management ports should be closed on your virtual machines",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01"
+        },
+        "status": {
+          "code": "Unhealthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-3d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/assessments/e2c7b2f1-8d30-4d6f-ab52-1a4f9b3c7d22",
+      "name": "e2c7b2f1-8d30-4d6f-ab52-1a4f9b3c7d22",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Accounts with owner permissions on Azure resources should be MFA enabled",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}"
+        },
+        "status": {
+          "code": "Unhealthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-90d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/e2c7b2f1-8d30-4d6f-ab52-1a4f9b3c7d22"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod/providers/Microsoft.Security/assessments/f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33",
+      "name": "f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Storage account public access should be disallowed",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod"
+        },
+        "status": {
+          "code": "Unhealthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-200d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.KeyVault/vaults/kv-legacy-prod/providers/Microsoft.Security/assessments/a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44",
+      "name": "a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Key vaults should have deletion protection enabled",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.KeyVault/vaults/kv-legacy-prod"
+        },
+        "status": {
+          "code": "Unhealthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-400d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod/providers/Microsoft.Security/assessments/a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44",
+      "name": "a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Key vaults should have deletion protection enabled",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.KeyVault/vaults/kv-orders-prod"
+        },
+        "status": {
+          "code": "Healthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-3d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod/providers/Microsoft.Security/assessments/b5f0e5c4-1063-4092-9e85-4d7c2e6f0a55",
+      "name": "b5f0e5c4-1063-4092-9e85-4d7c2e6f0a55",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Kubernetes Services should be upgraded to a non-vulnerable Kubernetes version",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerService/managedClusters/aks-platform-prod"
+        },
+        "status": {
+          "code": "Unhealthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-60d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/b5f0e5c4-1063-4092-9e85-4d7c2e6f0a55"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod/providers/Microsoft.Security/assessments/c6a1f6d5-2174-41a3-8f96-5e8d3f7a1b66",
+      "name": "c6a1f6d5-2174-41a3-8f96-5e8d3f7a1b66",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Container registries should have local admin account disabled",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerRegistry/registries/acrcontosoprod"
+        },
+        "status": {
+          "code": "Unhealthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-150d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/c6a1f6d5-2174-41a3-8f96-5e8d3f7a1b66"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod/providers/Microsoft.Security/assessments/d7b2a7e6-3285-42b4-90a7-6f9e4a8b2c77",
+      "name": "d7b2a7e6-3285-42b4-90a7-6f9e4a8b2c77",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "SQL servers should have an Azure Active Directory administrator provisioned",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod"
+        },
+        "status": {
+          "code": "Healthy",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-3d}}"
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/d7b2a7e6-3285-42b4-90a7-6f9e4a8b2c77"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.Security/assessments/e8c3b8f7-4396-43c5-a1b8-7a0f5b9c3d88",
+      "name": "e8c3b8f7-4396-43c5-a1b8-7a0f5b9c3d88",
+      "type": "Microsoft.Security/assessments",
+      "properties": {
+        "displayName": "Endpoint protection should be installed on your machines",
+        "resourceDetails": {
+          "Source": "Azure",
+          "Id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01"
+        },
+        "status": {
+          "code": "NotApplicable",
+          "firstEvaluationDate": "{{iso:now-400d}}",
+          "statusChangeDate": "{{iso:now-3d}}",
+          "cause": "OffByPolicy",
+          "description": "The machine is excluded by the assignment's scope."
+        },
+        "links": {
+          "azurePortal": "portal.azure.com/#blade/Microsoft_Azure_Security/RecommendationsBlade/assessmentKey/e8c3b8f7-4396-43c5-a1b8-7a0f5b9c3d88"
+        }
+      }
+    }
+  ]
+}

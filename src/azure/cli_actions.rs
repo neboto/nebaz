@@ -173,7 +173,8 @@ fn generic_actions(r: &dyn Resource) -> Vec<CliAction> {
     }
     let q = shell_quote(id);
     let mut out = Vec::new();
-    if !crate::azure::services::governance::is_governance_id(id) {
+    // Governance and Defender rows have no RBAC of their own.
+    if !crate::azure::services::governance::is_governance_id(id) && !crate::azure::services::defender::is_defender_id(id) {
         out.push(
             inspect(format!("az role assignment list --scope {} --include-inherited", q))
                 .note("role assignments at this scope and inherited from above (the Access section)"),

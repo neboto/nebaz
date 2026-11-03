@@ -72,13 +72,11 @@ async fn split_pane_sections_follow_the_descriptor() {
             assert_eq!(labels, ["Overview", "Related"], "{label}: an event's sections");
             continue;
         }
-        // A governance row (a policy assignment, exemption, definition or
-        // lock) has no RBAC and no tags of its own (ADR 0009): Activity,
-        // Related.
-        let governance = h
-            .app
-            .get_selected_resource()
-            .is_some_and(|r| crate::azure::services::governance::is_governance_id(r.id()));
+        // A governance row (ADR 0009) or a Defender row (ADR 0010) has no
+        // RBAC and no tags of its own: Activity, Related.
+        let governance = h.app.get_selected_resource().is_some_and(|r| {
+            crate::azure::services::governance::is_governance_id(r.id()) || crate::azure::services::defender::is_defender_id(r.id())
+        });
         assert!(n >= if governance { 4 } else { 5 }, "{label}: no descriptor, or a short one: {labels:?}");
         // A directory row (Graph, no ARM id) has no ARM scope for Access or
         // Activity (SERVICES.md rule 13): its tail is Related, Tags.
