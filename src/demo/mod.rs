@@ -180,15 +180,22 @@ pub(crate) fn path_matches(pattern: &str, path: &str) -> bool {
     }
 }
 
+/// Graph navigation properties that hold one object, not a collection.
+const GRAPH_SINGLE_VALUED: &[&str] = &["claimsPolicy"];
+
 /// Whether an unmatched path names a collection (answered `{"value": []}`)
 /// or one resource (answered 404). ARM alternates type / name segments
 /// after the last provider namespace, and before any (`subscriptions/x/
 /// resourceGroups`); Graph alternates after the version, and a segment
 /// with its key in parentheses (`servicePrincipals(appId='…')`) is a
-/// collection and its key at once: one resource.
+/// collection and its key at once: one resource. A single-valued
+/// navigation property (`…/claimsPolicy`) is one resource too.
 pub(crate) fn is_collection(path: &str) -> bool {
     let segs: Vec<&str> = path.trim_matches('/').split('/').filter(|s| !s.is_empty()).collect();
     if segs.first().is_some_and(|s| s.starts_with("v1.0") || s.starts_with("beta")) {
+        if segs.last().is_some_and(|s| GRAPH_SINGLE_VALUED.iter().any(|p| s.eq_ignore_ascii_case(p))) {
+            return false;
+        }
         let keyed = |s: &&str| s.contains('(') && s.ends_with(')');
         let steps: usize = segs[1..].iter().map(|s| if keyed(s) { 2 } else { 1 }).sum();
         return steps % 2 == 1;

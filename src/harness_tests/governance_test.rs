@@ -23,7 +23,7 @@ async fn an_inherited_assignment_loads_its_definition_and_jumps_to_it() {
     // The mock's definition is a built-in: one GET by id, nothing listed.
     let builtin = "/providers/Microsoft.Authorization/policyDefinitions/00000000-0000-0000-0000-000000000001";
     assert!(matches!(h.app.lazy.policy_definitions.get(builtin), Some(Lazy::Loading)), "the built-in read fired");
-    assert!(h.app.lazy.governance_lists.get(&format!("{sub}|policy-definitions")).is_none(), "no list for a built-in");
+    assert!(h.app.lazy.section_lists.get(&format!("{sub}|policy-definitions")).is_none(), "no list for a built-in");
     assert!(h.app.get_detail_lines().iter().any(|(_, v)| v == "Loading…"));
 
     // A custom definition at a management group: the Definitions list,
@@ -39,7 +39,7 @@ async fn an_inherited_assignment_loads_its_definition_and_jumps_to_it() {
     h.press(KeyCode::Enter).await;
     h.press(KeyCode::Char(crate::sections::key_for(idx).unwrap())).await;
     let key = format!("{sub}|policy-definitions");
-    assert!(matches!(h.app.lazy.governance_lists.get(&key), Some(Lazy::Loading)), "the list read fired");
+    assert!(matches!(h.app.lazy.section_lists.get(&key), Some(Lazy::Loading)), "the list read fired");
     assert!(h.app.lazy.policy_definitions.get(def).is_none());
 
     let row = PolicyDefinitionRow::from_json(
@@ -50,7 +50,7 @@ async fn an_inherited_assignment_loads_its_definition_and_jumps_to_it() {
     .unwrap();
     let rows: Vec<Box<dyn Resource>> = vec![Box::new(row)];
     let apply: Box<dyn FnOnce(&mut App) + Send> =
-        Box::new(move |app: &mut App| app.lazy.governance_lists.apply(key, Ok(rows)));
+        Box::new(move |app: &mut App| app.lazy.section_lists.apply(key, Ok(rows)));
     let epoch = h.app.lazy.epoch();
     h.send(Event::Lazy(LazyApply { epoch, apply })).await;
     let lines = h.app.get_detail_lines();

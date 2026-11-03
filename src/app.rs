@@ -150,6 +150,7 @@ mod audit;
 mod network_lens;
 mod firewall;
 mod flow_logs;
+mod defender;
 mod governance;
 mod backup;
 /// The "referenced by" lens (`U`): the reverse index, keys, `L`.
@@ -2122,6 +2123,25 @@ impl App {
         app.trigger_directory_child("federatedIdentityCredentials", event_tx);
     }
 
+    /// A service principal's Claims: its claims-mapping policies (v1.0) and
+    /// its custom claims policy (beta, one object; a 404 is "none").
+    pub fn trigger_sp_claims(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
+        use crate::azure::graph;
+        app.trigger_directory_child(graph::CLAIMS_MAPPING_CHILD, event_tx);
+        let Some(id) = app.get_selected_resource_id().filter(|id| graph::is_row_id(id)) else {
+            return;
+        };
+        let fut = app.azure_clients.graph_get_fetch(graph::claims_policy_path(&id));
+        let fut = async move {
+            match fut.await {
+                Ok(policy) => Ok(vec![policy]),
+                Err(e) if graph::is_not_found(&e) => Ok(Vec::new()),
+                Err(e) => Err(e),
+            }
+        };
+        app.trigger_lazy_with(|s| &mut s.directory_children, child_key(&id, graph::CLAIMS_POLICY_CHILD), event_tx, move || fut, false);
+    }
+
     pub fn trigger_sp_app_role_assignments(app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
         app.trigger_directory_child("appRoleAssignments", event_tx);
         app.trigger_directory_followups(event_tx);
@@ -2848,6 +2868,9 @@ impl App {
             ));
         }
         if let Some(lines) = self.governance_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.defender_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {

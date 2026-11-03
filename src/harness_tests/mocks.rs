@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, governance,
+    aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager,
 };
@@ -788,6 +788,73 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                         "name": "mg-1",
                         "type": "Microsoft.Management/managementGroups",
                         "properties": {"displayName": "Landing zones", "tenantId": "t"}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::DefenderRecommendations,
+            "RecommendationRow",
+            parse(
+                "RecommendationRow",
+                defender::RecommendationRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Compute/virtualMachines/vm-1/providers/Microsoft.Security/assessments/a-1"),
+                        "name": "a-1",
+                        "properties": {
+                            "displayName": "Management ports should be closed",
+                            "resourceDetails": {"Source": "Azure", "Id": arm_id("Microsoft.Compute/virtualMachines/vm-1")},
+                            "status": {"code": "Unhealthy"}
+                        }
+                    }),
+                    Some(&json!({"severity": "High", "categories": ["Networking"]})),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::DefenderAlerts,
+            "AlertRow",
+            parse(
+                "AlertRow",
+                defender::AlertRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Security/locations/eastus/alerts/alert-1"),
+                        "name": "alert-1",
+                        "properties": {"alertDisplayName": "Brute force", "severity": "High", "status": "Active",
+                            "entities": [{"type": "host", "hostName": "vm-1"}]}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::SecureScore,
+            "ScoreControlRow",
+            parse(
+                "ScoreControlRow",
+                defender::ScoreControlRow::from_json(
+                    &json!({
+                        "id": "/subscriptions/00000000-0000-0000-0000-000000000001/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/c-1",
+                        "name": "c-1",
+                        "properties": {"displayName": "Secure management ports", "score": {"current": 2.0, "max": 8, "percentage": 0.25},
+                            "unhealthyResourceCount": 1}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::DefenderPlans,
+            "PlanRow",
+            parse(
+                "PlanRow",
+                defender::PlanRow::from_json(
+                    &json!({
+                        "id": "/subscriptions/00000000-0000-0000-0000-000000000001/providers/Microsoft.Security/pricings/VirtualMachines",
+                        "name": "VirtualMachines",
+                        "properties": {"pricingTier": "Standard", "subPlan": "P2"}
                     }),
                     t,
                 ),

@@ -154,6 +154,7 @@ all).
 | `vm` | Virtual Machines | VMs, Disks (`disk`), NICs (`nic`), Scale sets (`vmss`, instances lazy; a Flexible set's VMs are in VMs) |
 | `storage` | Storage | Accounts (blob containers lazy) |
 | `gov` | Governance | Policy assignments (management groups' included), exemptions (`exempt`), custom definitions and initiatives (`pdef`), resource locks (`lock`), the management groups you can read (`mg`); never compliance (a POST) |
+| `defender` | Defender | Defender for Cloud recommendations with their severity, alerts (`secalert`, never a command line), the secure score and its controls (`score`), which plans are on (`pricing`); beside `@audit`, never in it |
 | `backup` | Backup | Recovery Services vaults (protected items, policies, failed jobs), Backup vaults (`bvault`: backup instances, policies, jobs) |
 | `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`, appliance next hops matched to their NIC / VM or load balancer), NAT gateways (`nat`), Private endpoints (`pe`), Bastion hosts (`bastion`), DDoS protection plans (`ddos`); VNets and NSGs show their Network Watcher flow logs |
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`), Traffic Manager profiles (`tm`, endpoints) |
@@ -266,6 +267,7 @@ nebaz get /subscriptions/…/virtualMachines/vm-1          # every section, lazy
 nebaz get vm-1 --in vm --section access --section related
 nebaz changes --since 6h                    # what changed, subscription-wide
 nebaz audit --fail-on high                  # exit 3 on a finding at or above high
+nebaz doctor -o md                          # proxy, certificates, az login, ARM, Graph, GitHub: each failure in full
 ```
 
 `get` shows what the detail pane shows, driving the same app without a
@@ -296,6 +298,11 @@ for one run.
 - **Update check:** once a day nebaz asks GitHub for its latest release and
   shows a dim `↑ vX.Y.Z` when it is newer. `update_check = false`,
   `--no-update-check` or `NEBAZ_NO_UPDATE_CHECK=1` turn it off.
+- **Behind a proxy:** nebaz reads `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY`,
+  not the macOS or Windows system proxy settings or a PAC file, and trusts
+  the OS certificate store (so a TLS-inspecting proxy's root CA that IT
+  installed is trusted; on Linux and WSL, the system CA bundle or
+  `SSL_CERT_FILE`). `nebaz doctor -o md` shows what fails and why.
 
 ---
 

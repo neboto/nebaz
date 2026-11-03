@@ -108,6 +108,88 @@
         "verifiedPublisherId": null,
         "addedDateTime": null
       }
+    },
+    {
+      "@odata.type": "#microsoft.graph.servicePrincipal",
+      "id": "cb637341-a93c-4494-bac6-3fa4363387f2",
+      "deletedDateTime": null,
+      "accountEnabled": true,
+      "alternativeNames": [],
+      "appDisplayName": "expenses-sso",
+      "appDescription": null,
+      "appId": "2306f346-508b-45ba-86a5-3f31b5509d25",
+      "applicationTemplateId": null,
+      "appOwnerOrganizationId": "{{tenant}}",
+      "appRoleAssignmentRequired": true,
+      "createdDateTime": "{{iso:now-200d}}",
+      "description": null,
+      "disabledByMicrosoftStatus": null,
+      "displayName": "expenses-sso",
+      "homepage": "https://expenses.contoso.com/",
+      "loginUrl": "https://expenses.contoso.com/login",
+      "logoutUrl": null,
+      "notes": null,
+      "notificationEmailAddresses": [
+        "it-ops@contoso.com"
+      ],
+      "preferredSingleSignOnMode": "saml",
+      "preferredTokenSigningKeyThumbprint": "BDCF191731F232BC3369CE3E5178DD9C83D35904",
+      "replyUrls": [
+        "https://expenses.contoso.com/saml/acs"
+      ],
+      "servicePrincipalNames": [
+        "2306f346-508b-45ba-86a5-3f31b5509d25",
+        "https://expenses.contoso.com/saml/metadata"
+      ],
+      "servicePrincipalType": "Application",
+      "signInAudience": "AzureADMyOrg",
+      "tags": [
+        "WindowsAzureActiveDirectoryCustomSingleSignOnApplication",
+        "WindowsAzureActiveDirectoryIntegratedApp"
+      ],
+      "tokenEncryptionKeyId": null,
+      "info": {
+        "logoUrl": null,
+        "marketingUrl": null,
+        "privacyStatementUrl": null,
+        "supportUrl": null,
+        "termsOfServiceUrl": null
+      },
+      "samlSingleSignOnSettings": {
+        "relayState": "/reports"
+      },
+      "addIns": [],
+      "appRoles": [],
+      "keyCredentials": [
+        {
+          "customKeyIdentifier": "vc8ZFzHyMrwzac4+UXjdnIPTWQQ=",
+          "displayName": "CN=Microsoft Azure Federated SSO Certificate",
+          "endDateTime": "{{iso:now+530d}}",
+          "key": null,
+          "keyId": "ac2fdb42-14cf-496a-9d8f-b1055da87fae",
+          "startDateTime": "{{iso:now-200d}}",
+          "type": "AsymmetricX509Cert",
+          "usage": "Verify"
+        },
+        {
+          "customKeyIdentifier": "vc8ZFzHyMrwzac4+UXjdnIPTWQQ=",
+          "displayName": "CN=Microsoft Azure Federated SSO Certificate",
+          "endDateTime": "{{iso:now+530d}}",
+          "key": null,
+          "keyId": "d0785c3b-5419-4bc1-9a9a-3c700183071a",
+          "startDateTime": "{{iso:now-200d}}",
+          "type": "AsymmetricX509Cert",
+          "usage": "Sign"
+        }
+      ],
+      "oauth2PermissionScopes": [],
+      "passwordCredentials": [],
+      "resourceSpecificApplicationPermissions": [],
+      "verifiedPublisher": {
+        "displayName": null,
+        "verifiedPublisherId": null,
+        "addedDateTime": null
+      }
     }
   ]
 }

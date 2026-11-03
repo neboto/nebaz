@@ -1,0 +1,238 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/ports",
+      "name": "ports",
+      "type": "Microsoft.Security/secureScores/secureScoreControls",
+      "properties": {
+        "displayName": "Secure management ports",
+        "score": {
+          "max": 8,
+          "current": 0,
+          "percentage": 0.0
+        },
+        "healthyResourceCount": 0,
+        "unhealthyResourceCount": 1,
+        "notApplicableResourceCount": 0,
+        "weight": 2,
+        "definition": {
+          "id": "/providers/Microsoft.Security/secureScoreControlDefinitions/ports",
+          "name": "ports",
+          "properties": {
+            "displayName": "Secure management ports",
+            "maxScore": 8,
+            "source": {
+              "sourceType": "BuiltIn"
+            },
+            "assessmentDefinitions": [
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/mfa",
+      "name": "mfa",
+      "type": "Microsoft.Security/secureScores/secureScoreControls",
+      "properties": {
+        "displayName": "Enable MFA",
+        "score": {
+          "max": 10,
+          "current": 0,
+          "percentage": 0.0
+        },
+        "healthyResourceCount": 0,
+        "unhealthyResourceCount": 1,
+        "notApplicableResourceCount": 0,
+        "weight": 2,
+        "definition": {
+          "id": "/providers/Microsoft.Security/secureScoreControlDefinitions/mfa",
+          "name": "mfa",
+          "properties": {
+            "displayName": "Enable MFA",
+            "maxScore": 10,
+            "source": {
+              "sourceType": "BuiltIn"
+            },
+            "assessmentDefinitions": [
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/e2c7b2f1-8d30-4d6f-ab52-1a4f9b3c7d22"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/net",
+      "name": "net",
+      "type": "Microsoft.Security/secureScores/secureScoreControls",
+      "properties": {
+        "displayName": "Restrict unauthorized network access",
+        "score": {
+          "max": 4,
+          "current": 2,
+          "percentage": 0.5
+        },
+        "healthyResourceCount": 1,
+        "unhealthyResourceCount": 2,
+        "notApplicableResourceCount": 0,
+        "weight": 2,
+        "definition": {
+          "id": "/providers/Microsoft.Security/secureScoreControlDefinitions/net",
+          "name": "net",
+          "properties": {
+            "displayName": "Restrict unauthorized network access",
+            "maxScore": 4,
+            "source": {
+              "sourceType": "BuiltIn"
+            },
+            "assessmentDefinitions": [
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33"
+              },
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/c6a1f6d5-2174-41a3-8f96-5e8d3f7a1b66"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/vuln",
+      "name": "vuln",
+      "type": "Microsoft.Security/secureScores/secureScoreControls",
+      "properties": {
+        "displayName": "Remediate vulnerabilities",
+        "score": {
+          "max": 6,
+          "current": 3,
+          "percentage": 0.5
+        },
+        "healthyResourceCount": 3,
+        "unhealthyResourceCount": 1,
+        "notApplicableResourceCount": 0,
+        "weight": 2,
+        "definition": {
+          "id": "/providers/Microsoft.Security/secureScoreControlDefinitions/vuln",
+          "name": "vuln",
+          "properties": {
+            "displayName": "Remediate vulnerabilities",
+            "maxScore": 6,
+            "source": {
+              "sourceType": "BuiltIn"
+            },
+            "assessmentDefinitions": [
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/b5f0e5c4-1063-4092-9e85-4d7c2e6f0a55"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/access",
+      "name": "access",
+      "type": "Microsoft.Security/secureScores/secureScoreControls",
+      "properties": {
+        "displayName": "Manage access and permissions",
+        "score": {
+          "max": 4,
+          "current": 4,
+          "percentage": 1.0
+        },
+        "healthyResourceCount": 2,
+        "unhealthyResourceCount": 0,
+        "notApplicableResourceCount": 0,
+        "weight": 2,
+        "definition": {
+          "id": "/providers/Microsoft.Security/secureScoreControlDefinitions/access",
+          "name": "access",
+          "properties": {
+            "displayName": "Manage access and permissions",
+            "maxScore": 4,
+            "source": {
+              "sourceType": "BuiltIn"
+            },
+            "assessmentDefinitions": [
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/d7b2a7e6-3285-42b4-90a7-6f9e4a8b2c77"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/dp",
+      "name": "dp",
+      "type": "Microsoft.Security/secureScores/secureScoreControls",
+      "properties": {
+        "displayName": "Enable data protection",
+        "score": {
+          "max": 4,
+          "current": 2,
+          "percentage": 0.5
+        },
+        "healthyResourceCount": 1,
+        "unhealthyResourceCount": 1,
+        "notApplicableResourceCount": 0,
+        "weight": 2,
+        "definition": {
+          "id": "/providers/Microsoft.Security/secureScoreControlDefinitions/dp",
+          "name": "dp",
+          "properties": {
+            "displayName": "Enable data protection",
+            "maxScore": 4,
+            "source": {
+              "sourceType": "BuiltIn"
+            },
+            "assessmentDefinitions": [
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/a4e9d4b3-0f52-4f81-8d74-3c6b1d5e9f44"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores/ascScore/secureScoreControls/edr",
+      "name": "edr",
+      "type": "Microsoft.Security/secureScores/secureScoreControls",
+      "properties": {
+        "displayName": "Enable endpoint protection",
+        "score": {
+          "max": 0,
+          "current": 0,
+          "percentage": 0
+        },
+        "healthyResourceCount": 0,
+        "unhealthyResourceCount": 0,
+        "notApplicableResourceCount": 1,
+        "weight": 2,
+        "definition": {
+          "id": "/providers/Microsoft.Security/secureScoreControlDefinitions/edr",
+          "name": "edr",
+          "properties": {
+            "displayName": "Enable endpoint protection",
+            "maxScore": 0,
+            "source": {
+              "sourceType": "BuiltIn"
+            },
+            "assessmentDefinitions": [
+              {
+                "id": "/providers/Microsoft.Security/assessmentMetadata/e8c3b8f7-4396-43c5-a1b8-7a0f5b9c3d88"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

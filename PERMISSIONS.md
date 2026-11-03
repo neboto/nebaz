@@ -48,7 +48,7 @@ used). Guests, and tenants that restrict members' directory access, get a
 `403`: the section says "directory read not allowed for this account" and
 shows object ids, and nothing else is affected.
 
-The Graph calls (all `GET`, all under `/v1.0`):
+The Graph calls (all `GET`, all under `/v1.0` but one under `/beta`):
 
 - `directoryObjects/{id}`: one per principal id in an Access section,
   cached for the session, at most 50 per section (and the APIs a service
@@ -65,6 +65,13 @@ The Graph calls (all `GET`, all under `/v1.0`):
 - `servicePrincipals(appId='{appId}')`: an app registration's APIs, named,
   and (with `directoryObjects/{id}`) an `@changes` caller's kind: at most
   50 per load.
+- `servicePrincipals/{id}/claimsMappingPolicies` and
+  `/beta/servicePrincipals/{id}/claimsPolicy` (Graph has the custom claims
+  policy, what the portal's Attributes & Claims edits, in beta only): a
+  service principal's Claims section. These read policy objects, which
+  plain directory read does not cover: the signed-in user needs the
+  **Global Reader** or **Application Administrator** directory role.
+  Without it the section says so and nothing else is affected.
 
 A credential's value is never shown: Graph returns no `secretText` to a
 `GET`, nebaz never `$select`s (so a certificate's `key` stays null), and
@@ -110,6 +117,14 @@ each one backs are in the catalog table
   role is assigned at a group; none is not an error). All in
   `Reader` at subscription scope. Never sent: Policy Insights'
   `queryResults` and `summarize` (compliance; `POST`s).
+- **Defender** (ADR 0010): `Microsoft.Security/assessments/read`,
+  `Microsoft.Security/assessmentMetadata/read` (the built-in metadata at
+  the tenant root, which anyone signed in may read, and the
+  subscription's custom metadata), `Microsoft.Security/alerts/read`,
+  `Microsoft.Security/secureScores/read`,
+  `Microsoft.Security/secureScoreControls/read`,
+  `Microsoft.Security/pricings/read`. All in `Reader` at subscription
+  scope. Never sent: anything that changes a plan or an alert's state.
 - **Backup** (Recovery Services vaults, Backup vaults):
   `Microsoft.RecoveryServices/vaults/read` (redundancy, soft delete,
   immutability, multi-user authorization, encryption, private endpoints
@@ -394,7 +409,10 @@ retries; a failure is silent. The answer is cached in
 `~/.cache/nebaz/update-check.json`. It needs no Azure permission. Turn it
 off with `update_check = false` in the config, `--no-update-check`, or
 `NEBAZ_NO_UPDATE_CHECK=1`; it never runs with `CI` set or for the headless
-subcommands.
+subcommands, except `nebaz doctor`, which makes it once on request (and
+skips it when it is turned off) to print the error the TUI swallows.
+`doctor`'s other requests are reads nebaz makes anyway: `az account list`,
+the subscription's locations, and one Graph `GET /v1.0/applications?$top=1`.
 
 ## Local commands
 

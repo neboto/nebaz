@@ -39,7 +39,8 @@
     ],
     "audit": [
       "--fail-on"
-    ]
+    ],
+    "doctor": []
   },
   "exit_codes": {
     "ok": 0,
@@ -181,6 +182,26 @@
       "info"
     ]
   },
+  "doctor": {
+    "envelope": [
+      "schema",
+      "ok",
+      "checks"
+    ],
+    "check": [
+      "name",
+      "status",
+      "detail",
+      "hint"
+    ],
+    "statuses": [
+      "ok",
+      "info",
+      "warn",
+      "fail",
+      "skip"
+    ]
+  },
   "prefixes": {
     "aca": [
       "container-apps (aca)",
@@ -220,6 +241,12 @@
     ],
     "cosmos": [
       "cosmos-accounts (cosmos)"
+    ],
+    "defender": [
+      "defender-recommendations (defender)",
+      "defender-alerts (secalert)",
+      "secure-score (score)",
+      "defender-plans (pricing)"
     ],
     "dns": [
       "private-dns-zones (dns)",
@@ -329,6 +356,7 @@
       "Overview",
       "Credentials",
       "Federated credentials",
+      "Token configuration",
       "API permissions",
       "Redirect URIs",
       "Owners",
@@ -524,6 +552,27 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Defender alert": [
+      "Overview",
+      "Alert",
+      "Entities",
+      "Activity",
+      "Related"
+    ],
+    "Defender plan": [
+      "Overview",
+      "Plan",
+      "Extensions",
+      "Activity",
+      "Related"
+    ],
+    "Defender recommendation": [
+      "Overview",
+      "Recommendation",
+      "Resources",
+      "Activity",
+      "Related"
     ],
     "Deployment": [
       "Overview",
@@ -864,6 +913,13 @@
       "Related",
       "Tags"
     ],
+    "Secure score control": [
+      "Overview",
+      "Control",
+      "Recommendations",
+      "Activity",
+      "Related"
+    ],
     "Service Bus namespace": [
       "Overview",
       "Network",
@@ -879,6 +935,8 @@
     "Service Principal": [
       "Overview",
       "Credentials",
+      "Single sign-on",
+      "Claims",
       "App role assignments",
       "OAuth2 grants",
       "Owners",

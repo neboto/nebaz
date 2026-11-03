@@ -43,6 +43,8 @@ crate::sections! {
     pub static SERVICE_PRINCIPAL_SECTIONS = [
         Overview "Overview",
         Credentials "Credentials",
+        SingleSignOn "Single sign-on",
+        Claims "Claims" => crate::app::App::trigger_sp_claims,
         AppRoleAssignments "App role assignments" => crate::app::App::trigger_sp_app_role_assignments,
         OAuth2Grants "OAuth2 grants" => crate::app::App::trigger_sp_oauth2_grants,
         Owners "Owners" => crate::app::App::trigger_directory_owners,
@@ -58,6 +60,7 @@ crate::sections! {
         Overview "Overview",
         Credentials "Credentials",
         FederatedCredentials "Federated credentials" => crate::app::App::trigger_app_federated_credentials,
+        TokenConfiguration "Token configuration",
         ApiPermissions "API permissions" => crate::app::App::trigger_app_api_permissions,
         RedirectUris "Redirect URIs",
         Owners "Owners" => crate::app::App::trigger_directory_owners,
@@ -222,7 +225,7 @@ impl DirectoryBase {
 
 /// The `Resource` methods both directory rows answer the same way.
 macro_rules! directory_row {
-    ($kind:expr) => {
+    ($kind:expr, $search:expr) => {
         fn id(&self) -> &str {
             &self.base.id
         }
@@ -254,14 +257,17 @@ macro_rules! directory_row {
         fn list_cell(&self) -> String {
             self.base.app_id.clone()
         }
+        /// Also the row's URIs and URLs, so an obscurely named app is
+        /// found by the host it signs in to.
         fn search_text(&self) -> String {
             format!(
-                "{} {} {} {} {}",
+                "{} {} {} {} {} {}",
                 self.base.name,
                 self.base.object_id,
                 self.base.app_id,
                 $kind,
-                json::strings_at(&self.base.json, "/tags").join(" ")
+                json::strings_at(&self.base.json, "/tags").join(" "),
+                search_fields(&self.base.json, $search)
             )
         }
         fn clone_box(&self) -> Box<dyn Resource> {
@@ -272,6 +278,49 @@ macro_rules! directory_row {
         }
     };
 }
+
+/// The text at each pointer, string or string list, space-joined.
+fn search_fields(v: &Value, pointers: &[&str]) -> String {
+    let mut out: Vec<String> = Vec::new();
+    for ptr in pointers {
+        match v.pointer(ptr) {
+            Some(Value::String(s)) => out.push(s.clone()),
+            Some(Value::Array(_)) => out.extend(json::strings_at(v, ptr)),
+            _ => {}
+        }
+    }
+    out.join(" ")
+}
+
+/// What an app registration's search reads beyond the shared fields.
+const APP_REGISTRATION_SEARCH: &[&str] = &[
+    "/web/redirectUris",
+    "/spa/redirectUris",
+    "/publicClient/redirectUris",
+    "/identifierUris",
+    "/web/homePageUrl",
+    "/web/logoutUrl",
+    "/info/marketingUrl",
+    "/info/privacyStatementUrl",
+    "/info/supportUrl",
+    "/info/termsOfServiceUrl",
+    "/publisherDomain",
+    "/uniqueName",
+    "/description",
+    "/notes",
+];
+
+/// What a service principal's search reads beyond the shared fields.
+const SERVICE_PRINCIPAL_SEARCH: &[&str] = &[
+    "/replyUrls",
+    "/servicePrincipalNames",
+    "/homepage",
+    "/loginUrl",
+    "/logoutUrl",
+    "/appDisplayName",
+    "/description",
+    "/notes",
+];
 
 #[derive(Debug, Clone)]
 pub struct ServicePrincipalRow {
@@ -310,7 +359,7 @@ impl ServicePrincipalRow {
 }
 
 impl Resource for ServicePrincipalRow {
-    directory_row!("Service Principal");
+    directory_row!("Service Principal", SERVICE_PRINCIPAL_SEARCH);
 
     fn detail_sections(&self) -> Option<&'static crate::sections::SectionDescriptor> {
         Some(&SERVICE_PRINCIPAL_SECTIONS)
@@ -387,7 +436,7 @@ impl AppRegistrationRow {
 }
 
 impl Resource for AppRegistrationRow {
-    directory_row!("App Registration");
+    directory_row!("App Registration", APP_REGISTRATION_SEARCH);
 
     fn detail_sections(&self) -> Option<&'static crate::sections::SectionDescriptor> {
         Some(&APP_REGISTRATION_SECTIONS)
@@ -506,6 +555,265 @@ pub fn credential_rows(v: &Value, now: i64) -> Vec<(String, String)> {
         String::new(),
         format!("· expiring = ends within {} days; values are never shown (Graph does not return them)", EXPIRY_WARN_DAYS),
     ));
+    lines
+}
+
+/// A certificate's thumbprint as Graph's `preferredTokenSigningKeyThumbprint`
+/// spells it (upper hex), from its base64 `customKeyIdentifier`.
+fn key_thumbprint(c: &Value) -> Option<String> {
+    use base64::Engine;
+    let raw = base64::engine::general_purpose::STANDARD.decode(json::str_at(c, "/customKeyIdentifier")?).ok()?;
+    Some(raw.iter().map(|b| format!("{:02X}", b)).collect())
+}
+
+/// The Single sign-on section: the enterprise app's SAML settings, all
+/// from the list's own JSON. The signing certificate is the credential
+/// whose thumbprint is `preferredTokenSigningKeyThumbprint` (a Sign key
+/// before its Verify twin).
+fn single_sign_on_rows(r: &ServicePrincipalRow, now: i64) -> Vec<(String, String)> {
+    let v = &r.base.json;
+    let mode = json::str_at(v, "/preferredSingleSignOnMode");
+    let mut lines = vec![("Mode".to_string(), mode.clone().filter(|m| !m.is_empty()).unwrap_or_else(|| "not set".into()))];
+    if mode.as_deref() != Some("saml") {
+        lines.push((String::new(), "· not SAML-based: no SAML settings".into()));
+        return lines;
+    }
+    let identifiers: Vec<String> = json::strings_at(v, "/servicePrincipalNames")
+        .into_iter()
+        .filter(|n| !n.eq_ignore_ascii_case(&r.base.app_id))
+        .collect();
+    let reply_urls = json::strings_at(v, "/replyUrls");
+    for (label, items) in [("Identifier (entity id)", identifiers), ("Reply URL (ACS)", reply_urls)] {
+        if items.is_empty() {
+            lines.push((label.into(), "-".into()));
+        }
+        lines.extend(items.into_iter().map(|i| (label.to_string(), i)));
+    }
+    lines.push(("Sign-on URL".into(), json::text(v, "/loginUrl")));
+    lines.push(("Logout URL".into(), json::text(v, "/logoutUrl")));
+    lines.push(("Relay state".into(), json::text(v, "/samlSingleSignOnSettings/relayState")));
+    lines.push((String::new(), String::new()));
+    match json::str_at(v, "/preferredTokenSigningKeyThumbprint").filter(|t| !t.is_empty()) {
+        None => lines.push(("Signing certificate".into(), "-".into())),
+        Some(thumb) => {
+            let mut keys: Vec<Value> = json::arr(v, "/keyCredentials")
+                .into_iter()
+                .filter(|c| key_thumbprint(c).is_some_and(|t| t.eq_ignore_ascii_case(&thumb)))
+                .collect();
+            keys.sort_by_key(|c| json::str_at(c, "/usage").as_deref() != Some("Sign"));
+            match keys.first() {
+                Some(c) => {
+                    let name = json::str_at(c, "/displayName").filter(|s| !s.is_empty()).unwrap_or_else(|| "(no name)".into());
+                    let expiry = Expiry::of(json::str_at(c, "/endDateTime").as_deref(), now);
+                    lines.push(("Signing certificate".into(), format!("{} · {}", name, expiry.describe())));
+                    lines.push(("  Thumbprint".into(), thumb));
+                    lines.push(("  End".into(), json::time(json::str_at(c, "/endDateTime"))));
+                }
+                None => {
+                    lines.push(("Signing certificate".into(), thumb));
+                    lines.push((String::new(), "· not among this principal's certificates".into()));
+                }
+            }
+        }
+    }
+    lines.push(("Expiry notifications".into(), json::join(&json::strings_at(v, "/notificationEmailAddresses"))));
+    lines.push((String::new(), String::new()));
+    lines.push((String::new(), "· which attributes go out as claims: the Claims section".into()));
+    lines
+}
+
+/// A claims policy fetch's loading and failure arms; a 403 names the
+/// directory role the read needs.
+fn claims_fetch_rows<'a>(lazy: Option<&'a Lazy<Vec<Value>>>, what: &str) -> std::result::Result<&'a [Value], Vec<(String, String)>> {
+    match lazy {
+        None | Some(Lazy::Loading) => Err(vec![(what.into(), "Loading…".into())]),
+        Some(Lazy::Error(e)) if graph::is_denied(e) => Err(error_rows(graph::CLAIMS_READ_DENIED)),
+        Some(Lazy::Error(e)) => Err(error_rows(e)),
+        Some(Lazy::Loaded(items)) => Ok(items),
+    }
+}
+
+/// A claim's source attribute: `user.mail`, or a constant in quotes.
+fn claim_attribute(a: &Value) -> String {
+    match json::str_at(a, "/@odata.type").as_deref().map(|t| t.trim_start_matches('#')) {
+        Some("microsoft.graph.valueBasedAttribute") => format!("\"{}\"", json::text(a, "/value")),
+        _ if a.is_null() => "-".into(),
+        _ => match (json::str_at(a, "/source"), json::str_at(a, "/id")) {
+            (Some(source), Some(id)) => format!("{}.{}", source, id.trim()),
+            _ => a.to_string(),
+        },
+    }
+}
+
+/// One transformation as `join(user.givenname, user.surname, separator= )`:
+/// the type's name less `Transformation`, then each argument, an input's
+/// attribute in place.
+fn claim_transformation(t: &Value) -> String {
+    let kind = json::str_at(t, "/@odata.type").unwrap_or_default();
+    let name = kind.trim_start_matches('#').trim_start_matches("microsoft.graph.").trim_end_matches("Transformation").to_string();
+    let mut args = Vec::new();
+    for (k, v) in t.as_object().into_iter().flatten().filter(|(k, _)| !k.starts_with('@')) {
+        match v {
+            Value::Null => {}
+            Value::Object(_) if v.get("attribute").is_some() => {
+                let all = if json::bool_at(v, "/treatAsMultiValue") == Some(true) { " (every value)" } else { "" };
+                args.push(format!("{}{}", claim_attribute(&v["attribute"]), all));
+            }
+            Value::Object(_) => args.push(claim_attribute(v)),
+            Value::String(s) => args.push(format!("{}={}", k, s)),
+            other => args.push(format!("{}={}", k, other)),
+        }
+    }
+    format!("{}({})", name, args.join(", "))
+}
+
+/// A configuration's condition, `members, member of Platform Admins`
+/// (each group named once resolved).
+fn claim_condition(c: &Value, objects: &LazyMap<Value>) -> Option<String> {
+    if c.is_null() {
+        return None;
+    }
+    let mut parts = Vec::new();
+    if let Some(who) = json::str_at(c, "/userType").filter(|t| t != "any") {
+        parts.push(who);
+    }
+    let groups = json::strings_at(c, "/memberOf");
+    if !groups.is_empty() {
+        let names: Vec<String> = groups.iter().map(|g| object_name(objects, g)).collect();
+        parts.push(format!("member of {}", names.join(", ")));
+    }
+    (!parts.is_empty()).then(|| parts.join(", "))
+}
+
+/// One custom claim: its emitted name, then a line per configuration
+/// (the condition, then the transformations, else the attribute).
+fn custom_claim_lines(c: &Value, objects: &LazyMap<Value>) -> Vec<(String, String)> {
+    let is_name_id = json::str_at(c, "/@odata.type").is_some_and(|t| t.ends_with("samlNameIdClaim"));
+    let mut label = if is_name_id {
+        format!("NameID · {}", json::text(c, "/nameIdFormat"))
+    } else {
+        let name = json::text(c, "/name");
+        match json::str_at(c, "/namespace").filter(|n| !n.is_empty()) {
+            Some(ns) => format!("{}/{}", ns.trim_end_matches('/'), name),
+            None => name,
+        }
+    };
+    let formats = json::strings_at(c, "/tokenFormat");
+    if !formats.is_empty() && formats != ["saml"] {
+        label = format!("{} · {}", label, formats.join(", "));
+    }
+    let configs = json::arr(c, "/configurations");
+    if configs.is_empty() {
+        return vec![(format!("  {}", label), "-".into())];
+    }
+    configs
+        .iter()
+        .enumerate()
+        .map(|(i, cfg)| {
+            let transforms = json::arr(cfg, "/transformations");
+            let attribute = cfg.get("attribute").filter(|a| !a.is_null());
+            let mut value = if transforms.is_empty() {
+                attribute.map(claim_attribute).unwrap_or_else(|| "-".into())
+            } else {
+                let chain = transforms.iter().map(claim_transformation).collect::<Vec<_>>().join(" → ");
+                match attribute {
+                    Some(a) => format!("{} (else {})", chain, claim_attribute(a)),
+                    None => chain,
+                }
+            };
+            if let Some(when) = cfg.get("condition").and_then(|c| claim_condition(c, objects)) {
+                value = format!("when {}: {}", when, value);
+            }
+            (if i == 0 { format!("  {}", label) } else { "    or".into() }, value)
+        })
+        .collect()
+}
+
+/// One claims-mapping policy: its name, then its `ClaimsSchema` (the
+/// definition is a JSON string).
+fn mapping_policy_lines(p: &Value) -> Vec<(String, String)> {
+    let mut lines = vec![(json::text(p, "/displayName"), json::text(p, "/id"))];
+    let Some(def) = json::strings_at(p, "/definition")
+        .first()
+        .and_then(|d| serde_json::from_str::<Value>(d).ok())
+        .and_then(|d| d.get("ClaimsMappingPolicy").cloned())
+    else {
+        lines.push((String::new(), "· ⚠ definition unreadable".into()));
+        return lines;
+    };
+    let basic = match def.get("IncludeBasicClaimSet") {
+        Some(Value::Bool(b)) => Some(*b),
+        Some(Value::String(s)) => Some(s.eq_ignore_ascii_case("true")),
+        _ => None,
+    };
+    lines.push(("  Basic claim set".into(), basic_claims(basic)));
+    for e in json::arr(&def, "/ClaimsSchema") {
+        let label = ["/SamlClaimType", "/SAMLClaimType", "/JwtClaimType", "/JWTClaimType", "/ID"]
+            .iter()
+            .find_map(|p| json::str_at(&e, p))
+            .unwrap_or_else(|| "-".into());
+        let value = if let Some(v) = json::str_at(&e, "/Value") {
+            format!("\"{}\"", v)
+        } else if let Some(t) = json::str_at(&e, "/TransformationId") {
+            format!("transformation {}", t)
+        } else {
+            let id = json::str_at(&e, "/ID").or_else(|| json::str_at(&e, "/ExtensionID")).unwrap_or_default();
+            format!("{}.{}", json::text(&e, "/Source"), id)
+        };
+        lines.push((format!("  {}", label), value));
+    }
+    for t in json::arr(&def, "/ClaimsTransformations") {
+        lines.push((format!("  transformation {}", json::text(&t, "/ID")), json::text(&t, "/TransformationMethod")));
+    }
+    lines
+}
+
+fn basic_claims(include: Option<bool>) -> String {
+    match include {
+        Some(true) => "included".into(),
+        Some(false) => "omitted".into(),
+        None => "-".into(),
+    }
+}
+
+/// The Claims section: the custom claims policy (what the portal's
+/// Attributes & Claims edits), then any claims-mapping policy, which
+/// overrides it.
+fn claims_rows(policy: Option<&Lazy<Vec<Value>>>, mapping: Option<&Lazy<Vec<Value>>>, objects: &LazyMap<Value>) -> Vec<(String, String)> {
+    let mut lines = vec![("Custom claims policy".to_string(), String::new())];
+    match claims_fetch_rows(policy, "  Custom claims policy") {
+        Err(rows) => lines.extend(rows),
+        Ok([]) => lines.push((String::new(), "none: the default claims".into())),
+        Ok([p, ..]) => {
+            lines.push(("  Basic claim set".into(), basic_claims(json::bool_at(p, "/includeBasicClaimSet"))));
+            lines.push(("  Audience override".into(), json::text(p, "/audienceOverride")));
+            lines.push(("  App id in issuer".into(), json::yes_no(json::bool_at(p, "/includeApplicationIdInIssuer"))));
+            if let Some(f) = p.get("groupFilter").filter(|f| !f.is_null()) {
+                lines.push(("  Group filter".into(), f.to_string()));
+            }
+            let claims = json::arr(p, "/claims");
+            lines.push((String::new(), String::new()));
+            lines.push((format!("Claims ({})", claims.len()), String::new()));
+            // The NameID first, as the portal lists it.
+            let (name_id, rest): (Vec<_>, Vec<_>) =
+                claims.iter().partition(|c| json::str_at(c, "/@odata.type").is_some_and(|t| t.ends_with("samlNameIdClaim")));
+            for c in name_id.into_iter().chain(rest) {
+                lines.extend(custom_claim_lines(c, objects));
+            }
+        }
+    }
+    lines.push((String::new(), String::new()));
+    lines.push(("Claims mapping policy".into(), String::new()));
+    match claims_fetch_rows(mapping, "  Claims mapping policy") {
+        Err(rows) => lines.extend(rows),
+        Ok([]) => lines.push((String::new(), "none".into())),
+        Ok(policies) => {
+            for p in policies {
+                lines.extend(mapping_policy_lines(p));
+            }
+            lines.push((String::new(), "· a claims mapping policy overrides the custom claims policy and the portal's settings".into()));
+        }
+    }
     lines
 }
 
@@ -636,6 +944,56 @@ fn api_permission_rows(r: &AppRegistrationRow, by_app_id: &LazyMap<Value>) -> Ve
     lines
 }
 
+/// The Token configuration section (the portal's page of that name): the
+/// group claims setting, the access token version and the optional claims
+/// per token, all from the list's own JSON. A SAML enterprise app's claims
+/// are mostly its service principal's claims policy, not these.
+fn token_configuration_rows(v: &Value) -> Vec<(String, String)> {
+    let groups = json::str_at(v, "/groupMembershipClaims").filter(|g| !g.is_empty() && !g.eq_ignore_ascii_case("None"));
+    let version = match json::int_at(v, "/api/requestedAccessTokenVersion") {
+        Some(n) => format!("v{}", n),
+        None => "v1 (default)".into(),
+    };
+    let mut lines = vec![
+        ("Group claims".to_string(), groups.clone().unwrap_or_else(|| "none".into())),
+        ("Access token version".into(), version),
+        ("Accept mapped claims".into(), json::yes_no(json::bool_at(v, "/api/acceptMappedClaims"))),
+    ];
+    let tokens = [("ID token", "/optionalClaims/idToken"), ("Access token", "/optionalClaims/accessToken"), ("SAML token", "/optionalClaims/saml2Token")];
+    let mut any = false;
+    let mut groups_claim = false;
+    for (label, ptr) in tokens {
+        let claims = json::arr(v, ptr);
+        if claims.is_empty() {
+            continue;
+        }
+        any = true;
+        lines.push((String::new(), String::new()));
+        lines.push((format!("{} ({})", label, claims.len()), String::new()));
+        for c in &claims {
+            let name = json::text(c, "/name");
+            groups_claim |= name == "groups";
+            let mut parts: Vec<String> = json::str_at(c, "/source").filter(|s| !s.is_empty()).map(|s| format!("from {}", s)).into_iter().collect();
+            parts.extend(json::strings_at(c, "/additionalProperties"));
+            if json::bool_at(c, "/essential") == Some(true) {
+                parts.push("essential".into());
+            }
+            let value = if parts.is_empty() { "-".to_string() } else { parts.join(" · ") };
+            lines.push((format!("  {}", name), value));
+        }
+    }
+    if !any {
+        lines.push((String::new(), String::new()));
+        lines.push(("Optional claims".into(), "none".into()));
+    }
+    lines.push((String::new(), String::new()));
+    if groups_claim && groups.is_none() {
+        lines.push((String::new(), "· ⚠ a groups optional claim does nothing until Group claims is set".into()));
+    }
+    lines.push((String::new(), "· a SAML enterprise app's claims: its service principal's Claims section".into()));
+    lines
+}
+
 fn redirect_uri_rows(v: &Value) -> Vec<(String, String)> {
     let groups = [("Web", "/web/redirectUris"), ("SPA", "/spa/redirectUris"), ("Public client", "/publicClient/redirectUris")];
     let mut lines = Vec::new();
@@ -714,6 +1072,8 @@ pub fn service_principal_section_lines(
     match section {
         S::Overview => overview_rows(r),
         S::Credentials => credential_rows(&r.base.json, now),
+        S::SingleSignOn => single_sign_on_rows(r, now),
+        S::Claims => claims_rows(child(graph::CLAIMS_POLICY_CHILD), child(graph::CLAIMS_MAPPING_CHILD), lazy.objects),
         S::AppRoleAssignments => graph_list_rows(child("appRoleAssignments"), "App role assignments", |items| {
             app_role_assignment_rows(items, lazy.objects)
         }),
@@ -747,6 +1107,7 @@ pub fn app_registration_section_lines(
         S::Overview => overview_rows(r),
         S::Credentials => credential_rows(&r.base.json, now),
         S::FederatedCredentials => graph_list_rows(child("federatedIdentityCredentials"), "Federated credentials", federated_rows),
+        S::TokenConfiguration => token_configuration_rows(&r.base.json),
         S::ApiPermissions => api_permission_rows(r, lazy.by_app_id),
         S::RedirectUris => redirect_uri_rows(&r.base.json),
         S::Owners => graph_list_rows(child("owners"), "Owners", owner_rows),
@@ -757,8 +1118,8 @@ pub fn app_registration_section_lines(
 }
 
 /// The directory objects a service principal's loaded sections name by id
-/// (an API's service principal, a consenting user), for the app to
-/// resolve; bounded by [`FOLLOWUPS_MAX`].
+/// (an API's service principal, a consenting user, a claim condition's
+/// group), for the app to resolve; bounded by [`FOLLOWUPS_MAX`].
 pub fn followup_object_ids(row_id: &str, children: &LazyMap<Vec<Value>>) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for (child, ptrs) in [("appRoleAssignments", &["/resourceId"][..]), ("oauth2PermissionGrants", &["/resourceId", "/principalId"][..])] {
@@ -771,6 +1132,14 @@ pub fn followup_object_ids(row_id: &str, children: &LazyMap<Vec<Value>>) -> Vec<
                         }
                     }
                 }
+            }
+        }
+    }
+    if let Some(Lazy::Loaded(policies)) = children.get(&child_key(row_id, graph::CLAIMS_POLICY_CHILD)) {
+        let configs = policies.iter().flat_map(|p| json::arr(p, "/claims")).flat_map(|c| json::arr(&c, "/configurations"));
+        for id in configs.flat_map(|cfg| json::strings_at(&cfg, "/condition/memberOf")).map(|s| s.to_lowercase()) {
+            if graph::is_object_id(&id) && !out.contains(&id) {
+                out.push(id);
             }
         }
     }
@@ -1077,16 +1446,197 @@ mod tests {
     #[test]
     fn section_labels() {
         let sp: Vec<&str> = SERVICE_PRINCIPAL_SECTIONS.sections.iter().map(|s| s.label).collect();
-        assert_eq!(sp, ["Overview", "Credentials", "App role assignments", "OAuth2 grants", "Owners", "Azure roles", "Related", "Tags"]);
+        assert_eq!(sp, ["Overview", "Credentials", "Single sign-on", "Claims", "App role assignments", "OAuth2 grants", "Owners", "Azure roles", "Related", "Tags"]);
         let app: Vec<&str> = APP_REGISTRATION_SECTIONS.sections.iter().map(|s| s.label).collect();
         assert_eq!(
             app,
-            ["Overview", "Credentials", "Federated credentials", "API permissions", "Redirect URIs", "Owners", "Exposed API", "Related", "Tags"]
+            ["Overview", "Credentials", "Federated credentials", "Token configuration", "API permissions", "Redirect URIs", "Owners", "Exposed API", "Related", "Tags"]
         );
+    }
+
+    #[test]
+    fn token_configuration_lists_optional_claims_per_token() {
+        let mut v = app_json();
+        let plain = token_configuration_rows(&v);
+        assert!(plain.contains(&("Group claims".into(), "none".into())));
+        assert!(plain.contains(&("Access token version".into(), "v1 (default)".into())));
+        assert!(plain.contains(&("Optional claims".into(), "none".into())));
+
+        v["api"]["requestedAccessTokenVersion"] = 2.into();
+        v["optionalClaims"] = serde_json::json!({
+            "idToken": [{"name": "email", "source": null, "essential": false, "additionalProperties": []}],
+            "accessToken": [{"name": "groups", "source": null, "essential": true, "additionalProperties": ["sam_account_name", "emit_as_roles"]}],
+            "saml2Token": []
+        });
+        let lines = token_configuration_rows(&v);
+        assert!(lines.contains(&("Access token version".into(), "v2".into())));
+        assert!(lines.contains(&("ID token (1)".into(), String::new())));
+        assert!(lines.contains(&("  email".into(), "-".into())));
+        assert!(lines.contains(&("  groups".into(), "sam_account_name · emit_as_roles · essential".into())));
+        assert!(!lines.iter().any(|(k, _)| k.starts_with("SAML token")));
+        assert!(lines.iter().any(|(_, t)| t.contains("does nothing until Group claims is set")));
+
+        v["groupMembershipClaims"] = "SecurityGroup".into();
+        let set = token_configuration_rows(&v);
+        assert!(set.contains(&("Group claims".into(), "SecurityGroup".into())));
+        assert!(!set.iter().any(|(_, t)| t.contains("does nothing")));
+    }
+
+    fn saml_sp_json() -> Value {
+        let mut v = sp_json();
+        v["preferredSingleSignOnMode"] = "saml".into();
+        v["servicePrincipalNames"] = serde_json::json!(["11111111-2222-3333-4444-555555555555", "https://sso.expenses.example/saml"]);
+        v["replyUrls"] = serde_json::json!(["https://expenses.example/saml/acs"]);
+        v["loginUrl"] = "https://expenses.example/login".into();
+        v["samlSingleSignOnSettings"] = serde_json::json!({"relayState": "/dashboard"});
+        v["notificationEmailAddresses"] = serde_json::json!(["it-ops@contoso.example"]);
+        v["preferredTokenSigningKeyThumbprint"] = "a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4".into();
+        let cert = |usage: &str| serde_json::json!({
+            "displayName": "CN=Microsoft Azure Federated SSO Certificate", "keyId": format!("k-{usage}"), "type": "AsymmetricX509Cert",
+            "usage": usage, "customKeyIdentifier": "oaKjpKWmp6ipqqusra6vsLGys7Q=",
+            "startDateTime": "2025-01-01T00:00:00Z", "endDateTime": "2026-01-15T00:00:00Z", "key": null
+        });
+        v["keyCredentials"] = serde_json::json!([cert("Verify"), cert("Sign")]);
+        v
+    }
+
+    #[test]
+    fn single_sign_on_reads_the_saml_settings_and_finds_the_signing_certificate() {
+        let (children, objects, by_app_id) = (LazyMap::default(), LazyMap::default(), LazyMap::default());
+        let lazy = empty_lazy(&children, &objects, &by_app_id);
+        let sp = ServicePrincipalRow::from_json(&saml_sp_json(), Some(TENANT), NOW).unwrap();
+        let lines = service_principal_section_lines(&sp, ServicePrincipalDetailSection::SingleSignOn, &lazy, NOW);
+        let get = |k: &str| lines.iter().find(|(l, _)| l == k).map(|(_, v)| v.as_str());
+        assert_eq!(get("Mode"), Some("saml"));
+        assert_eq!(get("Identifier (entity id)"), Some("https://sso.expenses.example/saml"), "the app id is not an identifier");
+        assert_eq!(get("Reply URL (ACS)"), Some("https://expenses.example/saml/acs"));
+        assert_eq!(get("Sign-on URL"), Some("https://expenses.example/login"));
+        assert_eq!(get("Logout URL"), Some("-"));
+        assert_eq!(get("Relay state"), Some("/dashboard"));
+        assert_eq!(get("Signing certificate"), Some("CN=Microsoft Azure Federated SSO Certificate · expires in 14 d"));
+        assert_eq!(get("Expiry notifications"), Some("it-ops@contoso.example"));
+
+        let mut v = saml_sp_json();
+        v["preferredTokenSigningKeyThumbprint"] = "FFFF".into();
+        let sp = ServicePrincipalRow::from_json(&v, Some(TENANT), NOW).unwrap();
+        let lines = service_principal_section_lines(&sp, ServicePrincipalDetailSection::SingleSignOn, &lazy, NOW);
+        assert!(lines.contains(&("Signing certificate".into(), "FFFF".into())));
+        assert!(lines.iter().any(|(_, v)| v == "· not among this principal's certificates"));
+
+        let plain = ServicePrincipalRow::from_json(&sp_json(), Some(TENANT), NOW).unwrap();
+        let lines = service_principal_section_lines(&plain, ServicePrincipalDetailSection::SingleSignOn, &lazy, NOW);
+        assert_eq!(lines[0], ("Mode".into(), "not set".into()));
+        assert_eq!(lines.len(), 2, "no SAML settings without the saml mode");
+    }
+
+    /// A custom claims policy as the portal writes it for a SAML app, plus
+    /// a transformation and a group condition.
+    fn claims_policy_json() -> Value {
+        let ns = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims";
+        let sourced = |id: &str| serde_json::json!({"@odata.type": "#microsoft.graph.sourcedAttribute", "id": id, "source": "user", "isExtensionAttribute": false});
+        let claim = |name: &str, cfgs: Value| serde_json::json!({
+            "@odata.type": "#microsoft.graph.customClaim", "name": name, "namespace": ns,
+            "tokenFormat": ["saml"], "samlAttributeNameFormat": null, "configurations": cfgs
+        });
+        serde_json::json!({
+            "id": "aaaaaaaa-bbbb-cccc-1111-222222222222",
+            "includeBasicClaimSet": true, "includeApplicationIdInIssuer": false, "audienceOverride": null, "groupFilter": null,
+            "claims": [
+                claim("emailaddress", serde_json::json!([{"condition": null, "attribute": sourced("mail"), "transformations": []}])),
+                {
+                    "@odata.type": "#microsoft.graph.samlNameIdClaim", "nameIdFormat": "emailAddress", "serviceProviderNameQualifier": null,
+                    "configurations": [{"condition": null, "attribute": sourced("userprincipalname"), "transformations": []}]
+                },
+                claim("role", serde_json::json!([
+                    {"condition": {"@odata.type": "#microsoft.graph.customClaimCondition", "userType": "members", "memberOf": ["e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d"]},
+                     "attribute": {"@odata.type": "#microsoft.graph.valueBasedAttribute", "value": "admin"}, "transformations": []},
+                    {"condition": null, "attribute": {"@odata.type": "#microsoft.graph.valueBasedAttribute", "value": "user"}, "transformations": []}
+                ])),
+                {
+                    "@odata.type": "#microsoft.graph.customClaim", "name": "JoinedData", "namespace": null, "tokenFormat": ["jwt", "saml"],
+                    "configurations": [{"condition": null, "attribute": null, "transformations": [{
+                        "@odata.type": "#microsoft.graph.joinTransformation", "separator": "-",
+                        "input": {"treatAsMultiValue": false, "attribute": sourced("extensionattribute1")},
+                        "input2": {"treatAsMultiValue": false, "attribute": {"@odata.type": "#microsoft.graph.valueBasedAttribute", "value": "ext"}}
+                    }]}]
+                }
+            ]
+        })
+    }
+
+    #[test]
+    fn claims_render_the_custom_policy_nameid_first_and_any_mapping_policy() {
+        let ns = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims";
+        let policy = Lazy::Loaded(vec![claims_policy_json()]);
+        let none = Lazy::Loaded(Vec::new());
+        let mut objects: LazyMap<Value> = LazyMap::default();
+        let lines = claims_rows(Some(&policy), Some(&none), &objects);
+        let at = |k: &str| lines.iter().position(|(l, _)| l == k).unwrap_or_else(|| panic!("no {k}: {lines:#?}"));
+        assert_eq!(lines[at("  Basic claim set")].1, "included");
+        assert_eq!(lines[at("Claims (4)")].1, "");
+        let name_id = at("  NameID · emailAddress");
+        assert_eq!(lines[name_id].1, "user.userprincipalname");
+        let email = at(&format!("  {ns}/emailaddress"));
+        assert_eq!(lines[email].1, "user.mail");
+        assert!(name_id < email, "NameID first");
+        let role = at(&format!("  {ns}/role"));
+        assert_eq!(lines[role].1, "when members, member of e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d: \"admin\"");
+        assert_eq!(lines[role + 1], ("    or".into(), "\"user\"".into()));
+        let group = "e1a8fb8b-9024-4a39-abf4-cc2a5c73b98d";
+        let mut children: LazyMap<Vec<Value>> = LazyMap::default();
+        children.apply(child_key("graph:/servicePrincipals/x", graph::CLAIMS_POLICY_CHILD), Ok(vec![claims_policy_json()]));
+        assert_eq!(followup_object_ids("graph:/servicePrincipals/x", &children), [group], "the condition's group is resolved");
+        objects.apply(group.into(), Ok(serde_json::json!({"@odata.type": "#microsoft.graph.group", "id": group, "displayName": "Platform Admins"})));
+        let lines = claims_rows(Some(&policy), Some(&none), &objects);
+        assert_eq!(lines[role].1, "when members, member of Platform Admins: \"admin\"");
+        assert_eq!(lines[at("  JoinedData · jwt, saml")].1, "join(separator=-, user.extensionattribute1, \"ext\")");
+        assert_eq!(lines.last().unwrap(), &(String::new(), "none".into()), "no mapping policy");
+
+        let mapping = Lazy::Loaded(vec![serde_json::json!({
+            "id": "8782712b-4368-4bc2-84d9-d47cd0146621", "displayName": "TestclaimsPolicy", "isOrganizationDefault": false,
+            "definition": ["{\"ClaimsMappingPolicy\":{\"Version\":1,\"IncludeBasicClaimSet\":\"true\", \"ClaimsSchema\":[{\"Source\":\"user\",\"ID\":\"extensionattribute1\"},{\"Source\":\"transformation\",\"ID\":\"DataJoin\",\"TransformationId\":\"JoinTheData\",\"JwtClaimType\":\"JoinedData\"}],\"ClaimsTransformations\":[{\"ID\":\"JoinTheData\",\"TransformationMethod\":\"Join\"}]}}"]
+        })]);
+        let lines = claims_rows(Some(&none), Some(&mapping), &objects);
+        assert!(lines.contains(&(String::new(), "none: the default claims".into())));
+        for want in [
+            ("TestclaimsPolicy", "8782712b-4368-4bc2-84d9-d47cd0146621"),
+            ("  Basic claim set", "included"),
+            ("  extensionattribute1", "user.extensionattribute1"),
+            ("  JoinedData", "transformation JoinTheData"),
+            ("  transformation JoinTheData", "Join"),
+        ] {
+            assert!(lines.contains(&(want.0.into(), want.1.into())), "{want:?} in {lines:#?}");
+        }
+        assert!(lines.last().unwrap().1.contains("overrides"));
+
+        let denied = Lazy::Error("403 Forbidden Authorization_RequestDenied: Insufficient privileges".into());
+        let lines = claims_rows(Some(&denied), None, &objects);
+        assert!(lines.iter().any(|(_, v)| v.contains(graph::CLAIMS_READ_DENIED)), "{lines:#?}");
+        assert!(lines.contains(&("  Claims mapping policy".into(), "Loading…".into())));
     }
 
     fn empty_lazy<'a>(children: &'a LazyMap<Vec<Value>>, objects: &'a LazyMap<Value>, by_app_id: &'a LazyMap<Value>) -> DirectoryLazy<'a> {
         DirectoryLazy { children, objects, by_app_id, azure_roles: None, role_definitions: None, subscription_scope: Some("/subscriptions/0000") }
+    }
+
+    #[test]
+    fn search_reads_redirect_and_identifier_uris() {
+        let matcher = crate::search::fuzzy::FuzzyMatcher::new();
+        let mut v = app_json();
+        v["displayName"] = "xq-7".into();
+        v["web"]["homePageUrl"] = "https://zephyr.example".into();
+        let mut sp = sp_json();
+        sp["displayName"] = "xq-7".into();
+        sp["replyUrls"] = serde_json::json!(["https://quokka.example/auth"]);
+        let rows: Vec<Box<dyn Resource>> = vec![
+            Box::new(AppRegistrationRow::from_json(&v, Some(TENANT), NOW).unwrap()),
+            Box::new(ServicePrincipalRow::from_json(&sp, Some(TENANT), NOW).unwrap()),
+        ];
+        let hits = |q: &str| matcher.filter_resources(q, &rows).into_iter().map(|(i, _)| i).collect::<Vec<_>>();
+        assert_eq!(hits("orders.example/signin"), vec![0], "a web redirect URI");
+        assert_eq!(hits("api://orders"), vec![0, 1], "an identifier URI, which the service principal also names");
+        assert_eq!(hits("zephyr"), vec![0], "the home page");
+        assert_eq!(hits("quokka"), vec![1], "a service principal's reply URL");
     }
 
     #[test]
