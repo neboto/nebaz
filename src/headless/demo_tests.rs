@@ -206,6 +206,24 @@ async fn the_demo_audit_finds_every_planted_check() {
     assert!(missing.is_empty(), "the demo audit no longer finds {missing:?} (found {found:?})");
 }
 
+/// `doctor` over the demo tenant: login, ARM and Graph answer offline,
+/// and the release check is off, as `--demo` turns it off in the TUI.
+#[tokio::test]
+async fn the_demo_doctor_passes_and_skips_the_release_check() {
+    let cli = demo_cli(&["doctor"]);
+    let (out, code) = super::doctor::doctor(&cli, OutputFormat::Json).await.unwrap_or_else(|f| panic!("doctor: {}", f.message()));
+    let v: Value = serde_json::from_str(&out).expect("doctor prints JSON");
+    let status = |name: &str| {
+        v["checks"].as_array().into_iter().flatten().find(|c| c["name"] == name).and_then(|c| c["status"].as_str()).map(str::to_string)
+    };
+    assert_eq!(code, 0, "{out}");
+    assert_eq!(v["ok"], true);
+    for name in ["az login", "arm", "graph"] {
+        assert_eq!(status(name).as_deref(), Some("ok"), "{name}: {out}");
+    }
+    assert_eq!(status("update check").as_deref(), Some("skip"));
+}
+
 /// The `N` lens on the story's two NSG findings, from the demo fixtures
 /// alone (nothing warm, so every subnet, NIC and NSG is a GET): Power
 /// Platform's subnet meets `DenyAllOutbound` 4000, which shadows the

@@ -71,3 +71,14 @@ nebaz sends it through what it already has:
 - Not ported from neboto (yet): clicking the chip to copy the upgrade
   command and dismiss that version. nebaz's mouse only replays keys, and
   there is no key for it; the splash names the upgrade command instead.
+
+## Amendment (2026-10-30): `nebaz doctor` makes it on request
+
+Behind a proxy or a TLS-inspecting middlebox (Zscaler) the silent check
+leaves nothing to go on. `nebaz doctor` (`src/headless/doctor.rs`) calls
+`update_check::fetch_latest` once and prints its error in full, beside the
+proxy and certificate settings, the `az` login, and one ARM and one Graph
+read. It is the one headless path that reaches the check; it honours every
+opt-out (a turned-off check reads `skip`, with the reason), and `--demo`
+turns it off as in the TUI. `anonymous_get` still has one caller,
+`src/update_check.rs`.
