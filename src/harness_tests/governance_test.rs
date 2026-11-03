@@ -77,3 +77,24 @@ async fn an_inherited_assignment_has_no_activity_call() {
     assert!(h.app.lazy.activity.get(&id).is_none(), "the Activity Log is per subscription");
     assert!(h.app.get_detail_lines().iter().any(|(_, v)| v.starts_with("Made above the subscription")));
 }
+
+/// A policy rule is pretty JSON in the Rule section: drawn coloured from the
+/// theme (keys in the accent colour, strings in success), the row text unchanged.
+#[tokio::test]
+async fn a_policy_rule_is_drawn_with_syntax_colours() {
+    let mut h = Harness::new().await;
+    h.install(mock("PolicyDefinitionRow")).await;
+    h.press(KeyCode::Enter).await;
+    let idx = h.section_labels().iter().position(|l| *l == "Rule").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(idx).unwrap())).await;
+    let (x, y) = h.find("\"effect\"");
+    let (vx, _) = h.find("\"deny\"");
+    let buffer = h.terminal.backend().buffer();
+    assert_eq!(buffer.get(x, y).fg, crate::ui::theme::accent(), "a key");
+    assert_eq!(buffer.get(vx, y).fg, crate::ui::theme::success(), "a string value");
+    // Off: the same cells are plain text.
+    h.app.syntax_highlight = false;
+    h.render();
+    let buffer = h.terminal.backend().buffer();
+    assert_eq!(buffer.get(vx, y).fg, crate::ui::theme::text_primary());
+}
