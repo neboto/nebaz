@@ -206,6 +206,7 @@ pub static COMMANDS: &[Command] = &[
     cmd(Search, "@* …", "search every cached list"),
     cmd(Search, "Tab", "complete @prefix"),
     cmd(Search, "↑ / ↓", "earlier searches"),
+    cmd(Search, "← → Home End", "edit the query (shell keys work too)"),
     cmd(Context, "S", "service").runs(Key('S')),
     cmd(Context, "R", "location").runs(Key('R')),
     cmd(Context, "P", "subscription").runs(Key('P')),

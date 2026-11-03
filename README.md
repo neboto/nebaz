@@ -194,6 +194,7 @@ strings, app settings and secret values are never fetched.
 |---|---|
 | `S` · `R` · `P` | service · location · subscription pickers |
 | `/` · `@svc text` | fuzzy search · switch service and search |
+| `↑`/`↓` in the bar · `←` `→` `Home` `End` | earlier searches (this session); move through the query, so `/` `↑` `←←←` fixes a typo in the last one (`^A` `^E` `Alt-←` `^W` `^U` `^K` `Del` work too) |
 | `⌫` / `Ctrl-O` · `Ctrl-F` · `` ` `` | history back · forward · jump list (the `←` `→` left of the service tabs click the same) |
 | `B` · `'` | bookmark · bookmarks |
 | `,` | macros (record, replay; `--macro NAME` on startup) |
@@ -218,7 +219,7 @@ strings, app settings and secret values are never fetched.
 | `Tab` · `1`–`9` | sections |
 | `⏎` | jump to the ARM id on the line |
 | `\` · `Z` · `^W` | every section in one scroll · full width · wrap long values |
-| `/` · `n`/`N` | filter the lines · step matches |
+| `/` · `n`/`N` | filter the lines (edited like the search bar; `^W` deletes a word there) · step matches |
 | `[[` / `]]` | previous / next group |
 | `V` · `y` | select lines · copy line or selection |
 

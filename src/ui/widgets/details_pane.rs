@@ -308,12 +308,27 @@ fn filter_bar(app: &App) -> Line<'static> {
     } else {
         "  n/N next · / new · Esc clear"
     };
-    let mut spans = vec![
-        Span::styled(" / ", Style::default().fg(theme::brand()).add_modifier(Modifier::BOLD)),
-        Span::styled(app.detail_search_query.clone(), Style::default().fg(theme::text_primary())),
-    ];
+    let text = Style::default().fg(theme::text_primary());
+    let mut spans = vec![Span::styled(" / ", Style::default().fg(theme::brand()).add_modifier(Modifier::BOLD))];
     if app.detail_search_active {
-        spans.push(Span::styled("█", Style::default().fg(theme::brand())));
+        // The caret sits on the char under the cursor, or after the text.
+        let query = &app.detail_search_query;
+        let at = crate::search::line_edit::cursor_index(query, app.detail_search_cursor_back);
+        let mut chars = query.chars();
+        let before: String = chars.by_ref().take(at).collect();
+        let under = chars.next();
+        let after: String = chars.collect();
+        spans.push(Span::styled(before, text));
+        match under {
+            Some(c) => spans.push(Span::styled(
+                c.to_string(),
+                Style::default().fg(theme::brand()).add_modifier(Modifier::REVERSED),
+            )),
+            None => spans.push(Span::styled("█", Style::default().fg(theme::brand()))),
+        }
+        spans.push(Span::styled(after, text));
+    } else {
+        spans.push(Span::styled(app.detail_search_query.clone(), text));
     }
     spans.push(Span::styled(info, Style::default().fg(theme::text_dim())));
     spans.push(Span::styled(keys, Style::default().fg(theme::text_dim())));

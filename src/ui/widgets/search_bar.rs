@@ -36,8 +36,16 @@ pub fn render_search_bar(app: &App, area: Rect, frame: &mut Frame) {
         .title(Span::styled(" Search ", title_style));
 
     if app.search_active {
+        let key = Style::default().fg(theme::accent()).add_modifier(Modifier::BOLD);
+        let mut hints = Vec::new();
+        // History is easy to forget about; say it is there while the bar
+        // is empty, which is when you would reach for it.
+        if app.search_query.is_empty() && !app.search_history.is_empty() {
+            hints.push(Span::styled(" ↑ ", key));
+            hints.push(Span::styled("history", Style::default().fg(theme::text_dim())));
+        }
         block = block.title(
-            Title::from(Line::from(vec![
+            Title::from(Line::from([hints, vec![
                 Span::styled(
                     " ⏎ ",
                     Style::default()
@@ -52,7 +60,7 @@ pub fn render_search_bar(app: &App, area: Rect, frame: &mut Frame) {
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled("cancel ", Style::default().fg(theme::text_dim())),
-            ]))
+            ]].concat()))
             .position(Position::Top)
             .alignment(Alignment::Right),
         );
@@ -113,9 +121,10 @@ pub fn render_search_bar(app: &App, area: Rect, frame: &mut Frame) {
 
     frame.render_widget(Paragraph::new(content).block(block), area);
 
-    // Show a real terminal cursor at the end of the query while typing
+    // Show a real terminal cursor where the query is being edited
     if app.search_active {
-        let cursor_x = area.x + 1 + 2 + app.search_query.chars().count() as u16;
+        let at = crate::search::line_edit::cursor_index(&app.search_query, app.search_cursor_back);
+        let cursor_x = area.x + 1 + 2 + at as u16;
         let cursor_x = cursor_x.min(area.x + area.width.saturating_sub(2));
         frame.set_cursor(cursor_x, area.y + 1);
     }
