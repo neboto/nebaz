@@ -458,6 +458,8 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
                 ("j/k", "select"),
                 ("[/]", "range"),
                 ("a", "all metrics"),
+                ("c", "changes"),
+                ("W", "timeline"),
                 ("e", "editor"),
                 ("Esc", "close"),
             ];

@@ -5,10 +5,20 @@
 //! The default set is curated per ARM type (`azure::metrics`); `a` lists
 //! every metric the resource has (its metric definitions) to chart one.
 //!
-//! `[` / `]` or `1`–`4` pick the window (1h, 6h, 24h, 7d) and refetch;
+//! `[` / `]` or `1`–`5` pick the window (1h, 6h, 24h, 7d, 30d) and refetch;
 //! `r` refetches; a metric that fails is a warning on its line, never an
 //! error for the view.
+//!
+//! Change markers (#152, neboto-tui#259 / #284 / #289): the `W` timeline's
+//! events for the resource (Activity Log, Resource Health, fired alerts,
+//! deployments) drawn as vertical lines on the selected metric's chart, a
+//! failed one in the error colour, with a legend on the chart's bottom
+//! border (each change named once with a count). `c` hides them, `W` opens
+//! the timeline and `Esc` there returns here with the range kept. The rows
+//! come from `App::chart_timeline`, fetched through the same sources as
+//! `W` (`app/timeline.rs`), over the week or month the range needs.
 
+use crate::azure::timeline::TimelineRow;
 use crate::azure::metrics::{fmt_value, MetricDefinition, MetricQuery, MetricSeries, MetricWindow};
 use crate::ui::theme;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -201,7 +211,7 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
     if let Some(p) = &st.picker {
         render_picker(p, chunks[2], &mut rows, frame);
     } else {
-        render_series(st, chunks[2], &mut rows, frame);
+        render_series(st, app.marker_source(), chunks[2], &mut rows, frame);
     }
     drop(rows);
 
@@ -214,6 +224,8 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
             ("[/]", "range"),
             ("a", "all metrics"),
             ("d", "default set"),
+            ("c", "changes"),
+            ("W", "timeline"),
             ("y", "copy"),
             ("r", "refetch"),
             ("Z", "width"),
@@ -267,7 +279,7 @@ fn series_color(i: usize) -> Color {
     [theme::accent(), theme::success(), theme::warning(), theme::heading(), theme::brand(), theme::border_focused()][i % 6]
 }
 
-fn render_series(st: &MetricsState, area: Rect, hits: &mut crate::app::PopupHits, frame: &mut Frame) {
+fn render_series(st: &MetricsState, markers: Option<MarkerSource>, area: Rect, hits: &mut crate::app::PopupHits, frame: &mut Frame) {
     if st.series.is_empty() {
         let msg = if st.loading {
             "  Reading…"
@@ -335,12 +347,130 @@ fn render_series(st: &MetricsState, area: Rect, hits: &mut crate::app::PopupHits
     hits.record_rows(list_area, 0, st.series.len());
 
     if let (Some(chart_area), Some(s)) = (chart_area, st.selected_series()) {
-        render_value_chart(s, st, series_color(st.selected), chart_area, frame);
+        render_value_chart(s, st, markers.as_ref(), series_color(st.selected), chart_area, frame);
     }
 }
 
-/// The selected metric as a braille line chart over the window.
-fn render_value_chart(s: &MetricSeries, st: &MetricsState, color: Color, area: Rect, frame: &mut Frame) {
+/// What the chart draws markers from: the timeline's rows (newest first)
+/// and whether its fetch is still running.
+pub struct MarkerSource<'a> {
+    pub rows: &'a [TimelineRow],
+    pub loading: bool,
+}
+
+/// One marker on the time axis: the row it is, its x (seconds from the
+/// window's start) and whether the event failed.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Marker {
+    pub row: usize,
+    pub x: f64,
+    pub failed: bool,
+}
+
+/// The rows that fall inside a chart whose window is `window_secs` long
+/// and ends at `end` (epoch secs), as x positions. An event outside the
+/// window (or without a time) is dropped; nothing is drawn before the
+/// series has landed (`end == 0`).
+pub fn marker_positions(rows: &[TimelineRow], end: i64, window_secs: i64) -> Vec<Marker> {
+    if end <= 0 {
+        return Vec::new();
+    }
+    let start = end - window_secs;
+    rows.iter()
+        .enumerate()
+        .filter(|(_, r)| r.ts_secs > 0)
+        .map(|(row, r)| Marker { row, x: (r.ts_secs - start) as f64, failed: r.failed })
+        .filter(|m| (0.0..=window_secs as f64).contains(&m.x))
+        .collect()
+}
+
+/// An operation name short enough for a legend: the last two segments of
+/// an ARM operation (`Microsoft.Network/networkSecurityGroups/securityRules/write`
+/// is `securityRules/write`); anything else as it is.
+fn short_what(what: &str) -> String {
+    if what.contains('/') {
+        let parts: Vec<&str> = what.split('/').collect();
+        if parts.len() > 2 {
+            return parts[parts.len() - 2..].join("/");
+        }
+    }
+    what.to_string()
+}
+
+/// The legend: each drawn change named once with a count (`Delete ×3`),
+/// newest first, as many as fit, then how many did not and the keys.
+fn marker_legend(rows: &[TimelineRow], drawn: &[Marker], loading: bool, width: u16) -> Line<'static> {
+    let dim = Style::default().fg(theme::text_dim());
+    let key = Style::default().fg(theme::warning());
+    let tail = [Span::styled("  c", key), Span::styled(" hide · ", dim), Span::styled("W", key), Span::styled(" timeline", dim)];
+    let tail_w: usize = tail.iter().map(|s| s.width()).sum();
+    let mut spans = vec![Span::styled(" ┊ ", dim)];
+    if drawn.is_empty() {
+        let msg = if loading {
+            "loading changes…".to_string()
+        } else {
+            format!("no changes in this window ({} in the timeline)", rows.len())
+        };
+        spans.push(Span::styled(msg, dim));
+        spans.extend(tail);
+        return Line::from(spans);
+    }
+    // (label, count, any failed) per distinct change, newest first.
+    let mut groups: Vec<(String, usize, bool)> = Vec::new();
+    for m in drawn {
+        let r = &rows[m.row];
+        let label = format!("{} {}", r.source().badge().trim(), short_what(&r.what));
+        match groups.iter_mut().find(|g| g.0 == label) {
+            Some(g) => {
+                g.1 += 1;
+                g.2 |= m.failed;
+            }
+            None => groups.push((label, 1, m.failed)),
+        }
+    }
+    let budget = (width as usize).saturating_sub(3 + tail_w + 12);
+    let (mut used, mut shown) = (0, 0);
+    for (label, n, failed) in &groups {
+        let mut text: String = if label.chars().count() > 40 {
+            label.chars().take(39).chain(['…']).collect()
+        } else {
+            label.clone()
+        };
+        if *n > 1 {
+            text.push_str(&format!(" ×{n}"));
+        }
+        let w = text.chars().count() + 3;
+        if shown > 0 && used + w > budget {
+            break;
+        }
+        if shown > 0 {
+            spans.push(Span::styled(" · ", dim));
+        }
+        let color = if *failed { theme::error() } else { theme::text_primary() };
+        spans.push(Span::styled(text, Style::default().fg(color)));
+        used += w;
+        shown += 1;
+    }
+    if shown < groups.len() {
+        spans.push(Span::styled(format!("  +{} more", groups.len() - shown), dim));
+    }
+    if loading {
+        spans.push(Span::styled("  loading…", dim));
+    }
+    spans.extend(tail);
+    Line::from(spans)
+}
+
+/// The selected metric as a braille line chart over the window, with the
+/// change markers behind the line when there are any.
+fn render_value_chart(
+    s: &MetricSeries,
+    st: &MetricsState,
+    markers: Option<&MarkerSource>,
+    color: Color,
+    area: Rect,
+    frame: &mut Frame,
+) {
     let x_max = st.window.secs() as f64;
     let start = st.end - st.window.secs();
     let data: Vec<(f64, f64)> = s.points.iter().map(|&(t, v)| ((t - start) as f64, v)).collect();
@@ -348,19 +478,36 @@ fn render_value_chart(s: &MetricSeries, st: &MetricsState, color: Color, area: R
     let peak = data.iter().map(|(_, y)| *y).fold(f64::MIN, f64::max);
     let hi = if peak > lo { peak + (peak - lo) * 0.1 } else { lo + 1.0 };
     let label = |v: f64| Span::styled(fmt_value(v, &s.unit), Style::default().fg(theme::text_dim()));
-    let dataset = Dataset::default()
-        .data(&data)
-        .marker(symbols::Marker::Braille)
-        .graph_type(GraphType::Line)
-        .style(Style::default().fg(color));
+    let drawn = markers.map(|m| marker_positions(m.rows, st.end, st.window.secs())).unwrap_or_default();
+    // Unnamed datasets, before the series so the data draws on top.
+    let lines: Vec<([(f64, f64); 2], bool)> = drawn.iter().map(|m| ([(m.x, lo), (m.x, hi)], m.failed)).collect();
+    let mut datasets: Vec<Dataset> = lines
+        .iter()
+        .map(|(pts, failed)| {
+            Dataset::default()
+                .data(pts)
+                .marker(symbols::Marker::Braille)
+                .graph_type(GraphType::Line)
+                .style(Style::default().fg(if *failed { theme::error() } else { theme::text_dim() }))
+        })
+        .collect();
+    datasets.push(
+        Dataset::default()
+            .data(&data)
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(color)),
+    );
     let title = format!(" {} · {} ({}) ", s.label, s.name, s.aggregation.short());
-    let chart = Chart::new(vec![dataset])
-        .block(
-            Block::default()
-                .title(Span::styled(title, Style::default().fg(color).add_modifier(Modifier::BOLD)))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme::border_dim())),
-        )
+    let mut block = Block::default()
+        .title(Span::styled(title, Style::default().fg(color).add_modifier(Modifier::BOLD)))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme::border_dim()));
+    if let Some(m) = markers.filter(|m| m.loading || !m.rows.is_empty()) {
+        block = block.title_bottom(marker_legend(m.rows, &drawn, m.loading, area.width.saturating_sub(2)));
+    }
+    let chart = Chart::new(datasets)
+        .block(block)
         .x_axis(Axis::default().bounds([0.0, x_max]).labels(vec![
             Span::styled(st.window.start_label(), Style::default().fg(theme::text_dim())),
             Span::styled("now", Style::default().fg(theme::text_dim())),
@@ -382,6 +529,107 @@ mod tests {
         // Never wider than the points.
         assert_eq!(spark_line(&pts[..2], 10).chars().count(), 2);
         assert_eq!(spark_line(&[], 10), "");
+    }
+
+    fn row(ts: i64, what: &str, failed: bool) -> TimelineRow {
+        TimelineRow {
+            ts_secs: ts,
+            what: what.to_string(),
+            failed,
+            source: Some(crate::azure::timeline::TimelineSource::Activity),
+            ..Default::default()
+        }
+    }
+
+    const END: i64 = 1_800_000_000;
+
+    #[test]
+    fn markers_sit_at_their_time_on_the_axis_and_outside_events_are_dropped() {
+        let rows = vec![
+            row(END - 600, "a", true),       // 10 min ago
+            row(END - 1800, "b", false),     // half way back
+            row(END - 3600, "c", false),     // exactly the window's start
+            row(END - 7200, "d", false),     // before the window
+            row(END + 60, "e", false),       // after the window's end
+            row(0, "f", false),              // no time
+        ];
+        let m = marker_positions(&rows, END, 3600);
+        assert_eq!(
+            m,
+            vec![
+                Marker { row: 0, x: 3000.0, failed: true },
+                Marker { row: 1, x: 1800.0, failed: false },
+                Marker { row: 2, x: 0.0, failed: false },
+            ]
+        );
+        // The same events on a 24h axis: x scales with the window start.
+        let day = marker_positions(&rows, END, 86_400);
+        assert_eq!(day.len(), 4);
+        assert_eq!(day[0].x, 86_400.0 - 600.0);
+        // Nothing before the series has landed (no window end).
+        assert!(marker_positions(&rows, 0, 3600).is_empty());
+    }
+
+    fn chart_buffer(markers: Option<&MarkerSource>) -> ratatui::buffer::Buffer {
+        let pts: Vec<(i64, f64)> = (0..=60).map(|m| (END - 3600 + m * 60, 10.0 + (m % 7) as f64)).collect();
+        let s = MetricSeries {
+            name: "Percentage CPU".into(),
+            label: "CPU".into(),
+            unit: "Percent".into(),
+            aggregation: crate::azure::metrics::Aggregation::Average,
+            points: pts,
+            error: None,
+        };
+        let mut st = MetricsState::open("/x".into(), "VM · x".into(), vec![], MetricWindow::OneHour);
+        st.end = END;
+        let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(100, 16)).unwrap();
+        terminal.draw(|f| render_value_chart(&s, &st, markers, Color::Green, f.size(), f)).unwrap();
+        terminal.backend().buffer().clone()
+    }
+
+    #[test]
+    fn a_marker_draws_a_vertical_line_and_no_event_in_the_window_leaves_the_chart_alone() {
+        let plain = chart_buffer(None);
+        let rows = vec![row(END - 600, "UpdateApp", true), row(END - 2400, "UpdateApp", false)];
+        let marked = chart_buffer(Some(&MarkerSource { rows: &rows, loading: false }));
+        assert_ne!(plain, marked);
+        // The failed one is error-coloured inside the plot (not the legend row).
+        let w = marked.area.width as usize;
+        let h = marked.area.height as usize;
+        let plot = &marked.content()[w..w * (h - 1)];
+        assert!(plot.iter().any(|c| c.fg == theme::error()), "a failed change is error-coloured");
+        assert!(plot.iter().any(|c| c.fg == theme::text_dim() && c.symbol() != " "), "an ordinary change is dim");
+
+        // Only older events: the plot is untouched (the legend says so).
+        let old = vec![row(END - 7200, "Old", false)];
+        let outside = chart_buffer(Some(&MarkerSource { rows: &old, loading: false }));
+        let plot = |b: &ratatui::buffer::Buffer| b.content()[w..w * (h - 1)].to_vec();
+        assert_eq!(plot(&plain), plot(&outside));
+    }
+
+    #[test]
+    fn the_legend_names_each_change_once_with_a_count_and_counts_what_does_not_fit() {
+        let text = |l: Line| l.spans.iter().map(|s| s.content.to_string()).collect::<String>();
+        let rows = vec![
+            row(END - 100, "Delete", false),
+            row(END - 200, "Delete", false),
+            row(END - 300, "Delete", true),
+            row(END - 400, "Restart", false),
+            row(END - 500, "A fairly long operation name", false),
+        ];
+        let drawn = marker_positions(&rows, END, 3600);
+        let wide = text(marker_legend(&rows, &drawn, false, 200));
+        assert!(wide.contains("ACT Delete ×3 · ACT Restart"), "{wide}");
+        assert_eq!(short_what("Microsoft.Network/networkSecurityGroups/securityRules/write"), "securityRules/write");
+        assert_eq!(short_what("Microsoft.Compute/virtualMachines/deallocate/action"), "deallocate/action");
+        assert_eq!(short_what("Alert fired · Sev3"), "Alert fired · Sev3");
+        assert!(wide.contains("c hide") && wide.contains("W timeline"), "{wide}");
+        let narrow = text(marker_legend(&rows, &drawn, false, 60));
+        assert!(narrow.contains("+") && narrow.contains("more"), "{narrow}");
+
+        let none = text(marker_legend(&rows, &[], false, 120));
+        assert!(none.contains("no changes in this window (5 in the timeline)"), "{none}");
+        assert!(text(marker_legend(&rows, &[], true, 120)).contains("loading changes…"));
     }
 
     #[test]

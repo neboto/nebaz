@@ -142,6 +142,9 @@ rules computed client-side from GETs (never the POST effective calls),
 `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics,
 owning the detail pane the same way; the default set is keyed by ARM
 type (`curated_metrics`, which also gates the hint), `SERVICES.md` rule 19.
+The chart draws the `W` timeline's events as markers (`App::chart_timeline`,
+fetched through the timeline's own `fetch_timeline`, never a second path);
+`W` from the chart parks the view and `Esc` returns to it.
 
 **`@audit`** (`src/audit.rs`, `src/audit/checks.rs`, `src/app/audit.rs`;
 ADR 0007, `SERVICES.md` rule 25): a virtual service (`is_virtual()`, never
