@@ -109,6 +109,18 @@ curl -fsSLO https://raw.githubusercontent.com/neboto/nebaz/main/install.sh && le
 `NEBAZ_VERSION=v0.3.0` pins a version and `NEBAZ_INSTALL_DIR` changes the
 destination.
 
+**Windows (PowerShell):** installs `nebaz.exe` to
+`%LOCALAPPDATA%\Programs\nebaz`, verifies the SHA-256 (and the provenance
+when `gh` is installed and logged in), and adds the folder to your user PATH:
+
+```powershell
+irm https://raw.githubusercontent.com/neboto/nebaz/main/install.ps1 | iex
+```
+
+`NEBAZ_VERSION`, `NEBAZ_INSTALL_DIR` and `NEBAZ_NO_ATTEST` work as above. On
+Windows on ARM it takes the native build when the release has one, else the
+x64 build (emulated). scoop and winget packages: not yet.
+
 **Other ways:**
 
 ```bash
@@ -123,6 +135,17 @@ carries a signed build provenance attestation:
 ```bash
 gh attestation verify nebaz-aarch64-apple-darwin.tar.gz --repo neboto/nebaz
 ```
+
+### Windows
+
+nebaz builds and is tested on Windows (CI runs the suite on `windows-latest`;
+install with the PowerShell line under [Install](#install)). Use Windows Terminal; the
+Azure CLI (`az`) must be installed and logged in. Files live under
+`%APPDATA%\nebaz` (config, bookmarks, macros) and `%LOCALAPPDATA%\nebaz`
+(cache). The system proxy is not read: set `HTTPS_PROXY` if you need one
+(`nebaz doctor` shows what it sees). `$EDITOR` may be quoted, for example
+`"C:\Program Files\Microsoft VS Code\bin\code.cmd" --wait`; the default is
+`notepad`. The Linux build also runs under WSL.
 
 ---
 
@@ -292,7 +315,9 @@ Every subcommand takes `--demo` too.
 
 ## Configuration
 
-`~/.config/nebaz/config.toml`; every key is documented in
+`~/.config/nebaz/config.toml` (`%APPDATA%\nebaz\config.toml` on Windows;
+bookmarks and macros live beside it, the update-check state under
+`%LOCALAPPDATA%\nebaz`); every key is documented in
 [`config.example.toml`](config.example.toml). Command-line flags override it
 for one run.
 
@@ -369,7 +394,7 @@ cargo build
 cargo run -- --demo                          # the offline tenant (docs/DEMO.md)
 cargo test                                   # every test, the read-only guard included
 cargo clippy --all-targets -- -D warnings    # CI fails on any warning
-scripts/smoke.sh                             # offline pty run with a fake az (needs python3)
+scripts/smoke.sh                             # offline pty run with a fake az (needs python3; Unix only)
 ```
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): how to send a change.

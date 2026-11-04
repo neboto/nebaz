@@ -33,8 +33,11 @@ pub const LATEST_URL: &str = "https://api.github.com/repos/neboto/nebaz/releases
 
 /// The upgrade command the splash names — the README's primary install
 /// path. nebaz can't tell how it was installed, so binstall users get the
-/// release page alongside it.
+/// release page alongside it. Windows names the PowerShell installer.
+#[cfg(not(windows))]
 pub const UPGRADE_COMMAND: &str = "curl -fsSL https://raw.githubusercontent.com/neboto/nebaz/main/install.sh | sh";
+#[cfg(windows)]
+pub const UPGRADE_COMMAND: &str = "irm https://raw.githubusercontent.com/neboto/nebaz/main/install.ps1 | iex";
 
 /// How long a check's answer is trusted. Unauthenticated GitHub API calls
 /// allow 60/hour per IP; one a day per machine is nowhere near that.
@@ -102,15 +105,13 @@ fn allowed(config: Option<bool>, no_update_check: Option<OsString>, ci: Option<O
     reason(config, no_update_check, ci).is_none()
 }
 
-/// `$NEBAZ_UPDATE_STATE`, then `$XDG_CACHE_HOME/nebaz/update-check.json`
-/// (default `~/.cache/…`).
+/// `$NEBAZ_UPDATE_STATE`, then `update-check.json` in the cache directory
+/// (`paths::cache_dir`: `~/.cache/nebaz`, `%LOCALAPPDATA%\nebaz` on Windows).
 pub fn state_path() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("NEBAZ_UPDATE_STATE") {
         return Some(PathBuf::from(p));
     }
-    let home = std::env::var("HOME").ok()?;
-    let xdg = std::env::var("XDG_CACHE_HOME").unwrap_or_else(|_| format!("{}/.cache", home));
-    Some(PathBuf::from(format!("{}/nebaz/update-check.json", xdg)))
+    Some(crate::paths::cache_dir()?.join("update-check.json"))
 }
 
 pub fn load() -> UpdateState {
@@ -190,6 +191,15 @@ pub fn is_newer(latest: &str, current: &str) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn upgrade_command_names_this_platform_installer() {
+        if cfg!(windows) {
+            assert!(UPGRADE_COMMAND.contains("install.ps1"));
+        } else {
+            assert!(UPGRADE_COMMAND.contains("install.sh"));
+        }
+    }
 
     #[test]
     fn newer_compares_numerically() {

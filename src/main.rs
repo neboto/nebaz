@@ -17,6 +17,7 @@ mod headless;
 mod keycast;
 mod lazy;
 mod macros;
+mod paths;
 mod search;
 mod sections;
 mod tui;

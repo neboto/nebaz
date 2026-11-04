@@ -152,6 +152,15 @@ impl EventHandler {
     }
 }
 
+/// Windows reports a key's release as well as its press, which would run
+/// every binding twice. Forward presses and repeats (a held `j` keeps
+/// scrolling) and drop releases.
+pub fn is_key_input(key: &KeyEvent) -> bool {
+    use crossterm::event::KeyEventKind;
+    matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+}
+
+
 // Spawn a task to handle terminal events
 pub async fn handle_terminal_events(tx: mpsc::UnboundedSender<Event>) {
     use crossterm::event::{poll, read, Event as CrosstermEvent};
@@ -169,6 +178,9 @@ pub async fn handle_terminal_events(tx: mpsc::UnboundedSender<Event>) {
         {
             Ok(Some(event)) => match event {
                 CrosstermEvent::Key(key) => {
+                    if !is_key_input(&key) {
+                        continue;
+                    }
                     if tx.send(Event::Key(key)).is_err() {
                         break;
                     }
@@ -205,5 +217,22 @@ pub async fn handle_tick_events(tx: mpsc::UnboundedSender<Event>, tick_rate: Dur
         if tx.send(Event::Tick).is_err() {
             break;
         }
+    }
+}
+
+#[cfg(test)]
+mod key_kind_tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEventKind, KeyEventState, KeyModifiers};
+
+    fn key(kind: KeyEventKind) -> KeyEvent {
+        KeyEvent { code: KeyCode::Char('j'), modifiers: KeyModifiers::NONE, kind, state: KeyEventState::NONE }
+    }
+
+    #[test]
+    fn presses_and_repeats_pass_releases_do_not() {
+        assert!(is_key_input(&key(KeyEventKind::Press)));
+        assert!(is_key_input(&key(KeyEventKind::Repeat)));
+        assert!(!is_key_input(&key(KeyEventKind::Release)));
     }
 }
