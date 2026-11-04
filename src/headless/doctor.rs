@@ -275,7 +275,7 @@ async fn update_check(config: &Config, proxied: bool) -> Check {
     let state = match (uc::state_path(), cached.checked_at) {
         (Some(p), 0) => format!("{}: never written", p.display()),
         (Some(p), at) => format!("{}: v{} at {}", p.display(), cached.latest.as_deref().unwrap_or("?"), crate::azure::services::json::time(Some(crate::azure::metrics::iso_utc(at as i64)))),
-        (None, _) => "no state file (HOME is not set)".into(),
+        (None, _) => "no state file (no home directory)".into(),
     };
     if let Some(why) = uc::off_reason(config.update_check) {
         return Check::new("update check", Status::Skip, format!("{} · {}", why, state));

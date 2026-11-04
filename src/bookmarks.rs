@@ -8,15 +8,13 @@ use crate::app::NavLocation;
 use std::path::PathBuf;
 
 /// Resolve the bookmarks file path. Honours `$NEBAZ_BOOKMARKS`, then
-/// `$XDG_CONFIG_HOME` (mirroring config.rs); defaults to
-/// `~/.config/nebaz/bookmarks.json`.
+/// the config directory (`paths::config_dir`: `~/.config/nebaz` on Unix,
+/// `%APPDATA%\nebaz` on Windows) plus `bookmarks.json`.
 fn bookmarks_path() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("NEBAZ_BOOKMARKS") {
         return Some(PathBuf::from(p));
     }
-    let home = std::env::var("HOME").ok()?;
-    let xdg = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{}/.config", home));
-    Some(PathBuf::from(format!("{}/nebaz/bookmarks.json", xdg)))
+    Some(crate::paths::config_dir()?.join("bookmarks.json"))
 }
 
 /// Load saved bookmarks. Returns empty on a missing file or any parse error

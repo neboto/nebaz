@@ -1,5 +1,5 @@
-# nebaz configuration — copy to ~/.config/nebaz/config.toml (or ~/.nebaz.toml,
-# or point $NEBAZ_CONFIG at it). Every key is optional.
+# nebaz configuration — copy to ~/.config/nebaz/config.toml (on Windows
+# %APPDATA%\nebaz\config.toml), or ~/.nebaz.toml, or point $NEBAZ_CONFIG at it. Every key is optional.
 #
 # A file that fails to parse is reported in the status bar at startup rather
 # than being silently ignored.

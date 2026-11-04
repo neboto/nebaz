@@ -8,7 +8,8 @@ use std::path::PathBuf;
 /// optional — a missing file (or missing key) just falls back to defaults.
 ///
 /// Search order: `$NEBAZ_CONFIG`, then `$XDG_CONFIG_HOME/nebaz/config.toml`
-/// (default `~/.config/nebaz/config.toml`), then `~/.nebaz.toml`.
+/// (default `~/.config/nebaz/config.toml`; `%APPDATA%\nebaz\config.toml` on
+/// Windows), then `~/.nebaz.toml` (`%USERPROFILE%` on Windows).
 ///
 /// ```toml
 /// # ~/.config/nebaz/config.toml
@@ -189,11 +190,11 @@ impl Config {
         if let Ok(p) = std::env::var("NEBAZ_CONFIG") {
             paths.push(PathBuf::from(p));
         }
-        if let Ok(home) = std::env::var("HOME") {
-            let xdg = std::env::var("XDG_CONFIG_HOME")
-                .unwrap_or_else(|_| format!("{}/.config", home));
-            paths.push(PathBuf::from(format!("{}/nebaz/config.toml", xdg)));
-            paths.push(PathBuf::from(format!("{}/.nebaz.toml", home)));
+        if let Some(dir) = crate::paths::config_dir() {
+            paths.push(dir.join("config.toml"));
+        }
+        if let Some(home) = crate::paths::home_dir() {
+            paths.push(home.join(".nebaz.toml"));
         }
         paths
     }

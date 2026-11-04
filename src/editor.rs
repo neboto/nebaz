@@ -27,54 +27,101 @@ pub fn spawn_editor_with_content(content: &str, suffix: &str) -> Result<()> {
     Ok(())
 }
 
-/// Get the editor command from $EDITOR environment variable, or fallback to vim
+/// The editor to use when `$EDITOR` is unset.
+fn default_editor(windows: bool) -> &'static str {
+    if windows {
+        "notepad"
+    } else {
+        "vim"
+    }
+}
+
+/// Get the editor command from $EDITOR, or the platform default.
 /// Returns (program, args) tuple where args can contain multiple arguments
 fn get_editor_command() -> Result<(String, Vec<String>)> {
-    let editor_str = env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+    let editor_str = env::var("EDITOR").unwrap_or_default();
+    Ok(editor_command(&editor_str, cfg!(windows)))
+}
 
-    // Split the editor string into program and arguments
-    let parts: Vec<String> = editor_str
-        .split_whitespace()
-        .map(|s| s.to_string())
-        .collect();
-
+fn editor_command(editor_str: &str, windows: bool) -> (String, Vec<String>) {
+    let mut parts = split_command(editor_str);
     if parts.is_empty() {
-        return Ok(("vim".to_string(), vec![]));
+        return (default_editor(windows).to_string(), vec![]);
     }
+    let program = parts.remove(0);
+    (program, parts)
+}
 
-    let program = parts[0].clone();
-    let args = parts[1..].to_vec();
+/// Split a command line on whitespace, honouring simple single and double
+/// quotes (`"C:\Program Files\Code\code.cmd" --wait`). No escapes: a
+/// backslash is a path separator, not an escape.
+fn split_command(s: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let mut in_token = false;
+    let mut quote: Option<char> = None;
+    for c in s.chars() {
+        match quote {
+            Some(q) if c == q => quote = None,
+            Some(_) => cur.push(c),
+            None if c == '"' || c == '\'' => {
+                quote = Some(c);
+                in_token = true;
+            }
+            None if c.is_whitespace() => {
+                if in_token {
+                    out.push(std::mem::take(&mut cur));
+                    in_token = false;
+                }
+            }
+            None => {
+                cur.push(c);
+                in_token = true;
+            }
+        }
+    }
+    if in_token {
+        out.push(cur);
+    }
+    out
+}
 
-    Ok((program, args))
+/// The programs to try, in order. On Windows a bare name (VS Code's
+/// `code`) is usually a `.cmd` shim, which `Command` won't find on its own
+/// (it only appends `.exe`), so the shim names follow. A `.cmd` / `.bat` is
+/// run directly: std quotes its arguments for `cmd.exe` itself, which a
+/// hand-built `cmd /C` line gets wrong once a path has spaces in it.
+fn candidates(program: &str, windows: bool) -> Vec<String> {
+    let has_extension = std::path::Path::new(program).extension().is_some();
+    if windows && !has_extension {
+        vec![program.to_string(), format!("{program}.cmd"), format!("{program}.bat")]
+    } else {
+        vec![program.to_string()]
+    }
 }
 
 /// Spawn the editor process and wait for it to complete
 fn spawn_editor(editor: &str, args: &[String], file_path: &str) -> Result<()> {
     use std::process::Stdio;
 
-    // Launch editor with inherited stdio
-    let mut cmd = Command::new(editor);
-
-    // Add any arguments from $EDITOR
-    for arg in args {
-        cmd.arg(arg);
-    }
-
-    // Add the file path as the last argument
-    cmd.arg(file_path);
-
-    // Inherit stdio to allow full interaction with the editor
-    cmd.stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
-
-    let status = cmd.status().map_err(|e| {
-        if e.kind() == std::io::ErrorKind::NotFound {
-            Error::EditorNotFound(editor.to_string())
-        } else {
-            Error::EditorFailed(format!("Failed to spawn editor: {}", e))
+    let mut status = None;
+    for program in candidates(editor, cfg!(windows)) {
+        // Launch editor with inherited stdio, the file path last
+        let mut cmd = Command::new(program);
+        cmd.args(args).arg(file_path);
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+        match cmd.status() {
+            Ok(s) => {
+                status = Some(s);
+                break;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(Error::EditorFailed(format!("Failed to spawn editor: {}", e))),
         }
-    })?;
+    }
+    let status = status.ok_or_else(|| Error::EditorNotFound(editor.to_string()))?;
 
     if !status.success() {
         return Err(Error::EditorFailed(format!(
@@ -84,4 +131,44 @@ fn spawn_editor(editor: &str, args: &[String], file_path: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn v(a: &[&str]) -> Vec<String> {
+        a.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn splits_plain_and_quoted() {
+        assert_eq!(split_command("vim"), v(&["vim"]));
+        assert_eq!(split_command("code --wait  -n"), v(&["code", "--wait", "-n"]));
+        assert_eq!(
+            split_command(r#""C:\Program Files\Microsoft VS Code\bin\code.cmd" --wait"#),
+            v(&[r"C:\Program Files\Microsoft VS Code\bin\code.cmd", "--wait"])
+        );
+        assert_eq!(split_command("'/opt/my ed/ed' -x"), v(&["/opt/my ed/ed", "-x"]));
+        assert_eq!(split_command(r#"ed "" x"#), v(&["ed", "", "x"]));
+        assert!(split_command("   ").is_empty());
+    }
+
+    #[test]
+    fn default_editor_per_platform() {
+        assert_eq!(editor_command("", false), ("vim".into(), vec![]));
+        assert_eq!(editor_command("  ", true), ("notepad".into(), vec![]));
+        assert_eq!(editor_command("nvim -R", false), ("nvim".into(), v(&["-R"])));
+    }
+
+    #[test]
+    fn windows_tries_the_shims_after_a_bare_name() {
+        assert_eq!(candidates("code", true), v(&["code", "code.cmd", "code.bat"]));
+        assert_eq!(
+            candidates(r"C:\Program Files\Microsoft VS Code\bin\code.cmd", true),
+            v(&[r"C:\Program Files\Microsoft VS Code\bin\code.cmd"])
+        );
+        assert_eq!(candidates("NOTEPAD.EXE", true), v(&["NOTEPAD.EXE"]));
+        assert_eq!(candidates("code", false), v(&["code"]));
+    }
 }
