@@ -345,7 +345,7 @@ fn line_of(text: &str, offset: usize) -> usize {
 }
 
 fn rel(path: &Path) -> String {
-    path.strip_prefix(root()).unwrap().display().to_string()
+    path.strip_prefix(root()).unwrap().display().to_string().replace(std::path::MAIN_SEPARATOR, "/")
 }
 
 /// Every `"…"` string literal in the text with its byte offset.
