@@ -49,3 +49,33 @@ jobs:
 
       - name: Clippy (warnings fail the build)
         run: cargo clippy --locked --all-targets -- -D warnings
+
+  # install.ps1 is exercised for real only by a release, so CI checks that it
+  # parses and passes PSScriptAnalyzer at error severity. It downloads nothing.
+  install-ps1:
+    name: install.ps1 (parse + analyze)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Parse (PowerShell 7)
+        shell: pwsh
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD/install.ps1", [ref]$null, [ref]$errors)
+          if ($errors) { $errors | ForEach-Object { Write-Error $_.ToString() }; exit 1 }
+
+      - name: Parse (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD/install.ps1", [ref]$null, [ref]$errors)
+          if ($errors) { $errors | ForEach-Object { Write-Error $_.ToString() }; exit 1 }
+
+      - name: PSScriptAnalyzer (errors fail)
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          $found = Invoke-ScriptAnalyzer -Path install.ps1 -Severity Error
+          $found | Format-List
+          if ($found) { exit 1 }

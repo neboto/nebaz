@@ -22,7 +22,8 @@ async fn a_newer_release_shows_on_the_splash_and_the_strip() {
     h.send(Event::UpdateAvailable("9.9.9".into())).await;
     let splash = h.render();
     assert!(splash.contains("nebaz v9.9.9 is out"), "{splash}");
-    assert!(splash.contains("install.sh | sh"), "the splash names the upgrade command\n{splash}");
+    let tail = if cfg!(windows) { "install.ps1 | iex" } else { "install.sh | sh" };
+    assert!(splash.contains(tail),"the splash names the upgrade command\n{splash}");
 
     h.app.current_location = Location::All;
     h.open(JumpView::VirtualMachines).await;

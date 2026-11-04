@@ -14,13 +14,16 @@ the tag runs the Release workflow, which:
 1. creates a **draft** GitHub Release with auto-generated notes (the merged
    PRs / commits since the previous tag);
 2. builds `nebaz` in release mode for every target in the matrix and uploads
-   `nebaz-<target>.tar.gz` + `nebaz-<target>.sha256` (sha256sum format,
-   one line per asset) into the draft;
+   `nebaz-<target>.tar.gz` (`.zip` for Windows targets) +
+   `nebaz-<target>.sha256` (sha256sum format, one line per asset) into the
+   draft;
 3. flips the draft to published (and marks it *latest*) only once every
    target succeeded.
 
 Targets today: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`,
-`aarch64-apple-darwin`, `x86_64-apple-darwin`. Linux builds run on
+`aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`,
+`aarch64-pc-windows-msvc` (both on `windows-latest`, the ARM64 one
+cross-built by the MSVC ARM64 tools). Linux builds run on
 `ubuntu-22.04` so the binaries need glibc ≥ 2.35; arm64 Linux is
 cross-compiled with `cross` (the image carries the C compiler that
 `aws-lc-sys`, rustls' crypto backend behind `azure_core`'s reqwest, needs),
@@ -28,11 +31,12 @@ Intel macOS is cross-compiled from Apple Silicon. No OpenSSL anywhere:
 `reqwest` is built with rustls, so the binaries carry no system TLS
 dependency.
 
-The tarball layout is flat — `nebaz`, `README.md`, `LICENSE`,
+The archive layout is flat — `nebaz` (`nebaz.exe` in the Windows zips), `README.md`, `LICENSE`,
 `PERMISSIONS.md`, `config.example.toml` — and the archive name is
-load-bearing: `install.sh` and the `[package.metadata.binstall]` table in
-`Cargo.toml` both derive it from `<bin>-<target>.tar.gz`. Change all three
-together.
+load-bearing: `install.sh`, `install.ps1` and the
+`[package.metadata.binstall]` table in `Cargo.toml` (with its Windows
+`zip` overrides) all derive it from `<bin>-<target>.tar.gz` /
+`<bin>-<target>.zip`. Change all four together.
 
 **Runtime dependency**: the binary needs the Azure CLI (≥ 2.54.0), logged in
 (`az login`). Neither the workflow nor `install.sh` installs it; the
@@ -139,7 +143,7 @@ a bypass; fix forward with a patch tag instead.)
 
 **Trying a toolchain / target change without a tag:** run the workflow by
 hand (`gh workflow run release.yml`, or the *Run workflow* button). A manual
-run is a dry run — it builds every target and keeps the archives as workflow
+run is a dry run — it builds every target (the Windows zips included) and keeps the archives as workflow
 artifacts, but creates no release and uploads nothing.
 
 ## Build time
@@ -199,14 +203,19 @@ check makes every PR pass CI on top of the latest `main` before it merges.
 |---|---|
 | Installer script | `curl -fsSL https://raw.githubusercontent.com/neboto/nebaz/main/install.sh \| sh` |
 | cargo-binstall | `cargo binstall --git https://github.com/neboto/nebaz nebaz` (plain `cargo binstall nebaz` once published to crates.io) |
-| Manual | download `nebaz-<target>.tar.gz` + `nebaz-<target>.sha256` from the Releases page, `shasum -a 256 -c` the latter, put `nebaz` on `PATH` |
+| Windows installer | `irm https://raw.githubusercontent.com/neboto/nebaz/main/install.ps1 \| iex` |
+| Manual | download `nebaz-<target>.tar.gz` (`.zip` on Windows) + `nebaz-<target>.sha256` from the Releases page, `shasum -a 256 -c` the latter, put `nebaz` on `PATH` |
 | From source | `cargo install --git https://github.com/neboto/nebaz` |
 
 `install.sh` honours `NEBAZ_VERSION` (pin a tag), `NEBAZ_INSTALL_DIR`
-(default `~/.local/bin`), `NEBAZ_NO_ATTEST=1` and `GITHUB_TOKEN`.
+(default `~/.local/bin`), `NEBAZ_NO_ATTEST=1` and `GITHUB_TOKEN`;
+`install.ps1` honours the same four (default dir
+`%LOCALAPPDATA%\Programs\nebaz`). CI parses `install.ps1` and runs
+PSScriptAnalyzer on it, but only a real release exercises the download.
+scoop and winget are not set up.
 
 ## Not done yet
 
 Tracked as issues labelled `area:release`: Homebrew tap (#71), crates.io
 (#72), macOS signing (#73), musl builds (#74), a hand-kept CHANGELOG
-(#75; the label-grouped notes above are its first half), Windows (#68).
+(#75; the label-grouped notes above are its first half). Windows scoop/winget packages and Authenticode signing are not done.

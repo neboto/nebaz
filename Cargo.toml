@@ -10,13 +10,20 @@ readme = "README.md"
 keywords = ["azure", "tui", "terminal", "ratatui", "cloud"]
 categories = ["command-line-utilities"]
 
-# `cargo binstall nebaz` pulls the prebuilt tarball the Release workflow
+# `cargo binstall nebaz` pulls the prebuilt archive the Release workflow
 # attaches to each tag. The archive name must match what
-# .github/workflows/release.yml produces and install.sh downloads.
+# .github/workflows/release.yml produces and install.sh / install.ps1 download.
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }{ archive-suffix }"
 pkg-fmt = "tgz"
 bin-dir = "{ bin }{ binary-ext }"
+
+# Windows archives are zips (install.ps1 reads the same name).
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.aarch64-pc-windows-msvc]
+pkg-fmt = "zip"
 
 [dependencies]
 # TUI (unicode-width: the detail body wraps by display width)
