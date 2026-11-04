@@ -47,6 +47,10 @@ all it needs, and a test fails the build if that ever changes. See
 - **Network access lens** (`N`) on a VM, NIC, subnet or NSG: the NSG rules
   that apply, in priority order with defaults, shadowed rules marked.
 - **Metrics** (`m`): Azure Monitor charts in the pane, a curated set per type.
+  On an Application Gateway with WAF, a Front Door profile or a WAF policy it
+  is the WAF view: requests by action, the block rate and per-rule tables
+  (`Tab` between them, `⏎` charts a rule, `d` back, `w` toggles with the
+  default set).
 - **Change timeline** (`W`) on any resource: the Activity Log, Resource Health
   and fired alerts, merged. **`@changes`** does it subscription-wide.
 - **`@audit`**: over 60 checks (world-open NSG rules, subnets without an NSG,
@@ -251,7 +255,7 @@ strings, app settings and secret values are never fetched.
 | Key | |
 |---|---|
 | `N` | network access lens (VM, NIC, subnet, NSG) |
-| `m` | metrics |
+| `m` | metrics (WAF view on a gateway, Front Door profile or WAF policy: `Tab` `⏎` `d` `w` `n`) |
 | `W` | change timeline (`f` one source, `[`/`]` window) |
 | `U` | referenced by |
 | `C` | copy an `az` command (inspect, connect, change; never run) |

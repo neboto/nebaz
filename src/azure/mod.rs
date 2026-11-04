@@ -6,6 +6,7 @@ pub mod client;
 pub mod graph;
 pub mod location;
 pub mod metrics;
+pub mod waf_metrics;
 pub mod nsg_eval;
 pub mod references;
 pub mod ownership;

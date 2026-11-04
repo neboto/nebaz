@@ -74,6 +74,17 @@ the failed `v119` rollout and the Degraded health as change markers (`c` hides
 them, `W` opens the timeline, `Esc` comes back); `ca-orders-api` shows the
 fired alert at the cliff.
 
+The WAF view (#153): `m` on `agw-contoso-prod` (Detection mode, so its
+matches are logged and the block rate is 0%) charts requests by action with
+the managed-rule, custom-rule and bot tables beside the chart; `m` on
+`afd-contoso` (Prevention) shows a block rate above zero, the SQLI and XSS
+rules blocking and the bot rule only logging, and `⏎` on a rule charts its
+actions; `m` on the WAF policy `wafp-agw-prod` or `wafpafdcontoso` opens the
+same view of the gateway or profile it is attached to, pinned to that
+policy. The numbers come from `waf_rows` in `src/demo/generate.rs`, which
+answers a metrics call with a `$filter` by splitting on the dimensions it
+names.
+
 Planted findings, one per thing a screen or `@audit` shows off:
 
 | What | Where it shows |

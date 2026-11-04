@@ -453,6 +453,15 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
                 ("[/]", "window"),
                 ("Esc", "close"),
             ];
+        } else if app.metrics.as_ref().is_some_and(|m| m.waf_view()) {
+            main_hints = vec![
+                ("j/k", "rule"),
+                ("Tab", "table"),
+                ("⏎", "chart rule"),
+                ("d", "back"),
+                ("[/]", "range"),
+                ("Esc", "close"),
+            ];
         } else if app.metrics.is_some() {
             main_hints = vec![
                 ("j/k", "select"),
