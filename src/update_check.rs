@@ -33,8 +33,11 @@ pub const LATEST_URL: &str = "https://api.github.com/repos/neboto/nebaz/releases
 
 /// The upgrade command the splash names — the README's primary install
 /// path. nebaz can't tell how it was installed, so binstall users get the
-/// release page alongside it.
+/// release page alongside it. Windows names the PowerShell installer.
+#[cfg(not(windows))]
 pub const UPGRADE_COMMAND: &str = "curl -fsSL https://raw.githubusercontent.com/neboto/nebaz/main/install.sh | sh";
+#[cfg(windows)]
+pub const UPGRADE_COMMAND: &str = "irm https://raw.githubusercontent.com/neboto/nebaz/main/install.ps1 | iex";
 
 /// How long a check's answer is trusted. Unauthenticated GitHub API calls
 /// allow 60/hour per IP; one a day per machine is nowhere near that.
@@ -188,6 +191,15 @@ pub fn is_newer(latest: &str, current: &str) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn upgrade_command_names_this_platform_installer() {
+        if cfg!(windows) {
+            assert!(UPGRADE_COMMAND.contains("install.ps1"));
+        } else {
+            assert!(UPGRADE_COMMAND.contains("install.sh"));
+        }
+    }
 
     #[test]
     fn newer_compares_numerically() {
