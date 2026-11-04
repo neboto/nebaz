@@ -46,7 +46,7 @@ azure_identity = { version = "1", features = ["tokio"] }
 fuzzy-matcher = "0.3"
 
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Serialization + config
 serde = { version = "1.0", features = ["derive"] }
