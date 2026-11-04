@@ -248,6 +248,10 @@ verbatim where the concept is unchanged.
   (`service_error`); `AuthError::classify` only
   calls something an auth condition when the text says so (a transport
   "retry policy expired" is not a token expiry).
+- **Paths** (`src/paths.rs`): config, cache and home directories (and `~/`
+  expansion) go through it, never `HOME`/`XDG_*` directly; Windows uses
+  `%APPDATA%` / `%LOCALAPPDATA%` / `%USERPROFILE%`. Resolvers take the
+  environment as a parameter so every OS tests both shapes.
 - **Colors** (`src/ui/theme.rs`): the palette is runtime-selected and
   read through accessors (`theme::accent()`, …). Never hardcode
   `Color::White` and friends for UI text; that is what breaks the light

@@ -102,15 +102,13 @@ fn allowed(config: Option<bool>, no_update_check: Option<OsString>, ci: Option<O
     reason(config, no_update_check, ci).is_none()
 }
 
-/// `$NEBAZ_UPDATE_STATE`, then `$XDG_CACHE_HOME/nebaz/update-check.json`
-/// (default `~/.cache/…`).
+/// `$NEBAZ_UPDATE_STATE`, then `update-check.json` in the cache directory
+/// (`paths::cache_dir`: `~/.cache/nebaz`, `%LOCALAPPDATA%\nebaz` on Windows).
 pub fn state_path() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("NEBAZ_UPDATE_STATE") {
         return Some(PathBuf::from(p));
     }
-    let home = std::env::var("HOME").ok()?;
-    let xdg = std::env::var("XDG_CACHE_HOME").unwrap_or_else(|_| format!("{}/.cache", home));
-    Some(PathBuf::from(format!("{}/nebaz/update-check.json", xdg)))
+    Some(crate::paths::cache_dir()?.join("update-check.json"))
 }
 
 pub fn load() -> UpdateState {

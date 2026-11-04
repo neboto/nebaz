@@ -770,15 +770,7 @@ impl ExportOptions {
     }
 }
 
-/// Expand a leading `~/` in a configured path.
-pub fn expand_home(path: &str) -> PathBuf {
-    match path.strip_prefix("~/") {
-        Some(rest) => std::env::var_os("HOME")
-            .map(|h| PathBuf::from(h).join(rest))
-            .unwrap_or_else(|| PathBuf::from(path)),
-        None => PathBuf::from(path),
-    }
-}
+pub use crate::paths::expand_home;
 
 /// Write the enabled formats, each built lazily so a skipped format costs
 /// nothing. Returns the written paths in json/csv/md order.
@@ -1354,13 +1346,6 @@ mod tests {
         assert!(md.contains("| Size | Standard_B2s |") && csv.contains("Size,Standard_B2s"));
     }
 
-    #[test]
-    fn expand_home_only_touches_a_leading_tilde() {
-        assert_eq!(expand_home("/tmp/x"), PathBuf::from("/tmp/x"));
-        if let Some(home) = std::env::var_os("HOME") {
-            assert_eq!(expand_home("~/exports"), PathBuf::from(home).join("exports"));
-        }
-    }
     #[test]
     fn key_hints_are_stripped_from_exports() {
         let cases = [

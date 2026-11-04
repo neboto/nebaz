@@ -259,15 +259,13 @@ pub struct MacroPlayer {
 }
 
 /// Resolve the macros file path. Honours `$NEBAZ_MACROS`, then
-/// `$XDG_CONFIG_HOME` (mirroring config.rs); defaults to
-/// `~/.config/nebaz/macros.json`.
+/// the config directory (`paths::config_dir`: `~/.config/nebaz` on Unix,
+/// `%APPDATA%\nebaz` on Windows) plus `macros.json`.
 fn macros_path() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("NEBAZ_MACROS") {
         return Some(PathBuf::from(p));
     }
-    let home = std::env::var("HOME").ok()?;
-    let xdg = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{}/.config", home));
-    Some(PathBuf::from(format!("{}/nebaz/macros.json", xdg)))
+    Some(crate::paths::config_dir()?.join("macros.json"))
 }
 
 /// Load saved macros. Returns empty on a missing file or any parse error

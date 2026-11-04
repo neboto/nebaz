@@ -124,6 +124,18 @@ carries a signed build provenance attestation:
 gh attestation verify nebaz-aarch64-apple-darwin.tar.gz --repo neboto/nebaz
 ```
 
+### Windows
+
+nebaz builds and is tested on Windows (CI runs the suite on `windows-latest`;
+a release binary and installer are tracked in
+[#68](https://github.com/neboto/nebaz/issues/68)). Use Windows Terminal; the
+Azure CLI (`az`) must be installed and logged in. Files live under
+`%APPDATA%\nebaz` (config, bookmarks, macros) and `%LOCALAPPDATA%\nebaz`
+(cache). The system proxy is not read: set `HTTPS_PROXY` if you need one
+(`nebaz doctor` shows what it sees). `$EDITOR` may be quoted, for example
+`"C:\Program Files\Microsoft VS Code\bin\code.cmd" --wait`; the default is
+`notepad`. The Linux build also runs under WSL.
+
 ---
 
 ## Quick start
@@ -284,7 +296,9 @@ Every subcommand takes `--demo` too.
 
 ## Configuration
 
-`~/.config/nebaz/config.toml`; every key is documented in
+`~/.config/nebaz/config.toml` (`%APPDATA%\nebaz\config.toml` on Windows;
+bookmarks and macros live beside it, the update-check state under
+`%LOCALAPPDATA%\nebaz`); every key is documented in
 [`config.example.toml`](config.example.toml). Command-line flags override it
 for one run.
 
@@ -361,7 +375,7 @@ cargo build
 cargo run -- --demo                          # the offline tenant (docs/DEMO.md)
 cargo test                                   # every test, the read-only guard included
 cargo clippy --all-targets -- -D warnings    # CI fails on any warning
-scripts/smoke.sh                             # offline pty run with a fake az (needs python3)
+scripts/smoke.sh                             # offline pty run with a fake az (needs python3; Unix only)
 ```
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): how to send a change.
