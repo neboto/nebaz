@@ -69,8 +69,18 @@ pub fn subtab_bar_spans(
     area: Rect,
     tabs: &[(char, &str, bool)],
 ) -> Vec<Span<'static>> {
+    // While a search filters the list, the tabs it found nothing on are
+    // dimmed, so the bright ones say where the matches are. A tab that is
+    // not warm has no count and keeps its colours (#154).
+    let counts = &app.sub_tab_match_counts;
+    let empty: Vec<char> = tabs
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| counts.get(*i) == Some(&Some(0)))
+        .map(|(_, &(key, _, _))| key)
+        .collect();
     // A chip is its key; `‹` / `›` step one sub-tab (`H` / `L`).
-    chip_spans(app, area, tabs, ClickAction::List, (KeyCode::Char('H'), KeyCode::Char('L')))
+    chip_spans_muted(app, area, tabs, ClickAction::List, (KeyCode::Char('H'), KeyCode::Char('L')), &empty)
 }
 
 /// The chip strip itself, with the click action a chip records: a sub-tab
@@ -83,6 +93,18 @@ pub fn chip_spans(
     tabs: &[(char, &str, bool)],
     click: impl Fn(KeyCode) -> ClickAction,
     markers: (KeyCode, KeyCode),
+) -> Vec<Span<'static>> {
+    chip_spans_muted(app, area, tabs, click, markers, &[])
+}
+
+/// [`chip_spans`], drawing the inactive chips whose key is in `muted` dim.
+fn chip_spans_muted(
+    app: &App,
+    area: Rect,
+    tabs: &[(char, &str, bool)],
+    click: impl Fn(KeyCode) -> ClickAction,
+    markers: (KeyCode, KeyCode),
+    muted: &[char],
 ) -> Vec<Span<'static>> {
     if tabs.is_empty() || area.width == 0 {
         return Vec::new();
@@ -141,6 +163,10 @@ pub fn chip_spans(
                     .bg(theme::brand())
                     .add_modifier(Modifier::BOLD),
             ));
+        } else if muted.contains(&key) {
+            let dim = Style::default().fg(theme::text_dim());
+            spans.push(Span::styled(key.to_string(), dim));
+            spans.push(Span::styled(format!(" {} ", label), dim));
         } else {
             spans.push(Span::styled(key.to_string(), Style::default().fg(theme::accent())));
             spans.push(Span::styled(format!(" {} ", label), Style::default().fg(crate::ui::theme::text_muted())));

@@ -240,6 +240,14 @@ strings, app settings and secret values are never fetched.
 click, double-click (`⏎`), right-click (`⌫`), drag to select, wheel to
 scroll.
 
+On a service with sub-tabs, `/` counts its matches in every tab already
+loaded this session (it never fetches): the tabs it found nothing on are
+dimmed, and while you type, a tab with no matches gives way to the first
+loaded tab that has some. It returns to the tab you started on once that
+tab matches again, or on `Esc`; `⏎` keeps the tab it found; an `F` state
+filter holds the tab still. A tab not loaded yet is neither followed nor
+dimmed.
+
 ---
 
 ## Subscriptions and locations
