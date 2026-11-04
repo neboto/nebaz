@@ -167,6 +167,7 @@ pub use mouse::{record_hint_regions, ClickAction, ClickRegion, MouseState, Popup
 pub use all_search::all_search_label;
 /// The list pane's visual selection (`V`, `Ctrl-A`, drag) and its verbs.
 mod list_visual;
+mod search_follow;
 
 /// The terminal-less `App` behind `nebaz ls` / `nebaz get` (#44).
 mod headless;
@@ -461,6 +462,13 @@ pub struct App {
     /// at the end. Edited by `search::line_edit`.
     pub search_cursor_back: usize,
     pending_search: bool,
+    /// The sub-tab a `/` search started on: while typing, a tab with no
+    /// matches gives way to one that has some, and the search comes back
+    /// here once this tab matches again (or on `Esc`). `app/search_follow.rs`.
+    search_home_view: Option<JumpView>,
+    /// Matches per sub-tab for the current query, in sub-tab order (`None`:
+    /// not warm, so neither followed nor dimmed; empty with no query).
+    pub sub_tab_match_counts: Vec<Option<usize>>,
     /// This session's submitted `/` queries, oldest first, de-duplicated
     /// (a re-run moves to the end), capped at `SEARCH_HISTORY_MAX`. `↑`/`↓`
     /// in the search bar walk it. In memory only: queries can hold
@@ -733,6 +741,8 @@ impl App {
             search_query: String::new(),
             search_cursor_back: 0,
             pending_search: false,
+            search_home_view: None,
+            sub_tab_match_counts: Vec::new(),
             search_history: Vec::new(),
             search_history_cursor: None,
             search_history_draft: String::new(),
@@ -1353,6 +1363,13 @@ impl App {
         let (tag_filters, text) = split_tag_filters(&search_text);
         let (rg_filters, text) = split_rg_filters(&text);
 
+        // Per-tab counts dim the empty tabs; while the bar is open the list
+        // follows them (re-served, so this pass is done).
+        self.sub_tab_match_counts = self.count_sub_tab_matches(&text, &tag_filters, &rg_filters);
+        if self.follow_matches_to_sub_tab() {
+            return;
+        }
+
         // Location filter first — it decides the "of N" denominator.
         let admitted: Vec<usize> = (0..self.resources.len())
             .filter(|&i| self.current_location.admits(self.resources[i].filter_location()))
@@ -1574,6 +1591,8 @@ impl App {
         self.list_sort = ListSort::Default;
         self.list_state_filter = None;
         self.search_query.clear();
+        self.search_home_view = None;
+        self.sub_tab_match_counts.clear();
         // The cursor is a position in the old list: a new list starts at
         // its top. A history restore or a jump re-selects by id afterwards.
         self.filtered_resources.clear();
@@ -3922,10 +3941,15 @@ impl App {
                     self.search_active = false;
                     self.search_history_cursor = None;
                     self.search_query.clear();
+                    self.search_cursor_back = 0;
+                    // Cancelled: back to the tab the search started on.
+                    self.return_to_search_home();
                     self.pending_search = true;
                 }
                 KeyCode::Enter => {
                     self.search_active = false;
+                    // ⏎ keeps the tab the search found.
+                    self.search_home_view = None;
                     // Recorded as typed, so recalling an `@service …` query
                     // switches service again.
                     self.record_search_history();
@@ -4172,6 +4196,7 @@ impl App {
             KeyCode::Char('/') => {
                 self.search_active = true;
                 self.search_cursor_back = 0;
+                self.search_home_view = None;
             }
             KeyCode::Backspace => self.nav_back(event_tx),
             KeyCode::Tab => self.cycle_view(true),
