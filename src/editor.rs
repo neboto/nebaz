@@ -86,16 +86,17 @@ fn split_command(s: &str) -> Vec<String> {
     out
 }
 
-/// On Windows anything but a plain `.exe` (a `.cmd`/`.bat` shim such as VS
-/// Code's `code`, or a bare name resolved through PATHEXT) has to go
-/// through `cmd /C`, as `az` does.
-fn invocation(program: &str, args: &[String], windows: bool) -> (String, Vec<String>) {
-    if windows && !program.to_ascii_lowercase().ends_with(".exe") {
-        let mut a = vec!["/C".to_string(), program.to_string()];
-        a.extend(args.iter().cloned());
-        ("cmd".to_string(), a)
+/// The programs to try, in order. On Windows a bare name (VS Code's
+/// `code`) is usually a `.cmd` shim, which `Command` won't find on its own
+/// (it only appends `.exe`), so the shim names follow. A `.cmd` / `.bat` is
+/// run directly: std quotes its arguments for `cmd.exe` itself, which a
+/// hand-built `cmd /C` line gets wrong once a path has spaces in it.
+fn candidates(program: &str, windows: bool) -> Vec<String> {
+    let has_extension = std::path::Path::new(program).extension().is_some();
+    if windows && !has_extension {
+        vec![program.to_string(), format!("{program}.cmd"), format!("{program}.bat")]
     } else {
-        (program.to_string(), args.to_vec())
+        vec![program.to_string()]
     }
 }
 
@@ -103,30 +104,24 @@ fn invocation(program: &str, args: &[String], windows: bool) -> (String, Vec<Str
 fn spawn_editor(editor: &str, args: &[String], file_path: &str) -> Result<()> {
     use std::process::Stdio;
 
-    // Launch editor with inherited stdio
-    let (program, args) = invocation(editor, args, cfg!(windows));
-    let mut cmd = Command::new(program);
-
-    // Add any arguments from $EDITOR
-    for arg in &args {
-        cmd.arg(arg);
-    }
-
-    // Add the file path as the last argument
-    cmd.arg(file_path);
-
-    // Inherit stdio to allow full interaction with the editor
-    cmd.stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
-
-    let status = cmd.status().map_err(|e| {
-        if e.kind() == std::io::ErrorKind::NotFound {
-            Error::EditorNotFound(editor.to_string())
-        } else {
-            Error::EditorFailed(format!("Failed to spawn editor: {}", e))
+    let mut status = None;
+    for program in candidates(editor, cfg!(windows)) {
+        // Launch editor with inherited stdio, the file path last
+        let mut cmd = Command::new(program);
+        cmd.args(args).arg(file_path);
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+        match cmd.status() {
+            Ok(s) => {
+                status = Some(s);
+                break;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(Error::EditorFailed(format!("Failed to spawn editor: {}", e))),
         }
-    })?;
+    }
+    let status = status.ok_or_else(|| Error::EditorNotFound(editor.to_string()))?;
 
     if !status.success() {
         return Err(Error::EditorFailed(format!(
@@ -167,11 +162,13 @@ mod tests {
     }
 
     #[test]
-    fn windows_scripts_go_through_cmd() {
-        let args = v(&["--wait"]);
-        assert_eq!(invocation("code.cmd", &args, true), ("cmd".into(), v(&["/C", "code.cmd", "--wait"])));
-        assert_eq!(invocation("code", &args, true).0, "cmd");
-        assert_eq!(invocation("NOTEPAD.EXE", &args, true), ("NOTEPAD.EXE".into(), args.clone()));
-        assert_eq!(invocation("code", &args, false), ("code".into(), args));
+    fn windows_tries_the_shims_after_a_bare_name() {
+        assert_eq!(candidates("code", true), v(&["code", "code.cmd", "code.bat"]));
+        assert_eq!(
+            candidates(r"C:\Program Files\Microsoft VS Code\bin\code.cmd", true),
+            v(&[r"C:\Program Files\Microsoft VS Code\bin\code.cmd"])
+        );
+        assert_eq!(candidates("NOTEPAD.EXE", true), v(&["NOTEPAD.EXE"]));
+        assert_eq!(candidates("code", false), v(&["code"]));
     }
 }
