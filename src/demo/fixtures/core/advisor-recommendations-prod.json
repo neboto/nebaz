@@ -1,0 +1,252 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b01",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b01",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "Cost",
+        "impact": "High",
+        "impactedField": "Microsoft.Compute/virtualMachines",
+        "impactedValue": "vm-jump-01",
+        "recommendationTypeId": "e10b1381-5f0a-47ff-8c7b-37bd13d7c974",
+        "risk": "None",
+        "lastUpdated": "{{iso:now-20h}}",
+        "shortDescription": {
+          "problem": "Right-size or shut down underutilized virtual machines",
+          "solution": "Right-size or shut down underutilized virtual machines"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01",
+          "singular": "Virtual machine",
+          "plural": "Virtual machines"
+        },
+        "extendedProperties": {
+          "currentSku": "Standard_D4s_v5",
+          "targetSku": "Standard_B2s",
+          "MaxCpuP95": "3",
+          "annualSavingsAmount": "1260",
+          "savingsAmount": "105",
+          "savingsCurrency": "EUR"
+        },
+        "potentialBenefits": "Save money by resizing or shutting down underutilized resources",
+        "learnMoreLink": "https://aka.ms/aa_lowusagerec_learnmore"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b02",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b02",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "Cost",
+        "impact": "High",
+        "impactedField": "Microsoft.Compute/virtualMachines",
+        "impactedValue": "vm-nva-01",
+        "recommendationTypeId": "e10b1381-5f0a-47ff-8c7b-37bd13d7c974",
+        "risk": "None",
+        "lastUpdated": "{{iso:now-20h}}",
+        "shortDescription": {
+          "problem": "Right-size or shut down underutilized virtual machines",
+          "solution": "Right-size or shut down underutilized virtual machines"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Compute/virtualMachines/vm-nva-01",
+          "singular": "Virtual machine",
+          "plural": "Virtual machines"
+        },
+        "extendedProperties": {
+          "currentSku": "Standard_D8s_v5",
+          "targetSku": "Standard_D4s_v5",
+          "MaxCpuP95": "11",
+          "annualSavingsAmount": "2940",
+          "savingsAmount": "245",
+          "savingsCurrency": "EUR"
+        },
+        "potentialBenefits": "Save money by resizing or shutting down underutilized resources",
+        "learnMoreLink": "https://aka.ms/aa_lowusagerec_learnmore"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/disk-legacy-data-01/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b03",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b03",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "Cost",
+        "impact": "Medium",
+        "impactedField": "Microsoft.Compute/disks",
+        "impactedValue": "disk-legacy-data-01",
+        "recommendationTypeId": "48eda464-1485-4dcf-a674-d0905df5054a",
+        "risk": "None",
+        "lastUpdated": "{{iso:now-2d}}",
+        "shortDescription": {
+          "problem": "Review unattached managed disks",
+          "solution": "Delete or snapshot disks that are not attached to a virtual machine"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/disk-legacy-data-01",
+          "singular": "Disk",
+          "plural": "Disks"
+        },
+        "extendedProperties": {
+          "diskSku": "Premium_LRS",
+          "diskSizeGB": "1024",
+          "annualSavingsAmount": "1620",
+          "savingsCurrency": "EUR"
+        },
+        "potentialBenefits": "Stop paying for storage nothing uses",
+        "learnMoreLink": "https://aka.ms/unattacheddisks"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b04",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b04",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "HighAvailability",
+        "control": "HighAvailability",
+        "impact": "High",
+        "impactedField": "Microsoft.App/managedEnvironments",
+        "impactedValue": "cae-orders-prod",
+        "recommendationTypeId": "f0d40f3a-6c0c-4a0e-9a4c-2d1b8f7e6c05",
+        "risk": "Warning",
+        "lastUpdated": "{{iso:now-1d}}",
+        "shortDescription": {
+          "problem": "Enable zone redundancy for Container Apps environments",
+          "solution": "Recreate the environment with zone redundancy on"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+          "singular": "Container Apps environment",
+          "plural": "Container Apps environments"
+        },
+        "potentialBenefits": "The orders apps keep running when a zone in westeurope fails",
+        "learnMoreLink": "https://aka.ms/containerapps/zoneredundancy"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b05",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b05",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "HighAvailability",
+        "control": "DisasterRecovery",
+        "impact": "Medium",
+        "impactedField": "Microsoft.Sql/servers",
+        "impactedValue": "sql-orders-prod",
+        "recommendationTypeId": "a1b2c3d4-0e1f-4a5b-8c9d-0e1f2a3b4c06",
+        "risk": "Warning",
+        "lastUpdated": "{{iso:now-3d}}",
+        "shortDescription": {
+          "problem": "Configure a failover group for your SQL server",
+          "solution": "Add a secondary in northeurope with a failover group"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod",
+          "singular": "SQL server",
+          "plural": "SQL servers"
+        },
+        "potentialBenefits": "Recover the orders database from a regional outage",
+        "learnMoreLink": "https://aka.ms/sqlfailovergroups"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b06",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b06",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "OperationalExcellence",
+        "control": "MonitoringAndAlerting",
+        "impact": "Medium",
+        "impactedField": "Microsoft.Subscriptions/subscriptions",
+        "impactedValue": "{{prod}}",
+        "recommendationTypeId": "242639fd-cd73-4be2-8f55-70478db8d1a5",
+        "risk": "None",
+        "lastUpdated": "{{iso:now-6d}}",
+        "shortDescription": {
+          "problem": "Create Azure Service Health alerts to be notified when Azure issues affect you",
+          "solution": "Create a Service Health alert for the services and regions you use"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}",
+          "singular": "Subscription",
+          "plural": "Subscriptions"
+        },
+        "potentialBenefits": "Hear about an Azure incident before your users do",
+        "learnMoreLink": "https://aka.ms/aa_servicehealthalert_learnmore"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/Redis/redis-orders-cache/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b07",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b07",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "Performance",
+        "impact": "Low",
+        "impactedField": "Microsoft.Cache/Redis",
+        "impactedValue": "redis-orders-cache",
+        "recommendationTypeId": "5b3c1d2e-7f8a-4b9c-a0d1-e2f3a4b5c607",
+        "risk": "None",
+        "lastUpdated": "{{iso:now-1d}}",
+        "shortDescription": {
+          "problem": "Improve your cache and application performance when running with high server load",
+          "solution": "Scale the cache up, or spread the load over more shards"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/Redis/redis-orders-cache",
+          "singular": "Redis cache",
+          "plural": "Redis caches"
+        },
+        "potentialBenefits": "Fewer timeouts at peak",
+        "learnMoreLink": "https://aka.ms/redis/recommendations/serverload"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b08",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b08",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "Security",
+        "impact": "High",
+        "impactedField": "Microsoft.Compute/virtualMachines",
+        "impactedValue": "vm-jump-01",
+        "recommendationTypeId": "d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11",
+        "risk": "Error",
+        "lastUpdated": "{{iso:now-3d}}",
+        "shortDescription": {
+          "problem": "Management ports should be closed on your virtual machines",
+          "solution": "Management ports should be closed on your virtual machines"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01",
+          "source": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-jump-01/providers/Microsoft.Security/assessments/d1b6a1e0-7c2f-4c5e-9a41-0f3e8a2b6c11",
+          "singular": "Virtual machine",
+          "plural": "Virtual machines"
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b09",
+      "name": "7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b09",
+      "type": "Microsoft.Advisor/recommendations",
+      "properties": {
+        "category": "Security",
+        "impact": "Medium",
+        "impactedField": "Microsoft.Storage/storageAccounts",
+        "impactedValue": "stcontosoordersprod",
+        "recommendationTypeId": "f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33",
+        "risk": "Warning",
+        "lastUpdated": "{{iso:now-3d}}",
+        "shortDescription": {
+          "problem": "Storage account public access should be disallowed",
+          "solution": "Storage account public access should be disallowed"
+        },
+        "resourceMetadata": {
+          "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+          "source": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod/providers/Microsoft.Security/assessments/f3d8c3a2-9e41-4e70-bc63-2b5a0c4d8e33",
+          "singular": "Storage account",
+          "plural": "Storage accounts"
+        }
+      }
+    }
+  ]
+}

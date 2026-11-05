@@ -729,6 +729,29 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     **Never**: Defender findings as `@audit` rows (the same issue twice),
     regulatory compliance (#156 leaves it out), anything that changes a
     plan or an alert's state.
+34. **Advisor is what Advisor last computed, beside Defender and
+    `@audit`, never in either** (#157, ADR 0011,
+    `src/azure/services/advisor.rs`, glue `src/app/advisor.rs`):
+    recommendations (`@advisor`), the score (`@advscore`) and the
+    suppressions (`@snooze`). **Recommendations** are one row per
+    recommendation and resource, named by the problem. State: the impact
+    (`high` red, `medium` amber, `low` grey), so `F` filters by it. A
+    cost recommendation's savings show in the list. Each row says when
+    Advisor last updated it: the list is cached by Advisor, and
+    `generateRecommendations` (the POST behind the portal's refresh and
+    `az advisor recommendation list --refresh`) is never sent. **Security**
+    recommendations are Defender's assessments relayed: they are noise
+    (`a`) and link to the Defender row (`resourceMetadata.source`). The
+    **score** reads the overall and per-category score, the possible
+    gain and the daily history; its Recommendations section reads the
+    warm list by category (the overall score: every non-Security one).
+    A **suppression** is a snooze (a TTL) or a dismissal (`-1`); its
+    recommendation is its id's parent, and is not in the Recommendations
+    list while suppressed. No region, no RBAC or tags of their own: the
+    tail is Activity, Related. The portal link is the resource's page,
+    which has an Advisor blade. **Never**: `generateRecommendations`,
+    Advisor rows as `@audit` findings, anything that snoozes, dismisses
+    or reactivates a recommendation.
 
 ## The catalog
 
@@ -786,6 +809,9 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Defender · Alerts (rule 33) | Alert (severity, status, alert or incident, type, intent, techniques, entity, started, ended, generated, product, description, remediation steps, portal link) · Entities (type and name or address, from the sanitized body) | `active` (high unavailable, else pending), `in progress` pending, `resolved` available, `dismissed` stopped | the resources it names | `az security alert show --name {name} --location {asc location} [--resource-group {rg}]` |
 | Defender · Secure score (rule 33) | Score (percentage, points, weight) · a control's Control (points, potential gain, unhealthy / healthy / not applicable counts, source, description) and Recommendations (the warm unhealthy recommendations it is made of) | the score stateless; a control `gaps` (pending) or `met`, stateless when it carries no points | a control's score | `az security secure-scores show --name {name}`; a control: `az security secure-score-controls list` |
 | Defender · Plans (rule 33) | Plan (portal name and API name, tier with what Free means, sub-plan, on since, trial left, coverage, enforced below, inherited and from where, retired and its replacement) · Extensions (each on or off, with its status) | `on` (Standard, available) or `off` (Free, stopped); retired plans are noise | the scope it is inherited from | `az security pricing show --name {plan}` |
+| Advisor · Recommendations (rule 34; tail Activity, Related) | Recommendation (impact, category in the portal's words, sub-category, risk, the resource as a name with its kind and an id, savings, last updated with its age, problem, solution when it differs, benefits, description, learn-more link, the Defender assessment a Security one relays, Advisor's extended properties) · Resources (every resource the same recommendation type is about in the warm list, with its savings) | the impact: `high` unavailable, `medium` pending, `low` stopped; Security is noise | the resource it is about; a Security one's Defender recommendation | `az advisor recommendation list --ids {resource}`; on the subscription `az advisor recommendation list [--category {category}]` |
+| Advisor · Score (rule 34) | Score (score, possible gain, impacted resources, computed, the trend and the daily history) · Recommendations (the warm ones in its category, high impact first) | stateless | its subscription | none (the CLI has no score command) |
+| Advisor · Suppressions (rule 34) | Suppression (snoozed or dismissed, for how long, expiry, the resource, the recommendation id) | `snoozed` or `dismissed` (stopped) | the resource | none (the CLI has no suppression command) |
 | Governance · Management groups (rule 32; tail Activity, Related) | Group ⧗ (parent, direct children: groups and subscriptions, the current one marked; updated when and by whom) · Assignments (the warm Assignments made at the group) · (Overview: display name, group name, tenant; the root group reads `tenant root`) | stateless | none (the Group section's lines jump) | `az account management-group show --name {name} --expand` |
 | Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
@@ -814,7 +840,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -960,6 +986,9 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Alerts (rule 33) | 1 | `/providers/Microsoft.Security/alerts` · `2022-01-01` |
 | Secure score (rule 33) | 2 | `/providers/Microsoft.Security/secureScores` · `/providers/Microsoft.Security/secureScoreControls?$expand=definition` · `2020-01-01` |
 | Plans (rule 33) | 1 | `/providers/Microsoft.Security/pricings` · `2024-01-01` |
+| Advisor · Recommendations (rule 34) | 1 | `/providers/Microsoft.Advisor/recommendations` · `2025-01-01` |
+| Advisor · Score (rule 34) | 1 | `/providers/Microsoft.Advisor/advisorScore` · `2025-01-01` |
+| Advisor · Suppressions (rule 34) | 1 | `/providers/Microsoft.Advisor/suppressions` · `2025-01-01` |
 | Assignments · Exemptions · Locks (rule 32) | 1 each, unfiltered | `/providers/Microsoft.Authorization/policyAssignments` · `2025-03-01` · `/providers/Microsoft.Authorization/policyExemptions` · `2022-07-01-preview` (no stable version) · `/providers/Microsoft.Authorization/locks` · `2020-05-01` |
 | Management groups (rule 32) | 1, above the subscription | `/providers/Microsoft.Management/managementGroups` · `2023-04-01` |
 | A management group's Group | 1 per group, on demand | `/providers/Microsoft.Management/managementGroups/{name}?$expand=children` · `2023-04-01` |

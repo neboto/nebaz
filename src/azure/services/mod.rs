@@ -7,6 +7,7 @@
 
 pub mod access;
 pub mod activity;
+pub mod advisor;
 pub mod aks;
 pub mod backup;
 pub mod all_resources;

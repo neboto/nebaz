@@ -1,0 +1,23 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b10/suppressions/legacy-decommission",
+      "name": "legacy-decommission",
+      "type": "Microsoft.Advisor/suppressions",
+      "properties": {
+        "suppressionId": "9c1e2a3b-4d5f-4a6b-8c7d-9e0f1a2b3c4d",
+        "ttl": "30.00:00:00",
+        "expirationTimeStamp": "{{iso:now+18d}}"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-hub-prod/providers/Microsoft.Advisor/recommendations/7a3c1e90-2b4d-4f61-9e80-1c5d7f3a2b11/suppressions/keep-for-rollback",
+      "name": "keep-for-rollback",
+      "type": "Microsoft.Advisor/suppressions",
+      "properties": {
+        "suppressionId": "1d2e3f4a-5b6c-4d7e-8f9a-0b1c2d3e4f5a",
+        "ttl": "-1"
+      }
+    }
+  ]
+}
