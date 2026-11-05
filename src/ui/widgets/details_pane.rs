@@ -28,7 +28,6 @@ use ratatui::{
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
-        block::{Position, Title},
         Paragraph,
     },
     Frame,
@@ -141,13 +140,9 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
         let y = area.y + area.height - 1;
         crate::app::record_hint_regions(app, &footer, 0, x, y, x + footer_w);
     }
-    let mut block = theme::pane_block(&title, focused).title(
-        Title::from(footer)
-            .position(Position::Bottom)
-            .alignment(Alignment::Right),
-    );
+    let mut block = theme::pane_block(&title, focused).title_bottom(footer.right_aligned());
     if let Some(ribbon) = ownership_ribbon_line(app, &title, area.width) {
-        block = block.title(Title::from(ribbon).position(Position::Top).alignment(Alignment::Right));
+        block = block.title_top(ribbon.right_aligned());
     }
     let inner = block.inner(area);
     frame.render_widget(block, area);

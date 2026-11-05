@@ -10,11 +10,10 @@ use crate::azure::location::{Location, LocationRow};
 use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
-        block::{Position, Title},
         Clear, List, ListItem, ListState, Paragraph,
     },
     Frame,
@@ -187,7 +186,7 @@ pub fn render_location_selector(
         return;
     }
 
-    let area = centered_rect(60, 70, frame.size());
+    let area = centered_rect(60, 70, frame.area());
     frame.render_widget(Clear, area);
 
     let (pos, total) = state.position();
@@ -208,19 +207,11 @@ pub fn render_location_selector(
         }
     }
     let block = theme::popup_block("Filter by Location")
-        .title(
-            Title::from(theme::hint_line(&hints))
-                .position(Position::Bottom)
-                .alignment(Alignment::Center),
-        )
-        .title(
-            Title::from(Span::styled(
+        .title_bottom(theme::hint_line(&hints).centered())
+        .title_bottom(Line::from(Span::styled(
                 format!(" {}/{} ", pos, total),
                 Style::default().fg(theme::text_dim()),
-            ))
-            .position(Position::Bottom)
-            .alignment(Alignment::Right),
-        );
+            )).right_aligned());
     let inner = block.inner(area);
     frame.render_widget(block, area);
 

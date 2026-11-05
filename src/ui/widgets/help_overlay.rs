@@ -5,11 +5,10 @@ use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
 use unicode_width::UnicodeWidthStr;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
-        block::{Position, Title},
         Clear, Paragraph,
     },
     Frame,
@@ -84,7 +83,7 @@ fn filter_groups(query: &str) -> Vec<Group> {
 /// doesn't fit. Typing filters it to one full-width column, so a matched
 /// entry has room for its whole description.
 pub fn render_help_overlay(app: &App, frame: &mut Frame) {
-    let size = frame.size();
+    let size = frame.area();
 
     // Width: what the content needs, so nothing is truncated while the
     // terminal has room. A narrower terminal shares the space in proportion
@@ -135,28 +134,20 @@ pub fn render_help_overlay(app: &App, frame: &mut Frame) {
     frame.render_widget(Clear, area);
     app.mouse.popup.borrow_mut().record_area(area);
 
-    let mut block = theme::popup_block("Help").title(
-        Title::from(Span::styled(
+    let mut block = theme::popup_block("Help").title_bottom(Line::from(Span::styled(
             if max_scroll > 0 {
                 " type to filter · : run a command · ↑/↓ scroll · Esc close "
             } else {
                 " type to filter · : run a command · Esc close "
             },
             Style::default().fg(theme::text_dim()),
-        ))
-        .position(Position::Bottom)
-        .alignment(Alignment::Center),
-    );
+        )).centered());
     if max_scroll > 0 {
         // Overflow indicator: which slice of the content is on screen.
-        block = block.title(
-            Title::from(Span::styled(
+        block = block.title_bottom(Line::from(Span::styled(
                 format!(" {}–{}/{} ", offset + 1, (offset + viewport).min(content_h), content_h),
                 Style::default().fg(theme::text_dim()),
-            ))
-            .position(Position::Bottom)
-            .alignment(Alignment::Right),
-        );
+            )).right_aligned());
     }
     let inner = block.inner(area);
     frame.render_widget(block, area);

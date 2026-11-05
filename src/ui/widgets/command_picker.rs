@@ -11,11 +11,10 @@ use crate::azure::cli_actions::{CliAction, CliTier};
 use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
-        block::{Position, Title},
         Clear, Paragraph, Wrap,
     },
     Frame,
@@ -114,7 +113,7 @@ pub fn render_command_picker(app: &App, frame: &mut Frame) {
     let Some(state) = &app.command_picker else {
         return;
     };
-    let full = frame.size();
+    let full = frame.area();
     let width = full.width.saturating_sub(4).clamp(20, 100).min(full.width);
     let inner_width = width.saturating_sub(2).max(1) as usize;
 
@@ -154,11 +153,7 @@ pub fn render_command_picker(app: &App, frame: &mut Frame) {
     } else {
         &[("j/k", "move"), ("⏎/y", "copy"), ("1-9", "pick"), ("/", "filter"), ("Esc", "close")]
     };
-    let block = theme::popup_block(&format!("Copy az command · {}", state.subject)).title(
-        Title::from(theme::hint_line(hints))
-            .position(Position::Bottom)
-            .alignment(Alignment::Center),
-    );
+    let block = theme::popup_block(&format!("Copy az command · {}", state.subject)).title_bottom(theme::hint_line(hints).centered());
     frame.render_widget(
         Paragraph::new(lines).wrap(Wrap { trim: false }).block(block),
         area,

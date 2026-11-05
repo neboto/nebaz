@@ -129,8 +129,8 @@ async fn tabs_with_no_matches_are_dimmed_and_cold_ones_are_not() {
     let (nx, ny) = h.find("3 NICs");
     let dim = crate::ui::theme::text_dim();
     let buf = h.terminal.backend().buffer().clone();
-    assert_eq!(buf.get(vx + 2, vy).fg, dim, "no matches on VMs:\n{screen}");
-    assert_ne!(buf.get(nx + 2, ny).fg, dim, "a cold tab reads as an ordinary one");
+    assert_eq!(buf[(vx + 2, vy)].fg, dim, "no matches on VMs:\n{screen}");
+    assert_ne!(buf[(nx + 2, ny)].fg, dim, "a cold tab reads as an ordinary one");
     // No counts added to the labels.
     assert!(screen.contains("1 VMs  │ 2 Disks  │ 3 NICs"), "{screen}");
 }

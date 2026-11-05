@@ -6,7 +6,6 @@ use ratatui::{
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
-        block::{Position, Title},
         Clear, Paragraph,
     },
     Frame,
@@ -16,17 +15,13 @@ use ratatui::{
 /// newest first, so a 3-second toast is reviewable after it vanishes.
 /// `↑`/`↓` move, `y` copies the selected message, `Esc`/`M` closes.
 pub fn render_message_log(app: &App, frame: &mut Frame) {
-    let area = centered_rect(76, 60, frame.size());
+    let area = centered_rect(76, 60, frame.area());
     frame.render_widget(Clear, area);
 
-    let block = theme::popup_block("Messages").title(
-        Title::from(Span::styled(
+    let block = theme::popup_block("Messages").title_bottom(Line::from(Span::styled(
             " ↑↓ move · y copy · Esc close ",
             Style::default().fg(theme::text_dim()),
-        ))
-        .position(Position::Bottom)
-        .alignment(Alignment::Center),
-    );
+        )).centered());
     let inner = block.inner(area);
     frame.render_widget(block, area);
     app.mouse.popup.borrow_mut().record_area(area);

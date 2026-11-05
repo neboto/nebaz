@@ -4,11 +4,10 @@ use crate::search::fuzzy::FuzzyMatcher;
 use crate::ui::theme;
 use unicode_width::UnicodeWidthStr;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
-        block::{Position, Title},
         Clear, List, ListItem, ListState, Paragraph,
     },
     Frame,
@@ -290,7 +289,7 @@ pub fn render_service_selector(
     // the terminal draws a column wider than ratatui counted (an ambiguous-
     // width `…` or `▌`) then can't spill past the edge and wrap onto the
     // next line. A narrow terminal truncates descriptions with `…`.
-    let size = frame.size();
+    let size = frame.area();
     let rows_need = (2 + 2 + name_w + desc_w + 1 + 2) as u16; // + a column before the border
     let width = rows_need.max(size.width / 2).min(size.width.saturating_sub(EDGE_MARGIN * 2));
     let area = centered_rect(width, size.height * 75 / 100, size);
@@ -373,19 +372,11 @@ pub fn render_service_selector(
     let list_block = ratatui::widgets::Block::default()
         .borders(ratatui::widgets::Borders::LEFT | ratatui::widgets::Borders::RIGHT | ratatui::widgets::Borders::BOTTOM)
         .border_style(Style::default().fg(theme::border_dim()))
-        .title(
-            Title::from(hint)
-            .position(Position::Bottom)
-            .alignment(Alignment::Center),
-        )
-        .title(
-            Title::from(Span::styled(
+        .title_bottom(hint.centered())
+        .title_bottom(Line::from(Span::styled(
                 format!(" {}/{} ", pos, total),
                 Style::default().fg(theme::text_dim()),
-            ))
-            .position(Position::Bottom)
-            .alignment(Alignment::Right),
-        );
+            )).right_aligned());
 
     let list_rows = list_block.inner(chunks[1]);
     let list = List::new(items)
@@ -643,7 +634,7 @@ mod tests {
         t.draw(|f| render_service_selector(&state, None, &hits, f)).unwrap();
         let buf = t.backend().buffer();
         let screen: Vec<String> = (0..buf.area.height)
-            .map(|y| (0..buf.area.width).map(|x| buf.get(x, y).symbol()).collect())
+            .map(|y| (0..buf.area.width).map(|x| buf[(x, y)].symbol()).collect())
             .collect();
         let name_w = ServiceType::all().iter().map(|s| s.short_name().width()).max().unwrap();
         for service in ServiceType::all() {
