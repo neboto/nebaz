@@ -197,6 +197,12 @@ run defender-plans ok pricing '[]' \
   "4 Plans" \
   "cannot reach 127.0.0.1"
 
+# Advisor reads Microsoft.Advisor under the subscription.
+run advisor-suppressions ok snooze '[]' \
+  "Recommendations, score & suppressions" \
+  "3 Suppressions" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

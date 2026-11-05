@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
+    advisor, aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager,
 };
@@ -855,6 +855,56 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                         "id": "/subscriptions/00000000-0000-0000-0000-000000000001/providers/Microsoft.Security/pricings/VirtualMachines",
                         "name": "VirtualMachines",
                         "properties": {"pricingTier": "Standard", "subPlan": "P2"}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::AdvisorRecommendations,
+            "AdvisorRecommendationRow",
+            parse(
+                "AdvisorRecommendationRow",
+                advisor::AdvisorRecommendationRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Compute/virtualMachines/vm-1/providers/Microsoft.Advisor/recommendations/r-1"),
+                        "name": "r-1",
+                        "properties": {
+                            "category": "Cost", "impact": "High", "recommendationTypeId": "t-1",
+                            "shortDescription": {"problem": "Right-size or shut down underutilized virtual machines"},
+                            "resourceMetadata": {"resourceId": arm_id("Microsoft.Compute/virtualMachines/vm-1")},
+                            "extendedProperties": {"annualSavingsAmount": "1260", "savingsCurrency": "EUR"}
+                        }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::AdvisorScore,
+            "AdvisorScoreRow",
+            parse(
+                "AdvisorScoreRow",
+                advisor::AdvisorScoreRow::from_json(
+                    &json!({
+                        "id": "/subscriptions/00000000-0000-0000-0000-000000000001/providers/Microsoft.Advisor/advisorScore/Cost",
+                        "name": "Cost",
+                        "properties": {"lastRefreshedScore": {"date": "2026-10-28T00:00:00Z", "score": 72, "potentialScoreIncrease": 3, "impactedResourceCount": 1}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::AdvisorSuppressions,
+            "AdvisorSuppressionRow",
+            parse(
+                "AdvisorSuppressionRow",
+                advisor::AdvisorSuppressionRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Compute/virtualMachines/vm-1/providers/Microsoft.Advisor/recommendations/r-2/suppressions/snooze-1"),
+                        "name": "snooze-1",
+                        "properties": {"suppressionId": "g-1", "ttl": "30.00:00:00", "expirationTimeStamp": "2026-11-30T00:00:00Z"}
                     }),
                     t,
                 ),

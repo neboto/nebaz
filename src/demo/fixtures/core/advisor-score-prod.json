@@ -1,0 +1,388 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore/Advisor",
+      "name": "Advisor",
+      "type": "Microsoft.Advisor/advisorScore",
+      "properties": {
+        "lastRefreshedScore": {
+          "date": "{{iso:now-1d}}",
+          "score": 64,
+          "consumptionUnits": 0,
+          "impactedResourceCount": 9,
+          "potentialScoreIncrease": 0,
+          "categoryCount": 5
+        },
+        "timeSeries": [
+          {
+            "aggregationLevel": "day",
+            "scoreHistory": [
+              {
+                "date": "{{iso:now-1d}}",
+                "score": 64.0,
+                "impactedResourceCount": 9,
+                "potentialScoreIncrease": 0
+              },
+              {
+                "date": "{{iso:now-2d}}",
+                "score": 63.2,
+                "impactedResourceCount": 9,
+                "potentialScoreIncrease": 0
+              },
+              {
+                "date": "{{iso:now-3d}}",
+                "score": 62.3,
+                "impactedResourceCount": 9,
+                "potentialScoreIncrease": 0
+              },
+              {
+                "date": "{{iso:now-4d}}",
+                "score": 61.5,
+                "impactedResourceCount": 9,
+                "potentialScoreIncrease": 0
+              },
+              {
+                "date": "{{iso:now-5d}}",
+                "score": 60.7,
+                "impactedResourceCount": 9,
+                "potentialScoreIncrease": 0
+              },
+              {
+                "date": "{{iso:now-6d}}",
+                "score": 59.8,
+                "impactedResourceCount": 9,
+                "potentialScoreIncrease": 0
+              },
+              {
+                "date": "{{iso:now-7d}}",
+                "score": 59.0,
+                "impactedResourceCount": 9,
+                "potentialScoreIncrease": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore/Cost",
+      "name": "Cost",
+      "type": "Microsoft.Advisor/advisorScore",
+      "properties": {
+        "lastRefreshedScore": {
+          "date": "{{iso:now-1d}}",
+          "score": 48,
+          "consumptionUnits": 0,
+          "impactedResourceCount": 3,
+          "potentialScoreIncrease": 6,
+          "categoryCount": 5
+        },
+        "timeSeries": [
+          {
+            "aggregationLevel": "day",
+            "scoreHistory": [
+              {
+                "date": "{{iso:now-1d}}",
+                "score": 48.0,
+                "impactedResourceCount": 3,
+                "potentialScoreIncrease": 6
+              },
+              {
+                "date": "{{iso:now-2d}}",
+                "score": 47.5,
+                "impactedResourceCount": 3,
+                "potentialScoreIncrease": 6
+              },
+              {
+                "date": "{{iso:now-3d}}",
+                "score": 47.0,
+                "impactedResourceCount": 3,
+                "potentialScoreIncrease": 6
+              },
+              {
+                "date": "{{iso:now-4d}}",
+                "score": 46.5,
+                "impactedResourceCount": 3,
+                "potentialScoreIncrease": 6
+              },
+              {
+                "date": "{{iso:now-5d}}",
+                "score": 46.0,
+                "impactedResourceCount": 3,
+                "potentialScoreIncrease": 6
+              },
+              {
+                "date": "{{iso:now-6d}}",
+                "score": 45.5,
+                "impactedResourceCount": 3,
+                "potentialScoreIncrease": 6
+              },
+              {
+                "date": "{{iso:now-7d}}",
+                "score": 45.0,
+                "impactedResourceCount": 3,
+                "potentialScoreIncrease": 6
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore/HighAvailability",
+      "name": "HighAvailability",
+      "type": "Microsoft.Advisor/advisorScore",
+      "properties": {
+        "lastRefreshedScore": {
+          "date": "{{iso:now-1d}}",
+          "score": 58,
+          "consumptionUnits": 0,
+          "impactedResourceCount": 2,
+          "potentialScoreIncrease": 5,
+          "categoryCount": 5
+        },
+        "timeSeries": [
+          {
+            "aggregationLevel": "day",
+            "scoreHistory": [
+              {
+                "date": "{{iso:now-1d}}",
+                "score": 58.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 5
+              },
+              {
+                "date": "{{iso:now-2d}}",
+                "score": 58.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 5
+              },
+              {
+                "date": "{{iso:now-3d}}",
+                "score": 58.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 5
+              },
+              {
+                "date": "{{iso:now-4d}}",
+                "score": 58.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 5
+              },
+              {
+                "date": "{{iso:now-5d}}",
+                "score": 58.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 5
+              },
+              {
+                "date": "{{iso:now-6d}}",
+                "score": 58.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 5
+              },
+              {
+                "date": "{{iso:now-7d}}",
+                "score": 58.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore/OperationalExcellence",
+      "name": "OperationalExcellence",
+      "type": "Microsoft.Advisor/advisorScore",
+      "properties": {
+        "lastRefreshedScore": {
+          "date": "{{iso:now-1d}}",
+          "score": 80,
+          "consumptionUnits": 0,
+          "impactedResourceCount": 1,
+          "potentialScoreIncrease": 2,
+          "categoryCount": 5
+        },
+        "timeSeries": [
+          {
+            "aggregationLevel": "day",
+            "scoreHistory": [
+              {
+                "date": "{{iso:now-1d}}",
+                "score": 80.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 2
+              },
+              {
+                "date": "{{iso:now-2d}}",
+                "score": 80.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 2
+              },
+              {
+                "date": "{{iso:now-3d}}",
+                "score": 80.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 2
+              },
+              {
+                "date": "{{iso:now-4d}}",
+                "score": 80.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 2
+              },
+              {
+                "date": "{{iso:now-5d}}",
+                "score": 80.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 2
+              },
+              {
+                "date": "{{iso:now-6d}}",
+                "score": 80.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 2
+              },
+              {
+                "date": "{{iso:now-7d}}",
+                "score": 80.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore/Performance",
+      "name": "Performance",
+      "type": "Microsoft.Advisor/advisorScore",
+      "properties": {
+        "lastRefreshedScore": {
+          "date": "{{iso:now-1d}}",
+          "score": 91,
+          "consumptionUnits": 0,
+          "impactedResourceCount": 1,
+          "potentialScoreIncrease": 1,
+          "categoryCount": 5
+        },
+        "timeSeries": [
+          {
+            "aggregationLevel": "day",
+            "scoreHistory": [
+              {
+                "date": "{{iso:now-1d}}",
+                "score": 91.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 1
+              },
+              {
+                "date": "{{iso:now-2d}}",
+                "score": 91.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 1
+              },
+              {
+                "date": "{{iso:now-3d}}",
+                "score": 91.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 1
+              },
+              {
+                "date": "{{iso:now-4d}}",
+                "score": 91.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 1
+              },
+              {
+                "date": "{{iso:now-5d}}",
+                "score": 91.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 1
+              },
+              {
+                "date": "{{iso:now-6d}}",
+                "score": 91.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 1
+              },
+              {
+                "date": "{{iso:now-7d}}",
+                "score": 91.0,
+                "impactedResourceCount": 1,
+                "potentialScoreIncrease": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore/Security",
+      "name": "Security",
+      "type": "Microsoft.Advisor/advisorScore",
+      "properties": {
+        "lastRefreshedScore": {
+          "date": "{{iso:now-1d}}",
+          "score": 31,
+          "consumptionUnits": 0,
+          "impactedResourceCount": 2,
+          "potentialScoreIncrease": 8,
+          "categoryCount": 5
+        },
+        "timeSeries": [
+          {
+            "aggregationLevel": "day",
+            "scoreHistory": [
+              {
+                "date": "{{iso:now-1d}}",
+                "score": 31.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 8
+              },
+              {
+                "date": "{{iso:now-2d}}",
+                "score": 30.5,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 8
+              },
+              {
+                "date": "{{iso:now-3d}}",
+                "score": 30.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 8
+              },
+              {
+                "date": "{{iso:now-4d}}",
+                "score": 29.5,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 8
+              },
+              {
+                "date": "{{iso:now-5d}}",
+                "score": 29.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 8
+              },
+              {
+                "date": "{{iso:now-6d}}",
+                "score": 28.5,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 8
+              },
+              {
+                "date": "{{iso:now-7d}}",
+                "score": 28.0,
+                "impactedResourceCount": 2,
+                "potentialScoreIncrease": 8
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
