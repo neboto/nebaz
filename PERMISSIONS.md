@@ -125,6 +125,12 @@ each one backs are in the catalog table
   `Microsoft.Security/secureScoreControls/read`,
   `Microsoft.Security/pricings/read`. All in `Reader` at subscription
   scope. Never sent: anything that changes a plan or an alert's state.
+- **Advisor** (ADR 0011): `Microsoft.Advisor/recommendations/read`,
+  `Microsoft.Advisor/advisorScore/read`,
+  `Microsoft.Advisor/suppressions/read`. All in `Reader` at subscription
+  scope. Never sent: `generateRecommendations` (a POST: the list is what
+  Advisor last computed) or anything that snoozes, dismisses or
+  reactivates a recommendation.
 - **Backup** (Recovery Services vaults, Backup vaults):
   `Microsoft.RecoveryServices/vaults/read` (redundancy, soft delete,
   immutability, multi-user authorization, encryption, private endpoints

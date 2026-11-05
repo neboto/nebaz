@@ -72,6 +72,13 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScores", "defender-secure-scores-prod.json"),
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/secureScoreControls", "defender-score-controls-prod.json"),
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Security/pricings", "defender-pricings-prod.json"),
+    // Advisor (#157): recommendations tied to the story (the jump box and
+    // the NVA oversized, the unattached disk, the orders environment
+    // without zones), two Security ones relaying Defender's, the score,
+    // one snooze and one dismissal. contoso-dev has none.
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Advisor/recommendations", "advisor-recommendations-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore", "advisor-score-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Advisor/suppressions", "advisor-suppressions-prod.json"),
     // Resources no service browses: All resources lists them (the alert
     // rules behind the fired alerts, their action groups, the watchers).
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/metricAlerts", "metric-alerts.json"),

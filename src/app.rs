@@ -150,6 +150,7 @@ mod audit;
 mod network_lens;
 mod firewall;
 mod flow_logs;
+mod advisor;
 mod defender;
 mod governance;
 mod backup;
@@ -2926,6 +2927,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.defender_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.advisor_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {
