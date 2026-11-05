@@ -69,7 +69,10 @@ The incident the demo is built around (`@changes`, then `W`, then `N`):
 
 `N` from `snet-pp-injection` to `cae-orders-prod` shows the deny;
 `@changes` shows who and when; `W` on `nsg-pp-injection` shows the rule
-change next to the alert.
+change next to the alert. `m` on `ca-orders-worker` charts its metrics with
+the failed `v119` rollout and the Degraded health as change markers (`c` hides
+them, `W` opens the timeline, `Esc` comes back); `ca-orders-api` shows the
+fired alert at the cliff.
 
 Planted findings, one per thing a screen or `@audit` shows off:
 

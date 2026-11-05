@@ -10,7 +10,8 @@ use crate::azure::metrics::{
 };
 use crate::event::Event;
 use crate::lazy::LazyApply;
-use crate::ui::widgets::metrics_overlay::{MetricPicker, MetricsState};
+use crate::app::timeline::TimelineTarget;
+use crate::ui::widgets::metrics_overlay::{MarkerSource, MetricPicker, MetricsState};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tokio::sync::mpsc;
 
@@ -38,6 +39,8 @@ impl App {
         let curated = !queries.is_empty();
         self.network_lens = None;
         self.refs_lens = None;
+        self.chart_timeline = None;
+        self.metrics_parked = None;
         self.metrics = Some(MetricsState::open(id, title, queries, window));
         // From the list: the pane behind the view is the default section,
         // with its on-enter hook fired, so closing never leaves a spinner.
@@ -50,6 +53,14 @@ impl App {
         } else {
             self.open_metric_picker(event_tx);
         }
+        self.seed_chart_markers(event_tx);
+    }
+
+    /// The change markers the open chart draws: the `W` timeline rows
+    /// behind it, unless `c` hid them.
+    pub fn marker_source(&self) -> Option<MarkerSource<'_>> {
+        let tl = self.chart_timeline.as_ref().filter(|_| self.chart_markers)?;
+        Some(MarkerSource { rows: &tl.rows, loading: tl.is_loading() })
     }
 
     /// One task: every series of the view's window, delivered through the
@@ -139,6 +150,7 @@ impl App {
 
     fn close_metrics(&mut self) {
         self.metrics = None;
+        self.chart_timeline = None;
         if self.layout_mode == LayoutMode::DetailsOnly {
             self.layout_mode = LayoutMode::Split;
         }
@@ -181,18 +193,36 @@ impl App {
             KeyCode::Char(']') => {
                 st.window = st.window.next();
                 self.fetch_metrics(event_tx);
+                self.widen_chart_markers(event_tx);
             }
             KeyCode::Char('[') => {
+                // From 1h this wraps to 30d, and the changes widen with it.
                 st.window = st.window.prev();
                 self.fetch_metrics(event_tx);
+                self.widen_chart_markers(event_tx);
             }
-            KeyCode::Char(c @ '1'..='4') => {
+            KeyCode::Char(c @ '1'..='5') => {
                 if let Some(w) = crate::azure::metrics::MetricWindow::from_digit(c) {
                     st.window = w;
                     self.fetch_metrics(event_tx);
+                    self.widen_chart_markers(event_tx);
                 }
             }
-            KeyCode::Char('r') | KeyCode::F(5) => self.fetch_metrics(event_tx),
+            KeyCode::Char('r') | KeyCode::F(5) => {
+                self.fetch_metrics(event_tx);
+                // The changes since the last read, too.
+                if self.chart_timeline.is_some() {
+                    self.fetch_timeline(event_tx, TimelineTarget::Markers);
+                }
+            }
+            // Change markers: hide / show; the first show fetches them.
+            KeyCode::Char('c') if st.picker.is_none() => {
+                self.chart_markers = !self.chart_markers;
+                if self.chart_markers {
+                    self.seed_chart_markers(event_tx);
+                }
+            }
+            KeyCode::Char('W') if st.picker.is_none() => self.metrics_to_timeline(event_tx),
             KeyCode::Char('a') => self.open_metric_picker(event_tx),
             KeyCode::Char('d') => {
                 let queries = curated_queries(&st.resource_id);
