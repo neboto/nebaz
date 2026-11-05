@@ -265,12 +265,62 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `$filter`, so dimensions are aggregated away); a failed call of
     several names is retried name by name (a vCore database has no DTU
     metric, which fails the whole call), and whatever still fails is a
-    warning on its line. Windows 1h / 6h / 24h / 7d (`[` / `]`, `1`–`4`)
-    at `PT1M` / `PT5M` / `PT15M` / `PT1H` with `AutoAdjustTimegrain`;
+    warning on its line. Windows 1h / 6h / 24h / 7d / 30d (`[` / `]`, `1`–`5`)
+    at `PT1M` / `PT5M` / `PT15M` / `PT1H` / `PT6H` with `AutoAdjustTimegrain`;
     every open, window change and `r` refetches (off the `LazyStore`, one
     task, a generation drops a superseded answer). Opening from the list
     fires the default section's on-enter hook first, so closing never
-    leaves a section waiting.
+    leaves a section waiting. **Change markers** (#152): the selected
+    metric's chart draws the `W` timeline's events for the same resource
+    (rule 23's four sources: Activity Log changes, Resource Health, fired
+    alerts, deployments) as vertical lines, failed ones in the error
+    colour, with a legend on the chart's bottom border; the rows are one
+    fetch per open into `App::chart_timeline` (no new call: the lens's
+    own), over the week, or the month once the range is 30d (`[` wrapping
+    to 30d, `]` and `5` widen and refetch; shorter ranges filter at draw
+    time). `c` hides them, `W` parks the view and opens the timeline on
+    those rows, `Esc` there returns to the charts as left.
+    **WAF view** (#153, `src/azure/waf_metrics.rs`, drawn by
+    `src/ui/widgets/metrics_waf.rs`): `m` on an Application Gateway that
+    runs a WAF (`AppGatewayRow::has_waf`), a Front Door Standard / Premium
+    profile (`Microsoft.Cdn/profiles`) or a WAF policy opens the WAF view
+    instead of the default set (`d` shows the default set, `w` returns).
+    It is the one place the metrics calls carry a **`$filter`** that splits
+    a metric by dimension (`Action eq '*' and RuleID eq '*'`, plus
+    `top=` and `orderby=total desc`); still the same `GET` on the
+    resource's own id, `2023-10-01`, no `metricnamespace`, so `Reader`
+    covers it. One call per metric (their dimensions differ): App Gateway
+    `AzwafTotalRequests` by `Action`; `AzwafSecRule` by `Action`, `RuleID`
+    and, when the API accepts them, `RuleGroupID`, `RuleSetName`,
+    `PolicyName`; `AzwafCustomRule` by `Action`, `CustomRuleID`;
+    `AzwafBotProtection` by `Action`, `Category` (a failed bot call is
+    dropped: most gateways have none). Front Door
+    `WebApplicationFirewallRequestCount` by `Action`, and by `Action` and
+    `RuleName` (+ `PolicyName`) for the table; its unsplit "WAF matches"
+    line left the default set. A call refused with the optional dimensions
+    is retried once with the required ones and no `orderby`. The view: one
+    line per action (allow green, block red, log amber, other neutral) with
+    a sparkline, a **block rate** row, the actions on one chart with the
+    change markers behind them, and per-rule tables (rule, set, group,
+    policy, matches, blocked; a column with nothing in it is hidden, the
+    policy column only when the rows span several) beside the chart from 110
+    columns, under it below. `Tab` moves between tables, `j` / `k` along
+    one, `⏎` charts the rule's actions over time (from the rows already
+    fetched, no call), `d` / `Esc` go back, `y` copies the rule. **Block
+    rate** is neboto's rule: `Block ÷ (Allow + Block + Other)`; an action
+    whose word says log, count, detect, match, anomaly or monitor
+    (`classify_action`) left out, 0% for a minute with no requests; an
+    action word it does not know counts as ending the request. The API
+    returns at most `top` series per call (60 for the rule tables), so a
+    table at that size says "top N series by total; more may not be
+    shown": the real count of the rest is not knowable. **From a policy**
+    the view is the resource it is attached to (`applicationGateways`,
+    `httpListeners`, `pathBasedRules`, a Front Door profile's
+    `securityPolicyLinks`, folded to the top-level resource), with
+    `PolicyName eq '<policy>'` pinned in every call; attached to several,
+    the first is shown, the header says "1 of N attached" and `n` steps
+    through them; attached only to a classic Front Door (not covered) or
+    nothing, `m` says so.
 20. **`C` command picker** (#47, ADR 0005, `src/azure/cli_actions.rs`):
     the row's read command first (rule 9; `⏎` on it is the old `C`),
     then the type's commands in three tiers, then two reads every ARM
@@ -720,6 +770,29 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     **Never**: Defender findings as `@audit` rows (the same issue twice),
     regulatory compliance (#156 leaves it out), anything that changes a
     plan or an alert's state.
+34. **Advisor is what Advisor last computed, beside Defender and
+    `@audit`, never in either** (#157, ADR 0011,
+    `src/azure/services/advisor.rs`, glue `src/app/advisor.rs`):
+    recommendations (`@advisor`), the score (`@advscore`) and the
+    suppressions (`@snooze`). **Recommendations** are one row per
+    recommendation and resource, named by the problem. State: the impact
+    (`high` red, `medium` amber, `low` grey), so `F` filters by it. A
+    cost recommendation's savings show in the list. Each row says when
+    Advisor last updated it: the list is cached by Advisor, and
+    `generateRecommendations` (the POST behind the portal's refresh and
+    `az advisor recommendation list --refresh`) is never sent. **Security**
+    recommendations are Defender's assessments relayed: they are noise
+    (`a`) and link to the Defender row (`resourceMetadata.source`). The
+    **score** reads the overall and per-category score, the possible
+    gain and the daily history; its Recommendations section reads the
+    warm list by category (the overall score: every non-Security one).
+    A **suppression** is a snooze (a TTL) or a dismissal (`-1`); its
+    recommendation is its id's parent, and is not in the Recommendations
+    list while suppressed. No region, no RBAC or tags of their own: the
+    tail is Activity, Related. The portal link is the resource's page,
+    which has an Advisor blade. **Never**: `generateRecommendations`,
+    Advisor rows as `@audit` findings, anything that snoozes, dismisses
+    or reactivates a recommendation.
 
 ## The catalog
 
@@ -777,6 +850,9 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Defender · Alerts (rule 33) | Alert (severity, status, alert or incident, type, intent, techniques, entity, started, ended, generated, product, description, remediation steps, portal link) · Entities (type and name or address, from the sanitized body) | `active` (high unavailable, else pending), `in progress` pending, `resolved` available, `dismissed` stopped | the resources it names | `az security alert show --name {name} --location {asc location} [--resource-group {rg}]` |
 | Defender · Secure score (rule 33) | Score (percentage, points, weight) · a control's Control (points, potential gain, unhealthy / healthy / not applicable counts, source, description) and Recommendations (the warm unhealthy recommendations it is made of) | the score stateless; a control `gaps` (pending) or `met`, stateless when it carries no points | a control's score | `az security secure-scores show --name {name}`; a control: `az security secure-score-controls list` |
 | Defender · Plans (rule 33) | Plan (portal name and API name, tier with what Free means, sub-plan, on since, trial left, coverage, enforced below, inherited and from where, retired and its replacement) · Extensions (each on or off, with its status) | `on` (Standard, available) or `off` (Free, stopped); retired plans are noise | the scope it is inherited from | `az security pricing show --name {plan}` |
+| Advisor · Recommendations (rule 34; tail Activity, Related) | Recommendation (impact, category in the portal's words, sub-category, risk, the resource as a name with its kind and an id, savings, last updated with its age, problem, solution when it differs, benefits, description, learn-more link, the Defender assessment a Security one relays, Advisor's extended properties) · Resources (every resource the same recommendation type is about in the warm list, with its savings) | the impact: `high` unavailable, `medium` pending, `low` stopped; Security is noise | the resource it is about; a Security one's Defender recommendation | `az advisor recommendation list --ids {resource}`; on the subscription `az advisor recommendation list [--category {category}]` |
+| Advisor · Score (rule 34) | Score (score, possible gain, impacted resources, computed, the trend and the daily history) · Recommendations (the warm ones in its category, high impact first) | stateless | its subscription | none (the CLI has no score command) |
+| Advisor · Suppressions (rule 34) | Suppression (snoozed or dismissed, for how long, expiry, the resource, the recommendation id) | `snoozed` or `dismissed` (stopped) | the resource | none (the CLI has no suppression command) |
 | Governance · Management groups (rule 32; tail Activity, Related) | Group ⧗ (parent, direct children: groups and subscriptions, the current one marked; updated when and by whom) · Assignments (the warm Assignments made at the group) · (Overview: display name, group name, tenant; the root group reads `tenant root`) | stateless | none (the Group section's lines jump) | `az account management-group show --name {name} --expand` |
 | Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
@@ -805,7 +881,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -927,7 +1003,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
-| Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
+| Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1. The WAF view: 4 for App Gateway (one per WAF metric), 2 for Front Door, +1 per call refused with its optional dimensions | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` (WAF view: `&$filter=Action eq '*' and …&top=…&orderby=total desc`) · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Change timeline (`W`, rule 23) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
 | `@changes` (rule 24) | per window, on load and `r`: the Activity Log (≤10 pages), Resource Health (≤20 pages), then 1 per group with a deployment in the window (≤20); Graph: ≤50 caller lookups (2 when an id is an app id) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{window start}'` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` (or `/subscriptions/{sub}/providers/Microsoft.Resources/deployments`) · `2025-04-01`; Graph `/v1.0/directoryObjects/{id}`, `/v1.0/servicePrincipals(appId='{id}')` |
 | `@audit` (rule 25) | 0 on open (the warm caches only). `r`: each uncached source list once (the rows above), then at most 50 each of SQL Firewall, Redis firewall rules, Service Bus and Event Hubs network rule sets, App Configuration and Access principal names, plus the subscription's Access list and its flow logs (rule 30). `nebaz audit` makes the same calls | the paths of the rows above |
@@ -951,6 +1027,9 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Alerts (rule 33) | 1 | `/providers/Microsoft.Security/alerts` · `2022-01-01` |
 | Secure score (rule 33) | 2 | `/providers/Microsoft.Security/secureScores` · `/providers/Microsoft.Security/secureScoreControls?$expand=definition` · `2020-01-01` |
 | Plans (rule 33) | 1 | `/providers/Microsoft.Security/pricings` · `2024-01-01` |
+| Advisor · Recommendations (rule 34) | 1 | `/providers/Microsoft.Advisor/recommendations` · `2025-01-01` |
+| Advisor · Score (rule 34) | 1 | `/providers/Microsoft.Advisor/advisorScore` · `2025-01-01` |
+| Advisor · Suppressions (rule 34) | 1 | `/providers/Microsoft.Advisor/suppressions` · `2025-01-01` |
 | Assignments · Exemptions · Locks (rule 32) | 1 each, unfiltered | `/providers/Microsoft.Authorization/policyAssignments` · `2025-03-01` · `/providers/Microsoft.Authorization/policyExemptions` · `2022-07-01-preview` (no stable version) · `/providers/Microsoft.Authorization/locks` · `2020-05-01` |
 | Management groups (rule 32) | 1, above the subscription | `/providers/Microsoft.Management/managementGroups` · `2023-04-01` |
 | A management group's Group | 1 per group, on demand | `/providers/Microsoft.Management/managementGroups/{name}?$expand=children` · `2023-04-01` |

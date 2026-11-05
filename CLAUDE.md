@@ -19,7 +19,7 @@ Azure sibling of neboto (`neboto/neboto-tui`, the AWS one) and was built by
 | What a service actually renders today | the service file itself; it is the reference |
 | The ARM actions per service, the one role to assign | [`PERMISSIONS.md`](PERMISSIONS.md) |
 | The project's own vocabulary (subscription, location, ARM id, Lazy, LazyStore, epoch, state ladder, Related section, guard…) | [`CONTEXT.md`](CONTEXT.md) |
-| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands, 0006 `@changes` fetches, 0007 audit checks are pure, 0008 the update check, 0009 governance reads from the subscription, 0010 Defender is its own tab |
+| Why a design is the way it is | [`docs/adr/`](docs/adr) — 0001 copy-not-depend, 0002 scoping, 0003 auth, 0004 Graph, 0005 copied commands, 0006 `@changes` fetches, 0007 audit checks are pure, 0008 the update check, 0009 governance reads from the subscription, 0010 Defender is its own tab, 0011 Advisor is its own tab |
 | What `v0.1.0` is and is not | [`docs/SPEC-v0.1.md`](docs/SPEC-v0.1.md) |
 | What is not built yet, and what is parked | [GitHub issues](https://github.com/neboto/nebaz/issues) (`gh issue list`); the parity roadmap is #55 |
 | What came from neboto and what changed | [`docs/PORTED-FROM-NEBOTO.md`](docs/PORTED-FROM-NEBOTO.md) |
@@ -32,7 +32,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / vmss / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca / redis / amr / pg / mysql / sb / eh / agw / afd / waf / pls / tm / er / vgw / cn / lgw / fw / fwp / ipg / ngfw / rulestack / backup / bvault / gov / mg / defender / changes
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / vmss / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / sql / cosmos / foundry / law / appi / aca / redis / amr / pg / mysql / sb / eh / agw / afd / waf / pls / tm / er / vgw / cn / lgw / fw / fwp / ipg / ngfw / rulestack / backup / bvault / gov / mg / defender / advisor / changes
 cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to stdout, exit codes in src/headless/contract.json
 cargo run -- doctor -o md           # proxy, certificates, az login, ARM, Graph, the release check: each failure in full
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
@@ -142,6 +142,12 @@ rules computed client-side from GETs (never the POST effective calls),
 `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics,
 owning the detail pane the same way; the default set is keyed by ARM
 type (`curated_metrics`, which also gates the hint), `SERVICES.md` rule 19.
+The WAF view (`src/azure/waf_metrics.rs`, `src/ui/widgets/metrics_waf.rs`)
+is the same view with dimension-split calls: actions, block rate, rule
+tables; a policy opens its gateway's or profile's.
+The chart draws the `W` timeline's events as markers (`App::chart_timeline`,
+fetched through the timeline's own `fetch_timeline`, never a second path);
+`W` from the chart parks the view and `Esc` returns to it.
 
 **`@audit`** (`src/audit.rs`, `src/audit/checks.rs`, `src/app/audit.rs`;
 ADR 0007, `SERVICES.md` rule 25): a virtual service (`is_virtual()`, never
@@ -289,12 +295,13 @@ verbatim where the concept is unchanged.
 | `src/azure/service.rs` | `ServiceType`, `JumpView`, routing prefixes, `for_arm_id` |
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
-| `src/azure/services/{subscriptions,compute,scale_sets,storage,network,network_edge,network_hub,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid,firewall,private_link,traffic_manager,flow_logs,backup,governance,defender}.rs` | one file per service |
+| `src/azure/services/{subscriptions,compute,scale_sets,storage,network,network_edge,network_hub,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid,firewall,private_link,traffic_manager,flow_logs,backup,governance,defender,advisor}.rs` | one file per service |
 | `src/headless.rs`, `src/app/headless.rs` | `nebaz services / ls / get`: a terminal-less `App`, the output contract, `skills/nebaz/SKILL.md` |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/cli_actions.rs` | the `C` catalogue: every copyable `az` command per type, tiers; the one file the guard lets spell a Connect / Change verb |
 | `src/azure/nsg_eval.rs` | the network lens's evaluation: rule order, shadowing, layers, resolution |
 | `src/azure/metrics.rs` | the metrics view's default sets, request builder, parsers and fetch |
+| `src/azure/waf_metrics.rs` | the WAF view: split queries, action kinds, block rate, rule rows, policy → resource |
 | `src/audit.rs`, `src/audit/checks.rs` | `@audit`: the finding row, `run`, and every check (pure, fixture-tested) |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |

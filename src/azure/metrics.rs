@@ -23,7 +23,7 @@ use std::future::Future;
 /// version of both (Microsoft Learn, `rest-monitor-2023-10-01`).
 pub const METRICS_API_VERSION: &str = "2023-10-01";
 
-/// The time window, `[` / `]` or `1`–`4` in the overlay.
+/// The time window, `[` / `]` or `1`–`5` in the overlay.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MetricWindow {
     #[default]
@@ -31,10 +31,12 @@ pub enum MetricWindow {
     SixHours,
     OneDay,
     SevenDays,
+    ThirtyDays,
 }
 
 impl MetricWindow {
-    pub const ALL: [MetricWindow; 4] = [Self::OneHour, Self::SixHours, Self::OneDay, Self::SevenDays];
+    pub const ALL: [MetricWindow; 5] =
+        [Self::OneHour, Self::SixHours, Self::OneDay, Self::SevenDays, Self::ThirtyDays];
 
     pub fn secs(self) -> i64 {
         match self {
@@ -42,10 +44,11 @@ impl MetricWindow {
             Self::SixHours => 6 * 3_600,
             Self::OneDay => 24 * 3_600,
             Self::SevenDays => 7 * 24 * 3_600,
+            Self::ThirtyDays => 30 * 24 * 3_600,
         }
     }
 
-    /// The time grain asked for: 60, 72, 96 and 168 points. Platform
+    /// The time grain asked for: 60, 72, 96, 168 and 120 points. Platform
     /// metrics keep `PT1M` for 93 days; a metric whose finest grain is
     /// coarser (storage capacity, `PT1H`) is adjusted by
     /// `AutoAdjustTimegrain`.
@@ -55,6 +58,7 @@ impl MetricWindow {
             Self::SixHours => "PT5M",
             Self::OneDay => "PT15M",
             Self::SevenDays => "PT1H",
+            Self::ThirtyDays => "PT6H",
         }
     }
 
@@ -64,6 +68,7 @@ impl MetricWindow {
             Self::SixHours => "6h",
             Self::OneDay => "24h",
             Self::SevenDays => "7d",
+            Self::ThirtyDays => "30d",
         }
     }
 
@@ -73,6 +78,7 @@ impl MetricWindow {
             Self::SixHours => "6h ago",
             Self::OneDay => "24h ago",
             Self::SevenDays => "7d ago",
+            Self::ThirtyDays => "30d ago",
         }
     }
 
@@ -88,7 +94,18 @@ impl MetricWindow {
         Self::ALL[(self.index() + Self::ALL.len() - 1) % Self::ALL.len()]
     }
 
-    /// `1`–`4`.
+    /// The `W` timeline window whose rows cover this chart: a week for
+    /// everything up to 7d, a month for 30d (#152, neboto-tui#289).
+    pub fn timeline_window(self) -> crate::azure::timeline::LensWindow {
+        use crate::azure::timeline::LensWindow;
+        if self.secs() > LensWindow::Week.days() * 86_400 {
+            LensWindow::Month
+        } else {
+            LensWindow::Week
+        }
+    }
+
+    /// `1`–`5`.
     pub fn from_digit(c: char) -> Option<Self> {
         c.to_digit(10).and_then(|d| Self::ALL.get((d as usize).checked_sub(1)?).copied())
     }
@@ -312,14 +329,15 @@ const APP_GATEWAY: &[MetricSpec] = &[
     m("ApplicationGatewayTotalTime", "Total time", Avg),
     m("Throughput", "Throughput", Avg),
 ];
-/// Front Door Standard / Premium (`Microsoft.Cdn/profiles`).
+/// Front Door Standard / Premium (`Microsoft.Cdn/profiles`). Its WAF
+/// request count is the WAF view's (`azure::waf_metrics`, split by action
+/// and rule), so it is not a line here.
 const FRONT_DOOR: &[MetricSpec] = &[
     m("RequestCount", "Requests", Total),
     m("Percentage4XX", "4xx", Avg),
     m("Percentage5XX", "5xx", Avg),
     m("OriginHealthPercentage", "Origin health", Avg),
     m("TotalLatency", "Total latency", Avg),
-    m("WebApplicationFirewallRequestCount", "WAF matches", Total),
 ];
 /// ExpressRoute circuit: is BGP and ARP up towards the peers, and the
 /// traffic each way.
@@ -801,9 +819,11 @@ pub(crate) mod tests {
     #[test]
     fn windows_cycle_and_pick_their_grain() {
         assert_eq!(MetricWindow::default().next(), MetricWindow::SixHours);
-        assert_eq!(MetricWindow::OneHour.prev(), MetricWindow::SevenDays);
+        assert_eq!(MetricWindow::OneHour.prev(), MetricWindow::ThirtyDays);
+        assert_eq!(MetricWindow::ThirtyDays.next(), MetricWindow::OneHour);
         assert_eq!(MetricWindow::from_digit('3'), Some(MetricWindow::OneDay));
-        assert_eq!(MetricWindow::from_digit('5'), None);
+        assert_eq!(MetricWindow::from_digit('5'), Some(MetricWindow::ThirtyDays));
+        assert_eq!(MetricWindow::from_digit('6'), None);
         assert_eq!(MetricWindow::from_digit('0'), None);
         for w in MetricWindow::ALL {
             let grain = match w.interval() {
@@ -811,10 +831,23 @@ pub(crate) mod tests {
                 "PT5M" => 300,
                 "PT15M" => 900,
                 "PT1H" => 3600,
+                "PT6H" => 6 * 3600,
                 other => panic!("{other}"),
             };
             let points = w.secs() / grain;
             assert!((60..=168).contains(&points), "{w:?}: {points} points");
+        }
+    }
+
+    #[test]
+    fn the_range_maps_to_the_timeline_window_that_covers_it() {
+        use crate::azure::timeline::LensWindow;
+        for w in [MetricWindow::OneHour, MetricWindow::SixHours, MetricWindow::OneDay, MetricWindow::SevenDays] {
+            assert_eq!(w.timeline_window(), LensWindow::Week, "{w:?}");
+        }
+        assert_eq!(MetricWindow::ThirtyDays.timeline_window(), LensWindow::Month);
+        for w in MetricWindow::ALL {
+            assert!(w.timeline_window().days() * 86_400 >= w.secs(), "{w:?} is covered");
         }
     }
 
@@ -863,7 +896,12 @@ pub(crate) mod tests {
         assert!(!supports_metrics(&p("Microsoft.Network/firewallPolicies/fwp")));
         assert!(names(&p("Microsoft.RecoveryServices/vaults/rsv")).contains(&"BackupHealthEvent"));
         assert!(names(&p("Microsoft.DataProtection/backupVaults/bv")).contains(&"RestoreHealthEvent"));
+        // A WAF policy has no metrics of its own: `m` on one opens the WAF
+        // view of what it is attached to (`App::supports_metrics`, which
+        // knows the row), and the id alone has no default set.
         assert!(!supports_metrics(&p("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/w")));
+        assert!(!supports_metrics(&p("Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/w")));
+        assert!(!names(&p("Microsoft.Cdn/profiles/afd")).contains(&"WebApplicationFirewallRequestCount"));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));

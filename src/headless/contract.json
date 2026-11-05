@@ -211,6 +211,11 @@
     "acr": [
       "registries (acr)"
     ],
+    "advisor": [
+      "advisor-recommendations (advisor)",
+      "advisor-score (advscore)",
+      "advisor-suppressions (snooze)"
+    ],
     "agw": [
       "app-gateways (agw)",
       "front-door-profiles (afd)",
@@ -350,6 +355,26 @@
     ],
     "Activity Log": [
       "Overview",
+      "Related"
+    ],
+    "Advisor recommendation": [
+      "Overview",
+      "Recommendation",
+      "Resources",
+      "Activity",
+      "Related"
+    ],
+    "Advisor score": [
+      "Overview",
+      "Score",
+      "Recommendations",
+      "Activity",
+      "Related"
+    ],
+    "Advisor suppression": [
+      "Overview",
+      "Suppression",
+      "Activity",
       "Related"
     ],
     "App Registration": [

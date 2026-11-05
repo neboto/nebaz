@@ -8,6 +8,7 @@ pub mod keycast_box;
 pub mod location_selector;
 pub mod macro_picker;
 pub mod metrics_overlay;
+pub mod metrics_waf;
 pub mod network_lens;
 pub mod refs_lens;
 pub mod timeline_lens;

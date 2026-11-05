@@ -455,6 +455,12 @@ impl AppGatewayRow {
         self.sku_tier.as_deref().or(self.sku_name.as_deref()).unwrap_or("-")
     }
 
+    /// Whether the gateway runs a WAF (a `WAF` / `WAF_v2` tier, a policy,
+    /// or the classic configuration): `m` opens the WAF metrics view.
+    pub fn has_waf(&self) -> bool {
+        self.tier().to_lowercase().starts_with("waf") || !self.waf_policy_ids().is_empty() || self.waf_config.is_some()
+    }
+
     fn is_v2(&self) -> bool {
         self.tier().to_lowercase().ends_with("_v2")
     }

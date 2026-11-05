@@ -69,7 +69,21 @@ The incident the demo is built around (`@changes`, then `W`, then `N`):
 
 `N` from `snet-pp-injection` to `cae-orders-prod` shows the deny;
 `@changes` shows who and when; `W` on `nsg-pp-injection` shows the rule
-change next to the alert.
+change next to the alert. `m` on `ca-orders-worker` charts its metrics with
+the failed `v119` rollout and the Degraded health as change markers (`c` hides
+them, `W` opens the timeline, `Esc` comes back); `ca-orders-api` shows the
+fired alert at the cliff.
+
+The WAF view (#153): `m` on `agw-contoso-prod` (Detection mode, so its
+matches are logged and the block rate is 0%) charts requests by action with
+the managed-rule, custom-rule and bot tables beside the chart; `m` on
+`afd-contoso` (Prevention) shows a block rate above zero, the SQLI and XSS
+rules blocking and the bot rule only logging, and `⏎` on a rule charts its
+actions; `m` on the WAF policy `wafp-agw-prod` or `wafpafdcontoso` opens the
+same view of the gateway or profile it is attached to, pinned to that
+policy. The numbers come from `waf_rows` in `src/demo/generate.rs`, which
+answers a metrics call with a `$filter` by splitting on the dimensions it
+names.
 
 Planted findings, one per thing a screen or `@audit` shows off:
 
@@ -116,6 +130,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `CanNotDelete` locks on `rg-network-prod` and `kv-orders-prod` | Governance · Locks |
 | The hierarchy: Tenant Root Group → `contoso` → `contoso-platform`, `contoso-landingzones` → `contoso-corp` (contoso-prod), `contoso-sandbox` (contoso-dev) | Governance · Management groups |
 | Defender: an active High alert, a failed SSH brute force on `vm-jump-01` from 185.220.101.4 two days ago (the same open port `@audit` flags); a resolved suspicious-IP access on `stcontosoordersprod`. Six unhealthy recommendations (management ports on `vm-jump-01`, MFA for owners, storage public access, `kv-legacy-prod`'s deletion protection, `aks-platform-prod`'s Kubernetes version, the ACR admin user), two healthy and one not applicable (hidden until `a`). Secure score 31% (11 of 36). Plans: Servers P2, Storage and SQL on, the rest Free, three retired | Defender, every sub-tab |
+| Advisor: `vm-jump-01` and `vm-nva-01` oversized (1,260 and 2,940 EUR a year, one recommendation type, so each lists the other under Resources), `disk-legacy-data-01` unattached, `cae-orders-prod` without zone redundancy, `sql-orders-prod` without a failover group, no Service Health alert on the subscription, `redis-orders-cache` under load; two Security ones relaying Defender's (hidden until `a`). Score 64% overall. `vm-legacy-app-01`'s recommendation snoozed for 30 days, `afw-hub-prod`'s dismissed | Advisor, every sub-tab |
 
 ## Recordings
 

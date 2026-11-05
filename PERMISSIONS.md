@@ -125,6 +125,12 @@ each one backs are in the catalog table
   `Microsoft.Security/secureScoreControls/read`,
   `Microsoft.Security/pricings/read`. All in `Reader` at subscription
   scope. Never sent: anything that changes a plan or an alert's state.
+- **Advisor** (ADR 0011): `Microsoft.Advisor/recommendations/read`,
+  `Microsoft.Advisor/advisorScore/read`,
+  `Microsoft.Advisor/suppressions/read`. All in `Reader` at subscription
+  scope. Never sent: `generateRecommendations` (a POST: the list is what
+  Advisor last computed) or anything that snoozes, dismisses or
+  reactivates a recommendation.
 - **Backup** (Recovery Services vaults, Backup vaults):
   `Microsoft.RecoveryServices/vaults/read` (redundancy, soft delete,
   immutability, multi-user authorization, encryption, private endpoints
@@ -271,6 +277,9 @@ each one backs are in the catalog table
   and, for the all-metrics picker, `Microsoft.Insights/metricDefinitions/read`.
   Both are control-plane `GET`s on the resource's own id (platform
   metrics only; no log query); a 403 is a line in the view, never fatal.
+  The WAF view (`m` on an Application Gateway, Front Door profile or WAF
+  policy) adds a `$filter` / `top` / `orderby` to the same metrics `GET`
+  to split a metric by dimension: the same action, no new permission.
 - **Change timeline** (`W`, any ARM row): the Activity log action
   above, `Microsoft.AlertsManagement/alerts/read` (fired alerts),
   `Microsoft.ResourceHealth/availabilityStatuses/read` (the health

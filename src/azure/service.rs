@@ -90,6 +90,10 @@ pub enum ServiceType {
     /// alerts, the secure score and which plans are on. Its own findings,
     /// never `@audit` rows.
     Defender,
+    /// Azure Advisor (#157, ADR 0011): recommendations by category and
+    /// impact, the Advisor score, the snoozed and dismissed ones. What
+    /// Advisor last computed; never `generateRecommendations` (POST).
+    Advisor,
     /// What changed recently, subscription-wide (#61, ADR 0006): the
     /// Activity Log's changes, deployments and health transitions over a
     /// `[` / `]` window. A service that fetches, not a view over caches.
@@ -255,6 +259,14 @@ pub enum JumpView {
     SecureScore,
     /// The Defender plans (`pricings`): which are on.
     DefenderPlans,
+    // Advisor
+    /// Advisor's recommendations, one row per recommendation and resource;
+    /// Security ones (Defender's, relayed) are noise.
+    AdvisorRecommendations,
+    /// The Advisor score, overall and per category.
+    AdvisorScore,
+    /// The snoozed and dismissed recommendations.
+    AdvisorSuppressions,
     // Changes: one list per window; the sub-tabs filter it by source.
     ChangesAll,
     ChangesActivity,
@@ -298,6 +310,7 @@ impl JumpView {
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
             PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups => ServiceType::Governance,
             DefenderRecommendations | DefenderAlerts | SecureScore | DefenderPlans => ServiceType::Defender,
+            AdvisorRecommendations | AdvisorScore | AdvisorSuppressions => ServiceType::Advisor,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
             Audit => ServiceType::Audit,
         }
@@ -380,6 +393,9 @@ impl JumpView {
             DefenderAlerts => "defender-alerts",
             SecureScore => "secure-score",
             DefenderPlans => "defender-plans",
+            AdvisorRecommendations => "advisor-recommendations",
+            AdvisorScore => "advisor-score",
+            AdvisorSuppressions => "advisor-suppressions",
             ChangesAll => "changes",
             ChangesActivity => "changes-activity",
             ChangesDeployments => "changes-deployments",
@@ -465,6 +481,9 @@ impl JumpView {
             DefenderAlerts => "Alerts",
             SecureScore => "Secure score",
             DefenderPlans => "Plans",
+            AdvisorRecommendations => "Recommendations",
+            AdvisorScore => "Score",
+            AdvisorSuppressions => "Suppressions",
             ChangesAll => "All",
             ChangesActivity => "Activity",
             ChangesDeployments => "Deployments",
@@ -566,6 +585,11 @@ impl JumpView {
             ("microsoft.security", ["locations", "alerts"]) => JumpView::DefenderAlerts,
             ("microsoft.security", ["securescores"] | ["securescores", "securescorecontrols"]) => JumpView::SecureScore,
             ("microsoft.security", ["pricings"]) => JumpView::DefenderPlans,
+            // Advisor (ADR 0011): a recommendation is an extension
+            // resource on what it is about, a suppression its child.
+            ("microsoft.advisor", ["recommendations"]) => JumpView::AdvisorRecommendations,
+            ("microsoft.advisor", ["recommendations", "suppressions"]) => JumpView::AdvisorSuppressions,
+            ("microsoft.advisor", ["advisorscore"]) => JumpView::AdvisorScore,
             _ => return None,
         })
     }
@@ -666,6 +690,7 @@ impl ServiceType {
             ServiceType::Messaging,
             ServiceType::Governance,
             ServiceType::Defender,
+            ServiceType::Advisor,
             ServiceType::Changes,
             ServiceType::Audit,
         ]
@@ -709,6 +734,7 @@ impl ServiceType {
             ServiceType::Messaging => "Integration",
             ServiceType::Governance => "Management",
             ServiceType::Defender => "Security",
+            ServiceType::Advisor => "Management",
             ServiceType::Changes => "Monitoring",
             ServiceType::Audit => "Security",
         }
@@ -741,6 +767,7 @@ impl ServiceType {
             ServiceType::Messaging => "Messaging",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
+            ServiceType::Advisor => "Advisor",
             ServiceType::Changes => "Changes",
             ServiceType::Audit => "Audit",
         }
@@ -774,6 +801,7 @@ impl ServiceType {
             ServiceType::Messaging => "Messaging",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
+            ServiceType::Advisor => "Advisor",
             ServiceType::Changes => "Changes",
             ServiceType::Audit => "Audit",
         }
@@ -806,6 +834,7 @@ impl ServiceType {
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
             ServiceType::Governance => "Policy, locks & management groups",
             ServiceType::Defender => "Recommendations, alerts, score & plans",
+            ServiceType::Advisor => "Recommendations, score & suppressions",
             ServiceType::Changes => "What changed recently, subscription-wide",
             ServiceType::Audit => "Security findings from what's loaded (no API calls)",
         }
@@ -859,6 +888,7 @@ impl ServiceType {
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
             ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups],
             ServiceType::Defender => &[DefenderRecommendations, DefenderAlerts, SecureScore, DefenderPlans],
+            ServiceType::Advisor => &[AdvisorRecommendations, AdvisorScore, AdvisorSuppressions],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
             ServiceType::Audit => &[Audit],
         }
@@ -1040,6 +1070,9 @@ impl ServiceType {
             "secalert" | "secalerts" | "defenderalert" | "defenderalerts" => (ServiceType::Defender, Some(JumpView::DefenderAlerts)),
             "score" | "securescore" => (ServiceType::Defender, Some(JumpView::SecureScore)),
             "pricing" | "pricings" | "defenderplan" | "defenderplans" => (ServiceType::Defender, Some(JumpView::DefenderPlans)),
+            "advisor" | "adv" => (ServiceType::Advisor, None),
+            "advscore" | "advisorscore" => (ServiceType::Advisor, Some(JumpView::AdvisorScore)),
+            "snooze" | "snoozed" | "suppression" | "suppressions" => (ServiceType::Advisor, Some(JumpView::AdvisorSuppressions)),
             "audit" | "findings" | "security" => (ServiceType::Audit, None),
             _ => return None,
         };
@@ -1080,6 +1113,7 @@ impl ServiceType {
             ServiceType::Messaging => "@sb",
             ServiceType::Governance => "@gov",
             ServiceType::Defender => "@defender",
+            ServiceType::Advisor => "@advisor",
             ServiceType::Changes => "@changes",
             ServiceType::Audit => "@audit",
         }
@@ -1088,12 +1122,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@defender", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1243,6 +1277,9 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@secalert"), Some((ServiceType::Defender, Some(JumpView::DefenderAlerts))));
         assert_eq!(ServiceType::from_prefix("@score"), Some((ServiceType::Defender, Some(JumpView::SecureScore))));
         assert_eq!(ServiceType::from_prefix("@pricing"), Some((ServiceType::Defender, Some(JumpView::DefenderPlans))));
+        assert_eq!(ServiceType::from_prefix("@advisor"), Some((ServiceType::Advisor, None)));
+        assert_eq!(ServiceType::from_prefix("@advscore"), Some((ServiceType::Advisor, Some(JumpView::AdvisorScore))));
+        assert_eq!(ServiceType::from_prefix("@snooze"), Some((ServiceType::Advisor, Some(JumpView::AdvisorSuppressions))));
         let corp = "/providers/Microsoft.Management/managementGroups/corp";
         assert_eq!(JumpView::landing_for_arm_id(corp), Some(JumpView::ManagementGroups));
         assert_eq!(JumpView::for_arm_id(&format!("{corp}/subscriptions/s")), None, "a membership, not a group");

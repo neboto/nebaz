@@ -47,6 +47,10 @@ all it needs, and a test fails the build if that ever changes. See
 - **Network access lens** (`N`) on a VM, NIC, subnet or NSG: the NSG rules
   that apply, in priority order with defaults, shadowed rules marked.
 - **Metrics** (`m`): Azure Monitor charts in the pane, a curated set per type.
+  On an Application Gateway with WAF, a Front Door profile or a WAF policy it
+  is the WAF view: requests by action, the block rate and per-rule tables
+  (`Tab` between them, `⏎` charts a rule, `d` back, `w` toggles with the
+  default set).
 - **Change timeline** (`W`) on any resource: the Activity Log, Resource Health
   and fired alerts, merged. **`@changes`** does it subscription-wide.
 - **`@audit`**: over 60 checks (world-open NSG rules, subnets without an NSG,
@@ -178,6 +182,7 @@ all).
 | `storage` | Storage | Accounts (blob containers lazy) |
 | `gov` | Governance | Policy assignments (management groups' included), exemptions (`exempt`), custom definitions and initiatives (`pdef`), resource locks (`lock`), the management groups you can read (`mg`); never compliance (a POST) |
 | `defender` | Defender | Defender for Cloud recommendations with their severity, alerts (`secalert`, never a command line), the secure score and its controls (`score`), which plans are on (`pricing`); beside `@audit`, never in it |
+| `advisor` | Advisor | Advisor recommendations by impact and category with their savings and age (Security ones are Defender's, hidden until `a`), the Advisor score and its history (`advscore`), what was snoozed or dismissed (`snooze`) |
 | `backup` | Backup | Recovery Services vaults (protected items, policies, failed jobs), Backup vaults (`bvault`: backup instances, policies, jobs) |
 | `vnet` | Virtual Network | VNets, Subnets (`subnet`), NSGs (`nsg`), Public IPs (`pip`), Load balancers (`lb`), Route tables (`rt`, appliance next hops matched to their NIC / VM or load balancer), NAT gateways (`nat`), Private endpoints (`pe`), Bastion hosts (`bastion`), DDoS protection plans (`ddos`); VNets and NSGs show their Network Watcher flow logs |
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`), Traffic Manager profiles (`tm`, endpoints) |
@@ -251,7 +256,7 @@ strings, app settings and secret values are never fetched.
 | Key | |
 |---|---|
 | `N` | network access lens (VM, NIC, subnet, NSG) |
-| `m` | metrics |
+| `m` | metrics (WAF view on a gateway, Front Door profile or WAF policy: `Tab` `⏎` `d` `w` `n`) |
 | `W` | change timeline (`f` one source, `[`/`]` window) |
 | `U` | referenced by |
 | `C` | copy an `az` command (inspect, connect, change; never run) |

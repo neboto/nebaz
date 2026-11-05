@@ -41,6 +41,7 @@ use std::sync::Arc;
 mod all_search_test;
 mod command_picker_test;
 mod changes_test;
+mod chart_markers_test;
 mod audit_test;
 mod directory_test;
 mod keycast_test;
@@ -48,6 +49,7 @@ mod list_ux_test;
 mod search_edit_test;
 mod search_follow_test;
 mod export_test;
+mod advisor_test;
 mod defender_test;
 mod governance_test;
 mod help_filter_test;
@@ -59,6 +61,7 @@ pub(crate) mod mocks;
 mod detail_pane_test;
 mod navigation_test;
 mod metrics_test;
+mod waf_metrics_test;
 mod mouse_test;
 mod network_lens_test;
 mod refs_lens_test;
@@ -371,6 +374,12 @@ impl Harness {
     pub fn reversed_at(&mut self, (x, y): (u16, u16)) -> bool {
         self.draw();
         self.terminal.backend().buffer().get(x, y).modifier.contains(ratatui::style::Modifier::REVERSED)
+    }
+
+    /// Whether any cell of a fresh frame is drawn with foreground `color`.
+    pub fn has_fg(&mut self, color: ratatui::style::Color) -> bool {
+        self.draw();
+        self.terminal.backend().buffer().content().iter().any(|c| c.fg == color)
     }
 
     /// The first recorded click region with `action` (its left cell).

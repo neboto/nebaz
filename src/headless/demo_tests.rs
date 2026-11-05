@@ -275,3 +275,92 @@ fn demo_app_insights_credentials_are_stripped() {
     let raw = ComponentRow::from_json(&v, None).expect("parses").raw_content().unwrap_or_default();
     assert!(!raw.contains("InstrumentationKey") && !raw.contains("ConnectionString"), "{raw}");
 }
+
+/// `m` on the demo's `ca-orders-worker` shows change markers: the failed
+/// `v119` revision (Activity Log), its Degraded health and its image
+/// rollout (deployment or activity) land inside a 6h chart, from the demo
+/// fixtures alone through the same row builders `W` uses (#152). `ca-orders-api`
+/// carries the other half of the story, the fired alert.
+#[test]
+fn the_demo_has_change_markers_on_the_orders_container_apps() {
+    use crate::azure::services::activity::{activity_path, activity_query_since};
+    use crate::azure::timeline::{activity_rows, alert_rows, alerts_request, health_path, health_rows, LensWindow};
+    use crate::ui::widgets::metrics_overlay::marker_positions;
+
+    const NOW: i64 = 1_790_000_000;
+    let app = |name: &str| {
+        format!("/subscriptions/{}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/{name}", crate::demo::PROD)
+    };
+    let get = |path: &str, query: &[(String, String)], version: &str| -> Vec<Value> {
+        let mut q: Vec<String> = query.iter().map(|(k, v)| format!("{k}={v}")).collect();
+        q.push(format!("api-version={version}"));
+        let r = crate::demo::respond(path, &q.join("&"), NOW);
+        assert_eq!(r.status, 200, "{path}: {}", r.body);
+        let v: Value = serde_json::from_str(&r.body).unwrap();
+        v["value"].as_array().cloned().unwrap_or_default()
+    };
+
+    let worker = app("ca-orders-worker");
+    let since = NOW - LensWindow::Week.days() * 86_400;
+    let events = get(&activity_path(&worker).unwrap(), &activity_query_since(&worker, since), "2015-04-01");
+    let mut rows = activity_rows(&events, since, false);
+    rows.extend(health_rows(&get(&health_path(&worker).unwrap(), &[], "2025-05-01"), since));
+    let in_6h = marker_positions(&rows, NOW, 6 * 3600);
+    assert!(
+        in_6h.iter().any(|m| m.failed),
+        "ca-orders-worker: a failed change in the last 6h, got {:?}",
+        rows.iter().map(|r| (&r.what, NOW - r.ts_secs)).collect::<Vec<_>>()
+    );
+
+    let api = app("ca-orders-api");
+    let (path, query) = alerts_request(&api, LensWindow::Week).unwrap();
+    let alerts = get(&path, &query, "2019-03-01");
+    let rows = alert_rows(&alerts, since);
+    assert!(!marker_positions(&rows, NOW, 6 * 3600).is_empty(), "ca-orders-api: the fired alert is inside 6h");
+}
+
+/// `m` on the demo's `agw-contoso-prod` (Detection: matches are logged,
+/// block rate 0%) and `afd-contoso` (Prevention: SQLI and XSS blocked)
+/// has WAF data split by action and rule, through the same `fetch_waf`
+/// the view runs (#153). Pinning a policy the profile does not serve
+/// leaves nothing.
+#[tokio::test]
+async fn the_demo_has_waf_metrics_split_by_action_and_rule() {
+    use crate::azure::metrics::MetricWindow;
+    use crate::azure::waf_metrics::{fetch_waf, ActionKind, WafProduct};
+
+    const NOW: i64 = 1_790_000_000;
+    let id = |t: &str| format!("/subscriptions/{}/resourceGroups/rg-platform-prod/providers/{t}", crate::demo::PROD);
+    let run = |resource: String, product: WafProduct, policy: Option<&'static str>| async move {
+        let fetch = move |q: Vec<(&'static str, String)>| {
+            let query = q.iter().map(|(k, v)| format!("{k}={v}")).chain(["api-version=2023-10-01".to_string()]).collect::<Vec<_>>().join("&");
+            let path = format!("{resource}/providers/Microsoft.Insights/metrics");
+            async move {
+                let r = crate::demo::respond(&path, &query, NOW);
+                assert_eq!(r.status, 200, "{path}?{query}: {}", r.body);
+                serde_json::from_str::<Value>(&r.body).map_err(|e| e.to_string())
+            }
+        };
+        fetch_waf(product, policy, MetricWindow::SixHours, NOW, fetch).await
+    };
+
+    let agw = run(id("Microsoft.Network/applicationGateways/agw-contoso-prod"), WafProduct::AppGateway, None).await;
+    assert!(agw.actions.iter().any(|a| a.kind == ActionKind::Allow && a.total > 0.0), "{:?}", agw.actions);
+    assert!(agw.actions.iter().any(|a| a.kind == ActionKind::Log && a.total > 0.0), "Detection logs its matches");
+    assert_eq!(agw.block_rate(), 0.0, "nothing is blocked in Detection");
+    let titles: Vec<&str> = agw.tables.iter().map(|t| t.title).collect();
+    assert_eq!(titles, ["Managed rules", "Custom rules", "Bot protection"], "{titles:?}");
+    assert_eq!(agw.tables[0].rows.len(), 4);
+    assert!(agw.tables[0].has_group() && agw.tables[0].has_set() && !agw.tables[0].has_blocked());
+
+    let afd = run(id("Microsoft.Cdn/profiles/afd-contoso"), WafProduct::FrontDoor, Some("wafpafdcontoso")).await;
+    let rate = afd.block_rate();
+    assert!(rate > 5.0 && rate < 50.0, "Prevention blocks some of what ends: {rate}");
+    let rules = &afd.tables[0];
+    let sqli = rules.rows.iter().find(|r| r.rule.contains("SQLI-942100")).expect("the SQLI rule");
+    assert!(sqli.blocked > 0.0 && sqli.actions.len() == 2, "blocked and anomaly-scored: {sqli:?}");
+    assert!(rules.rows.iter().any(|r| r.rule == "BlockBadBots") && rules.has_blocked());
+
+    let other = run(id("Microsoft.Cdn/profiles/afd-contoso"), WafProduct::FrontDoor, Some("some-other-policy")).await;
+    assert!(other.actions.is_empty() && other.tables.is_empty());
+}

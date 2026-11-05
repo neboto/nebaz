@@ -212,6 +212,12 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
                 "No Defender alerts".to_string(),
                 "alerts come from the Defender plans that are on: see Plans · r refresh".to_string(),
             )
+        } else if app.resources.is_empty() && app.current_view == crate::azure::service::JumpView::AdvisorSuppressions {
+            // Nothing snoozed or dismissed is the usual answer (ADR 0011).
+            (
+                "No snoozed or dismissed recommendations".to_string(),
+                "a recommendation someone postpones or dismisses in Advisor lists here · r refresh".to_string(),
+            )
         } else if app.resources.is_empty() {
             (
                 "No resources found".to_string(),
