@@ -265,12 +265,21 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `$filter`, so dimensions are aggregated away); a failed call of
     several names is retried name by name (a vCore database has no DTU
     metric, which fails the whole call), and whatever still fails is a
-    warning on its line. Windows 1h / 6h / 24h / 7d (`[` / `]`, `1`–`4`)
-    at `PT1M` / `PT5M` / `PT15M` / `PT1H` with `AutoAdjustTimegrain`;
+    warning on its line. Windows 1h / 6h / 24h / 7d / 30d (`[` / `]`, `1`–`5`)
+    at `PT1M` / `PT5M` / `PT15M` / `PT1H` / `PT6H` with `AutoAdjustTimegrain`;
     every open, window change and `r` refetches (off the `LazyStore`, one
     task, a generation drops a superseded answer). Opening from the list
     fires the default section's on-enter hook first, so closing never
-    leaves a section waiting.
+    leaves a section waiting. **Change markers** (#152): the selected
+    metric's chart draws the `W` timeline's events for the same resource
+    (rule 23's four sources: Activity Log changes, Resource Health, fired
+    alerts, deployments) as vertical lines, failed ones in the error
+    colour, with a legend on the chart's bottom border; the rows are one
+    fetch per open into `App::chart_timeline` (no new call: the lens's
+    own), over the week, or the month once the range is 30d (`[` wrapping
+    to 30d, `]` and `5` widen and refetch; shorter ranges filter at draw
+    time). `c` hides them, `W` parks the view and opens the timeline on
+    those rows, `Esc` there returns to the charts as left.
 20. **`C` command picker** (#47, ADR 0005, `src/azure/cli_actions.rs`):
     the row's read command first (rule 9; `⏎` on it is the old `C`),
     then the type's commands in three tiers, then two reads every ARM

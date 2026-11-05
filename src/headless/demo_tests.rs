@@ -275,3 +275,46 @@ fn demo_app_insights_credentials_are_stripped() {
     let raw = ComponentRow::from_json(&v, None).expect("parses").raw_content().unwrap_or_default();
     assert!(!raw.contains("InstrumentationKey") && !raw.contains("ConnectionString"), "{raw}");
 }
+
+/// `m` on the demo's `ca-orders-worker` shows change markers: the failed
+/// `v119` revision (Activity Log), its Degraded health and its image
+/// rollout (deployment or activity) land inside a 6h chart, from the demo
+/// fixtures alone through the same row builders `W` uses (#152). `ca-orders-api`
+/// carries the other half of the story, the fired alert.
+#[test]
+fn the_demo_has_change_markers_on_the_orders_container_apps() {
+    use crate::azure::services::activity::{activity_path, activity_query_since};
+    use crate::azure::timeline::{activity_rows, alert_rows, alerts_request, health_path, health_rows, LensWindow};
+    use crate::ui::widgets::metrics_overlay::marker_positions;
+
+    const NOW: i64 = 1_790_000_000;
+    let app = |name: &str| {
+        format!("/subscriptions/{}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/{name}", crate::demo::PROD)
+    };
+    let get = |path: &str, query: &[(String, String)], version: &str| -> Vec<Value> {
+        let mut q: Vec<String> = query.iter().map(|(k, v)| format!("{k}={v}")).collect();
+        q.push(format!("api-version={version}"));
+        let r = crate::demo::respond(path, &q.join("&"), NOW);
+        assert_eq!(r.status, 200, "{path}: {}", r.body);
+        let v: Value = serde_json::from_str(&r.body).unwrap();
+        v["value"].as_array().cloned().unwrap_or_default()
+    };
+
+    let worker = app("ca-orders-worker");
+    let since = NOW - LensWindow::Week.days() * 86_400;
+    let events = get(&activity_path(&worker).unwrap(), &activity_query_since(&worker, since), "2015-04-01");
+    let mut rows = activity_rows(&events, since, false);
+    rows.extend(health_rows(&get(&health_path(&worker).unwrap(), &[], "2025-05-01"), since));
+    let in_6h = marker_positions(&rows, NOW, 6 * 3600);
+    assert!(
+        in_6h.iter().any(|m| m.failed),
+        "ca-orders-worker: a failed change in the last 6h, got {:?}",
+        rows.iter().map(|r| (&r.what, NOW - r.ts_secs)).collect::<Vec<_>>()
+    );
+
+    let api = app("ca-orders-api");
+    let (path, query) = alerts_request(&api, LensWindow::Week).unwrap();
+    let alerts = get(&path, &query, "2019-03-01");
+    let rows = alert_rows(&alerts, since);
+    assert!(!marker_positions(&rows, NOW, 6 * 3600).is_empty(), "ca-orders-api: the fired alert is inside 6h");
+}

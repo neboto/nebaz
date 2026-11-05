@@ -650,6 +650,16 @@ pub struct App {
     /// The timeline's window and `a` mode: sticky across opens.
     timeline_window: crate::azure::timeline::LensWindow,
     timeline_include_all: bool,
+    /// Change markers on the `m` chart (#152): `c` toggles, sticky, on.
+    pub chart_markers: bool,
+    /// The timeline rows behind those markers: the `W` sources for the
+    /// charted resource, fetched once per `m` open and widened to the
+    /// range (`app/timeline.rs`). Never set while `W` is open from
+    /// elsewhere; `W` from the charts takes it over and Esc gives it back.
+    pub chart_timeline: Option<crate::ui::widgets::timeline_lens::TimelineLensState>,
+    /// The metrics view parked while `W` (opened from it) is up; `Esc`
+    /// there restores it as left (range, stat, cursor, picked metrics).
+    pub metrics_parked: Option<crate::ui::widgets::metrics_overlay::MetricsState>,
     /// `@changes`'s window (#61): `[` / `]` on its list.
     pub changes_window: crate::azure::services::changes::ChangesWindow,
 
@@ -833,6 +843,9 @@ impl App {
             timeline_generation: 0,
             timeline_window: Default::default(),
             timeline_include_all: false,
+            chart_markers: true,
+            chart_timeline: None,
+            metrics_parked: None,
             changes_window: Default::default(),
             audit: audit::AuditState::default(),
             click_regions: RefCell::new(Vec::new()),
@@ -1098,6 +1111,8 @@ impl App {
         self.refs_lens = None;
         self.metrics = None;
         self.timeline = None;
+        self.chart_timeline = None;
+        self.metrics_parked = None;
         if let Some(service) = self.current_service {
             let sub = self.subscription_key();
             self.cache.invalidate(&service, &sub, Some(self.cache_variant()));
@@ -1623,6 +1638,8 @@ impl App {
         self.refs_lens = None;
         self.metrics = None;
         self.timeline = None;
+        self.chart_timeline = None;
+        self.metrics_parked = None;
         self.load_service_resources();
         App::trigger_locations(self, event_tx);
         Ok(())

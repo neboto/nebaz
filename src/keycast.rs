@@ -241,6 +241,7 @@ fn fallback(key: KeyEvent, after: &View) -> Option<&'static str> {
         KeyCode::Char('f') if after.overlay == Some("referenced by") => Some("service filter"),
         KeyCode::Char('L') if after.overlay == Some("referenced by") => Some("load likely"),
         KeyCode::Char('a') if after.overlay == Some("metrics") => Some("all metrics"),
+        KeyCode::Char('c') if after.overlay == Some("metrics") => Some("change markers"),
         KeyCode::Char('F') => Some("state filter"),
         KeyCode::Char('y') => Some("copy"),
         KeyCode::Char('e') => Some("open in editor"),

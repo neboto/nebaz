@@ -31,7 +31,24 @@ pub fn timeline_target(r: &dyn Resource) -> Option<String> {
     r.id().starts_with("/subscriptions/").then(|| r.id().to_string())
 }
 
+/// Which state a timeline fetch fills: the `W` lens, or the rows behind
+/// the `m` chart's change markers.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum TimelineTarget {
+    Lens,
+    Markers,
+}
+
 impl App {
+    /// Where a landing source goes: the lens if it is up, else the markers'
+    /// rows. The two are never both live (the round trip moves one state).
+    fn timeline_sink(&mut self) -> Option<&mut TimelineLensState> {
+        match self.timeline.as_mut() {
+            Some(st) => Some(st),
+            None => self.chart_timeline.as_mut(),
+        }
+    }
+
     /// Whether `W` has a timeline for the selected row (the status-bar hint).
     pub fn supports_timeline(&self) -> bool {
         self.get_selected_resource().is_some_and(|r| timeline_target(r).is_some())
@@ -53,6 +70,8 @@ impl App {
         };
         self.network_lens = None;
         self.metrics = None;
+        self.metrics_parked = None;
+        self.chart_timeline = None;
         self.refs_lens = None;
         self.timeline = Some(TimelineLensState::open(title, id, self.timeline_window, self.timeline_include_all));
         // From the list: the pane behind the lens is the default section,
@@ -61,20 +80,96 @@ impl App {
             self.details_focused = true;
             self.reset_detail_section_to_default(event_tx);
         }
-        self.fetch_timeline(event_tx);
+        self.fetch_timeline(event_tx, TimelineTarget::Lens);
+    }
+
+    /// `W` in the metrics view: the view is parked as it is and the lens
+    /// opens on the markers' rows (already fetched, no second call), or
+    /// fetches them when the markers were off.
+    pub(super) fn metrics_to_timeline(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(m) = self.metrics.take() else {
+            return;
+        };
+        let fresh = self.chart_timeline.is_none();
+        let mut tl = self.chart_timeline.take().unwrap_or_else(|| {
+            TimelineLensState::open(m.title.clone(), m.resource_id.clone(), m.window.timeline_window(), false)
+        });
+        if tl.include_all != self.timeline_include_all {
+            tl.toggle_include_all();
+        }
+        self.metrics_parked = Some(m);
+        self.timeline = Some(tl);
+        if fresh {
+            self.fetch_timeline(event_tx, TimelineTarget::Lens);
+        }
+    }
+
+    /// The lens closes to the charts it was opened from: the view comes
+    /// back as it was and the lens's rows go back behind the markers, asked
+    /// again for the range if the lens held a shorter window.
+    fn timeline_back_to_metrics(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let (Some(m), Some(mut tl)) = (self.metrics_parked.take(), self.timeline.take()) else {
+            return;
+        };
+        // The markers are changes, whatever `a` showed in the lens.
+        if tl.include_all {
+            tl.toggle_include_all();
+        }
+        self.metrics = Some(m);
+        self.chart_timeline = Some(tl);
+        self.widen_chart_markers(event_tx);
+    }
+
+    /// Start the markers' fetch for the open metrics view: the `W`
+    /// sources over the week or month its range needs. Nothing when they
+    /// are hidden, already held, or the view has no ARM resource.
+    pub(super) fn seed_chart_markers(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let Some(m) = self.metrics.as_ref() else {
+            return;
+        };
+        if !self.chart_markers || self.chart_timeline.is_some() || health_path(&m.resource_id).is_none() {
+            return;
+        }
+        self.chart_timeline = Some(TimelineLensState::open(
+            m.title.clone(),
+            m.resource_id.clone(),
+            m.window.timeline_window(),
+            false,
+        ));
+        self.fetch_timeline(event_tx, TimelineTarget::Markers);
+    }
+
+    /// The range changed: when the markers' timeline holds less than the
+    /// chart now spans (`[` wrapping to 30d, `5`), widen it and ask again.
+    /// A shorter range filters at draw time and never refetches.
+    pub(super) fn widen_chart_markers(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        let (Some(m), Some(tl)) = (self.metrics.as_ref(), self.chart_timeline.as_mut()) else {
+            return;
+        };
+        let need = m.window.timeline_window();
+        if tl.window.days() < need.days() {
+            tl.window = need;
+            self.fetch_timeline(event_tx, TimelineTarget::Markers);
+        }
     }
 
     /// One task per source, each delivered through the apply-closure event
     /// under the lazy epoch (a subscription switch drops it) and the
     /// timeline generation (a reopen, a window change or `r` supersedes it).
-    fn fetch_timeline(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+    pub(super) fn fetch_timeline(&mut self, event_tx: &mpsc::UnboundedSender<Event>, target: TimelineTarget) {
         self.timeline_generation += 1;
         let generation = self.timeline_generation;
-        let Some(st) = self.timeline.as_ref() else {
+        let state = match target {
+            TimelineTarget::Lens => self.timeline.as_mut(),
+            TimelineTarget::Markers => self.chart_timeline.as_mut(),
+        };
+        let Some(st) = state else {
             return;
         };
         let (id, window) = (st.resource_id.clone(), st.window);
-        self.timeline_window = window;
+        if target == TimelineTarget::Lens {
+            self.timeline_window = window;
+        }
         let since = now_secs() - window.days() * 86_400;
         let is_resource = health_path(&id).is_some();
 
@@ -87,7 +182,7 @@ impl App {
         if deployments.is_some() {
             sources.push(TimelineSource::Deployment);
         }
-        if let Some(st) = self.timeline.as_mut() {
+        if let Some(st) = self.timeline_sink() {
             st.begin(sources, since);
             if health.is_none() {
                 st.note("Resource Health: resources only".into());
@@ -158,7 +253,7 @@ impl App {
                 if app.timeline_generation != generation {
                     return;
                 }
-                if let Some(st) = app.timeline.as_mut() {
+                if let Some(st) = app.timeline_sink() {
                     land(st, result);
                 }
             });
@@ -168,6 +263,7 @@ impl App {
 
     fn close_timeline(&mut self) {
         self.timeline = None;
+        self.metrics_parked = None;
         if self.layout_mode == LayoutMode::DetailsOnly {
             self.layout_mode = LayoutMode::Split;
         }
@@ -184,7 +280,11 @@ impl App {
             KeyCode::Char('d') if ctrl => st.move_by(PAGE_STEP as isize),
             KeyCode::Char('u') if ctrl => st.move_by(-(PAGE_STEP as isize)),
             KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('W') | KeyCode::Char('h') | KeyCode::Left => {
-                self.close_timeline()
+                if self.metrics_parked.is_some() {
+                    self.timeline_back_to_metrics(event_tx);
+                } else {
+                    self.close_timeline()
+                }
             }
             KeyCode::Char('j') | KeyCode::Down => st.move_by(1),
             KeyCode::Char('k') | KeyCode::Up => st.move_by(-1),
@@ -201,17 +301,17 @@ impl App {
                 let next = st.window.next();
                 if next != st.window {
                     st.window = next;
-                    self.fetch_timeline(event_tx);
+                    self.fetch_timeline(event_tx, TimelineTarget::Lens);
                 }
             }
             KeyCode::Char('[') => {
                 let prev = st.window.prev();
                 if prev != st.window {
                     st.window = prev;
-                    self.fetch_timeline(event_tx);
+                    self.fetch_timeline(event_tx, TimelineTarget::Lens);
                 }
             }
-            KeyCode::Char('r') | KeyCode::F(5) => self.fetch_timeline(event_tx),
+            KeyCode::Char('r') | KeyCode::F(5) => self.fetch_timeline(event_tx, TimelineTarget::Lens),
             // The row's named fields in `$EDITOR`; `e` the whole timeline.
             KeyCode::Enter | KeyCode::Char('v') => {
                 if st.selected_row().is_some() {
