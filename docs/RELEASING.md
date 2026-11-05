@@ -85,10 +85,8 @@ The dependency tree is small (azure_core + azure_identity + reqwest/rustls,
 ratatui, tokio), so a full `cargo update` is usually safe here — check it
 builds and that `cargo test` still passes before committing the lock.
 
-Known leftovers and why they're accepted:
-
-- `lru 0.12` / `paste` (unmaintained): via `ratatui 0.26`. Neither is
-  reachable from the TUI's usage; goes away with a ratatui upgrade.
+Known leftovers and why they're accepted: none. The `lru 0.12` /
+`paste` warnings left with ratatui 0.30.
 
 ## Cutting a release
 

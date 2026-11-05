@@ -6,7 +6,6 @@ use ratatui::{
     style::Style,
     text::{Line, Span},
     widgets::{
-        block::{Position, Title},
         List, ListItem, Paragraph,
     },
     Frame,
@@ -159,11 +158,7 @@ pub fn render_resource_list(app: &App, area: Rect, frame: &mut Frame) {
         Style::default().fg(theme::text_dim())
     };
 
-    let block = theme::pane_block(&title, focused).title(
-        Title::from(Span::styled(corner_text, corner_style))
-            .position(Position::Bottom)
-            .alignment(Alignment::Right),
-    );
+    let block = theme::pane_block(&title, focused).title_bottom(Line::from(Span::styled(corner_text, corner_style)).right_aligned());
 
     // Empty states: centered message with a contextual hint
     if app.filtered_resources.is_empty() {

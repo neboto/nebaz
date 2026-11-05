@@ -69,9 +69,9 @@ run flat-and-select ok sub '[{"wait": "Partner Dev"}, "\r", "\\", "V", "J", "J",
 # Ctrl-N moves down in a picker (it used to type `n` into the filter).
 # The picker lists services by category (`ServiceType::CATEGORIES`), then
 # in `ServiceType::all()` order: Subscriptions → Power Platform →
-# Governance (all Management) → Virtual Machines → Storage, then Enter. A
+# Governance → Advisor (all Management) → Virtual Machines → Storage, then Enter. A
 # new service in Management or Compute needs one more press here.
-run picker-ctrl-n ok sub '[{"wait": "Partner Dev"}, "S", "\u000e", "\u000e", "\u000e", "\u000e", "\r"]' \
+run picker-ctrl-n ok sub '[{"wait": "Partner Dev"}, "S", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\r"]' \
   "Loading Storage…"
 
 # A seventh tab still fits, and the Foundry list goes to ARM like the rest.

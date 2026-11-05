@@ -367,13 +367,13 @@ impl Harness {
     /// The terminal cursor after a fresh draw (where the search bar edits).
     pub fn cursor(&mut self) -> (u16, u16) {
         self.draw();
-        self.terminal.get_cursor().expect("cursor")
+        self.terminal.get_cursor_position().expect("cursor").into()
     }
 
     /// Whether the cell at `(x, y)` is drawn reverse-video, after a fresh draw.
     pub fn reversed_at(&mut self, (x, y): (u16, u16)) -> bool {
         self.draw();
-        self.terminal.backend().buffer().get(x, y).modifier.contains(ratatui::style::Modifier::REVERSED)
+        self.terminal.backend().buffer()[(x, y)].modifier.contains(ratatui::style::Modifier::REVERSED)
     }
 
     /// Whether any cell of a fresh frame is drawn with foreground `color`.

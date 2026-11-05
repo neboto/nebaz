@@ -90,11 +90,11 @@ async fn a_policy_rule_is_drawn_with_syntax_colours() {
     let (x, y) = h.find("\"effect\"");
     let (vx, _) = h.find("\"deny\"");
     let buffer = h.terminal.backend().buffer();
-    assert_eq!(buffer.get(x, y).fg, crate::ui::theme::accent(), "a key");
-    assert_eq!(buffer.get(vx, y).fg, crate::ui::theme::success(), "a string value");
+    assert_eq!(buffer[(x, y)].fg, crate::ui::theme::accent(), "a key");
+    assert_eq!(buffer[(vx, y)].fg, crate::ui::theme::success(), "a string value");
     // Off: the same cells are plain text.
     h.app.syntax_highlight = false;
     h.render();
     let buffer = h.terminal.backend().buffer();
-    assert_eq!(buffer.get(vx, y).fg, crate::ui::theme::text_primary());
+    assert_eq!(buffer[(vx, y)].fg, crate::ui::theme::text_primary());
 }

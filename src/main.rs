@@ -211,7 +211,7 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     let show_sub_tabs = !sub_tabs.is_empty();
     // Hide the top banner on the welcome splash — it has its own logo.
     let show_banner = app.banner_visible && app.current_service.is_some();
-    let layout = AppLayout::new(frame.size(), show_banner, show_sub_tabs, app.layout_mode);
+    let layout = AppLayout::new(frame.area(), show_banner, show_sub_tabs, app.layout_mode);
 
     if let Some(banner_area) = layout.banner_area {
         banner::render_banner(banner_area, frame);

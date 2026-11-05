@@ -679,7 +679,7 @@ mod tests {
         let mut st = MetricsState::open("/x".into(), "VM · x".into(), vec![], MetricWindow::OneHour);
         st.end = END;
         let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(100, 16)).unwrap();
-        terminal.draw(|f| render_value_chart(&s, &st, markers, Color::Green, f.size(), f)).unwrap();
+        terminal.draw(|f| render_value_chart(&s, &st, markers, Color::Green, f.area(), f)).unwrap();
         terminal.backend().buffer().clone()
     }
 

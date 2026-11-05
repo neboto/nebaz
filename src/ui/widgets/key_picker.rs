@@ -80,7 +80,7 @@ pub fn render_key_picker(app: &App, frame: &mut Frame) {
     if !state.visible {
         return;
     }
-    let area = centered_rect(64, 60, frame.size());
+    let area = centered_rect(64, 60, frame.area());
     frame.render_widget(Clear, area);
     app.mouse.popup.borrow_mut().record_area(area);
 
