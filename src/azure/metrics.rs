@@ -329,14 +329,15 @@ const APP_GATEWAY: &[MetricSpec] = &[
     m("ApplicationGatewayTotalTime", "Total time", Avg),
     m("Throughput", "Throughput", Avg),
 ];
-/// Front Door Standard / Premium (`Microsoft.Cdn/profiles`).
+/// Front Door Standard / Premium (`Microsoft.Cdn/profiles`). Its WAF
+/// request count is the WAF view's (`azure::waf_metrics`, split by action
+/// and rule), so it is not a line here.
 const FRONT_DOOR: &[MetricSpec] = &[
     m("RequestCount", "Requests", Total),
     m("Percentage4XX", "4xx", Avg),
     m("Percentage5XX", "5xx", Avg),
     m("OriginHealthPercentage", "Origin health", Avg),
     m("TotalLatency", "Total latency", Avg),
-    m("WebApplicationFirewallRequestCount", "WAF matches", Total),
 ];
 /// ExpressRoute circuit: is BGP and ARP up towards the peers, and the
 /// traffic each way.
@@ -895,7 +896,12 @@ pub(crate) mod tests {
         assert!(!supports_metrics(&p("Microsoft.Network/firewallPolicies/fwp")));
         assert!(names(&p("Microsoft.RecoveryServices/vaults/rsv")).contains(&"BackupHealthEvent"));
         assert!(names(&p("Microsoft.DataProtection/backupVaults/bv")).contains(&"RestoreHealthEvent"));
+        // A WAF policy has no metrics of its own: `m` on one opens the WAF
+        // view of what it is attached to (`App::supports_metrics`, which
+        // knows the row), and the id alone has no default set.
         assert!(!supports_metrics(&p("Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/w")));
+        assert!(!supports_metrics(&p("Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/w")));
+        assert!(!names(&p("Microsoft.Cdn/profiles/afd")).contains(&"WebApplicationFirewallRequestCount"));
         // A child with no set of its own, a group, a subscription.
         assert!(!supports_metrics(&p("Microsoft.Network/virtualNetworks/v/subnets/s")));
         assert!(!supports_metrics("/subscriptions/0000/resourceGroups/rg"));

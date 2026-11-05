@@ -277,6 +277,9 @@ each one backs are in the catalog table
   and, for the all-metrics picker, `Microsoft.Insights/metricDefinitions/read`.
   Both are control-plane `GET`s on the resource's own id (platform
   metrics only; no log query); a 403 is a line in the view, never fatal.
+  The WAF view (`m` on an Application Gateway, Front Door profile or WAF
+  policy) adds a `$filter` / `top` / `orderby` to the same metrics `GET`
+  to split a metric by dimension: the same action, no new permission.
 - **Change timeline** (`W`, any ARM row): the Activity log action
   above, `Microsoft.AlertsManagement/alerts/read` (fired alerts),
   `Microsoft.ResourceHealth/availabilityStatuses/read` (the health

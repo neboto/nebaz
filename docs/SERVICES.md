@@ -280,6 +280,47 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     to 30d, `]` and `5` widen and refetch; shorter ranges filter at draw
     time). `c` hides them, `W` parks the view and opens the timeline on
     those rows, `Esc` there returns to the charts as left.
+    **WAF view** (#153, `src/azure/waf_metrics.rs`, drawn by
+    `src/ui/widgets/metrics_waf.rs`): `m` on an Application Gateway that
+    runs a WAF (`AppGatewayRow::has_waf`), a Front Door Standard / Premium
+    profile (`Microsoft.Cdn/profiles`) or a WAF policy opens the WAF view
+    instead of the default set (`d` shows the default set, `w` returns).
+    It is the one place the metrics calls carry a **`$filter`** that splits
+    a metric by dimension (`Action eq '*' and RuleID eq '*'`, plus
+    `top=` and `orderby=total desc`); still the same `GET` on the
+    resource's own id, `2023-10-01`, no `metricnamespace`, so `Reader`
+    covers it. One call per metric (their dimensions differ): App Gateway
+    `AzwafTotalRequests` by `Action`; `AzwafSecRule` by `Action`, `RuleID`
+    and, when the API accepts them, `RuleGroupID`, `RuleSetName`,
+    `PolicyName`; `AzwafCustomRule` by `Action`, `CustomRuleID`;
+    `AzwafBotProtection` by `Action`, `Category` (a failed bot call is
+    dropped: most gateways have none). Front Door
+    `WebApplicationFirewallRequestCount` by `Action`, and by `Action` and
+    `RuleName` (+ `PolicyName`) for the table; its unsplit "WAF matches"
+    line left the default set. A call refused with the optional dimensions
+    is retried once with the required ones and no `orderby`. The view: one
+    line per action (allow green, block red, log amber, other neutral) with
+    a sparkline, a **block rate** row, the actions on one chart with the
+    change markers behind them, and per-rule tables (rule, set, group,
+    policy, matches, blocked; a column with nothing in it is hidden, the
+    policy column only when the rows span several) beside the chart from 110
+    columns, under it below. `Tab` moves between tables, `j` / `k` along
+    one, `⏎` charts the rule's actions over time (from the rows already
+    fetched, no call), `d` / `Esc` go back, `y` copies the rule. **Block
+    rate** is neboto's rule: `Block ÷ (Allow + Block + Other)`; an action
+    whose word says log, count, detect, match, anomaly or monitor
+    (`classify_action`) left out, 0% for a minute with no requests; an
+    action word it does not know counts as ending the request. The API
+    returns at most `top` series per call (60 for the rule tables), so a
+    table at that size says "top N series by total; more may not be
+    shown": the real count of the rest is not knowable. **From a policy**
+    the view is the resource it is attached to (`applicationGateways`,
+    `httpListeners`, `pathBasedRules`, a Front Door profile's
+    `securityPolicyLinks`, folded to the top-level resource), with
+    `PolicyName eq '<policy>'` pinned in every call; attached to several,
+    the first is shown, the header says "1 of N attached" and `n` steps
+    through them; attached only to a classic Front Door (not covered) or
+    nothing, `m` says so.
 20. **`C` command picker** (#47, ADR 0005, `src/azure/cli_actions.rs`):
     the row's read command first (rule 9; `⏎` on it is the old `C`),
     then the type's commands in three tiers, then two reads every ARM
@@ -962,7 +1003,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Access (every type) | 1 per row, on demand, plus 1 per subscription for role names | `{id}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()` · `/subscriptions/{sub}/providers/Microsoft.Authorization/roleDefinitions` · `2022-04-01` |
 | Access principal names (Graph) | 1 per principal, on demand, at most 50 per section, cached by object id | Graph `/v1.0/directoryObjects/{id}` (never `getByIds`, a `POST`) |
 | Activity (every type) | 1 per row, on demand, stopping at 500 events | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{7 days ago}' and resourceUri eq '{id}'` · `2015-04-01` (the only stable version) |
-| Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1 | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
+| Metrics (`m`, rule 19) | 1 per aggregation in the default set (2–3), on demand, each open, window change and `r`; a failed multi-name call adds 1 per name. The `a` picker: 1. The WAF view: 4 for App Gateway (one per WAF metric), 2 for Front Door, +1 per call refused with its optional dimensions | `{id}/providers/Microsoft.Insights/metrics?metricnames=…&timespan=…&interval=…&aggregation=…&AutoAdjustTimegrain=true` (WAF view: `&$filter=Action eq '*' and …&top=…&orderby=total desc`) · `{id}/providers/Microsoft.Insights/metricDefinitions` · `2023-10-01` |
 | Change timeline (`W`, rule 23) | 3–4 per open, window change and `r`, on demand: the Activity Log (stopping at 1,000 events), fired alerts, the resource's health history (resources only), the group's deployments (each stopping at 200) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=…` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts?targetResource={id}&timeRange=7d` · `2019-03-01` (the only stable version); `{id}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `2025-04-01` |
 | `@changes` (rule 24) | per window, on load and `r`: the Activity Log (≤10 pages), Resource Health (≤20 pages), then 1 per group with a deployment in the window (≤20); Graph: ≤50 caller lookups (2 when an id is an app id) | `/subscriptions/{sub}/providers/Microsoft.Insights/eventtypes/management/values?$filter=eventTimestamp ge '{window start}'` · `2015-04-01`; `/subscriptions/{sub}/providers/Microsoft.ResourceHealth/availabilityStatuses` · `2025-05-01`; `/subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` (or `/subscriptions/{sub}/providers/Microsoft.Resources/deployments`) · `2025-04-01`; Graph `/v1.0/directoryObjects/{id}`, `/v1.0/servicePrincipals(appId='{id}')` |
 | `@audit` (rule 25) | 0 on open (the warm caches only). `r`: each uncached source list once (the rows above), then at most 50 each of SQL Firewall, Redis firewall rules, Service Bus and Event Hubs network rule sets, App Configuration and Access principal names, plus the subscription's Access list and its flow logs (rule 30). `nebaz audit` makes the same calls | the paths of the rows above |

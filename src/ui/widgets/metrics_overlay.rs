@@ -54,6 +54,11 @@ pub struct MetricsState {
     /// The window's end, epoch seconds (the chart's `now`).
     pub end: i64,
     pub picker: Option<MetricPicker>,
+    /// The WAF view (#153) of this resource, when it has one; `waf_on`
+    /// says it is what the pane shows (`d` shows the default set instead,
+    /// `w` comes back).
+    pub waf: Option<super::metrics_waf::WafState>,
+    pub waf_on: bool,
 }
 
 impl MetricsState {
@@ -76,6 +81,19 @@ impl MetricsState {
         self.selected = self.selected.min(self.series.len().saturating_sub(1));
     }
 
+    pub fn set_waf(&mut self, data: crate::azure::waf_metrics::WafData) {
+        self.loading = false;
+        self.end = data.end;
+        if let Some(w) = self.waf.as_mut() {
+            w.set_data(data);
+        }
+    }
+
+    /// The WAF view is what the pane shows.
+    pub fn waf_view(&self) -> bool {
+        self.waf_on && self.waf.is_some() && self.picker.is_none()
+    }
+
     pub fn selected_series(&self) -> Option<&MetricSeries> {
         self.series.get(self.selected)
     }
@@ -84,6 +102,12 @@ impl MetricsState {
         if let Some(p) = self.picker.as_mut() {
             let max = p.defs.len().saturating_sub(1) as isize;
             p.selected = (p.selected as isize + delta).clamp(0, max.max(0)) as usize;
+            return;
+        }
+        if self.waf_view() {
+            if let Some(w) = self.waf.as_mut() {
+                w.move_row(delta);
+            }
             return;
         }
         let max = self.series.len().saturating_sub(1) as isize;
@@ -97,6 +121,10 @@ impl MetricsState {
     /// Every line, as text (the `e` editor view).
     pub fn as_text(&self) -> String {
         let mut out = format!("Metrics — {} — last {}\n\n", self.title, self.window.label());
+        if self.waf_view() {
+            out.push_str(&self.waf.as_ref().map(|w| w.as_text()).unwrap_or_default());
+            return out;
+        }
         for s in &self.series {
             out.push_str(&s.summary());
             out.push('\n');
@@ -106,7 +134,7 @@ impl MetricsState {
 }
 
 /// One character per column, the column's mean on an eight-step scale.
-fn spark_line(points: &[(i64, f64)], width: usize) -> String {
+pub(crate) fn spark_line(points: &[(i64, f64)], width: usize) -> String {
     const BARS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
     let n = points.len();
     if n == 0 || width == 0 {
@@ -153,6 +181,8 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
         Span::styled(
             if st.picker.is_some() {
                 "  · all metrics".to_string()
+            } else if st.waf_view() {
+                waf_header(st)
             } else if st.curated {
                 "  · default set".to_string()
             } else {
@@ -210,6 +240,8 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
     let mut rows = app.mouse.pane_rows.borrow_mut();
     if let Some(p) = &st.picker {
         render_picker(p, chunks[2], &mut rows, frame);
+    } else if let (true, Some(w)) = (st.waf_view(), st.waf.as_ref()) {
+        super::metrics_waf::render_waf(st, w, app.marker_source(), chunks[2], frame);
     } else {
         render_series(st, app.marker_source(), chunks[2], &mut rows, frame);
     }
@@ -218,6 +250,25 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
     // ── Footer ──
     let hints: &[(&str, &str)] = if st.picker.is_some() {
         &[("j/k", "select"), ("⏎", "chart it"), ("Esc", "back")]
+    } else if st.waf_view() {
+        let w = st.waf.as_ref();
+        if w.is_some_and(|w| w.targets.len() > 1) {
+            &[("j/k", "rule"), ("Tab", "table"), ("⏎", "chart rule"), ("n", "next"), ("d", "back"), ("[/]", "range"), ("c", "changes"), ("y", "copy"), ("r", "refetch"), ("Esc", "close")]
+        } else {
+            &[("j/k", "rule"), ("Tab", "table"), ("⏎", "chart rule"), ("d", "back"), ("[/]", "range"), ("c", "changes"), ("W", "timeline"), ("y", "copy"), ("r", "refetch"), ("Esc", "close")]
+        }
+    } else if st.waf.is_some() {
+        &[
+            ("j/k", "select"),
+            ("[/]", "range"),
+            ("w", "WAF view"),
+            ("a", "all metrics"),
+            ("c", "changes"),
+            ("W", "timeline"),
+            ("y", "copy"),
+            ("r", "refetch"),
+            ("Esc", "close"),
+        ]
     } else {
         &[
             ("j/k", "select"),
@@ -237,6 +288,23 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
     let c = chunks[3];
     crate::app::record_hint_regions(app, &footer, 1, c.x, c.y, c.x + c.width);
     frame.render_widget(Paragraph::new(footer), c);
+}
+
+/// `· WAF view · policy wafp-1 · 2 of 3 attached (n next)`.
+fn waf_header(st: &MetricsState) -> String {
+    let mut s = String::from("  · WAF view");
+    if let Some(w) = &st.waf {
+        if let Some(p) = &w.policy {
+            s.push_str(&format!(" · policy {p}"));
+        }
+        if w.targets.len() > 1 {
+            s.push_str(&format!(" · {} of {} attached (n next)", w.target + 1, w.targets.len()));
+        }
+        if !w.skipped.is_empty() {
+            s.push_str(&format!(" · {} attachment(s) without a WAF view", w.skipped.len()));
+        }
+    }
+    s
 }
 
 fn render_picker(p: &MetricPicker, area: Rect, hits: &mut crate::app::PopupHits, frame: &mut Frame) {
@@ -461,6 +529,13 @@ fn marker_legend(rows: &[TimelineRow], drawn: &[Marker], loading: bool, width: u
     Line::from(spans)
 }
 
+/// One line of a chart: its name (the legend), colour and points.
+pub struct ChartLine<'a> {
+    pub name: &'a str,
+    pub color: Color,
+    pub points: &'a [(i64, f64)],
+}
+
 /// The selected metric as a braille line chart over the window, with the
 /// change markers behind the line when there are any.
 fn render_value_chart(
@@ -471,17 +546,37 @@ fn render_value_chart(
     area: Rect,
     frame: &mut Frame,
 ) {
+    let title = format!(" {} · {} ({}) ", s.label, s.name, s.aggregation.short());
+    let title = vec![Span::styled(title, Style::default().fg(color).add_modifier(Modifier::BOLD))];
+    let line = ChartLine { name: &s.label, color, points: &s.points };
+    render_lines_chart(title, &s.unit, &[line], st, markers, area, frame);
+}
+
+/// Any number of lines over the window on one axis (the WAF view draws
+/// its actions this way), with the change markers behind them. The
+/// markers' x origin is the window's start, `st.end - st.window.secs()`.
+pub fn render_lines_chart(
+    title: Vec<Span<'static>>,
+    unit: &str,
+    lines: &[ChartLine],
+    st: &MetricsState,
+    markers: Option<&MarkerSource>,
+    area: Rect,
+    frame: &mut Frame,
+) {
     let x_max = st.window.secs() as f64;
     let start = st.end - st.window.secs();
-    let data: Vec<(f64, f64)> = s.points.iter().map(|&(t, v)| ((t - start) as f64, v)).collect();
-    let lo = data.iter().map(|(_, y)| *y).fold(0.0_f64, f64::min);
-    let peak = data.iter().map(|(_, y)| *y).fold(f64::MIN, f64::max);
+    let series: Vec<Vec<(f64, f64)>> =
+        lines.iter().map(|l| l.points.iter().map(|&(t, v)| ((t - start) as f64, v)).collect()).collect();
+    let ys = || series.iter().flatten().map(|(_, y)| *y);
+    let lo = ys().fold(0.0_f64, f64::min);
+    let peak = ys().fold(f64::MIN, f64::max);
     let hi = if peak > lo { peak + (peak - lo) * 0.1 } else { lo + 1.0 };
-    let label = |v: f64| Span::styled(fmt_value(v, &s.unit), Style::default().fg(theme::text_dim()));
+    let label = |v: f64| Span::styled(fmt_value(v, unit), Style::default().fg(theme::text_dim()));
     let drawn = markers.map(|m| marker_positions(m.rows, st.end, st.window.secs())).unwrap_or_default();
     // Unnamed datasets, before the series so the data draws on top.
-    let lines: Vec<([(f64, f64); 2], bool)> = drawn.iter().map(|m| ([(m.x, lo), (m.x, hi)], m.failed)).collect();
-    let mut datasets: Vec<Dataset> = lines
+    let marks: Vec<([(f64, f64); 2], bool)> = drawn.iter().map(|m| ([(m.x, lo), (m.x, hi)], m.failed)).collect();
+    let mut datasets: Vec<Dataset> = marks
         .iter()
         .map(|(pts, failed)| {
             Dataset::default()
@@ -491,16 +586,17 @@ fn render_value_chart(
                 .style(Style::default().fg(if *failed { theme::error() } else { theme::text_dim() }))
         })
         .collect();
-    datasets.push(
-        Dataset::default()
-            .data(&data)
-            .marker(symbols::Marker::Braille)
-            .graph_type(GraphType::Line)
-            .style(Style::default().fg(color)),
-    );
-    let title = format!(" {} · {} ({}) ", s.label, s.name, s.aggregation.short());
+    for (data, l) in series.iter().zip(lines) {
+        datasets.push(
+            Dataset::default()
+                .data(data)
+                .marker(symbols::Marker::Braille)
+                .graph_type(GraphType::Line)
+                .style(Style::default().fg(l.color)),
+        );
+    }
     let mut block = Block::default()
-        .title(Span::styled(title, Style::default().fg(color).add_modifier(Modifier::BOLD)))
+        .title(Line::from(title))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme::border_dim()));
     if let Some(m) = markers.filter(|m| m.loading || !m.rows.is_empty()) {

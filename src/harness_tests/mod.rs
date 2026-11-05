@@ -61,6 +61,7 @@ pub(crate) mod mocks;
 mod detail_pane_test;
 mod navigation_test;
 mod metrics_test;
+mod waf_metrics_test;
 mod mouse_test;
 mod network_lens_test;
 mod refs_lens_test;

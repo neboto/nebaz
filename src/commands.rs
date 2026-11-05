@@ -189,7 +189,7 @@ pub static COMMANDS: &[Command] = &[
         false,
     ),
     gated(Actions, "W", "change timeline (f · [ / ])", App::supports_timeline, ("W", "changes"), false),
-    cmd(Actions, "m: c · W", "chart: hide changes · timeline"),
+    cmd(Actions, "m: c · W · w", "chart: changes · timeline · WAF"),
     gated(Actions, "C", "copy an az command (never run)", App::supports_cli_commands, ("C", "copy cmd"), false),
     cmd(Actions, "X", "export detail").runs(Key('X')),
     cmd(Actions, "^X", "export list").runs(Ctrl('x')),

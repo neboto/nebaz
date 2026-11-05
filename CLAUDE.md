@@ -142,6 +142,9 @@ rules computed client-side from GETs (never the POST effective calls),
 `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics,
 owning the detail pane the same way; the default set is keyed by ARM
 type (`curated_metrics`, which also gates the hint), `SERVICES.md` rule 19.
+The WAF view (`src/azure/waf_metrics.rs`, `src/ui/widgets/metrics_waf.rs`)
+is the same view with dimension-split calls: actions, block rate, rule
+tables; a policy opens its gateway's or profile's.
 The chart draws the `W` timeline's events as markers (`App::chart_timeline`,
 fetched through the timeline's own `fetch_timeline`, never a second path);
 `W` from the chart parks the view and `Esc` returns to it.
@@ -298,6 +301,7 @@ verbatim where the concept is unchanged.
 | `src/azure/cli_actions.rs` | the `C` catalogue: every copyable `az` command per type, tiers; the one file the guard lets spell a Connect / Change verb |
 | `src/azure/nsg_eval.rs` | the network lens's evaluation: rule order, shadowing, layers, resolution |
 | `src/azure/metrics.rs` | the metrics view's default sets, request builder, parsers and fetch |
+| `src/azure/waf_metrics.rs` | the WAF view: split queries, action kinds, block rate, rule rows, policy → resource |
 | `src/audit.rs`, `src/audit/checks.rs` | `@audit`: the finding row, `run`, and every check (pure, fixture-tested) |
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |

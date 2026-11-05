@@ -664,6 +664,119 @@ fn arm_type(id: &str) -> String {
     listed_type(id).unwrap_or_default()
 }
 
+/// One WAF series of the demo: its dimensions (lowercase names, as the
+/// API answers them) and requests per minute.
+type WafRow = (&'static [(&'static str, &'static str)], f64);
+
+const AGW_POLICY: &str = "wafp-agw-prod";
+const AFD_POLICY: &str = "wafpafdcontoso";
+const DRS: &str = "Microsoft_DefaultRuleSet_2.1";
+
+/// What the demo's WAFs saw, per minute at a working day's peak:
+/// `agw-contoso-prod` runs `wafp-agw-prod` in Detection (matches are
+/// logged, nothing is blocked: block rate 0%), `afd-contoso` runs
+/// `wafpafdcontoso` in Prevention (SQLI and XSS are blocked, bots only
+/// logged, the anomaly score is not an end).
+fn waf_rows(who: &str, metric: &str) -> Vec<WafRow> {
+    macro_rules! row {
+        ($rate:expr; $($k:literal => $v:expr),+) => {
+            (&[$(($k, $v)),+] as &'static [(&'static str, &'static str)], $rate)
+        };
+    }
+    match (who, metric) {
+        ("agw-contoso-prod", "azwaftotalrequests") => vec![
+            row!(150.0; "action" => "Allowed", "policyname" => AGW_POLICY),
+            row!(5.0; "action" => "Detected", "policyname" => AGW_POLICY),
+        ],
+        ("agw-contoso-prod", "azwafsecrule") => vec![
+            row!(2.0; "action" => "Detected", "ruleid" => "942100", "rulegroupid" => "REQUEST-942-APPLICATION-ATTACK-SQLI", "rulesetname" => DRS, "policyname" => AGW_POLICY),
+            row!(1.4; "action" => "Detected", "ruleid" => "941100", "rulegroupid" => "REQUEST-941-APPLICATION-ATTACK-XSS", "rulesetname" => DRS, "policyname" => AGW_POLICY),
+            row!(0.7; "action" => "Detected", "ruleid" => "920350", "rulegroupid" => "REQUEST-920-PROTOCOL-ENFORCEMENT", "rulesetname" => DRS, "policyname" => AGW_POLICY),
+            row!(0.3; "action" => "Detected", "ruleid" => "930100", "rulegroupid" => "REQUEST-930-APPLICATION-ATTACK-LFI", "rulesetname" => DRS, "policyname" => AGW_POLICY),
+        ],
+        ("agw-contoso-prod", "azwafcustomrule") => vec![row!(12.0; "action" => "Allowed", "customruleid" => "AllowCorpProbes", "policyname" => AGW_POLICY)],
+        ("agw-contoso-prod", "azwafbotprotection") => vec![
+            row!(0.5; "action" => "Detected", "category" => "BadBots", "policyname" => AGW_POLICY),
+            row!(0.2; "action" => "Detected", "category" => "UnknownBots", "policyname" => AGW_POLICY),
+        ],
+        ("afd-contoso", "webapplicationfirewallrequestcount") => vec![
+            row!(25.0; "action" => "Allow", "rulename" => "AllowPartnerIPs", "policyname" => AFD_POLICY),
+            row!(3.0; "action" => "Block", "rulename" => "Microsoft_DefaultRuleSet-2.1-SQLI-942100", "policyname" => AFD_POLICY),
+            row!(1.2; "action" => "Block", "rulename" => "Microsoft_DefaultRuleSet-2.1-XSS-941100", "policyname" => AFD_POLICY),
+            row!(0.8; "action" => "Block", "rulename" => "BlockBadBots", "policyname" => AFD_POLICY),
+            row!(2.0; "action" => "Log", "rulename" => "Microsoft_BotManagerRuleSet-1.1-BadBots-Bot100200", "policyname" => AFD_POLICY),
+            row!(6.0; "action" => "AnomalyScoring", "rulename" => "Microsoft_DefaultRuleSet-2.1-SQLI-942100", "policyname" => AFD_POLICY),
+        ],
+        _ => Vec::new(),
+    }
+}
+
+/// A WAF metric split by dimension: `$filter` names the split dimensions
+/// (`Action eq '*'`) and pins the others (`PolicyName eq 'x'`); series
+/// that agree on the split dimensions add up, the biggest `top` stay.
+fn waf_split(id: &str, name: &str, filter: &str, q: &Query, times: &[i64], step: i64, now: i64) -> Value {
+    let _ = now;
+    let mut split: Vec<String> = Vec::new();
+    let mut pinned: Vec<(String, String)> = Vec::new();
+    for clause in filter.split(" and ") {
+        let Some((dim, rest)) = clause.trim().split_once(" eq ") else { continue };
+        let value = rest.trim().trim_matches('\'').replace("''", "'");
+        if value == "*" {
+            split.push(dim.trim().to_lowercase());
+        } else {
+            pinned.push((dim.trim().to_lowercase(), value));
+        }
+    }
+    let who = name_of(id);
+    let top = q.get("top").and_then(|t| t.parse::<usize>().ok()).unwrap_or(10);
+    let minutes = step as f64 / 60.0;
+    let dim = |row: &WafRow, d: &str| row.0.iter().find(|(k, _)| *k == d).map(|(_, v)| v.to_string());
+    let rows: Vec<WafRow> = waf_rows(&who, &name.to_lowercase())
+        .into_iter()
+        .filter(|r| pinned.iter().all(|(d, v)| dim(r, d).is_some_and(|x| x.eq_ignore_ascii_case(v))))
+        .collect();
+    // (dimension values, per-time totals)
+    type Key = Vec<(String, String)>;
+    let mut series: Vec<(Key, Vec<f64>)> = Vec::new();
+    for r in &rows {
+        let key: Vec<(String, String)> = split.iter().filter_map(|d| Some((d.clone(), dim(r, d)?))).collect();
+        if key.len() != split.len() {
+            continue; // the metric has no such dimension for this row
+        }
+        let values: Vec<f64> = times
+            .iter()
+            .map(|&t| {
+                let day = working_day(t);
+                let j = jitter(id, &format!("{name}{:?}", r.0), t);
+                (r.1 * minutes * (0.25 + 0.75 * day) * (1.0 + 0.3 * j)).round().max(0.0)
+            })
+            .collect();
+        match series.iter_mut().find(|(k, _)| *k == key) {
+            Some((_, v)) => v.iter_mut().zip(&values).for_each(|(a, b)| *a += b),
+            None => series.push((key, values)),
+        }
+    }
+    series.sort_by(|a, b| b.1.iter().sum::<f64>().partial_cmp(&a.1.iter().sum::<f64>()).unwrap_or(std::cmp::Ordering::Equal));
+    series.truncate(top);
+    let timeseries: Vec<Value> = series
+        .iter()
+        .map(|(key, values)| {
+            let data: Vec<Value> = times.iter().zip(values).map(|(&t, v)| json!({"timeStamp": iso_utc(t), "total": v})).collect();
+            let meta: Vec<Value> = key.iter().map(|(k, v)| json!({"name": {"value": k, "localizedValue": k}, "value": v})).collect();
+            json!({"metadatavalues": meta, "data": data})
+        })
+        .collect();
+    json!({
+        "id": format!("{id}/providers/Microsoft.Insights/metrics/{name}"),
+        "type": "Microsoft.Insights/metrics",
+        "name": {"value": name, "localizedValue": name},
+        "displayDescription": "",
+        "unit": "Count",
+        "timeseries": timeseries,
+        "errorCode": "Success",
+    })
+}
+
 fn metrics(id: &str, q: &Query, now: i64) -> Value {
     let timespan = q.get("timespan").unwrap_or("");
     let (start, end) = timespan
@@ -676,9 +789,13 @@ fn metrics(id: &str, q: &Query, now: i64) -> Value {
     let names: Vec<&str> = q.get("metricnames").unwrap_or("").split(',').map(str::trim).filter(|n| !n.is_empty()).collect();
     let first = start + (step - start.rem_euclid(step)) % step;
     let times: Vec<i64> = (0..).map(|i| first + i * step).take_while(|t| *t < end).collect();
+    let filter = q.get("$filter").filter(|f| !f.is_empty());
     let value: Vec<Value> = names
         .iter()
         .map(|name| {
+            if let Some(filter) = filter {
+                return waf_split(id, name, filter, q, &times, step, now);
+            }
             let data: Vec<Value> = times
                 .iter()
                 .map(|&t| {
