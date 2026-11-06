@@ -2944,6 +2944,9 @@ impl App {
         if let Some(lines) = self.gallery_section_lines(resource, idx) {
             return Some(lines);
         }
+        if let Some(lines) = crate::azure::services::budgets::budget_section_lines(resource, idx) {
+            return Some(lines);
+        }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {
             return Some(subscription_section_lines(
                 sub,

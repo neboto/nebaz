@@ -284,7 +284,8 @@
       "policy-exemptions (exempt)",
       "policy-definitions (pdef)",
       "resource-locks (lock)",
-      "management-groups (mg)"
+      "management-groups (mg)",
+      "budgets (budget)"
     ],
     "id": [
       "identities (id)",
@@ -511,6 +512,14 @@
       "Activity",
       "Related",
       "Tags"
+    ],
+    "Budget": [
+      "Overview",
+      "Budget",
+      "Notifications",
+      "Filter",
+      "Activity",
+      "Related"
     ],
     "Cloud NGFW": [
       "Overview",

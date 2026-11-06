@@ -180,7 +180,7 @@ all).
 | `sub` | Subscriptions | Subscriptions, Resource groups (`rg`), All resources (`all`) |
 | `vm` | Virtual Machines | VMs, Disks (`disk`), NICs (`nic`), Scale sets (`vmss`, instances lazy; a Flexible set's VMs are in VMs), ASGs (`asg`: member NICs, the NSG rules that name them), Galleries (`gallery`: image definitions and versions) |
 | `storage` | Storage | Accounts (blob containers lazy) |
-| `gov` | Governance | Policy assignments (management groups' included), exemptions (`exempt`), custom definitions and initiatives (`pdef`), resource locks (`lock`), the management groups you can read (`mg`); never compliance (a POST) |
+| `gov` | Governance | Policy assignments (management groups' included), exemptions (`exempt`), custom definitions and initiatives (`pdef`), resource locks (`lock`), the management groups you can read (`mg`), budgets (`budget`: spend, forecast and thresholds); never compliance or cost queries (POSTs) |
 | `defender` | Defender | Defender for Cloud recommendations with their severity, alerts (`secalert`, never a command line), the secure score and its controls (`score`), which plans are on (`pricing`); beside `@audit`, never in it |
 | `advisor` | Advisor | Advisor recommendations by impact and category with their savings and age (Security ones are Defender's, hidden until `a`), the Advisor score and its history (`advscore`), what was snoozed or dismissed (`snooze`) |
 | `backup` | Backup | Recovery Services vaults (protected items, policies, failed jobs), Backup vaults (`bvault`: backup instances, policies, jobs) |

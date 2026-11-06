@@ -50,6 +50,9 @@ const PLANTED: &[(&str, &str)] = &[
     // compute: the legacy app's Windows image definition and its one
     // version are past end of life.
     ("/galleries/gal_contoso_prod", "end of life"),
+    // core: the subscription's budget has crossed 80% and is forecast
+    // past its amount.
+    ("/budgets/contoso-prod-monthly", "⚠"),
     // network: contoso-dev's endpoint to the partner Private Link service
     // waits for approval; Traffic Manager's on-premises DR endpoint is
     // degraded.

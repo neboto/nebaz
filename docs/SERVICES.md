@@ -957,6 +957,17 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     lands in All resources. The gallery's Related names the warm VMs and
     scale sets built from it (never a call). Replication status needs
     `$expand=ReplicationStatus` on a per-version GET and is left out.
+42. **Budgets are a Governance sub-tab** (#203,
+    `src/azure/services/budgets.rs`): the subscription's
+    `Microsoft.Consumption/budgets` (`@budget`), one list whose bodies
+    carry the current spend and the forecast, so nothing else is read. A
+    budget is a governance row (no Access section; `location`-less, it
+    passes every `R` filter). The list writes ids without the leading
+    slash; the row adds it. The state is spend and forecast against the
+    amount (a budget has no lifecycle word of its own); a notification is
+    ⚠ crossed when the spend (actual) or forecast (forecasted) it watches
+    is past its threshold. **Never**: actual cost and usage (the Cost
+    Management query API is a `POST`).
 
 ## The catalog
 
@@ -1026,6 +1037,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Advisor · Score (rule 34) | Score (score, possible gain, impacted resources, computed, the trend and the daily history) · Recommendations (the warm ones in its category, high impact first) | stateless | its subscription | none (the CLI has no score command) |
 | Advisor · Suppressions (rule 34) | Suppression (snoozed or dismissed, for how long, expiry, the resource, the recommendation id) | `snoozed` or `dismissed` (stopped) | the resource | none (the CLI has no suppression command) |
 | Governance · Management groups (rule 32; tail Activity, Related) | Group ⧗ (parent, direct children: groups and subscriptions, the current one marked; updated when and by whom) · Assignments (the warm Assignments made at the group) · (Overview: display name, group name, tenant; the root group reads `tenant root`) | stateless | none (the Group section's lines jump) | `az account management-group show --name {name} --expand` |
+| Governance · Budgets (rule 42; tail Activity, Related) | Budget (amount, spent and forecast with their share of it, ⚠ at or past 100%, time grain, period, category) · Notifications (each threshold, lowest first: actual or forecasted, operator, ⚠ crossed / not reached / off; emails, roles, action groups jumpable) · Filter (each dimension or tag clause, `not` kept) | spent ≥ amount → unavailable `over budget`, forecast ≥ amount → pending `forecast over`, else available `within`; no spend on the body → stateless | the subscription, the resource groups and resources the filter names, action groups | `az consumption budget show --budget-name {name} --subscription {sub}` (no `--ids`) |
 | Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · Single sign-on (mode; when `saml`: identifiers less the app id, reply URLs, sign-on and logout URLs, relay state, the signing certificate matched by `preferredTokenSigningKeyThumbprint` against each certificate's `customKeyIdentifier`, expiry notification addresses) · Claims ⧗ (the custom claims policy the portal's Attributes & Claims edits, Graph beta: basic claim set, audience override, app id in issuer, group filter, each claim NameID first with its source attribute, constant or transformation chain and any condition, a condition's groups named; then any claims-mapping policy's ClaimsSchema and transformations, which overrides it; a 403 names the directory role it needs) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity. Search also reads reply URLs, service principal names, home page, login / logout URLs, app display name, description, notes | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
@@ -1063,7 +1075,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1219,6 +1231,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Advisor · Suppressions (rule 34) | 1 | `/providers/Microsoft.Advisor/suppressions` · `2025-01-01` |
 | Assignments · Exemptions · Locks (rule 32) | 1 each, unfiltered | `/providers/Microsoft.Authorization/policyAssignments` · `2025-03-01` · `/providers/Microsoft.Authorization/policyExemptions` · `2022-07-01-preview` (no stable version) · `/providers/Microsoft.Authorization/locks` · `2020-05-01` |
 | Management groups (rule 32) | 1, above the subscription | `/providers/Microsoft.Management/managementGroups` · `2023-04-01` |
+| Budgets (rule 42) | 1 (spend and forecast are on each body) | `/providers/Microsoft.Consumption/budgets` · `2024-08-01` |
 | A management group's Group | 1 per group, on demand | `/providers/Microsoft.Management/managementGroups/{name}?$expand=children` · `2023-04-01` |
 | Definitions (rule 32) | 2 | `/providers/Microsoft.Authorization/policyDefinitions?$filter=policyType eq 'Custom'` · `/providers/Microsoft.Authorization/policySetDefinitions?$filter=policyType eq 'Custom'` · `2025-03-01` |
 | An assignment's built-in Definition | 1 per built-in, on demand (tenant root, not under a subscription) | `/providers/Microsoft.Authorization/policyDefinitions/{id}` or `policySetDefinitions/{id}` · `2025-03-01` |
@@ -1351,6 +1364,14 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- The #203 small adds, built without an Azure login from azure-rest-api-specs
+  (`network`, `compute/…/Compute/stable/2025-03-03` GalleryRP,
+  `consumption/…/stable/2024-08-01`). To check: whether `Reader` sees a
+  budget's `currentSpend` and `forecastSpend` (Cost Management Reader may
+  be needed; without them the row is stateless and Spent reads `-`);
+  whether the subscription list returns resource-group budgets too (it is
+  documented per scope); the gallery list's `location` form; a VM's
+  `imageReference.id` casing for a gallery version.
 - Container Instances (#197), built without an Azure login from
   azure-rest-api-specs (`containerinstance/…/ContainerInstance/stable/2026-07-01`)
   and the azure-cli `container` module. To check: whether the

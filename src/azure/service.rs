@@ -293,6 +293,8 @@ pub enum JumpView {
     /// /providers/Microsoft.Management/managementGroups`, ADR 0009
     /// decision 3): above the subscription, cached per subscription.
     ManagementGroups,
+    /// `Microsoft.Consumption/budgets` at the subscription (#203).
+    Budgets,
     // Defender
     /// Defender's assessments, one row per recommendation and resource;
     /// healthy and not-applicable ones are noise.
@@ -356,7 +358,7 @@ impl JumpView {
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
-            PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups => ServiceType::Governance,
+            PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups | Budgets => ServiceType::Governance,
             DefenderRecommendations | DefenderAlerts | SecureScore | DefenderPlans => ServiceType::Defender,
             AdvisorRecommendations | AdvisorScore | AdvisorSuppressions => ServiceType::Advisor,
             ChangesAll | ChangesActivity | ChangesDeployments | ChangesHealth => ServiceType::Changes,
@@ -455,6 +457,7 @@ impl JumpView {
             PolicyDefinitions => "policy-definitions",
             ResourceLocks => "resource-locks",
             ManagementGroups => "management-groups",
+            Budgets => "budgets",
             DefenderRecommendations => "defender-recommendations",
             DefenderAlerts => "defender-alerts",
             SecureScore => "secure-score",
@@ -561,6 +564,7 @@ impl JumpView {
             PolicyDefinitions => "Definitions",
             ResourceLocks => "Locks",
             ManagementGroups => "Management groups",
+            Budgets => "Budgets",
             DefenderRecommendations => "Recommendations",
             DefenderAlerts => "Alerts",
             SecureScore => "Secure score",
@@ -681,6 +685,7 @@ impl JumpView {
             }
             ("microsoft.authorization", ["locks"]) => JumpView::ResourceLocks,
             ("microsoft.management", ["managementgroups"]) => JumpView::ManagementGroups,
+            ("microsoft.consumption", ["budgets"]) => JumpView::Budgets,
             // Defender (ADR 0010): an assessment is an extension resource
             // on what it assessed.
             ("microsoft.security", ["assessments"]) => JumpView::DefenderRecommendations,
@@ -1003,7 +1008,7 @@ impl ServiceType {
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
-            ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups],
+            ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups, Budgets],
             ServiceType::Defender => &[DefenderRecommendations, DefenderAlerts, SecureScore, DefenderPlans],
             ServiceType::Advisor => &[AdvisorRecommendations, AdvisorScore, AdvisorSuppressions],
             ServiceType::Changes => &[ChangesAll, ChangesActivity, ChangesDeployments, ChangesHealth],
@@ -1223,6 +1228,7 @@ impl ServiceType {
             }
             "lock" | "locks" | "resourcelock" | "resourcelocks" => (ServiceType::Governance, Some(JumpView::ResourceLocks)),
             "mg" | "mgs" | "managementgroup" | "managementgroups" => (ServiceType::Governance, Some(JumpView::ManagementGroups)),
+            "budget" | "budgets" | "costbudget" | "costbudgets" => (ServiceType::Governance, Some(JumpView::Budgets)),
             "defender" | "mdc" | "asc" | "rec" | "recs" | "recommendation" | "recommendations" => (ServiceType::Defender, None),
             "secalert" | "secalerts" | "defenderalert" | "defenderalerts" => (ServiceType::Defender, Some(JumpView::DefenderAlerts)),
             "score" | "securescore" => (ServiceType::Defender, Some(JumpView::SecureScore)),
@@ -1280,7 +1286,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1588,6 +1594,8 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@gallery"), Some((ServiceType::VirtualMachines, Some(JumpView::Galleries))));
         // An image definition is a child: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Compute/galleries/gal_prod/images/ubuntu")), None);
+        assert_eq!(JumpView::for_arm_id("/subscriptions/0000/providers/Microsoft.Consumption/budgets/monthly"), Some(JumpView::Budgets));
+        assert_eq!(ServiceType::from_prefix("@budget"), Some((ServiceType::Governance, Some(JumpView::Budgets))));
         assert_eq!(ServiceType::from_prefix("@asg"), Some((ServiceType::VirtualMachines, Some(JumpView::ApplicationSecurityGroups))));
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.ContainerInstance/containerGroups/cg-agents")),

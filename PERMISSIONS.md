@@ -118,7 +118,10 @@ each one backs are in the catalog table
   built-in definition is read by id at the tenant root, which anyone
   signed in may read), `Microsoft.Authorization/locks/read`,
   `Microsoft.Management/managementGroups/read` (only the groups where the
-  role is assigned at a group; none is not an error). All in
+  role is assigned at a group; none is not an error),
+  `Microsoft.Consumption/budgets/read` (Budgets; whether `Reader` also
+  sees each budget's current spend and forecast is to be checked live,
+  else Cost Management Reader). All in
   `Reader` at subscription scope. Never sent: Policy Insights'
   `queryResults` and `summarize` (compliance; `POST`s).
 - **Defender** (ADR 0010): `Microsoft.Security/assessments/read`,
