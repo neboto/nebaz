@@ -104,7 +104,9 @@ each one backs are in the catalog table
   (a Uniform set's instances; a Flexible set's are VMs, the VM list's
   action above); ASGs: `Microsoft.Network/applicationSecurityGroups/read`
   (Members and Rules read the NICs and NSGs lists, the actions above and
-  under Network).
+  under Network); Galleries: `Microsoft.Compute/galleries/read`, and the
+  lazy Images section `Microsoft.Compute/galleries/images/read`,
+  `Microsoft.Compute/galleries/images/versions/read`.
 - **Storage**: `Microsoft.Storage/storageAccounts/read`; the lazy
   Containers section: `Microsoft.Storage/storageAccounts/blobServices/containers/read`
   (container metadata through ARM, never a blob).

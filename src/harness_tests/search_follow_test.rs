@@ -24,7 +24,7 @@ async fn typing_follows_the_matches_and_the_starting_tab_wins_again() {
     h.type_str("payments").await;
     assert_eq!(h.app.current_view, JumpView::Disks);
     assert_eq!(h.visible_names(), ["payments-disk"]);
-    assert_eq!(h.app.sub_tab_match_counts, [Some(0), Some(1), None, None, None], "NICs, scale sets and ASGs are cold");
+    assert_eq!(h.app.sub_tab_match_counts, [Some(0), Some(1), None, None, None, None], "NICs, scale sets, ASGs and galleries are cold");
     assert!(!h.app.loading, "following is served from the cache");
     assert!(h.app.search_active && h.app.search_query == "payments");
 

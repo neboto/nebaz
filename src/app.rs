@@ -156,6 +156,7 @@ mod sql_managed;
 mod ai_search;
 mod container_instances;
 mod network_asg;
+mod gallery;
 mod virtual_wan;
 mod defender;
 mod governance;
@@ -2938,6 +2939,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.asg_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.gallery_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {

@@ -62,6 +62,19 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("compute", "/subscriptions/{{dev}}/providers/Microsoft.App/managedEnvironments", "managed-environments.dev.json"),
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.App/jobs", "jobs.json"),
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.ContainerInstance/containerGroups", "container-groups.json"),
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.Compute/galleries", "galleries.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod", "gal_contoso_prod.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images", "gal_contoso_prod.images.json"),
+    fx!(
+        "compute",
+        "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/ubuntu-2404-batch/versions",
+        "gal_contoso_prod.ubuntu-2404-batch.versions.json"
+    ),
+    fx!(
+        "compute",
+        "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/win2019-legacy-app/versions",
+        "gal_contoso_prod.win2019-legacy-app.versions.json"
+    ),
     fx!(
         "compute",
         "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerInstance/containerGroups/ci-agents-prod",

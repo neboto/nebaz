@@ -98,6 +98,9 @@ pub struct ScaleSetRow {
     pub repair_grace_period: Option<String>,
     pub scale_in_rules: Vec<String>,
     pub image: Option<String>,
+    /// `imageReference.id`: a gallery image (or version) or a managed
+    /// image.
+    pub image_id: Option<String>,
     pub os_type: Option<String>,
     pub os_disk_type: Option<String>,
     pub os_disk_size_gb: Option<i64>,
@@ -241,6 +244,7 @@ impl ScaleSetRow {
             repair_grace_period: json::str_at(v, &format!("{}/automaticRepairsPolicy/gracePeriod", p)),
             scale_in_rules: json::strings_at(v, &format!("{}/scaleInPolicy/rules", p)),
             image: image_label(v, &format!("{}/imageReference", storage)),
+            image_id: json::arm_id(json::str_at(v, &format!("{}/imageReference/id", storage))),
             os_type: json::str_at(v, &format!("{}/osDisk/osType", storage)),
             os_disk_type: json::str_at(v, &format!("{}/osDisk/managedDisk/storageAccountType", storage)),
             os_disk_size_gb: json::int_at(v, &format!("{}/osDisk/diskSizeGB", storage)),
@@ -415,6 +419,9 @@ impl Resource for ScaleSetRow {
     }
     fn related(&self) -> Vec<(String, String)> {
         let mut v = scope_related(&self.base.id);
+        if let Some(i) = &self.image_id {
+            v.extend(crate::azure::services::gallery::image_related(i));
+        }
         for s in self.subnet_ids() {
             v.push((format!("Subnet {}", name_of_id(&s)), s));
         }

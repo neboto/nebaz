@@ -286,6 +286,9 @@ pub struct LazyStore {
     /// `GET {group}` (Container Instances, #197), keyed by group id: the
     /// body with the instance views the list leaves out, scrubbed.
     pub aci_instance_views: LazyMap<serde_json::Value>,
+    /// `{gallery}/images` and each image's `/versions` in one read (#203),
+    /// keyed by gallery id.
+    pub gallery_images: LazyMap<crate::azure::services::gallery::GalleryImages>,
 
     // ── Redis ────────────────────────────────────────────────────────────
     /// `GET {cache}/firewallRules`, keyed by cache id.

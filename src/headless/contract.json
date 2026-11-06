@@ -337,7 +337,8 @@
       "disks (disk)",
       "nics (nic)",
       "scale-sets (vmss)",
-      "asgs (asg)"
+      "asgs (asg)",
+      "galleries (gallery)"
     ],
     "vnet": [
       "vnets (vnet)",
@@ -529,6 +530,15 @@
       "Objects",
       "Security services",
       "Firewalls",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Compute Gallery": [
+      "Overview",
+      "Images",
+      "Sharing",
       "Access",
       "Activity",
       "Related",

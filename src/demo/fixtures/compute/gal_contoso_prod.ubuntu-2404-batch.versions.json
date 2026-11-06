@@ -1,0 +1,96 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/ubuntu-2404-batch/versions/1.3.0",
+      "name": "1.3.0",
+      "type": "Microsoft.Compute/galleries/images/versions",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1010"
+      },
+      "properties": {
+        "publishingProfile": {
+          "targetRegions": [
+            {
+              "name": "West Europe",
+              "regionalReplicaCount": 2,
+              "storageAccountType": "Standard_ZRS",
+              "excludeFromLatest": false
+            },
+            {
+              "name": "North Europe",
+              "regionalReplicaCount": 1,
+              "storageAccountType": "Standard_ZRS",
+              "excludeFromLatest": false
+            }
+          ],
+          "replicaCount": 1,
+          "excludeFromLatest": false,
+          "publishedDate": "{{iso:now-75d}}",
+          "endOfLifeDate": "{{iso:now+290d}}",
+          "storageAccountType": "Standard_ZRS"
+        },
+        "storageProfile": {
+          "osDiskImage": {
+            "sizeInGB": 30,
+            "hostCaching": "ReadWrite"
+          }
+        },
+        "safetyProfile": {
+          "allowDeletionOfReplicatedLocations": false,
+          "reportedForPolicyViolation": false
+        },
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/ubuntu-2404-batch/versions/1.4.0",
+      "name": "1.4.0",
+      "type": "Microsoft.Compute/galleries/images/versions",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1010"
+      },
+      "properties": {
+        "publishingProfile": {
+          "targetRegions": [
+            {
+              "name": "West Europe",
+              "regionalReplicaCount": 2,
+              "storageAccountType": "Standard_ZRS",
+              "excludeFromLatest": false
+            },
+            {
+              "name": "North Europe",
+              "regionalReplicaCount": 1,
+              "storageAccountType": "Standard_ZRS",
+              "excludeFromLatest": false
+            }
+          ],
+          "replicaCount": 1,
+          "excludeFromLatest": false,
+          "publishedDate": "{{iso:now-12d}}",
+          "endOfLifeDate": "{{iso:now+353d}}",
+          "storageAccountType": "Standard_ZRS"
+        },
+        "storageProfile": {
+          "osDiskImage": {
+            "sizeInGB": 30,
+            "hostCaching": "ReadWrite"
+          }
+        },
+        "safetyProfile": {
+          "allowDeletionOfReplicatedLocations": false,
+          "reportedForPolicyViolation": false
+        },
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

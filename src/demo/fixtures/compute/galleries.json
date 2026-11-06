@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod",
+      "name": "gal_contoso_prod",
+      "type": "Microsoft.Compute/galleries",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1010"
+      },
+      "properties": {
+        "description": "Hardened images for the platform's VMs and scale sets",
+        "identifier": {
+          "uniqueName": "{{prod}}-GAL_CONTOSO_PROD"
+        },
+        "sharingProfile": {
+          "permissions": "Private"
+        },
+        "softDeletePolicy": {
+          "isSoftDeleteEnabled": true
+        },
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

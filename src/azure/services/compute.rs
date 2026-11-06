@@ -11,6 +11,7 @@
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::gallery::{GalleryRow, GALLERIES_PATH, GALLERY_API_VERSION};
 use crate::azure::services::network_asg::{AsgRow, ASGS_PATH};
 use crate::azure::services::scale_sets::ScaleSetRow;
 use crate::azure::services::{
@@ -135,6 +136,9 @@ pub struct VmRow {
     pub time_created: Option<String>,
     pub license_type: Option<String>,
     pub image: Option<String>,
+    /// `storageProfile.imageReference.id`: a gallery image (or version) or
+    /// a managed image.
+    pub image_id: Option<String>,
     /// The marketplace `plan` a vendor image carries (an NVA's, usually).
     pub plan: Option<MarketplacePlan>,
 }
@@ -222,6 +226,7 @@ impl VmRow {
             time_created: json::str_at(v, &format!("{}/timeCreated", p)),
             license_type: json::str_at(v, &format!("{}/licenseType", p)),
             image,
+            image_id: json::arm_id(json::str_at(v, &format!("{}/storageProfile/imageReference/id", p))),
             plan: MarketplacePlan::from_json(v),
             base,
         })
@@ -320,6 +325,9 @@ impl Resource for VmRow {
     }
     fn related(&self) -> Vec<(String, String)> {
         let mut v = scope_related(&self.base.id);
+        if let Some(i) = &self.image_id {
+            v.extend(crate::azure::services::gallery::image_related(i));
+        }
         for (id, primary) in &self.nics {
             let label = if *primary { "NIC (primary)" } else { "NIC" };
             v.push((format!("{} {}", label, name_of_id(id)), id.clone()));
@@ -811,6 +819,10 @@ impl AzureService for ComputeService {
                     .filter_map(|v| NicRow::from_json(v, tenant))
                     .collect(),
             ),
+            JumpView::Galleries => Self::boxed(crate::azure::services::gallery::rows(
+                &self.scope.list(GALLERIES_PATH, GALLERY_API_VERSION).await?,
+                tenant,
+            )),
             JumpView::ApplicationSecurityGroups => Self::boxed(
                 self.scope
                     .list(ASGS_PATH, NIC_API_VERSION)
@@ -871,6 +883,15 @@ impl AzureService for ComputeService {
                     .scope
                     .stream(NIC_PATH, NIC_API_VERSION, &[], service_type, "Listing network interfaces…", &event_tx, |page| {
                         Self::boxed(page.iter().filter_map(|v| NicRow::from_json(v, tenant.as_deref())).collect())
+                    })
+                    .await;
+                finish_stream(service_type, r, &event_tx)
+            }
+            JumpView::Galleries => {
+                let r = self
+                    .scope
+                    .stream(GALLERIES_PATH, GALLERY_API_VERSION, &[], service_type, "Listing compute galleries…", &event_tx, |page| {
+                        Self::boxed(crate::azure::services::gallery::rows(&page, tenant.as_deref()))
                     })
                     .await;
                 finish_stream(service_type, r, &event_tx)
@@ -960,6 +981,10 @@ impl AzureService for ComputeService {
             Some(JumpView::Nics) => {
                 let v = self.scope.get(id, NIC_API_VERSION).await?;
                 Ok(Box::new(NicRow::from_json(&v, tenant).ok_or_else(not_found)?))
+            }
+            Some(JumpView::Galleries) => {
+                let v = self.scope.get(id, GALLERY_API_VERSION).await?;
+                Ok(Box::new(GalleryRow::from_json(&v, tenant).ok_or_else(not_found)?))
             }
             Some(JumpView::ApplicationSecurityGroups) => {
                 let v = self.scope.get(id, NIC_API_VERSION).await?;

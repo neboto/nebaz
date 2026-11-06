@@ -47,6 +47,9 @@ const PLANTED: &[(&str, &str)] = &[
     // run exited 1).
     ("/containerGroups/ci-agents-prod", "⚠ waiting"),
     ("/containerGroups/ci-agents-prod", "⚠ terminated"),
+    // compute: the legacy app's Windows image definition and its one
+    // version are past end of life.
+    ("/galleries/gal_contoso_prod", "end of life"),
     // network: contoso-dev's endpoint to the partner Private Link service
     // waits for approval; Traffic Manager's on-premises DR endpoint is
     // degraded.

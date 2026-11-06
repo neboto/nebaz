@@ -25,6 +25,7 @@ pub mod edge;
 pub mod firewall;
 pub mod flow_logs;
 pub mod foundry;
+pub mod gallery;
 pub mod defender;
 pub mod governance;
 pub mod hybrid;
