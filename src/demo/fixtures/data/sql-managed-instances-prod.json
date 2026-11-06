@@ -1,0 +1,61 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/managedInstances/sqlmi-legacy-prod",
+      "name": "sqlmi-legacy-prod",
+      "type": "Microsoft.Sql/managedInstances",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-team@contoso.com",
+        "costCenter": "CC-3300"
+      },
+      "sku": {
+        "name": "GP_Gen5",
+        "tier": "GeneralPurpose",
+        "family": "Gen5",
+        "capacity": 8
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "8a1b2c3d-4e5f-4a6b-9c7d-8e9f0a1b2c3d",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "state": "Ready",
+        "fullyQualifiedDomainName": "sqlmi-legacy-prod.7c3e9a1b5d2f.database.windows.net",
+        "dnsZone": "7c3e9a1b5d2f",
+        "administratorLogin": "legacyadmin",
+        "subnetId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-sqlmi",
+        "licenseType": "BasePrice",
+        "vCores": 8,
+        "storageSizeInGB": 512,
+        "memorySizeInGB": 41,
+        "isGeneralPurposeV2": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "publicDataEndpointEnabled": true,
+        "proxyOverride": "Proxy",
+        "timezoneId": "W. Europe Standard Time",
+        "instancePoolId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/instancePools/sqlpool-legacy-prod",
+        "minimalTlsVersion": "1.2",
+        "currentBackupStorageRedundancy": "Geo",
+        "requestedBackupStorageRedundancy": "Geo",
+        "zoneRedundant": false,
+        "databaseFormat": "SQLServer2022",
+        "createTime": "2026-02-11T09:12:44Z",
+        "maintenanceConfigurationId": "/subscriptions/{{prod}}/providers/Microsoft.Maintenance/publicMaintenanceConfigurations/SQL_WestEurope_MI_1",
+        "administrators": {
+          "administratorType": "ActiveDirectory",
+          "principalType": "Group",
+          "login": "Contoso Legacy DBAs",
+          "sid": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
+          "tenantId": "{{tenant}}",
+          "azureADOnlyAuthentication": false
+        },
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

@@ -152,6 +152,7 @@ mod firewall;
 mod flow_logs;
 mod advisor;
 mod alerts;
+mod sql_managed;
 mod virtual_wan;
 mod defender;
 mod governance;
@@ -2939,6 +2940,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.alerts_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.sql_managed_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {

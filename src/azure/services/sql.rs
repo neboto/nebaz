@@ -13,6 +13,7 @@ use crate::azure::resource::{
     ResourceState,
 };
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::sql_managed::ManagedLists;
 use crate::azure::services::{
     arm_row, finish_stream, json, lazy_list_rows, overview_rows, related_rows, tag_rows, ArmBase, Scope,
 };
@@ -348,7 +349,10 @@ impl AzureService for SqlService {
         "SQL"
     }
 
-    async fn list_resources(&self, _view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+    async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+        if view != JumpView::SqlServers {
+            return ManagedLists { scope: &self.scope }.list(view).await;
+        }
         let tenant = self.scope.tenant();
         Ok(self
             .scope
@@ -362,10 +366,13 @@ impl AzureService for SqlService {
 
     async fn list_resources_streaming(
         &self,
-        _view: JumpView,
+        view: JumpView,
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
+        if view != JumpView::SqlServers {
+            return ManagedLists { scope: &self.scope }.stream(view, &event_tx, service_type).await;
+        }
         let tenant = self.scope.tenant().map(str::to_string);
         let r = self
             .scope
@@ -380,6 +387,9 @@ impl AzureService for SqlService {
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
+        if let Some(view @ (JumpView::ManagedInstances | JumpView::InstancePools)) = JumpView::for_arm_id(id) {
+            return ManagedLists { scope: &self.scope }.get(id, view).await;
+        }
         let v = self.scope.get(id, SQL_API_VERSION).await?;
         SqlServerRow::from_json(&v, self.scope.tenant())
             .map(|r| Box::new(r) as Box<dyn Resource>)

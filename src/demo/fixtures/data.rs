@@ -61,6 +61,13 @@ pub static FIXTURES: &[Fixture] = &[
         "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Sql/servers/sql-orders-prod/firewallRules",
         "sql-orders-firewall.json"
     ),
+    // SQL Managed Instance (#195): the failover groups of rg-legacy-prod in
+    // westeurope are none (the default empty collection).
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.Sql/managedInstances", "sql-managed-instances-prod.json"),
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.Sql/instancePools", "sql-instance-pools-prod.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/managedInstances/sqlmi-legacy-prod/databases", "sqlmi-legacy-prod-databases.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/managedInstances/sqlmi-legacy-prod", "sqlmi-legacy-prod.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/instancePools/sqlpool-legacy-prod", "sqlpool-legacy-prod.json"),
     // ── Cosmos DB ──
     fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.DocumentDB/databaseAccounts", "cosmos-accounts-prod.json"),
     fx!(

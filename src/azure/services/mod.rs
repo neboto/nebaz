@@ -42,6 +42,7 @@ pub mod private_link;
 pub mod redis;
 pub mod scale_sets;
 pub mod sql;
+pub mod sql_managed;
 pub mod storage;
 pub mod subscriptions;
 pub mod traffic_manager;
@@ -286,6 +287,11 @@ impl Scope {
     /// One resource by ARM id.
     pub async fn get(&self, id: &str, api_version: &str) -> Result<Value> {
         self.arm()?.get(id, api_version).await
+    }
+
+    /// One resource by ARM id with extra query pairs (`$expand`).
+    pub async fn get_query(&self, id: &str, api_version: &str, query: &[(&str, &str)]) -> Result<Value> {
+        self.arm()?.get_query(id, api_version, query).await
     }
 
     /// Stream a subscription-wide collection: every page becomes one
