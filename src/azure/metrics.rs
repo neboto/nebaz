@@ -357,6 +357,15 @@ const VNET_GATEWAY: &[MetricSpec] = &[
     m("TunnelEgressBytes", "Tunnel out", Total),
     m("P2SConnectionCount", "P2S connections", Total),
 ];
+/// A SQL managed instance: CPU, workers, storage against what is reserved,
+/// I/O.
+const SQL_MANAGED_INSTANCE: &[MetricSpec] = &[
+    m("avg_cpu_percent", "CPU", Avg),
+    m("avg_workers_percent", "Workers", Avg),
+    m("storage_space_used_mb", "Storage used (MB)", Max),
+    m("reserved_storage_mb", "Storage reserved (MB)", Max),
+    m("io_requests", "IO requests", Avg),
+];
 /// A Virtual WAN hub's router: BGP with the hub's peers, its route
 /// counts, the routing infrastructure units and the data it processed.
 const VIRTUAL_HUB: &[MetricSpec] = &[
@@ -458,6 +467,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.network", ["expressroutecircuits"]) => ER_CIRCUIT,
         ("microsoft.network", ["virtualnetworkgateways"]) => VNET_GATEWAY,
         ("microsoft.network", ["virtualhubs"]) => VIRTUAL_HUB,
+        ("microsoft.sql", ["managedinstances"]) => SQL_MANAGED_INSTANCE,
         ("microsoft.network", ["vpngateways"]) => VWAN_VPN_GATEWAY,
         ("microsoft.network", ["expressroutegateways"]) => VWAN_ER_GATEWAY,
         ("microsoft.network", ["p2svpngateways"]) => P2S_GATEWAY,

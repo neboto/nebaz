@@ -1,0 +1,34 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/managedInstances/sqlmi-legacy-prod/databases/legacy_erp",
+      "name": "legacy_erp",
+      "type": "Microsoft.Sql/managedInstances/databases",
+      "location": "westeurope",
+      "properties": {
+        "status": "Online",
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "creationDate": "2026-02-12T08:00:00Z",
+        "earliestRestorePoint": "{{iso:now-7d}}",
+        "defaultSecondaryLocation": "northeurope",
+        "isLedgerOn": false,
+        "storageContainerSasToken": "sv=2024&sig=never-shown"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/managedInstances/sqlmi-legacy-prod/databases/legacy_reporting",
+      "name": "legacy_reporting",
+      "type": "Microsoft.Sql/managedInstances/databases",
+      "location": "westeurope",
+      "properties": {
+        "status": "Online",
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "creationDate": "2026-02-12T08:00:00Z",
+        "earliestRestorePoint": "{{iso:now-7d}}",
+        "defaultSecondaryLocation": "northeurope",
+        "isLedgerOn": false,
+        "storageContainerSasToken": "sv=2024&sig=never-shown"
+      }
+    }
+  ]
+}

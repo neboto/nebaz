@@ -227,6 +227,10 @@ pub enum JumpView {
     AppServicePlans,
     // SQL
     SqlServers,
+    /// `Microsoft.Sql/managedInstances` (#195).
+    ManagedInstances,
+    /// `Microsoft.Sql/instancePools`.
+    InstancePools,
     // Cosmos DB
     CosmosAccounts,
     // PostgreSQL & MySQL
@@ -332,7 +336,7 @@ impl JumpView {
             Clusters | NodePools => ServiceType::Aks,
             Registries => ServiceType::ContainerRegistry,
             WebApps | FunctionApps | AppServicePlans => ServiceType::AppService,
-            SqlServers => ServiceType::Sql,
+            SqlServers | ManagedInstances | InstancePools => ServiceType::Sql,
             CosmosAccounts => ServiceType::Cosmos,
             PostgresServers | MysqlServers => ServiceType::PostgresMysql,
             AiAccounts => ServiceType::Foundry,
@@ -410,6 +414,8 @@ impl JumpView {
             FunctionApps => "function-apps",
             AppServicePlans => "plans",
             SqlServers => "sql-servers",
+            ManagedInstances => "managed-instances",
+            InstancePools => "instance-pools",
             CosmosAccounts => "cosmos-accounts",
             PostgresServers => "postgres-servers",
             MysqlServers => "mysql-servers",
@@ -510,6 +516,8 @@ impl JumpView {
             FunctionApps => "Functions",
             AppServicePlans => "Plans",
             SqlServers => "Servers",
+            ManagedInstances => "Managed instances",
+            InstancePools => "Instance pools",
             CosmosAccounts => "Accounts",
             PostgresServers => "PostgreSQL",
             MysqlServers => "MySQL",
@@ -618,6 +626,8 @@ impl JumpView {
             ("microsoft.web", ["sites"]) => JumpView::WebApps,
             ("microsoft.web", ["serverfarms"]) => JumpView::AppServicePlans,
             ("microsoft.sql", ["servers"]) => JumpView::SqlServers,
+            ("microsoft.sql", ["managedinstances"]) => JumpView::ManagedInstances,
+            ("microsoft.sql", ["instancepools"]) => JumpView::InstancePools,
             ("microsoft.documentdb", ["databaseaccounts"]) => JumpView::CosmosAccounts,
             ("microsoft.dbforpostgresql", ["flexibleservers"]) => JumpView::PostgresServers,
             ("microsoft.dbformysql", ["flexibleservers"]) => JumpView::MysqlServers,
@@ -898,7 +908,7 @@ impl ServiceType {
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
             ServiceType::ContainerRegistry => "Container registries",
             ServiceType::AppService => "Web & function apps, plans",
-            ServiceType::Sql => "SQL servers & databases",
+            ServiceType::Sql => "SQL servers, managed instances & pools",
             ServiceType::Cosmos => "Cosmos DB accounts",
             ServiceType::PostgresMysql => "PostgreSQL & MySQL flexible servers",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
@@ -953,7 +963,7 @@ impl ServiceType {
             ServiceType::Aks => &[Clusters, NodePools],
             ServiceType::ContainerRegistry => &[Registries],
             ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans],
-            ServiceType::Sql => &[SqlServers],
+            ServiceType::Sql => &[SqlServers, ManagedInstances, InstancePools],
             ServiceType::Cosmos => &[CosmosAccounts],
             ServiceType::PostgresMysql => &[PostgresServers, MysqlServers],
             ServiceType::Foundry => &[AiAccounts],
@@ -1126,6 +1136,8 @@ impl ServiceType {
                 (ServiceType::AppService, Some(JumpView::FunctionApps))
             }
             "sql" | "sqlserver" | "sqlservers" | "azuresql" | "db" | "dbs" => (ServiceType::Sql, None),
+            "sqlmi" | "mi" | "managedinstance" | "managedinstances" => (ServiceType::Sql, Some(JumpView::ManagedInstances)),
+            "sqlpool" | "instancepool" | "instancepools" => (ServiceType::Sql, Some(JumpView::InstancePools)),
             "cosmos" | "cosmosdb" | "documentdb" | "docdb" => (ServiceType::Cosmos, None),
             "pg" | "postgres" | "postgresql" | "psql" | "flexibleserver" | "flexibleservers" => {
                 (ServiceType::PostgresMysql, None)
@@ -1234,7 +1246,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1436,6 +1448,11 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/serverfarms/plan")), Some(JumpView::AppServicePlans));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/sites/shop/slots/staging")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/managedInstances/sqlmi-prod")), Some(JumpView::ManagedInstances));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/instancePools/pool-1")), Some(JumpView::InstancePools));
+        // An instance database is a child: in no list of its own.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/managedInstances/sqlmi-prod/databases/orders")), None);
+        assert_eq!(ServiceType::from_prefix("@sqlmi"), Some((ServiceType::Sql, Some(JumpView::ManagedInstances))));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/staticSites/docs")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Web/staticSites/docs")), Some(JumpView::AllResources));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));

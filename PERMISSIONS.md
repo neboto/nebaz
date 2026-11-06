@@ -333,6 +333,12 @@ each one backs are in the catalog table
   Firewall sections: `Microsoft.Sql/servers/databases/read`,
   `Microsoft.Sql/servers/firewallRules/read`. Metadata only: nebaz never
   connects to a database (the server endpoints are on the guard's list).
+  Managed instances: `Microsoft.Sql/managedInstances/read`,
+  `Microsoft.Sql/instancePools/read`, and for the lazy sections
+  `Microsoft.Sql/managedInstances/databases/read` and
+  `Microsoft.Sql/locations/instanceFailoverGroups/read`. The admin password
+  is write-only and never returned; a database's restore SAS token is
+  stripped before the store keeps it.
 - **Redis**: `Microsoft.Cache/redis/read` (Azure Cache for Redis),
   `Microsoft.Cache/redisEnterprise/read` (Managed Redis); the lazy
   sections: `Microsoft.Cache/redis/firewallRules/read`,

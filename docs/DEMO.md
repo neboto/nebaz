@@ -106,6 +106,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `cosmos-legacy`: public network, key auth on | `@audit` |
 | `redis-orders-cache`: non-TLS port 6379 enabled | `@audit` |
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
+| `sqlmi-legacy-prod`'s public data endpoint is enabled (port 3342; `nsg-sqlmi` admits only the office), and the instance has no failover group | SQL › Managed instances |
 | `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
 | `vst-branch-cork`'s only link, `link-vodafone`, is `NotConnected` to the hub's VPN gateway (Dublin's is up): the gateway's list line says `⚠ 1 down` | Virtual WAN |
 | `nic-vm-legacy-batch-01` and `pip-vm-legacy-batch-01`, left behind by a deleted VM: a NIC attached to nothing, a static public IP attached to nothing | `@audit` (info) |
@@ -219,6 +220,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
   - `snet-pe` 10.10.5.0/24, private endpoints
   - `snet-appgw` 10.10.6.0/24, `agw-contoso-prod`, NSG `nsg-appgw-prod`
   - `snet-data` 10.10.7.0/24, delegated `Microsoft.DBforPostgreSQL/flexibleServers`
+  - `snet-sqlmi` 10.10.16.0/26, delegated `Microsoft.Sql/managedInstances`, NSG `nsg-sqlmi` (inbound 1433 from the VNet, 3342 from the office 203.0.113.24): `sqlpool-legacy-prod` and `sqlmi-legacy-prod`
   - `snet-jump` 10.10.8.0/27, NSG `nsg-jump-prod`: `nic-vm-jump-01` 10.10.8.4, `nic-vm-legacy-app-01` 10.10.8.5, `nic-vm-legacy-batch-01` 10.10.8.6 (attached to nothing, below), `lb-legacy-internal`'s frontend `fe-legacy-app` 10.10.8.10
   - `snet-nva` 10.10.13.0/28: the FortiGate NVA `vm-nva-01` (marketplace plan `fortinet` / `fortinet_fortigate-vm_v5`, so its kind reads "Fortinet fortinet_fortigate-vm_v5"; `nic-vm-nva-01` 10.10.13.4, IP forwarding on) behind `lb-nva-internal`'s frontend `fe-nva` 10.10.13.10 (HA ports rule `lbr-ha-ports`); `rt-spoke-egress` sends 192.168.0.0/16 there, the hit path of the next-hop match
   - `AzureBastionSubnet` 10.10.12.0/26: `bas-hub-prod` (Standard, 2 scale units, native client, IP connect and file copy on; public IP `pip-bas-hub-prod` 20.103.45.16)
@@ -270,6 +272,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - Power Platform enterprise policy `ep-pp-network-injection` (kind `NetworkInjection`, location `europe`): `snet-pp-injection` in `vnet-hub-prod` and `snet-pp-injection-dr` in `vnet-pp-dr`
 
 **`rg-legacy-prod`** (team legacy)
+- `sqlmi-legacy-prod` (SQL managed instance, GP_Gen5 8 vCores, 512 GB, Azure Hybrid Benefit, SQL Server 2022 update policy) in the instance pool `sqlpool-legacy-prod` (16 vCores, 8 used) on `snet-sqlmi`; Entra admin `Contoso Legacy DBAs` but Entra-only auth off; databases `legacy_erp` and `legacy_reporting`; **its public data endpoint is enabled** and it has **no failover group** (the failover-group list of rg-legacy-prod in westeurope is empty)
 - `vm-jump-01` (Standard_B2s, Ubuntu 22.04, running, zone 1, NIC `nic-vm-jump-01` (in `rg-legacy-prod`) in `snet-jump` with `pip-vm-jump-01`; OS disk `vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68`)
 - `vm-legacy-app-01` (Standard_D4s_v3, Windows Server 2019, deallocated 40 days, NIC `nic-vm-legacy-app-01` (in `rg-legacy-prod`) in `snet-jump` behind `lb-legacy-internal`; OS disk `vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13`, Reserved)
 - `disk-legacy-data-01` (1024 GiB Premium_LRS P30, Unattached; last owner change 40 days ago)

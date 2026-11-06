@@ -304,6 +304,13 @@ pub struct LazyStore {
     /// `GET {ns}/eventhubs`, keyed by Event Hubs namespace id.
     pub eh_hubs: LazyMap<Vec<serde_json::Value>>,
 
+    // ── SQL Managed Instance (#195) ──────────────────────────────────────
+    /// `GET {instance}/databases`, keyed by managed instance id.
+    pub mi_databases: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {group}/providers/Microsoft.Sql/locations/{region}/instanceFailoverGroups`,
+    /// keyed by managed instance id (its group and region).
+    pub mi_failover_groups: LazyMap<Vec<serde_json::Value>>,
+
     // ── Virtual WAN (#158) ───────────────────────────────────────────────
     /// `GET {hub}/hubVirtualNetworkConnections`, keyed by virtual hub id.
     pub vwan_hub_connections: LazyMap<Vec<serde_json::Value>>,
