@@ -1,7 +1,7 @@
 //! Demo fixtures: the `identity` area (see `docs/DEMO.md` for who owns what):
 //! managed identities, the directory (Microsoft Graph service principals,
 //! app registrations and every principal the Access and Activity sections
-//! name), Power Platform, Monitor and Foundry.
+//! name), Power Platform, Monitor, Foundry and AI Search.
 //!
 //! A directory object's body is one file served on every path that reads
 //! it: `servicePrincipals/{id}`, `servicePrincipals(appId='…')` and
@@ -123,5 +123,17 @@ pub static FIXTURES: &[Fixture] = &[
         "identity",
         "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod/projects",
         "foundry-projects.json"
+    ),
+    // ── AI Search (#196) ──
+    fx!("identity", "/subscriptions/{{prod}}/providers/Microsoft.Search/searchServices", "search-services.json"),
+    fx!(
+        "identity",
+        "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod",
+        "srch-contoso-prod.json"
+    ),
+    fx!(
+        "identity",
+        "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod/sharedPrivateLinkResources",
+        "srch-contoso-prod-shared-links.json"
     ),
 ];

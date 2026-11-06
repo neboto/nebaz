@@ -239,6 +239,8 @@ pub enum JumpView {
     // Foundry
     /// Every `Microsoft.CognitiveServices` account, `kind` on the row.
     AiAccounts,
+    /// `Microsoft.Search/searchServices` (#196).
+    SearchServices,
     // Monitor
     LogWorkspaces,
     AppInsights,
@@ -339,7 +341,7 @@ impl JumpView {
             SqlServers | ManagedInstances | InstancePools => ServiceType::Sql,
             CosmosAccounts => ServiceType::Cosmos,
             PostgresServers | MysqlServers => ServiceType::PostgresMysql,
-            AiAccounts => ServiceType::Foundry,
+            AiAccounts | SearchServices => ServiceType::Foundry,
             LogWorkspaces | AppInsights | MetricAlerts | LogAlerts | ActivityLogAlerts | ActionGroups | AlertProcessingRules
             | FiredAlerts => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
@@ -420,6 +422,7 @@ impl JumpView {
             PostgresServers => "postgres-servers",
             MysqlServers => "mysql-servers",
             AiAccounts => "ai-accounts",
+            SearchServices => "search-services",
             LogWorkspaces => "log-workspaces",
             MetricAlerts => "metric-alerts",
             LogAlerts => "log-alerts",
@@ -522,6 +525,7 @@ impl JumpView {
             PostgresServers => "PostgreSQL",
             MysqlServers => "MySQL",
             AiAccounts => "Resources",
+            SearchServices => "Search services",
             LogWorkspaces => "Workspaces",
             MetricAlerts => "Metric alerts",
             LogAlerts => "Log alerts",
@@ -632,6 +636,7 @@ impl JumpView {
             ("microsoft.dbforpostgresql", ["flexibleservers"]) => JumpView::PostgresServers,
             ("microsoft.dbformysql", ["flexibleservers"]) => JumpView::MysqlServers,
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
+            ("microsoft.search", ["searchservices"]) => JumpView::SearchServices,
             ("microsoft.operationalinsights", ["workspaces"]) => JumpView::LogWorkspaces,
             ("microsoft.insights", ["components"]) => JumpView::AppInsights,
             ("microsoft.insights", ["metricalerts"]) => JumpView::MetricAlerts,
@@ -911,7 +916,7 @@ impl ServiceType {
             ServiceType::Sql => "SQL servers, managed instances & pools",
             ServiceType::Cosmos => "Cosmos DB accounts",
             ServiceType::PostgresMysql => "PostgreSQL & MySQL flexible servers",
-            ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
+            ServiceType::Foundry => "Foundry, OpenAI & AI Search (metadata only)",
             ServiceType::Monitor => "Log Analytics, App Insights & alerts",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::ContainerApps => "Container apps, environments & jobs",
@@ -966,7 +971,7 @@ impl ServiceType {
             ServiceType::Sql => &[SqlServers, ManagedInstances, InstancePools],
             ServiceType::Cosmos => &[CosmosAccounts],
             ServiceType::PostgresMysql => &[PostgresServers, MysqlServers],
-            ServiceType::Foundry => &[AiAccounts],
+            ServiceType::Foundry => &[AiAccounts, SearchServices],
             ServiceType::Monitor => &[
                 LogWorkspaces,
                 AppInsights,
@@ -1149,6 +1154,9 @@ impl ServiceType {
             "foundry" | "aifoundry" | "aiservices" | "openai" | "aoai" | "cognitive" | "cognitiveservices" | "cog" => {
                 (ServiceType::Foundry, None)
             }
+            "search" | "srch" | "aisearch" | "cognitivesearch" | "searchservice" | "searchservices" => {
+                (ServiceType::Foundry, Some(JumpView::SearchServices))
+            }
             "monitor" | "monitoring" => (ServiceType::Monitor, None),
             "malert" | "malerts" | "metricalert" | "metricalerts" => (ServiceType::Monitor, Some(JumpView::MetricAlerts)),
             "logalert" | "logalerts" | "sqr" | "scheduledquery" | "scheduledqueryrules" => {
@@ -1246,7 +1254,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1450,6 +1458,8 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/managedInstances/sqlmi-prod")), Some(JumpView::ManagedInstances));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Sql/instancePools/pool-1")), Some(JumpView::InstancePools));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Search/searchServices/srch")), Some(JumpView::SearchServices));
+        assert_eq!(ServiceType::from_prefix("@search"), Some((ServiceType::Foundry, Some(JumpView::SearchServices))));
         // An instance database is a child: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/managedInstances/sqlmi-prod/databases/orders")), None);
         assert_eq!(ServiceType::from_prefix("@sqlmi"), Some((ServiceType::Sql, Some(JumpView::ManagedInstances))));

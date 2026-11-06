@@ -61,6 +61,11 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "cognitiveservices.azure.com",
     "openai.azure.com",
     "services.ai.azure.com",
+    // AI Search (#196): indexes, indexers, skillsets and documents live
+    // on the service's own endpoint (public and sovereign clouds).
+    "search.windows.net",
+    "search.azure.us",
+    "search.azure.cn",
     // App Service: the apps themselves and their Kudu (SCM) sites.
     "azurewebsites.net",
     // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).

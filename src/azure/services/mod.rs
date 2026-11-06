@@ -8,6 +8,7 @@
 pub mod access;
 pub mod activity;
 pub mod advisor;
+pub mod ai_search;
 pub mod alerts;
 pub mod aks;
 pub mod backup;

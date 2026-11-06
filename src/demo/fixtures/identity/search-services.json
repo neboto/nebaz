@@ -1,0 +1,108 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod",
+      "name": "srch-contoso-prod",
+      "type": "Microsoft.Search/searchServices",
+      "location": "westeurope",
+      "sku": {
+        "name": "standard"
+      },
+      "tags": {
+        "env": "prod",
+        "team": "data",
+        "owner": "data-team@contoso.com",
+        "costCenter": "cc-5120"
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "6b1c9e2a-3f47-4d8e-9a10-5c2e7d4b8f31",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "replicaCount": 2,
+        "partitionCount": 1,
+        "endpoint": "https://srch-contoso-prod.search.windows.net/",
+        "hostingMode": "Default",
+        "computeType": "Default",
+        "publicNetworkAccess": "Enabled",
+        "status": "running",
+        "statusDetails": "",
+        "provisioningState": "succeeded",
+        "networkRuleSet": {
+          "bypass": "AzureServices",
+          "ipRules": [
+            {
+              "value": "203.0.113.0/24"
+            }
+          ]
+        },
+        "dataExfiltrationProtections": [],
+        "encryptionWithCmk": {
+          "enforcement": "Unspecified",
+          "encryptionComplianceStatus": "Compliant"
+        },
+        "disableLocalAuth": false,
+        "authOptions": {
+          "aadOrApiKey": {
+            "aadAuthFailureMode": "http401WithBearerChallenge"
+          }
+        },
+        "semanticSearch": "free",
+        "privateEndpointConnections": [],
+        "sharedPrivateLinkResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod/sharedPrivateLinkResources/spl-st-orders-blob",
+            "name": "spl-st-orders-blob",
+            "type": "Microsoft.Search/searchServices/sharedPrivateLinkResources",
+            "properties": {
+              "privateLinkResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+              "groupId": "blob",
+              "requestMessage": "orders indexer",
+              "resourceRegion": null,
+              "status": "Approved",
+              "provisioningState": "Succeeded"
+            }
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod/sharedPrivateLinkResources/spl-ai-contoso-prod",
+            "name": "spl-ai-contoso-prod",
+            "type": "Microsoft.Search/searchServices/sharedPrivateLinkResources",
+            "properties": {
+              "privateLinkResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod",
+              "groupId": "openai_account",
+              "requestMessage": "vectorizer",
+              "resourceRegion": null,
+              "status": "Approved",
+              "provisioningState": "Succeeded"
+            }
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod/sharedPrivateLinkResources/spl-cosmos-legacy",
+            "name": "spl-cosmos-legacy",
+            "type": "Microsoft.Search/searchServices/sharedPrivateLinkResources",
+            "properties": {
+              "privateLinkResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DocumentDB/databaseAccounts/cosmos-legacy",
+              "groupId": "Sql",
+              "requestMessage": "legacy catalogue indexer",
+              "resourceRegion": null,
+              "status": "Pending",
+              "provisioningState": "Succeeded"
+            }
+          }
+        ],
+        "eTag": "\"0x8DCF1A2B3C4D5E6\"",
+        "upgradeAvailable": "notAvailable",
+        "serviceUpgradedAt": null
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-60d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      }
+    }
+  ]
+}

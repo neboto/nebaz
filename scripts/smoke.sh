@@ -79,6 +79,11 @@ run foundry-tab ok foundry '[]' \
   "Foundry" \
   "cannot reach 127.0.0.1"
 
+# AI Search is the Foundry tab's second sub-tab, through a routing prefix.
+run ai-search ok search '[]' \
+  "2 Search services" \
+  "cannot reach 127.0.0.1"
+
 # A routing prefix lands on a Network edge sub-tab, which lists through ARM.
 run network-edge-lb ok lb '[]' \
   "5 LBs" \
