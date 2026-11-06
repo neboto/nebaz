@@ -1,10 +1,9 @@
 // ported from neboto-tui src/harness_tests/list_ux_test.rs @ 3183ba1 (the
-// pinned chips, search history, back hint and history-sync cases, driven
-// through nebaz's Harness; the Ctrl-F forward and clickable-hint cases are
-// not ported, nebaz has neither)
-//! #58 polish: pinned service chips, `/` search history, the detail
-//! footer's `⌫ back to …` hint (and the two history fixes it made
-//! visible), and the list's per-type summary column.
+// pinned chips, search history and history-sync cases, driven through
+// nebaz's Harness; the footer's back hint is gone here as in neboto#291)
+//! #58 polish: pinned service chips, `/` search history, where `⌫`
+//! lands (and the two history fixes it made visible), and the list's
+//! per-type summary column.
 
 use super::mocks::{nic, nic_id, vm};
 use super::*;
@@ -117,6 +116,12 @@ async fn jump_to_nic_of(h: &mut Harness, name: &str) {
     assert_eq!(h.selected_id(), Some(nic_id(&format!("{name}-nic"))));
 }
 
+/// The name of the row `⌫` would land on (the strip's lit `←`).
+fn back_name(h: &Harness) -> Option<String> {
+    let i = h.app.nav_back_index()?;
+    h.app.nav_history[i].selected_id.as_deref().map(|id| name_of_id(id).to_string())
+}
+
 async fn two_vms() -> Harness {
     let mut h = Harness::new().await;
     h.open(JumpView::VirtualMachines).await;
@@ -125,18 +130,17 @@ async fn two_vms() -> Harness {
 }
 
 #[tokio::test]
-async fn the_detail_footer_names_where_back_goes() {
+async fn backspace_in_the_detail_pane_walks_history() {
     let mut h = two_vms().await;
     h.press(KeyCode::Enter).await;
-    let screen = h.render();
-    assert!(!screen.contains("back to"), "no history, no hint:\n{screen}");
-    assert!(screen.contains("h list"), "h says it goes to the list:\n{screen}");
+    assert_eq!(back_name(&h), None, "no history");
+    assert!(h.render().contains("h list"), "h says it goes to the list");
 
     h.press(KeyCode::Char('h')).await;
     jump_to_nic_of(&mut h, "vm-a").await;
-    assert_eq!(h.app.nav_back_hint().as_deref(), Some("VMs vm-a"));
+    assert_eq!(back_name(&h).as_deref(), Some("vm-a"));
     let screen = h.render();
-    assert!(screen.contains("⌫ back to VMs vm-a"), "{screen}");
+    assert!(!screen.contains("back to"), "the footer no longer names history:\n{screen}");
 
     // ⌫ in the detail pane walks history.
     assert!(h.app.details_focused);
@@ -156,7 +160,7 @@ async fn backspace_without_history_leaves_the_detail_pane() {
     assert_eq!(h.app.current_view, JumpView::VirtualMachines);
 }
 
-/// Back to A, move to B, jump away: back (and the hint) must say B, the
+/// Back to A, move to B, jump away: back must land on B, the
 /// place you left from, not the A you passed through.
 #[tokio::test]
 async fn back_returns_to_where_you_left_not_where_you_went_back_to() {
@@ -166,7 +170,7 @@ async fn back_returns_to_where_you_left_not_where_you_went_back_to() {
     assert_eq!(h.app.nav_cursor, Some(0));
     h.press(KeyCode::Char('h')).await;
     jump_to_nic_of(&mut h, "vm-b").await;
-    assert_eq!(h.app.nav_back_hint().as_deref(), Some("VMs vm-b"));
+    assert_eq!(back_name(&h).as_deref(), Some("vm-b"));
     assert_eq!(h.app.nav_history.len(), 1, "{:?}", h.app.nav_history);
 
     h.press(KeyCode::Backspace).await;
