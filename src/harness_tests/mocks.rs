@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    advisor, aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
+    advisor, aks, alerts, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager, virtual_wan,
 };
@@ -1190,6 +1190,103 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                         "name": "vst-1",
                         "location": "eastus",
                         "properties": {"provisioningState": "Succeeded", "addressSpace": {"addressPrefixes": ["192.168.40.0/24"]}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::MetricAlerts,
+            "MetricAlertRow",
+            parse(
+                "MetricAlertRow",
+                alerts::MetricAlertRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Insights/metricAlerts/cpu-high"),
+                        "name": "cpu-high",
+                        "location": "global",
+                        "properties": {"severity": 2, "enabled": true, "scopes": [arm_id("Microsoft.Compute/virtualMachines/vm-1")], "targetResourceType": "Microsoft.Compute/virtualMachines", "actions": [{"actionGroupId": arm_id("Microsoft.Insights/actionGroups/ag-1")}]}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::LogAlerts,
+            "LogAlertRow",
+            parse(
+                "LogAlertRow",
+                alerts::LogAlertRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Insights/scheduledQueryRules/errors"),
+                        "name": "errors",
+                        "location": "global",
+                        "kind": "LogAlert",
+                        "properties": {"severity": 1, "enabled": true, "scopes": [arm_id("Microsoft.OperationalInsights/workspaces/law-1")], "criteria": {"allOf": [{"query": "AppExceptions | count", "operator": "GreaterThan", "threshold": 0, "timeAggregation": "Count"}]}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ActivityLogAlerts,
+            "ActivityLogAlertRow",
+            parse(
+                "ActivityLogAlertRow",
+                alerts::ActivityLogAlertRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Insights/activityLogAlerts/sh"),
+                        "name": "sh",
+                        "location": "global",
+                        "properties": {"enabled": true, "scopes": ["/subscriptions/00000000-0000-0000-0000-000000000001"], "condition": {"allOf": [{"field": "category", "equals": "ServiceHealth"}]}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ActionGroups,
+            "ActionGroupRow",
+            parse(
+                "ActionGroupRow",
+                alerts::ActionGroupRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Insights/actionGroups/ag-1"),
+                        "name": "ag-1",
+                        "location": "global",
+                        "properties": {"groupShortName": "ops", "enabled": true, "emailReceivers": [{"name": "ops", "emailAddress": "ops@example.com"}]}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::AlertProcessingRules,
+            "ProcessingRuleRow",
+            parse(
+                "ProcessingRuleRow",
+                alerts::ProcessingRuleRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.AlertsManagement/actionRules/maint"),
+                        "name": "maint",
+                        "location": "global",
+                        "properties": {"enabled": true, "scopes": ["/subscriptions/00000000-0000-0000-0000-000000000001"], "actions": [{"actionType": "RemoveAllActionGroups"}]}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::FiredAlerts,
+            "FiredAlertRow",
+            parse(
+                "FiredAlertRow",
+                alerts::FiredAlertRow::from_json(
+                    &json!({
+                        "id": "/subscriptions/00000000-0000-0000-0000-000000000001/providers/Microsoft.AlertsManagement/alerts/a-1",
+                        "name": "cpu-high",
+                        "location": "global",
+                        "properties": {"essentials": {"severity": "Sev2", "alertState": "New", "monitorCondition": "Fired", "targetResource": arm_id("Microsoft.Compute/virtualMachines/vm-1"), "signalType": "Metric"}}
                     }),
                     t,
                 ),

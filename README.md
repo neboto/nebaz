@@ -199,7 +199,7 @@ all).
 | `cosmos` | Cosmos DB | Accounts (databases on whichever API) |
 | `pg` | PostgreSQL & MySQL | PostgreSQL flexible servers, MySQL (`mysql`) |
 | `foundry` | Foundry | AI Services and Azure OpenAI accounts (deployments, projects) |
-| `monitor` | Monitor | Log Analytics workspaces, App Insights (`appi`) |
+| `monitor` | Monitor | Log Analytics workspaces, App Insights (`appi`), Metric alerts (`malert`), Log search alerts (`logalert`), Activity log alerts (`activityalert`), Action groups (`ag`), Alert processing rules (`apr`), Fired alerts (`alert`, the last 30 days); every row's Related names the alert rules watching it |
 | `pp` | Power Platform | Enterprise policies (VNet injection, encryption) |
 | `aca` | Container Apps | Apps (revisions), Environments (`acaenv`), Jobs (`acajob`, executions) |
 | `redis` | Redis | Azure Cache for Redis, Managed Redis (`amr`) |

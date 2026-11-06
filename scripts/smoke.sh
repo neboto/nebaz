@@ -160,6 +160,12 @@ run dns-traffic-manager ok tm '[]' \
   "6 Traffic Manager" \
   "cannot reach 127.0.0.1"
 
+# Monitor's alert rules load through a routing prefix (metric alerts).
+run monitor-alert-rules ok malert '[]' \
+  "Log Analytics, App Insights & alerts" \
+  "3 Metric alerts" \
+  "cannot reach 127.0.0.1"
+
 # The Virtual WAN tab loads through a routing prefix (hubs).
 run vwan-hubs ok hub '[]' \
   "Virtual WANs, hubs, hub gateways & VPN sites" \
@@ -212,7 +218,7 @@ run advisor-suppressions ok snooze '[]' \
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \
-  "Log Analytics & App Insights" \
+  "Log Analytics, App Insights & alerts" \
   "cannot reach 127.0.0.1"
 
 # Access on a subscription row fetches role assignments from ARM; the

@@ -174,10 +174,11 @@ fn generic_actions(r: &dyn Resource) -> Vec<CliAction> {
     }
     let q = shell_quote(id);
     let mut out = Vec::new();
-    // Governance, Defender and Advisor rows have no RBAC of their own.
+    // Governance, Defender and Advisor rows and fired alerts have no RBAC of their own.
     if !crate::azure::services::governance::is_governance_id(id)
         && !crate::azure::services::defender::is_defender_id(id)
         && !crate::azure::services::advisor::is_advisor_id(id)
+        && !crate::azure::services::alerts::is_fired_alert_id(id)
     {
         out.push(
             inspect(format!("az role assignment list --scope {} --include-inherited", q))

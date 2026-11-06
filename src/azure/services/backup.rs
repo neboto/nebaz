@@ -475,23 +475,12 @@ pub fn protection_of(resource_id: &str, lazy: &BackupLazy<'_>, now: i64) -> Vec<
 
 /// [`related_lines`] output with `extra` links inserted before its hint
 /// footer (or in place of "No related resources"), each id once.
-pub fn with_protection(mut lines: Vec<(String, String)>, extra: Vec<(String, String)>) -> Vec<(String, String)> {
+pub fn with_protection(lines: Vec<(String, String)>, extra: Vec<(String, String)>) -> Vec<(String, String)> {
     let extra: Vec<(String, String)> = extra
         .into_iter()
         .filter(|(_, id)| !lines.iter().any(|(l, existing)| existing.eq_ignore_ascii_case(id) && l.starts_with("Backed up")))
         .collect();
-    if extra.is_empty() {
-        return lines;
-    }
-    if lines.len() == 1 && lines[0].1 == "No related resources" {
-        return related_lines(extra);
-    }
-    // The footer is a blank line then the ⏎ hint.
-    let at = lines.iter().rposition(|(k, v)| k.is_empty() && v.is_empty()).unwrap_or(lines.len());
-    let footer = lines.split_off(at);
-    lines.extend(extra);
-    lines.extend(footer);
-    lines
+    crate::azure::services::splice_related(lines, extra)
 }
 
 // ── Schedules and retention ───────────────────────────────────────────

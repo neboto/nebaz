@@ -14,6 +14,7 @@
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::alerts::{alert_list_of, AlertLists};
 use crate::azure::services::{
     arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope,
 };
@@ -390,6 +391,9 @@ impl AzureService for MonitorService {
     }
 
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+        if alert_list_of(view).is_some() {
+            return AlertLists { scope: &self.scope }.list(view).await;
+        }
         let (path, version, _) = Self::list_of(view);
         Ok(Self::rows(view, &self.scope.list(path, version).await?, self.scope.tenant()))
     }
@@ -400,6 +404,9 @@ impl AzureService for MonitorService {
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
+        if alert_list_of(view).is_some() {
+            return AlertLists { scope: &self.scope }.stream(view, &event_tx, service_type).await;
+        }
         let tenant = self.scope.tenant().map(str::to_string);
         let (path, version, label) = Self::list_of(view);
         let r = self
@@ -415,6 +422,7 @@ impl AzureService for MonitorService {
         let tenant = self.scope.tenant();
         let not_found = || Error::ResourceNotFound(id.to_string());
         match JumpView::for_arm_id(id) {
+            Some(view) if alert_list_of(view).is_some() => AlertLists { scope: &self.scope }.get(id, view).await,
             Some(JumpView::AppInsights) => {
                 let v = self.scope.get(id, COMPONENT_API_VERSION).await?;
                 Ok(Box::new(ComponentRow::from_json(&v, tenant).ok_or_else(not_found)?))

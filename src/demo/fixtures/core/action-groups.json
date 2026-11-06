@@ -52,8 +52,22 @@
             "status": "Enabled"
           }
         ],
-        "smsReceivers": [],
-        "webhookReceivers": [],
+        "smsReceivers": [
+          {
+            "name": "platform-lead",
+            "countryCode": "31",
+            "phoneNumber": "612345678",
+            "status": "Enabled"
+          }
+        ],
+        "webhookReceivers": [
+          {
+            "name": "slack-platform",
+            "serviceUri": "https://hooks.slack.com/services/T0CONTOSO/B0PLATFORM/never-shown-webhook-token",
+            "useCommonAlertSchema": true,
+            "useAadAuth": false
+          }
+        ],
         "eventHubReceivers": [],
         "itsmReceivers": [],
         "azureAppPushReceivers": [],

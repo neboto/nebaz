@@ -151,6 +151,7 @@ mod network_lens;
 mod firewall;
 mod flow_logs;
 mod advisor;
+mod alerts;
 mod virtual_wan;
 mod defender;
 mod governance;
@@ -2894,7 +2895,8 @@ impl App {
         // read this session says so (#32, no call).
         let label = resource.detail_sections().and_then(|d| d.sections.get(idx)).map(|s| s.label);
         if label == Some("Related") {
-            return Some(self.with_backup_protection(resource.id(), lines));
+            let lines = self.with_backup_protection(resource.id(), lines);
+            return Some(self.with_alert_rules(resource.id(), lines));
         }
         Some(lines)
     }
@@ -2934,6 +2936,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.virtual_wan_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.alerts_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {

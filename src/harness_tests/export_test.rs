@@ -46,6 +46,10 @@ pub(super) fn land_vm_sections(h: &mut Harness, id: &str) {
     lazy.role_assignments.apply(id.to_string(), Err("403 Forbidden: AuthorizationFailed".to_string()));
     lazy.role_definitions.apply(format!("/subscriptions/{}", SUB_DEV), Ok(vec![]));
     lazy.activity.apply(id.to_string(), Ok(vec![]));
+    // Related's alert rule lists (#194): none.
+    for view in ["metric-alerts", "log-alerts", "activity-log-alerts"] {
+        lazy.section_lists.apply(format!("{}|{}", SUB_DEV, view), Ok(vec![]));
+    }
 }
 
 fn vm_mock(name: &str) -> Mock {
