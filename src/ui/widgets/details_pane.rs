@@ -40,7 +40,7 @@ const JUMP_MARKER: &str = "  →";
 
 /// The footer's hints, dropping the optional ones (least useful first)
 /// until the line fits `width`: a block truncates an over-wide title,
-/// which cut the `h list` and `⌫ back to …` hints first. Any other key
+/// which cut the `h list` hint first. Any other key
 /// always stays (so does `Esc clear filter` while a filter is on).
 fn fit_hints(mut hints: Vec<(&str, &str)>, width: usize) -> Line<'static> {
     const DROP_ORDER: [&str; 7] = ["/", "j/k", "\\", "V", "y", "⏎", "n/N"];
@@ -104,15 +104,9 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
     let title = format!("{} · {}", resource.resource_type(), resource.name());
     let flat_hint = if app.detail_flat_mode { "tabs" } else { "flat" };
     let footer = if focused {
-        // `h` returns to the list; `⌫` walks history, and says where to
-        // when there is somewhere (first, so a narrow pane keeps it).
-        let back = app.nav_back_hint().map(|to| format!("back to {to}"));
+        // `h` returns to the list; history is the strip's `←` / `→`.
         let filtered = !app.detail_search_query.is_empty();
-        let mut hints: Vec<(&str, &str)> = Vec::new();
-        if let Some(back) = back.as_deref() {
-            hints.push(("⌫", back));
-        }
-        hints.extend([
+        let mut hints: Vec<(&str, &str)> = vec![
             ("Tab", if app.flat_active() { "header" } else { "section" }),
             ("j/k", "line"),
             if filtered { ("n/N", "match") } else { ("/", "filter") },
@@ -121,7 +115,7 @@ pub fn render_details_pane(app: &App, area: Rect, frame: &mut Frame) {
             ("y", "copy"),
             ("\\", flat_hint),
             ("h", "list"),
-        ]);
+        ];
         // While filtering, how to get the whole body back stays visible.
         if filtered {
             hints.push(("Esc", "clear filter"));

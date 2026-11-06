@@ -279,23 +279,6 @@ pub struct NavLocation {
 /// Cap on the navigation timeline length (oldest entries drop off the front).
 const NAV_HISTORY_MAX: usize = 25;
 
-/// `{service} {id tail}` for the detail footer's back hint: an ARM id keeps
-/// only its last `/` segment (the resource's name), capped so a long name
-/// cannot crowd out the rest of the footer.
-fn nav_hint_label(service: ServiceType, id: Option<&str>) -> String {
-    const MAX: usize = 28;
-    let Some(id) = id.filter(|id| !id.is_empty()) else {
-        return service.short_name().to_string();
-    };
-    let tail = id.rsplit('/').find(|seg| !seg.is_empty()).unwrap_or(id);
-    let tail = if tail.chars().count() > MAX {
-        format!("{}…", tail.chars().take(MAX - 1).collect::<String>())
-    } else {
-        tail.to_string()
-    };
-    format!("{} {tail}", service.short_name())
-}
-
 /// Cap on the `/` search history (oldest entries drop off the front).
 const SEARCH_HISTORY_MAX: usize = 50;
 
@@ -4084,7 +4067,7 @@ impl App {
                 KeyCode::Esc if self.detail_visual_anchor.is_some() => {
                     self.detail_visual_anchor = None;
                 }
-                // ⌫ walks history (the footer's `⌫ back to …` names it);
+                // ⌫ walks history (as the strip's `←` does);
                 // with nothing behind, it leaves the pane as `h` does. The
                 // filter belonged to the pane being left.
                 KeyCode::Backspace if self.nav_back_index().is_some() => {
@@ -4424,7 +4407,7 @@ impl App {
     }
 
     /// The entry `nav_back` would land on, computed without recording
-    /// anything (the footer hint asks it every frame).
+    /// anything (the strip's `←` asks it every frame).
     pub(crate) fn nav_back_index(&self) -> Option<usize> {
         match self.nav_cursor {
             None => {
@@ -4437,26 +4420,8 @@ impl App {
         }
     }
 
-    /// Where `⌫` / `Ctrl-O` would go, short, for the detail footer:
-    /// `VMs vm-1`, the ARM id cut to its last segment. `None` with no
-    /// history behind, or when that entry is where we already are.
-    pub(crate) fn nav_back_hint(&self) -> Option<String> {
-        let loc = &self.nav_history[self.nav_back_index()?];
-        let here = self.get_selected_resource().map(|r| r.id());
-        let other = self.other_subscription_name(loc);
-        if other.is_none() && Some(loc.service) == self.current_service && loc.selected_id.as_deref() == here {
-            return None;
-        }
-        let label = nav_hint_label(loc.service, loc.selected_id.as_deref());
-        // The step switches subscription, so the hint says which.
-        Some(match other {
-            Some(name) => format!("{label} · {name}"),
-            None => label,
-        })
-    }
-
     /// The subscription `loc` was captured in, by name, when it isn't the
-    /// current one: what the back hint, the jump list and the bookmarks
+    /// current one: what the jump list and the bookmarks
     /// name beside a place that restoring switches subscription for. An id
     /// `az account list` no longer knows shows as its first 8 characters.
     pub(crate) fn other_subscription_name(&self, loc: &NavLocation) -> Option<String> {
@@ -4902,20 +4867,6 @@ fn selection_text(lines: &[(String, String)], start: usize, end: usize) -> Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_back_hint_label_is_the_service_and_the_id_tail() {
-        let vm = "/subscriptions/s/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/web-1";
-        assert_eq!(nav_hint_label(ServiceType::VirtualMachines, Some(vm)), "VMs web-1");
-        let subnet = "/subscriptions/s/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/v/subnets/aks/";
-        assert_eq!(nav_hint_label(ServiceType::Network, Some(subnet)), "VNet aks");
-        let long = "a".repeat(40);
-        let label = nav_hint_label(ServiceType::Aks, Some(&long));
-        assert_eq!(label.chars().count(), "AKS ".len() + 28);
-        assert!(label.ends_with('…'));
-        assert_eq!(nav_hint_label(ServiceType::Aks, None), "AKS");
-        assert_eq!(nav_hint_label(ServiceType::Aks, Some("")), "AKS");
-    }
 
     fn s(k: &str, v: &str) -> (String, String) {
         (k.to_string(), v.to_string())

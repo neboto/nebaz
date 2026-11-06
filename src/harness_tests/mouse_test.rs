@@ -287,18 +287,6 @@ async fn hints_badges_and_the_location_chip_press_their_keys() {
 }
 
 #[tokio::test]
-async fn the_footer_back_hint_walks_history() {
-    let mut h = vms(&["vm-1"]).await;
-    open_related(&mut h).await;
-    h.cursor_to_value(&nic_id("vm-1-nic")).await;
-    h.press(KeyCode::Enter).await;
-    h.land(vec![nic("vm-1-nic", "westeurope")]).await;
-    let back = h.find("⌫ back to");
-    h.click(back).await;
-    assert_eq!(h.app.current_view, JumpView::VirtualMachines);
-}
-
-#[tokio::test]
 async fn the_service_picker_takes_clicks_and_nothing_falls_through() {
     let mut h = vms(&["vm-a", "vm-b"]).await;
     h.press(KeyCode::Char('S')).await;

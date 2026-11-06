@@ -72,6 +72,15 @@ fn cached(h: &Harness, sub: &str) -> Option<usize> {
         .map(|r| r.len())
 }
 
+/// Where `⌫` would land: the row's name, and its subscription by name
+/// when going back switches to it.
+fn back_to(h: &Harness) -> (Option<String>, Option<String>) {
+    let Some(i) = h.app.nav_back_index() else { return (None, None) };
+    let loc = &h.app.nav_history[i];
+    let name = loc.selected_id.as_deref().map(|id| name_of_id(id).to_string());
+    (name, h.app.other_subscription_name(loc))
+}
+
 fn shift(c: char) -> KeyEvent {
     KeyEvent::new(KeyCode::Char(c), KeyModifiers::SHIFT)
 }
@@ -126,7 +135,7 @@ async fn opening_p_counts_the_current_tab_in_each_configured_subscription() {
     assert_eq!(h.app.subscription_id.as_deref(), Some(SUB_PROD));
     assert!(!h.app.loading, "a cache hit isn't a load");
     assert_eq!(h.visible_names(), ["prod-1", "prod-2", "prod-3"]);
-    assert_eq!(h.app.nav_back_hint().as_deref(), Some("VMs dev-1 · Dev"));
+    assert_eq!(back_to(&h), (Some("dev-1".into()), Some("Dev".into())));
     // Another sub-tab counts its own list.
     assert_eq!(h.app.subscription_counts().get(SUB_PROD), Some(&SubscriptionCount::Count(3)));
     h.press(KeyCode::Tab).await;
@@ -153,7 +162,7 @@ async fn history_jump_list_and_bookmarks_cross_subscriptions() {
     h.press(KeyCode::Enter).await;
     assert_eq!(h.app.subscription_id.as_deref(), Some(SUB_PROD));
     h.land(vec![vm_in(SUB_PROD, "prod-1")]).await;
-    assert_eq!(h.app.nav_back_hint().as_deref(), Some("VMs dev-2 · Dev"));
+    assert_eq!(back_to(&h), (Some("dev-2".into()), Some("Dev".into())));
 
     // The bookmark from Dev names it.
     h.press(KeyCode::Char('\'')).await;
