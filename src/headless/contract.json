@@ -206,7 +206,8 @@
     "aca": [
       "container-apps (aca)",
       "container-app-environments (acaenv)",
-      "container-app-jobs (acajob)"
+      "container-app-jobs (acajob)",
+      "container-groups (aci)"
     ],
     "acr": [
       "registries (acr)"
@@ -563,6 +564,16 @@
       "Auth",
       "Identity",
       "Secrets",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Container group": [
+      "Overview",
+      "Containers",
+      "Network",
+      "Configuration",
       "Access",
       "Activity",
       "Related",

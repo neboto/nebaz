@@ -25,7 +25,7 @@ impl App {
     }
 
     /// A warm list of an ARM id's subscription (never a call).
-    fn warm_list(&self, id: &str, view: JumpView) -> Option<&[Box<dyn Resource>]> {
+    pub(super) fn warm_list(&self, id: &str, view: JumpView) -> Option<&[Box<dyn Resource>]> {
         let sub = subscription_of(id)?;
         self.cache.get_ref(&view.service(), sub, Some(view.as_str()))
     }

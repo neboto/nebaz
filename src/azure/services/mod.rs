@@ -17,6 +17,7 @@ pub mod app_service;
 pub mod changes;
 pub mod compute;
 pub mod container_apps;
+pub mod container_instances;
 pub mod container_registry;
 pub mod cosmos;
 pub mod directory;

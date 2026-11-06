@@ -66,6 +66,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "search.windows.net",
     "search.azure.us",
     "search.azure.cn",
+    // Container Instances (#197): a group's DNS label is the workload's
+    // own endpoint.
+    "azurecontainer.io",
     // App Service: the apps themselves and their Kudu (SCM) sites.
     "azurewebsites.net",
     // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).
@@ -266,6 +269,10 @@ const AZ_FORBIDDEN: &[&str] = &[
     // show` print values (the ARM side is the `listSecrets` POST).
     "containerapp secret",
     "containerapp job secret",
+    // A container instance's output (`logs`) and its live streams
+    // (`attach`): the workload's data, not metadata (#197).
+    "container logs",
+    "container attach",
     // Service Bus and Event Hubs shared access keys and connection strings
     // (`authorization-rule keys list`, the ARM side is the `listKeys`
     // POST), at every level a policy can sit, and the geo-DR alias's.
@@ -768,7 +775,13 @@ const POST_ONLY_READS: &[&str] = &[
 /// (`{connection}/sharedkey`, #135). `ReadOnlyPolicy` lets a GET through,
 /// so the guard keeps the path out of `src/` (the field name `sharedKey`,
 /// which the hybrid rows strip, is not the path).
-const SECRET_READS: &[&str] = &["/sharedkey"];
+const SECRET_READS: &[&str] = &[
+    "/sharedkey",
+    // A container instance's logs (`{group}/containers/{c}/logs`, #197):
+    // the workload's output, which is data, not metadata. Matched after a
+    // format placeholder, so a field like `/logScrubbing` is not a hit.
+    "}/logs",
+];
 
 #[test]
 fn no_secret_read_is_requested() {

@@ -1,7 +1,8 @@
 //! The Container Apps service (issue #26): apps, their environments and
 //! jobs (`Microsoft.App`), three subscription-wide lists. An app's
 //! Revisions and its Auth (Easy Auth) settings are lazy sections, one call
-//! per app each; a job's Executions is one, one call per job.
+//! per app each; a job's Executions is one, one call per job. The tab's
+//! Container groups sub-tab is `container_instances.rs` (#197).
 //!
 //! The list bodies carry credentials: a secret's `value` (when the caller
 //! may read it), a container env var's literal `value`, an environment's
@@ -22,6 +23,7 @@ use crate::azure::resource::{
     ResourceState,
 };
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::container_instances::ContainerInstanceLists;
 use crate::azure::services::{
     arm_row, finish_stream, json, lazy_list_rows, overview_rows, related_rows, tag_rows, ArmBase, Scope,
 };
@@ -1492,6 +1494,9 @@ impl AzureService for ContainerAppsService {
     }
 
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+        if view == JumpView::ContainerGroups {
+            return ContainerInstanceLists { scope: &self.scope }.list().await;
+        }
         let (path, _) = Self::list_of(view);
         Ok(Self::rows(view, &self.scope.list(path, ACA_API_VERSION).await?, self.scope.tenant()))
     }
@@ -1502,6 +1507,9 @@ impl AzureService for ContainerAppsService {
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
+        if view == JumpView::ContainerGroups {
+            return ContainerInstanceLists { scope: &self.scope }.stream(&event_tx, service_type).await;
+        }
         let tenant = self.scope.tenant().map(str::to_string);
         let (path, label) = Self::list_of(view);
         let r = self
@@ -1514,8 +1522,11 @@ impl AzureService for ContainerAppsService {
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
-        let v = self.scope.get(id, ACA_API_VERSION).await?;
         let view = JumpView::for_arm_id(id).unwrap_or(JumpView::ContainerApps);
+        if view == JumpView::ContainerGroups {
+            return ContainerInstanceLists { scope: &self.scope }.get(id).await;
+        }
+        let v = self.scope.get(id, ACA_API_VERSION).await?;
         Self::rows(view, std::slice::from_ref(&v), self.scope.tenant())
             .pop()
             .ok_or_else(|| Error::ResourceNotFound(id.to_string()))

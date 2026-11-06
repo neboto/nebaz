@@ -1,0 +1,184 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerInstance/containerGroups/ci-agents-prod",
+  "name": "ci-agents-prod",
+  "type": "Microsoft.ContainerInstance/containerGroups",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1010"
+  },
+  "systemData": {
+    "createdBy": "alex.kim@contoso.com",
+    "createdByType": "User",
+    "createdAt": "{{iso:now-90d}}",
+    "lastModifiedBy": "alex.kim@contoso.com",
+    "lastModifiedByType": "User",
+    "lastModifiedAt": "{{iso:now-2d}}"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "osType": "Linux",
+    "restartPolicy": "Always",
+    "sku": "Standard",
+    "priority": "Regular",
+    "containers": [
+      {
+        "name": "agent",
+        "properties": {
+          "image": "acrcontosoprod.azurecr.io/ci/build-agent:3.8.1",
+          "command": [],
+          "environmentVariables": [
+            {
+              "name": "AZP_URL",
+              "value": "https://dev.example/contoso"
+            },
+            {
+              "name": "AZP_POOL",
+              "value": "linux-prod"
+            },
+            {
+              "name": "AZP_TOKEN"
+            }
+          ],
+          "resources": {
+            "requests": {
+              "cpu": 2.0,
+              "memoryInGB": 4.0
+            }
+          },
+          "volumeMounts": [
+            {
+              "name": "work",
+              "mountPath": "/azp/_work",
+              "readOnly": false
+            }
+          ],
+          "instanceView": {
+            "restartCount": 14,
+            "currentState": {
+              "state": "Waiting",
+              "detailStatus": "CrashLoopBackOff: Back-off restarting failed container"
+            },
+            "previousState": {
+              "state": "Terminated",
+              "exitCode": 1,
+              "detailStatus": "Error",
+              "startTime": "{{iso:now-420s}}",
+              "finishTime": "{{iso:now-400s}}"
+            },
+            "events": [
+              {
+                "name": "Pulled",
+                "type": "Normal",
+                "count": 1,
+                "firstTimestamp": "{{iso:now-2d}}",
+                "lastTimestamp": "{{iso:now-2d}}",
+                "message": "Successfully pulled image \"acrcontosoprod.azurecr.io/ci/build-agent:3.8.1\""
+              },
+              {
+                "name": "Started",
+                "type": "Normal",
+                "count": 15,
+                "firstTimestamp": "{{iso:now-2d}}",
+                "lastTimestamp": "{{iso:now-420s}}",
+                "message": "Started container"
+              },
+              {
+                "name": "BackOff",
+                "type": "Warning",
+                "count": 61,
+                "firstTimestamp": "{{iso:now-1d}}",
+                "lastTimestamp": "{{iso:now-60s}}",
+                "message": "Back-off restarting failed container"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "docker-cache",
+        "properties": {
+          "image": "acrcontosoprod.azurecr.io/ci/registry-mirror:2.8",
+          "command": [],
+          "environmentVariables": [
+            {
+              "name": "REGISTRY_PROXY_REMOTEURL",
+              "value": "https://registry-1.docker.example"
+            }
+          ],
+          "ports": [
+            {
+              "port": 5000
+            }
+          ],
+          "resources": {
+            "requests": {
+              "cpu": 0.5,
+              "memoryInGB": 1.0
+            }
+          },
+          "volumeMounts": [
+            {
+              "name": "cache",
+              "mountPath": "/var/lib/registry",
+              "readOnly": false
+            }
+          ],
+          "livenessProbe": {
+            "httpGet": {
+              "path": "/",
+              "port": 5000
+            },
+            "periodSeconds": 30
+          },
+          "instanceView": {
+            "restartCount": 0,
+            "currentState": {
+              "state": "Running",
+              "detailStatus": "",
+              "startTime": "{{iso:now-2d}}"
+            },
+            "events": [
+              {
+                "name": "Started",
+                "type": "Normal",
+                "count": 1,
+                "firstTimestamp": "{{iso:now-2d}}",
+                "lastTimestamp": "{{iso:now-2d}}",
+                "message": "Started container"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "imageRegistryCredentials": [
+      {
+        "server": "acrcontosoprod.azurecr.io",
+        "username": "acrcontosoprod"
+      }
+    ],
+    "volumes": [
+      {
+        "name": "work",
+        "emptyDir": {}
+      },
+      {
+        "name": "cache",
+        "emptyDir": {}
+      }
+    ],
+    "diagnostics": {
+      "logAnalytics": {
+        "workspaceId": "a5584474-4031-4fdf-9df6-93254d6c4c43",
+        "logType": "ContainerInstanceLogs"
+      }
+    },
+    "instanceView": {
+      "state": "Running",
+      "events": []
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ContainerInstance/containerGroups/cg-orders-reindex",
+  "name": "cg-orders-reindex",
+  "type": "Microsoft.ContainerInstance/containerGroups",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "orders",
+    "owner": "orders-team@contoso.com",
+    "costCenter": "CC-3020"
+  },
+  "systemData": {
+    "createdBy": "alex.kim@contoso.com",
+    "createdByType": "User",
+    "createdAt": "{{iso:now-1d}}",
+    "lastModifiedBy": "alex.kim@contoso.com",
+    "lastModifiedByType": "User",
+    "lastModifiedAt": "{{iso:now-1d}}"
+  },
+  "identity": {
+    "type": "UserAssigned",
+    "userAssignedIdentities": {
+      "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api": {}
+    }
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "osType": "Linux",
+    "restartPolicy": "Never",
+    "sku": "Standard",
+    "priority": "Regular",
+    "containers": [
+      {
+        "name": "reindex",
+        "properties": {
+          "image": "acrcontosoprod.azurecr.io/orders-reindex:1.6.0",
+          "command": [
+            "dotnet",
+            "Orders.Reindex.dll",
+            "--full"
+          ],
+          "environmentVariables": [
+            {
+              "name": "ORDERS_DB_HOST",
+              "value": "psql-orders-prod"
+            },
+            {
+              "name": "ORDERS_DB_PASSWORD"
+            }
+          ],
+          "resources": {
+            "requests": {
+              "cpu": 1.0,
+              "memoryInGB": 2.0
+            }
+          },
+          "volumeMounts": [],
+          "instanceView": {
+            "restartCount": 0,
+            "currentState": {
+              "state": "Terminated",
+              "exitCode": 0,
+              "detailStatus": "Completed",
+              "startTime": "{{iso:now-1d}}",
+              "finishTime": "{{iso:now-84000s}}"
+            },
+            "events": [
+              {
+                "name": "Pulled",
+                "type": "Normal",
+                "count": 1,
+                "firstTimestamp": "{{iso:now-1d}}",
+                "lastTimestamp": "{{iso:now-1d}}",
+                "message": "Successfully pulled image \"acrcontosoprod.azurecr.io/orders-reindex:1.6.0\""
+              },
+              {
+                "name": "Started",
+                "type": "Normal",
+                "count": 1,
+                "firstTimestamp": "{{iso:now-1d}}",
+                "lastTimestamp": "{{iso:now-1d}}",
+                "message": "Started container"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "imageRegistryCredentials": [
+      {
+        "server": "acrcontosoprod.azurecr.io",
+        "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+      }
+    ],
+    "diagnostics": {
+      "logAnalytics": {
+        "workspaceId": "a5584474-4031-4fdf-9df6-93254d6c4c43",
+        "logType": "ContainerInstanceLogs"
+      }
+    },
+    "instanceView": {
+      "state": "Succeeded",
+      "events": []
+    }
+  }
+}

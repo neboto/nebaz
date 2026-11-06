@@ -107,6 +107,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `redis-orders-cache`: non-TLS port 6379 enabled | `@audit` |
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
 | `srch-contoso-prod`'s shared private link to `cosmos-legacy` waits for approval | Foundry › Search services |
+| `ci-agents-prod`'s build agent crash-loops (14 restarts, last exit 1) and pulls from `acrcontosoprod` with the registry's admin user | Container Apps › Container groups |
 | `sqlmi-legacy-prod`'s public data endpoint is enabled (port 3342; `nsg-sqlmi` admits only the office), and the instance has no failover group | SQL › Managed instances |
 | `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
 | `vst-branch-cork`'s only link, `link-vodafone`, is `NotConnected` to the hub's VPN gateway (Dublin's is up): the gateway's list line says `⚠ 1 down` | Virtual WAN |
@@ -251,6 +252,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `ca-orders-api` (profile `D4`): ingress 443 → 8080, `external: true` on the internal environment (so: reachable from the VNet, never the internet; with `external: false` neither Power Platform nor the app gateway could call it), IP restrictions allowing only 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24 (the same sources as `nsg-aca`), FQDN `ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io`, image `acrcontosoprod.azurecr.io/orders-api:2.31.0`, revision `ca-orders-api--v231` (100%, healthy, 3 replicas; `--v230`, `--v229` inactive), identity `id-orders-api` (also its ACR pull identity), three secrets, all Key Vault references to `kv-orders-prod`
 - `ca-orders-worker`: no ingress, system-assigned identity (pulls from ACR with it), KEDA `azure-servicebus` scale rule on `sb-orders-prod`/`orders`; app provisioning state Failed, latest revision `ca-orders-worker--v119` failed (image `orders-worker:1.19.0` not found, the revision's `provisioningError`), previous `ca-orders-worker--v118` (`orders-worker:1.18.2`, 2 replicas) still running
 - Job `caj-nightly-export`: scheduled `0 2 * * *`, identity `id-orders-api`, image `orders-export:1.4.2`; last execution (`caj-nightly-export-q7k2m9x`, 6h ago) Failed, the three before Succeeded (the `executions` fixture, read by the job's Executions section)
+- Container group `cg-orders-reindex` (Container Instances, Linux, restart `Never`): one `reindex` container from `acrcontosoprod` pulled with `id-orders-api`, ran yesterday and exited 0 (`Succeeded`); `ORDERS_DB_PASSWORD` is a secure env var, shown by name
 - `id-orders-api` (user-assigned): AcrPull on `acrcontosoprod`, Key Vault Secrets User on `kv-orders-prod`
 - `kv-orders-prod`: RBAC, public network disabled, purge protection on, behind `pe-kv-orders`
 - `stcontosoordersprod`: StorageV2, behind `pe-st-orders-blob` but public network still enabled, blob public access allowed, TLS 1.0
@@ -265,6 +267,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 **`rg-platform-prod`** (team platform)
 - `acrcontosoprod` (Premium, admin user on, public network disabled, behind `pe-acr-prod`; replicated to `northeurope`; webhook `ordersapipush` on `orders-api:*` pushes)
 - `aks-platform-prod`: 1.28.9, Free tier, Azure CNI overlay (managed VNet, no subnet of ours), Entra integration with `Contoso Platform Admins` as admins, monitoring to `law-contoso-prod`, node resource group `MC_rg-platform-prod_aks-platform-prod_westeurope`; node pools `system` (3 × Standard_D4s_v5, Succeeded) and `batch` (autoscale 0 → 4 × Standard_D8s_v5, Failed)
+- Container group `ci-agents-prod` (Container Instances, Linux, restart `Always`, no IP): build `agent` (2 CPU, 4 GB) **crash-looping**, 14 restarts, last exit 1, and a `docker-cache` registry mirror (running, port 5000); both pull from `acrcontosoprod` with its admin user; logs to `law-contoso-prod`
 - `agw-contoso-prod` (WAF_v2, in `snet-appgw`, `pip-agw-prod`): listener `api.contoso-demo.com` → backend pool `orders-api` → `ca-orders-api`'s FQDN `ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (the app's `ingress.fqdn` must be exactly this for the backend to match); WAF policy `wafp-agw-prod` in **Detection**
 - Traffic Manager `tm-contoso-api` (global, Priority, `contoso-api.trafficmanager.net`, HTTPS probe on `/healthz`): `agw-westeurope` (Azure endpoint → `pip-agw-prod`, priority 1, Online) and `dr-onprem` (external `api-dr.contoso-demo.com`, priority 2, **Degraded**)
 - Front Door `afd-contoso` (Premium, global): endpoint `contoso-web` (host `contoso-web-c7d9e2f4a1b3.z01.azurefd.net`) with route `route-web` for the custom domain `www.contoso-demo.com`, origin group `og-agw-prod` → origin `origin-agw-prod` at `pip-agw-prod`'s FQDN, WAF policy `wafpafdcontoso` in Prevention (through security policy `sp-wafpafdcontoso`)
@@ -311,6 +314,6 @@ Graph (`directoryObjects`) is `identity`'s.
 |---|---|
 | `core` | Subscriptions (subscription details, locations, resource groups, All resources), the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
 | `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Virtual WAN, Firewall |
-| `compute` | VMs, disks, AKS, Container Registry, App Service, Container Apps |
+| `compute` | VMs, disks, AKS, Container Registry, App Service, Container Apps, Container Instances |
 | `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, Backup |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry, AI Search |

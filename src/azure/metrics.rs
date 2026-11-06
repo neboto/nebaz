@@ -375,6 +375,14 @@ const SEARCH_SERVICE: &[MetricSpec] = &[
     m("DocumentsProcessedCount", "Documents indexed", Total),
     m("SkillExecutionCount", "Skill executions", Total),
 ];
+/// A container group: CPU and memory over its containers, and its
+/// network throughput.
+const CONTAINER_GROUP: &[MetricSpec] = &[
+    m("CpuUsage", "CPU (millicores)", Avg),
+    m("MemoryUsage", "Memory", Avg),
+    m("NetworkBytesReceivedPerSecond", "Network in /s", Avg),
+    m("NetworkBytesTransmittedPerSecond", "Network out /s", Avg),
+];
 /// A Virtual WAN hub's router: BGP with the hub's peers, its route
 /// counts, the routing infrastructure units and the data it processed.
 const VIRTUAL_HUB: &[MetricSpec] = &[
@@ -478,6 +486,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.network", ["virtualhubs"]) => VIRTUAL_HUB,
         ("microsoft.sql", ["managedinstances"]) => SQL_MANAGED_INSTANCE,
         ("microsoft.search", ["searchservices"]) => SEARCH_SERVICE,
+        ("microsoft.containerinstance", ["containergroups"]) => CONTAINER_GROUP,
         ("microsoft.network", ["vpngateways"]) => VWAN_VPN_GATEWAY,
         ("microsoft.network", ["expressroutegateways"]) => VWAN_ER_GATEWAY,
         ("microsoft.network", ["p2svpngateways"]) => P2S_GATEWAY,
