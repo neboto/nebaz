@@ -1,0 +1,200 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerInstance/containerGroups/ci-agents-prod",
+      "name": "ci-agents-prod",
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1010"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-2d}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "osType": "Linux",
+        "restartPolicy": "Always",
+        "sku": "Standard",
+        "priority": "Regular",
+        "containers": [
+          {
+            "name": "agent",
+            "properties": {
+              "image": "acrcontosoprod.azurecr.io/ci/build-agent:3.8.1",
+              "command": [],
+              "environmentVariables": [
+                {
+                  "name": "AZP_URL",
+                  "value": "https://dev.example/contoso"
+                },
+                {
+                  "name": "AZP_POOL",
+                  "value": "linux-prod"
+                },
+                {
+                  "name": "AZP_TOKEN"
+                }
+              ],
+              "resources": {
+                "requests": {
+                  "cpu": 2.0,
+                  "memoryInGB": 4.0
+                }
+              },
+              "volumeMounts": [
+                {
+                  "name": "work",
+                  "mountPath": "/azp/_work",
+                  "readOnly": false
+                }
+              ]
+            }
+          },
+          {
+            "name": "docker-cache",
+            "properties": {
+              "image": "acrcontosoprod.azurecr.io/ci/registry-mirror:2.8",
+              "command": [],
+              "environmentVariables": [
+                {
+                  "name": "REGISTRY_PROXY_REMOTEURL",
+                  "value": "https://registry-1.docker.example"
+                }
+              ],
+              "ports": [
+                {
+                  "port": 5000
+                }
+              ],
+              "resources": {
+                "requests": {
+                  "cpu": 0.5,
+                  "memoryInGB": 1.0
+                }
+              },
+              "volumeMounts": [
+                {
+                  "name": "cache",
+                  "mountPath": "/var/lib/registry",
+                  "readOnly": false
+                }
+              ],
+              "livenessProbe": {
+                "httpGet": {
+                  "path": "/",
+                  "port": 5000
+                },
+                "periodSeconds": 30
+              }
+            }
+          }
+        ],
+        "imageRegistryCredentials": [
+          {
+            "server": "acrcontosoprod.azurecr.io",
+            "username": "acrcontosoprod"
+          }
+        ],
+        "volumes": [
+          {
+            "name": "work",
+            "emptyDir": {}
+          },
+          {
+            "name": "cache",
+            "emptyDir": {}
+          }
+        ],
+        "diagnostics": {
+          "logAnalytics": {
+            "workspaceId": "a5584474-4031-4fdf-9df6-93254d6c4c43",
+            "logType": "ContainerInstanceLogs"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ContainerInstance/containerGroups/cg-orders-reindex",
+      "name": "cg-orders-reindex",
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders-team@contoso.com",
+        "costCenter": "CC-3020"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-1d}}",
+        "lastModifiedBy": "alex.kim@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-1d}}"
+      },
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api": {}
+        }
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "osType": "Linux",
+        "restartPolicy": "Never",
+        "sku": "Standard",
+        "priority": "Regular",
+        "containers": [
+          {
+            "name": "reindex",
+            "properties": {
+              "image": "acrcontosoprod.azurecr.io/orders-reindex:1.6.0",
+              "command": [
+                "dotnet",
+                "Orders.Reindex.dll",
+                "--full"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "ORDERS_DB_HOST",
+                  "value": "psql-orders-prod"
+                },
+                {
+                  "name": "ORDERS_DB_PASSWORD"
+                }
+              ],
+              "resources": {
+                "requests": {
+                  "cpu": 1.0,
+                  "memoryInGB": 2.0
+                }
+              },
+              "volumeMounts": []
+            }
+          }
+        ],
+        "imageRegistryCredentials": [
+          {
+            "server": "acrcontosoprod.azurecr.io",
+            "identity": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api"
+          }
+        ],
+        "diagnostics": {
+          "logAnalytics": {
+            "workspaceId": "a5584474-4031-4fdf-9df6-93254d6c4c43",
+            "logType": "ContainerInstanceLogs"
+          }
+        }
+      }
+    }
+  ]
+}

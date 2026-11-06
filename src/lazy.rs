@@ -283,6 +283,9 @@ pub struct LazyStore {
     /// `GET {job}/executions`, keyed by job id. The template (env) is
     /// never rendered.
     pub aca_job_executions: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {group}` (Container Instances, #197), keyed by group id: the
+    /// body with the instance views the list leaves out, scrubbed.
+    pub aci_instance_views: LazyMap<serde_json::Value>,
 
     // ── Redis ────────────────────────────────────────────────────────────
     /// `GET {cache}/firewallRules`, keyed by cache id.

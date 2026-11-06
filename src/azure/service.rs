@@ -263,6 +263,8 @@ pub enum JumpView {
     ContainerApps,
     ContainerAppEnvironments,
     ContainerAppJobs,
+    /// `Microsoft.ContainerInstance/containerGroups` (#197).
+    ContainerGroups,
     // Redis
     /// Azure Cache for Redis (`Microsoft.Cache/redis`).
     RedisCaches,
@@ -345,7 +347,7 @@ impl JumpView {
             LogWorkspaces | AppInsights | MetricAlerts | LogAlerts | ActivityLogAlerts | ActionGroups | AlertProcessingRules
             | FiredAlerts => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
-            ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
+            ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
             PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups => ServiceType::Governance,
@@ -435,6 +437,7 @@ impl JumpView {
             ContainerApps => "container-apps",
             ContainerAppEnvironments => "container-app-environments",
             ContainerAppJobs => "container-app-jobs",
+            ContainerGroups => "container-groups",
             RedisCaches => "redis-caches",
             ManagedRedis => "managed-redis",
             ServiceBusNamespaces => "servicebus-namespaces",
@@ -538,6 +541,7 @@ impl JumpView {
             ContainerApps => "Apps",
             ContainerAppEnvironments => "Environments",
             ContainerAppJobs => "Jobs",
+            ContainerGroups => "Container groups",
             RedisCaches => "Caches",
             ManagedRedis => "Managed Redis",
             ServiceBusNamespaces => "Service Bus",
@@ -649,6 +653,7 @@ impl JumpView {
             ("microsoft.app", ["containerapps"]) => JumpView::ContainerApps,
             ("microsoft.app", ["managedenvironments"]) => JumpView::ContainerAppEnvironments,
             ("microsoft.app", ["jobs"]) => JumpView::ContainerAppJobs,
+            ("microsoft.containerinstance", ["containergroups"]) => JumpView::ContainerGroups,
             ("microsoft.cache", ["redis"]) => JumpView::RedisCaches,
             ("microsoft.cache", ["redisenterprise"]) => JumpView::ManagedRedis,
             ("microsoft.servicebus", ["namespaces"]) => JumpView::ServiceBusNamespaces,
@@ -919,7 +924,7 @@ impl ServiceType {
             ServiceType::Foundry => "Foundry, OpenAI & AI Search (metadata only)",
             ServiceType::Monitor => "Log Analytics, App Insights & alerts",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
-            ServiceType::ContainerApps => "Container apps, environments & jobs",
+            ServiceType::ContainerApps => "Container apps, environments, jobs & instances",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
             ServiceType::Governance => "Policy, locks & management groups",
@@ -983,7 +988,7 @@ impl ServiceType {
                 FiredAlerts,
             ],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
-            ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
+            ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
             ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups],
@@ -1186,6 +1191,9 @@ impl ServiceType {
             "acajob" | "acajobs" | "containerappjob" | "containerappjobs" => {
                 (ServiceType::ContainerApps, Some(JumpView::ContainerAppJobs))
             }
+            "aci" | "containerinstance" | "containerinstances" | "containergroup" | "containergroups" | "cg" => {
+                (ServiceType::ContainerApps, Some(JumpView::ContainerGroups))
+            }
             "redis" | "cache" | "caches" | "rediscache" | "azurecache" => (ServiceType::Redis, None),
             "amr" | "managedredis" | "redisenterprise" => (ServiceType::Redis, Some(JumpView::ManagedRedis)),
             "sb" | "servicebus" | "messaging" | "msg" => (ServiceType::Messaging, None),
@@ -1254,7 +1262,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1554,6 +1562,11 @@ mod tests {
             Some(JumpView::ContainerAppEnvironments)
         );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/jobs/nightly")), Some(JumpView::ContainerAppJobs));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.ContainerInstance/containerGroups/cg-agents")),
+            Some(JumpView::ContainerGroups)
+        );
+        assert_eq!(ServiceType::from_prefix("@aci"), Some((ServiceType::ContainerApps, Some(JumpView::ContainerGroups))));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/Redis/redis-prod")), Some(JumpView::RedisCaches));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/redisEnterprise/amr-prod")), Some(JumpView::ManagedRedis));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Cache/redisEnterprise/amr-prod/databases/default")), None);

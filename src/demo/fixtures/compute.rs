@@ -61,6 +61,17 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.App/managedEnvironments", "managed-environments.prod.json"),
     fx!("compute", "/subscriptions/{{dev}}/providers/Microsoft.App/managedEnvironments", "managed-environments.dev.json"),
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.App/jobs", "jobs.json"),
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.ContainerInstance/containerGroups", "container-groups.json"),
+    fx!(
+        "compute",
+        "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.ContainerInstance/containerGroups/ci-agents-prod",
+        "ci-agents-prod.json"
+    ),
+    fx!(
+        "compute",
+        "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ContainerInstance/containerGroups/cg-orders-reindex",
+        "cg-orders-reindex.json"
+    ),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api/revisions/ca-orders-api--v231/replicas", "ca-orders-api.v231.replicas.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker/revisions/ca-orders-worker--v118/replicas", "ca-orders-worker.v118.replicas.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api/revisions", "ca-orders-api.revisions.json"),

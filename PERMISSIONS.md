@@ -397,6 +397,14 @@ each one backs are in the catalog table
   strings, are stripped before the row keeps the JSON. The apps' own
   hosts are on the guard's list, and `az containerapp secret` is named
   forbidden.
+  Container Instances (the tab's Container groups):
+  `Microsoft.ContainerInstance/containerGroups/read`, which also covers
+  the lazy Containers section (a `GET` of the group itself). Env var
+  values, registry passwords, storage keys, secret volume contents and the
+  Log Analytics key are stripped before the row or the store keeps the
+  JSON. A container's logs are a `GET` nebaz never sends (the workload's
+  output; the guard names the path), `exec` and `attach` are `POST`s, and
+  `az container logs` / `attach` are named forbidden.
 - **Messaging** (Service Bus, Event Hubs):
   `Microsoft.ServiceBus/namespaces/read`,
   `Microsoft.EventHub/namespaces/read`; the lazy sections:

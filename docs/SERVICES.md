@@ -902,6 +902,30 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     return the keys), anything on the service's own endpoint (indexes,
     indexers, skillsets, documents: data plane, #69; the guard names the
     host). The endpoint is text.
+39. **Container Instances is the Container Apps tab's Container groups
+    sub-tab** (#197, `src/azure/services/container_instances.rs`, glue
+    `src/app/container_instances.rs`): one subscription-wide list of
+    `Microsoft.ContainerInstance/containerGroups` (`@aci`). The list body
+    carries each group's containers but no instance view (the spec's list
+    example has none), so containers are a section, not sub-tabs: the
+    lazy **Containers** section is a `GET` of the group itself, which adds
+    the group's state and events and each container's current and
+    previous state, restart count and latest events. The list body's spec
+    renders while it is out or if it fails. A container waiting with a
+    reason (`CrashLoopBackOff`) or terminated with a non-zero exit is ⚠.
+    State: the ladder, then the group's `instanceView.state` when the body
+    has one (`Running`; `Pending` / `Repairing` → pending; `Stopped` /
+    `Succeeded` → stopped; `Failed` → unavailable); a list row without it
+    is stateless. A registry its credentials name is a jump (Configuration,
+    Related) when the ACR list is warm, never a call; otherwise the server
+    is text. Stripped before the row or the store keeps the JSON: env var
+    `value` / `secureValue` (env vars render as names, a bare name as
+    secure), registry `password`, `storageAccountKey`, secret volume and
+    config map contents, `workspaceKey`, extension `protectedSettings`.
+    **Never**: a container's logs (`{group}/containers/{c}/logs`, a GET
+    that returns the workload's output; the guard names the path), `exec`
+    and `attach` (POSTs). The group's FQDN is text; the guard names the
+    host.
 
 ## The catalog
 
@@ -995,6 +1019,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Monitor · Fired alerts | Alert (severity, condition and state, fired, resolved, last changed and by whom, monitor service and signal, resource, rule, suppressed, description) | Fired → unavailable, Acknowledged → pending, Resolved → available, Closed → stopped | resource, rule | — (none reads a fired alert) |
 | Container Apps · Apps | Ingress (external / internal, FQDN as text, transport, ports, insecure HTTP flagged, client certificate mode, sticky sessions, IP restrictions as an allow- or deny-list, CORS, traffic split by revision and label, custom domains with their certificates) · Scale (min / max replicas, rules by kind with metadata and auth as trigger parameter → secret **name**) · Containers (init first; image, CPU / memory, probes, env var **names** with secret refs named, volume mounts) · Revisions ⧗ (active first: active, traffic, replicas, health, running state, created, last active, provisioning error) · Auth ⧗ (`authConfigs`: on / off, unauthenticated action, excluded paths, per provider the client id; Entra ID issuer, client secret setting **name**, audiences, allowed client apps and identities) · Identity (system principal; each user-assigned identity with client and principal id; lifecycle; registry pull identities) · Secrets (names, Key Vault references and the identity reading them; registries) · (Overview: environment, workload profile, running status, ingress, FQDN, revisions mode, latest and latest-ready revision, Dapr, outbound IPs). Secret and env var `value`s are stripped from the JSON before the row keeps it | ladder, then `runningStatus` (`Running`, `Ready` → Available, `Stopped` / `Suspended` → Stopped, `Progressing` → Pending); `location` is a display name, stored as `eastus` | environment, user-assigned identities, registry pull identities, Express outbound subnet | `az containerapp show` |
 | Container Apps · Environments | Network (public access, internal only, static IP, default domain, infrastructure subnet, Docker bridge and platform reserved ranges, reserved DNS IP, the private DNS a VNet caller needs when internal, custom DNS suffix with its certificate subject / thumbprint / expiry / Key Vault source, peer mTLS, peer traffic encryption, the ingress tier, private endpoints) · Workload profiles (name, type, node bounds) · (Overview: mode, default domain, static IP, zone redundancy, logs destination and workspace customer id, Dapr / KEDA versions, deployment errors). The Log Analytics shared key, Dapr App Insights key and connection string, App Insights connection string and certificate blob and password are stripped | ladder only | infrastructure subnet, infrastructure resource group, private endpoints, user-assigned identities. The workspace is a customer id, not an ARM id: no link (search `@law` for it) | `az containerapp env show` |
+| Container Apps · Container groups (rule 39) | Containers ⧗ (group state and latest events; init then main containers: image, CPU / memory with limits and GPU, ports, command, env var **names** with secure ones marked, mounts, probes; live state with ⚠, restarts, previous state, latest events) · Network (IP and type, ports, DNS label and reuse scope, FQDN as text, subnets jumpable, DNS servers) · Configuration (OS, restart policy, SKU, priority, confidential, Log Analytics workspace id and log type, encryption key; registries with the user or identity that pulls, volumes by kind without contents, secret references; identity) · (Overview: OS, restart policy, container count) | ladder, then the group's `instanceView.state` (`GET` body only) | subnets, user-assigned identities, container group profile, standby pool, registries (when the ACR list is warm) | `az container show --ids` |
 | Container Apps · Jobs | Trigger (manual, schedule with cron, or event with KEDA rules; parallelism, completions, replica timeout, retry limit) · Executions ⧗ (newest first: status, a failed one `⚠`, start and end) · Containers · Identity · Secrets (as Apps) · (Overview: environment, workload profile, running state, trigger, outbound IPs) | ladder only | environment, user-assigned identities, registry pull identities | `az containerapp job show` |
 | Redis · Caches | Security (non-SSL port flagged, min TLS (1.0 / 1.1 flagged), Entra auth, access-key auth, `authnotrequired` flagged, public access, identity) · Network ⧗ (public access, VNet injection subnet with static IP (classic Premium), ports, host name as text, private endpoints with their connection status (not Approved flagged), VNet injection together with private endpoints flagged; then the firewall rules ⧗, an empty list flagged when public access is on and nothing else fences it) · Geo-replication ⧗ (linked servers: each linked cache, role, location, state; no call when the list body names none) · (Overview: SKU and family/capacity, shards, replicas per primary, Redis version, zones, host name and ports as text, update channel, max memory policy, persistence) | ladder only (caches report no runtime state); a `Disabled` provisioning state is Unavailable | subnet, private endpoints, user-assigned identities; ⧗ (Related fires Geo-replication's fetch) the linked caches | `az redis show` |
 | Redis · Managed Redis | Security (min TLS, encryption service- or customer-managed with the key identity, public access, identity) · Network (public access, host name as text, private endpoints with status; no firewall or VNet injection exists) · Databases ⧗ (port, client protocol (`Plaintext` flagged), access-key auth, clustering and eviction policy, persistence, modules, Redis version, state, geo-replication group with each linked cluster jumpable) · (Overview: kind, SKU, capacity, high availability, redundancy, zones, Redis version, resource state, host name) | ladder, then `resourceState` (`Running` → Available, `Disabled` / `…Failed` → Unavailable, else Pending) | private endpoints, user-assigned identities, the CMK identity | `az redisenterprise show` (the `redisenterprise` CLI extension) |
@@ -1005,7 +1030,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1197,6 +1222,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Container Apps jobs | 1 | `/providers/Microsoft.App/jobs` · `2026-07-01` |
 | Revisions, Auth | 1 each per app, on demand (`listSecrets` is a POST and never sent) | `{app}/revisions` · `{app}/authConfigs` · `2026-07-01` |
 | Job Executions | 1 per job, on demand (newest first; the execution's template, which carries env, is never rendered) | `{job}/executions` · `2026-07-01` |
+| Container groups (rule 39) | 1 | `/providers/Microsoft.ContainerInstance/containerGroups` · `2026-07-01` |
+| Containers (instance views) | 1 per group, on demand (a `GET` of the group; logs never) | `{group}` · `2026-07-01` |
 | Redis caches | 1 (the access keys and the persistence storage connection strings a body can carry are stripped before the row keeps it; `listKeys` is a POST and never sent) | `/providers/Microsoft.Cache/redis` · `2024-11-01` |
 | Redis Firewall, Geo-replication | 1 each per cache, on demand (linked servers only when the list body names one) | `{cache}/firewallRules` · `{cache}/linkedServers` · `2024-11-01` |
 | Managed Redis | 1 | `/providers/Microsoft.Cache/redisEnterprise` · `2026-09-01` |
@@ -1288,6 +1315,15 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- Container Instances (#197), built without an Azure login from
+  azure-rest-api-specs (`containerinstance/…/ContainerInstance/stable/2026-07-01`)
+  and the azure-cli `container` module. To check: whether the
+  subscription list carries `instanceView` after all (the row reads it
+  when present, so the list column would fill); how ARM returns a secure
+  env var (a bare name is read as secure); the group `instanceView.state`
+  values beyond `Running` / `Succeeded` / `Failed`; the metric defaults
+  (`CpuUsage`, `MemoryUsage`, `NetworkBytesReceivedPerSecond`,
+  `NetworkBytesTransmittedPerSecond`).
 - AI Search (#196), built without an Azure login from azure-rest-api-specs
   (`search/…/Search/stable/2025-05-01`) and the azure-cli `search`
   module. To check: the subscription list's body carries

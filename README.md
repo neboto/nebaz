@@ -201,7 +201,7 @@ all).
 | `foundry` | Foundry | AI Services and Azure OpenAI accounts (deployments, projects), Search services (`search`: shared private links) |
 | `monitor` | Monitor | Log Analytics workspaces, App Insights (`appi`), Metric alerts (`malert`), Log search alerts (`logalert`), Activity log alerts (`activityalert`), Action groups (`ag`), Alert processing rules (`apr`), Fired alerts (`alert`, the last 30 days); every row's Related names the alert rules watching it |
 | `pp` | Power Platform | Enterprise policies (VNet injection, encryption) |
-| `aca` | Container Apps | Apps (revisions), Environments (`acaenv`), Jobs (`acajob`, executions) |
+| `aca` | Container Apps | Apps (revisions), Environments (`acaenv`), Jobs (`acajob`, executions), Container groups (`aci`: Container Instances, each container's state and restarts) |
 | `redis` | Redis | Azure Cache for Redis, Managed Redis (`amr`) |
 | `sb` | Messaging | Service Bus namespaces, Event Hubs (`eh`) |
 | `changes` | Changes | Everything that changed recently: activity, deployments, health |

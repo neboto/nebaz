@@ -146,7 +146,12 @@ run mysql-tab ok mysql '[]' \
 
 # The Container Apps tab loads through a routing prefix (environments).
 run aca-env ok acaenv '[]' \
-  "Container apps, environments & jobs" \
+  "Container apps, environments, jobs & instances" \
+  "cannot reach 127.0.0.1"
+
+# Container Instances is the Container Apps tab's fourth sub-tab.
+run aci ok aci '[]' \
+  "4 Container groups" \
   "cannot reach 127.0.0.1"
 
 # The Messaging tab loads through a routing prefix (Event Hubs).

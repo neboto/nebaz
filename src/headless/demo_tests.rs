@@ -43,6 +43,10 @@ const PLANTED: &[(&str, &str)] = &[
     ("/vpnSites/vst-branch-cork", "link-vodafone"),
     ("/managedInstances/sqlmi-legacy-prod", "on port 3342"),
     ("/searchServices/srch-contoso-prod", "⚠ pending"),
+    // compute: a build agent in ci-agents-prod crash-loops (its last
+    // run exited 1).
+    ("/containerGroups/ci-agents-prod", "⚠ waiting"),
+    ("/containerGroups/ci-agents-prod", "⚠ terminated"),
     // network: contoso-dev's endpoint to the partner Private Link service
     // waits for approval; Traffic Manager's on-premises DR endpoint is
     // degraded.

@@ -154,6 +154,7 @@ mod advisor;
 mod alerts;
 mod sql_managed;
 mod ai_search;
+mod container_instances;
 mod virtual_wan;
 mod defender;
 mod governance;
@@ -2930,6 +2931,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.ai_search_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.container_group_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {
