@@ -357,6 +357,35 @@ const VNET_GATEWAY: &[MetricSpec] = &[
     m("TunnelEgressBytes", "Tunnel out", Total),
     m("P2SConnectionCount", "P2S connections", Total),
 ];
+/// A Virtual WAN hub's router: BGP with the hub's peers, its route
+/// counts, the routing infrastructure units and the data it processed.
+const VIRTUAL_HUB: &[MetricSpec] = &[
+    m("BgpPeerStatus", "BGP peers up", Max),
+    m("CountOfRoutesLearnedFromPeer", "Routes learned", Max),
+    m("CountOfRoutesAdvertisedToPeer", "Routes advertised", Max),
+    m("RoutingInfrastructureUnits", "Routing units", Max),
+    m("VirtualHubDataProcessed", "Data processed", Total),
+];
+/// A hub's site-to-site gateway.
+const VWAN_VPN_GATEWAY: &[MetricSpec] = &[
+    m("AverageBandwidth", "S2S bandwidth", Avg),
+    m("TunnelIngressBytes", "Tunnel in", Total),
+    m("TunnelEgressBytes", "Tunnel out", Total),
+    m("BgpPeerStatus", "BGP peers up", Avg),
+];
+/// A hub's ExpressRoute gateway.
+const VWAN_ER_GATEWAY: &[MetricSpec] = &[
+    m("ExpressRouteGatewayBitsPerSecond", "ER bits/s", Avg),
+    m("ExpressRouteGatewayCpuUtilization", "ER CPU", Avg),
+    m("ExpressRouteGatewayCountOfRoutesLearnedFromPeer", "Routes learned", Max),
+    m("ExpressRouteGatewayCountOfRoutesAdvertisedToPeer", "Routes advertised", Max),
+];
+/// A hub's point-to-site gateway.
+const P2S_GATEWAY: &[MetricSpec] = &[
+    m("P2SConnectionCount", "P2S connections", Total),
+    m("P2SBandwidth", "P2S bandwidth", Avg),
+    m("UserVpnRouteCount", "User VPN routes", Total),
+];
 /// A gateway connection (ExpressRoute: its share of the circuit).
 const GATEWAY_CONNECTION: &[MetricSpec] = &[
     m("BitsInPerSecond", "Bits in/s", Avg),
@@ -428,6 +457,10 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.cdn", ["profiles"]) => FRONT_DOOR,
         ("microsoft.network", ["expressroutecircuits"]) => ER_CIRCUIT,
         ("microsoft.network", ["virtualnetworkgateways"]) => VNET_GATEWAY,
+        ("microsoft.network", ["virtualhubs"]) => VIRTUAL_HUB,
+        ("microsoft.network", ["vpngateways"]) => VWAN_VPN_GATEWAY,
+        ("microsoft.network", ["expressroutegateways"]) => VWAN_ER_GATEWAY,
+        ("microsoft.network", ["p2svpngateways"]) => P2S_GATEWAY,
         ("microsoft.network", ["connections"]) => GATEWAY_CONNECTION,
         ("microsoft.network", ["azurefirewalls"]) => AZURE_FIREWALL,
         ("microsoft.network", ["privatelinkservices"]) => PRIVATE_LINK_SERVICE,

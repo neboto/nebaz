@@ -1,0 +1,57 @@
+{
+  "name": "ergw-vhub-neu-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteGateways/ergw-vhub-neu-prod",
+  "type": "Microsoft.Network/expressRouteGateways",
+  "location": "northeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200",
+    "pilot": "vwan-neu"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "virtualHub": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod"
+    },
+    "autoScaleConfiguration": {
+      "bounds": {
+        "min": 1
+      }
+    },
+    "allowNonVirtualWanTraffic": false,
+    "expressRouteConnections": [
+      {
+        "name": "conn-erc-contoso-ams",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteGateways/ergw-vhub-neu-prod/expressRouteConnections/conn-erc-contoso-ams",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "expressRouteCircuitPeering": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteCircuits/erc-contoso-ams/peerings/AzurePrivatePeering"
+          },
+          "authorizationKey": "auth-vwan-neu-never-shown",
+          "routingWeight": 0,
+          "enableInternetSecurity": true,
+          "expressRouteGatewayBypass": false,
+          "enablePrivateLinkFastPath": false,
+          "routingConfiguration": {
+            "associatedRouteTable": {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/defaultRouteTable"
+            },
+            "propagatedRouteTables": {
+              "labels": [
+                "none"
+              ],
+              "ids": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/noneRouteTable"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

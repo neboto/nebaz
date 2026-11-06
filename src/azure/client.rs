@@ -31,6 +31,7 @@ use crate::azure::services::monitor::MonitorService;
 use crate::azure::services::network_dns::DnsService;
 use crate::azure::services::edge::EdgeService;
 use crate::azure::services::hybrid::HybridService;
+use crate::azure::services::virtual_wan::VirtualWanService;
 use crate::azure::services::firewall::FirewallService;
 use crate::azure::services::backup::BackupService;
 use crate::azure::services::power_platform::PowerPlatformService;
@@ -372,6 +373,7 @@ impl AzureClients {
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Hybrid => Arc::new(HybridService::new(scope)),
+            ServiceType::VirtualWan => Arc::new(VirtualWanService::new(scope)),
             ServiceType::Firewall => Arc::new(FirewallService::new(scope)),
             ServiceType::Backup => Arc::new(BackupService::new(scope)),
             ServiceType::Changes => Arc::new(ChangesService::new(scope, graph, ChangesWindow::default())),

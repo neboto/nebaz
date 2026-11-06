@@ -160,6 +160,12 @@ run dns-traffic-manager ok tm '[]' \
   "6 Traffic Manager" \
   "cannot reach 127.0.0.1"
 
+# The Virtual WAN tab loads through a routing prefix (hubs).
+run vwan-hubs ok hub '[]' \
+  "Virtual WANs, hubs, hub gateways & VPN sites" \
+  "2 Hubs" \
+  "cannot reach 127.0.0.1"
+
 # The Firewall tab loads through a routing prefix (Cloud NGFW).
 run firewall-ngfw ok ngfw '[]' \
   "Azure Firewall, policies, IP groups & Cloud NGFW" \

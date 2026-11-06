@@ -151,6 +151,7 @@ mod network_lens;
 mod firewall;
 mod flow_logs;
 mod advisor;
+mod virtual_wan;
 mod defender;
 mod governance;
 mod backup;
@@ -2930,6 +2931,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.advisor_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.virtual_wan_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(sub) = any.downcast_ref::<SubscriptionRow>() {

@@ -25,6 +25,7 @@ pub mod foundry;
 pub mod defender;
 pub mod governance;
 pub mod hybrid;
+pub mod virtual_wan;
 pub mod identity;
 pub mod keyvault;
 pub mod messaging;

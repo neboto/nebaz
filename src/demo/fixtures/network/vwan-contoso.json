@@ -1,0 +1,34 @@
+{
+  "name": "vwan-contoso",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualWans/vwan-contoso",
+  "type": "Microsoft.Network/virtualWans",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200",
+    "pilot": "vwan-neu"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "type": "Standard",
+    "disableVpnEncryption": false,
+    "allowBranchToBranchTraffic": true,
+    "allowVnetToVnetTraffic": false,
+    "office365LocalBreakoutCategory": "None",
+    "virtualHubs": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod"
+      }
+    ],
+    "vpnSites": [
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-dublin"
+      },
+      {
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-cork"
+      }
+    ]
+  }
+}

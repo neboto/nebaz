@@ -38,6 +38,10 @@ pub enum ServiceType {
     /// their connections and local network gateways. Its own tab
     /// (SERVICES.md rule 28); never a shared or authorization key.
     Hybrid,
+    /// Virtual WAN (#158): WANs, hubs (connections and route tables lazy),
+    /// the hub gateways and VPN sites. Its own tab (SERVICES.md rule 35);
+    /// never a pre-shared or authorization key, never effective routes.
+    VirtualWan,
     /// The hub's security layer: Azure Firewalls, firewall policies (rule
     /// collection groups lazy), IP groups, and Palo Alto Networks Cloud
     /// NGFW firewalls and local rulestacks (rules lazy). Its own tab
@@ -170,6 +174,19 @@ pub enum JumpView {
     GatewayConnections,
     /// `localNetworkGateways`, listed per group.
     LocalGateways,
+    // Virtual WAN
+    /// `Microsoft.Network/virtualWans`.
+    VirtualWans,
+    /// `Microsoft.Network/virtualHubs`.
+    VirtualHubs,
+    /// `Microsoft.Network/vpnGateways`: a hub's site-to-site gateway.
+    VwanVpnGateways,
+    /// `Microsoft.Network/expressRouteGateways`: a hub's ExpressRoute gateway.
+    VwanErGateways,
+    /// `Microsoft.Network/p2sVpnGateways`: a hub's point-to-site gateway.
+    P2sGateways,
+    /// `Microsoft.Network/vpnSites`: the branches a hub's VPN gateway reaches.
+    VpnSites,
     // Firewall
     /// `Microsoft.Network/azureFirewalls`.
     AzureFirewalls,
@@ -292,6 +309,9 @@ impl JumpView {
             }
             AppGateways | FrontDoorProfiles | WafPolicies | PrivateLinkServices => ServiceType::Edge,
             ExpressRouteCircuits | VnetGateways | GatewayConnections | LocalGateways => ServiceType::Hybrid,
+            VirtualWans | VirtualHubs | VwanVpnGateways | VwanErGateways | P2sGateways | VpnSites => {
+                ServiceType::VirtualWan
+            }
             AzureFirewalls | FirewallPolicies | IpGroups | CloudNgfws | NgfwRulestacks => ServiceType::Firewall,
             RecoveryVaults | BackupVaults => ServiceType::Backup,
             KeyVaults => ServiceType::KeyVault,
@@ -352,6 +372,12 @@ impl JumpView {
             VnetGateways => "vnet-gateways",
             GatewayConnections => "gateway-connections",
             LocalGateways => "local-gateways",
+            VirtualWans => "virtual-wans",
+            VirtualHubs => "virtual-hubs",
+            VwanVpnGateways => "vwan-vpn-gateways",
+            VwanErGateways => "vwan-er-gateways",
+            P2sGateways => "p2s-gateways",
+            VpnSites => "vpn-sites",
             AzureFirewalls => "azure-firewalls",
             FirewallPolicies => "firewall-policies",
             IpGroups => "ip-groups",
@@ -440,6 +466,12 @@ impl JumpView {
             VnetGateways => "VNet gateways",
             GatewayConnections => "Connections",
             LocalGateways => "Local gateways",
+            VirtualWans => "WANs",
+            VirtualHubs => "Hubs",
+            VwanVpnGateways => "VPN gateways",
+            VwanErGateways => "ER gateways",
+            P2sGateways => "P2S gateways",
+            VpnSites => "VPN sites",
             AzureFirewalls => "Firewalls",
             FirewallPolicies => "Policies",
             IpGroups => "IP groups",
@@ -538,6 +570,12 @@ impl JumpView {
             ("microsoft.network", ["virtualnetworkgateways"]) => JumpView::VnetGateways,
             ("microsoft.network", ["connections"]) => JumpView::GatewayConnections,
             ("microsoft.network", ["localnetworkgateways"]) => JumpView::LocalGateways,
+            ("microsoft.network", ["virtualwans"]) => JumpView::VirtualWans,
+            ("microsoft.network", ["virtualhubs"]) => JumpView::VirtualHubs,
+            ("microsoft.network", ["vpngateways"]) => JumpView::VwanVpnGateways,
+            ("microsoft.network", ["expressroutegateways"]) => JumpView::VwanErGateways,
+            ("microsoft.network", ["p2svpngateways"]) => JumpView::P2sGateways,
+            ("microsoft.network", ["vpnsites"]) => JumpView::VpnSites,
             ("microsoft.network", ["azurefirewalls"]) => JumpView::AzureFirewalls,
             ("microsoft.network", ["firewallpolicies"]) => JumpView::FirewallPolicies,
             ("microsoft.network", ["ipgroups"]) => JumpView::IpGroups,
@@ -673,6 +711,7 @@ impl ServiceType {
             ServiceType::Dns,
             ServiceType::Edge,
             ServiceType::Hybrid,
+            ServiceType::VirtualWan,
             ServiceType::Firewall,
             ServiceType::KeyVault,
             ServiceType::Identity,
@@ -717,6 +756,7 @@ impl ServiceType {
             ServiceType::Dns => "Networking",
             ServiceType::Edge => "Networking",
             ServiceType::Hybrid => "Networking",
+            ServiceType::VirtualWan => "Networking",
             ServiceType::Firewall => "Networking",
             ServiceType::KeyVault => "Security",
             ServiceType::Identity => "Security",
@@ -750,6 +790,7 @@ impl ServiceType {
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
             ServiceType::Hybrid => "Hybrid",
+            ServiceType::VirtualWan => "Virtual WAN",
             ServiceType::Firewall => "Firewall",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Managed Identity",
@@ -784,6 +825,7 @@ impl ServiceType {
             ServiceType::Dns => "DNS",
             ServiceType::Edge => "Edge",
             ServiceType::Hybrid => "Hybrid",
+            ServiceType::VirtualWan => "vWAN",
             ServiceType::Firewall => "Firewall",
             ServiceType::KeyVault => "Key Vault",
             ServiceType::Identity => "Identity",
@@ -817,6 +859,7 @@ impl ServiceType {
             ServiceType::Dns => "DNS zones, resolvers, rulesets & Traffic Manager",
             ServiceType::Edge => "App gateways, Front Door, WAF & Private Link",
             ServiceType::Hybrid => "ExpressRoute, VNet gateways, connections & local gateways",
+            ServiceType::VirtualWan => "Virtual WANs, hubs, hub gateways & VPN sites",
             ServiceType::Firewall => "Azure Firewall, policies, IP groups & Cloud NGFW",
             ServiceType::KeyVault => "Key Vaults (metadata only)",
             ServiceType::Identity => "Managed identities, service principals & app registrations",
@@ -871,6 +914,7 @@ impl ServiceType {
             ],
             ServiceType::Edge => &[AppGateways, FrontDoorProfiles, WafPolicies, PrivateLinkServices],
             ServiceType::Hybrid => &[ExpressRouteCircuits, VnetGateways, GatewayConnections, LocalGateways],
+            ServiceType::VirtualWan => &[VirtualWans, VirtualHubs, VwanVpnGateways, VwanErGateways, P2sGateways, VpnSites],
             ServiceType::Firewall => &[AzureFirewalls, FirewallPolicies, IpGroups, CloudNgfws, NgfwRulestacks],
             ServiceType::KeyVault => &[KeyVaults],
             ServiceType::Identity => &[Identities, ServicePrincipals, AppRegistrations],
@@ -999,6 +1043,20 @@ impl ServiceType {
             "lgw" | "lng" | "localgateway" | "localgateways" | "localnetworkgateway" | "localnetworkgateways" => {
                 (ServiceType::Hybrid, Some(JumpView::LocalGateways))
             }
+            "vwan" | "vwans" | "wan" | "wans" | "virtualwan" | "virtualwans" => (ServiceType::VirtualWan, None),
+            "vhub" | "vhubs" | "hub" | "hubs" | "virtualhub" | "virtualhubs" => {
+                (ServiceType::VirtualWan, Some(JumpView::VirtualHubs))
+            }
+            "hubvpn" | "s2s" | "s2sgateway" | "s2sgateways" | "vwanvpn" => {
+                (ServiceType::VirtualWan, Some(JumpView::VwanVpnGateways))
+            }
+            "huber" | "vwaner" | "expressroutegateway" | "expressroutegateways" => {
+                (ServiceType::VirtualWan, Some(JumpView::VwanErGateways))
+            }
+            "p2s" | "p2sgw" | "p2sgateway" | "p2sgateways" | "p2svpngateway" | "p2svpngateways" => {
+                (ServiceType::VirtualWan, Some(JumpView::P2sGateways))
+            }
+            "vpnsite" | "vpnsites" | "branch" | "branches" => (ServiceType::VirtualWan, Some(JumpView::VpnSites)),
             "fw" | "fws" | "firewall" | "firewalls" | "azfw" | "azurefirewall" | "azurefirewalls" => (ServiceType::Firewall, None),
             "fwp" | "fwpolicy" | "fwpolicies" | "firewallpolicy" | "firewallpolicies" => {
                 (ServiceType::Firewall, Some(JumpView::FirewallPolicies))
@@ -1096,6 +1154,7 @@ impl ServiceType {
             ServiceType::Dns => "@dns",
             ServiceType::Edge => "@agw",
             ServiceType::Hybrid => "@er",
+            ServiceType::VirtualWan => "@vwan",
             ServiceType::Firewall => "@fw",
             ServiceType::KeyVault => "@kv",
             ServiceType::Identity => "@id",
@@ -1122,12 +1181,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1278,6 +1337,12 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@score"), Some((ServiceType::Defender, Some(JumpView::SecureScore))));
         assert_eq!(ServiceType::from_prefix("@pricing"), Some((ServiceType::Defender, Some(JumpView::DefenderPlans))));
         assert_eq!(ServiceType::from_prefix("@advisor"), Some((ServiceType::Advisor, None)));
+        assert_eq!(ServiceType::from_prefix("@vwan"), Some((ServiceType::VirtualWan, None)));
+        assert_eq!(ServiceType::from_prefix("@hub"), Some((ServiceType::VirtualWan, Some(JumpView::VirtualHubs))));
+        assert_eq!(ServiceType::from_prefix("@p2s"), Some((ServiceType::VirtualWan, Some(JumpView::P2sGateways))));
+        assert_eq!(ServiceType::from_prefix("@vpnsite"), Some((ServiceType::VirtualWan, Some(JumpView::VpnSites))));
+        // Hybrid keeps `vpngateway`: the VNet gateway is the older word.
+        assert_eq!(ServiceType::from_prefix("@vpngateway"), Some((ServiceType::Hybrid, Some(JumpView::VnetGateways))));
         assert_eq!(ServiceType::from_prefix("@advscore"), Some((ServiceType::Advisor, Some(JumpView::AdvisorScore))));
         assert_eq!(ServiceType::from_prefix("@snooze"), Some((ServiceType::Advisor, Some(JumpView::AdvisorSuppressions))));
         let corp = "/providers/Microsoft.Management/managementGroups/corp";
@@ -1455,6 +1520,14 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualNetworkGateways/vgw")), Some(JumpView::VnetGateways));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/connections/cn")), Some(JumpView::GatewayConnections));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/localNetworkGateways/lgw")), Some(JumpView::LocalGateways));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualWans/vwan")), Some(JumpView::VirtualWans));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/virtualHubs/hub")), Some(JumpView::VirtualHubs));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/vpnGateways/vpngw")), Some(JumpView::VwanVpnGateways));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/expressRouteGateways/ergw")), Some(JumpView::VwanErGateways));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/p2sVpnGateways/p2s")), Some(JumpView::P2sGateways));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/vpnSites/branch")), Some(JumpView::VpnSites));
+        // A hub's connection is a child: no list of its own, so no landing.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Network/virtualHubs/hub/hubVirtualNetworkConnections/c")), None);
         assert_eq!(ServiceType::from_prefix("@er"), Some((ServiceType::Hybrid, None)));
         assert_eq!(ServiceType::from_prefix("@cn"), Some((ServiceType::Hybrid, Some(JumpView::GatewayConnections))));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Network/azureFirewalls/afw")), Some(JumpView::AzureFirewalls));

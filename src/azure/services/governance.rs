@@ -238,7 +238,7 @@ impl<'a> Warm<'a> {
 
     /// The body while the rows are not there: `Loading…`, the error, or
     /// which sub-tab to open.
-    fn waiting(self, subtab: &str) -> Vec<(String, String)> {
+    pub(crate) fn waiting(self, subtab: &str) -> Vec<(String, String)> {
         match self {
             Warm::Loading => vec![(String::new(), "Loading…".into())],
             Warm::Failed(e) => crate::azure::services::error_rows(e),

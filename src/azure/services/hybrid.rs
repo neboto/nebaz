@@ -113,8 +113,10 @@ crate::sections! {
 /// Fields that hold a key or secret material, at any depth: authorization
 /// keys (circuit authorizations, Global Reach, a redeeming connection),
 /// pre-shared and MD5 keys, RADIUS secrets, the circuit activation key,
-/// and P2S root certificate data.
-const SECRET_FIELDS: &[&str] = &["authorizationKey", "sharedKey", "radiusServerSecret", "activationKey", "publicCertData"];
+/// P2S root certificate data, and a Virtual WAN VPN site's `siteKey`
+/// (`virtual_wan.rs` strips with this too).
+const SECRET_FIELDS: &[&str] =
+    &["authorizationKey", "sharedKey", "radiusServerSecret", "activationKey", "publicCertData", "siteKey"];
 
 /// The circuit field that is masked rather than removed: the provider
 /// needs it to provision, the last characters identify it.

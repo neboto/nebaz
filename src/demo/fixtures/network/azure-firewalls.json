@@ -57,6 +57,54 @@
           }
         ]
       }
+    },
+    {
+      "name": "afw-vhub-neu-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-vhub-neu-prod",
+      "type": "Microsoft.Network/azureFirewalls",
+      "location": "northeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200",
+        "pilot": "vwan-neu"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "properties": {
+        "provisioningState": "Succeeded",
+        "sku": {
+          "name": "AZFW_Hub",
+          "tier": "Premium"
+        },
+        "threatIntelMode": "Alert",
+        "additionalProperties": {},
+        "ipConfigurations": [],
+        "networkRuleCollections": [],
+        "applicationRuleCollections": [],
+        "natRuleCollections": [],
+        "virtualHub": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod"
+        },
+        "hubIPAddresses": {
+          "privateIPAddress": "10.100.0.132",
+          "publicIPs": {
+            "count": 1,
+            "addresses": [
+              {
+                "address": "20.107.12.40"
+              }
+            ]
+          }
+        },
+        "firewallPolicy": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/firewallPolicies/fwp-hub-prod"
+        }
+      }
     }
   ]
 }

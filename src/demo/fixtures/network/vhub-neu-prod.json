@@ -1,0 +1,50 @@
+{
+  "name": "vhub-neu-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod",
+  "type": "Microsoft.Network/virtualHubs",
+  "location": "northeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200",
+    "pilot": "vwan-neu"
+  },
+  "kind": "",
+  "properties": {
+    "provisioningState": "Succeeded",
+    "virtualWan": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualWans/vwan-contoso"
+    },
+    "addressPrefix": "10.100.0.0/23",
+    "sku": "Standard",
+    "routingState": "Provisioned",
+    "virtualRouterAsn": 65515,
+    "virtualRouterIps": [
+      "10.100.0.68",
+      "10.100.0.69"
+    ],
+    "virtualRouterAutoScaleConfiguration": {
+      "minCapacity": 2
+    },
+    "hubRoutingPreference": "ExpressRoute",
+    "preferredRoutingGateway": "ExpressRoute",
+    "allowBranchToBranchTraffic": true,
+    "vpnGateway": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod"
+    },
+    "expressRouteGateway": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteGateways/ergw-vhub-neu-prod"
+    },
+    "p2SVpnGateway": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/p2sVpnGateways/p2sgw-vhub-neu-prod"
+    },
+    "azureFirewall": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-vhub-neu-prod"
+    },
+    "virtualHubRouteTableV2s": [],
+    "routeTable": {
+      "routes": []
+    }
+  }
+}

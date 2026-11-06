@@ -1,0 +1,72 @@
+{
+  "value": [
+    {
+      "name": "p2sgw-vhub-neu-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/p2sVpnGateways/p2sgw-vhub-neu-prod",
+      "type": "Microsoft.Network/p2sVpnGateways",
+      "location": "northeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200",
+        "pilot": "vwan-neu"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "virtualHub": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod"
+        },
+        "vpnGatewayScaleUnit": 1,
+        "isRoutingPreferenceInternet": false,
+        "vpnServerConfiguration": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnServerConfigurations/vpnsc-contoso-entra"
+        },
+        "customDnsServers": [
+          "10.10.10.4"
+        ],
+        "p2SConnectionConfigurations": [
+          {
+            "name": "p2s-config-staff",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/p2sVpnGateways/p2sgw-vhub-neu-prod/p2sConnectionConfigurations/p2s-config-staff",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "vpnClientAddressPool": {
+                "addressPrefixes": [
+                  "172.30.0.0/22"
+                ]
+              },
+              "enableInternetSecurity": true,
+              "routingConfiguration": {
+                "associatedRouteTable": {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/defaultRouteTable"
+                },
+                "propagatedRouteTables": {
+                  "labels": [
+                    "none"
+                  ],
+                  "ids": [
+                    {
+                      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/noneRouteTable"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "vpnClientConnectionHealth": {
+          "vpnClientConnectionsCount": 4,
+          "totalIngressBytesTransferred": 3891203345,
+          "totalEgressBytesTransferred": 912384551,
+          "allocatedIpAddresses": [
+            "172.30.0.4",
+            "172.30.0.5",
+            "172.30.0.9",
+            "172.30.0.12"
+          ]
+        }
+      }
+    }
+  ]
+}

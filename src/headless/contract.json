@@ -339,6 +339,14 @@
       "private-endpoints (pe)",
       "bastion-hosts (bastion)",
       "ddos-plans (ddos)"
+    ],
+    "vwan": [
+      "virtual-wans (vwan)",
+      "virtual-hubs (hub)",
+      "vwan-vpn-gateways (hubvpn)",
+      "vwan-er-gateways (huber)",
+      "p2s-gateways (p2s)",
+      "vpn-sites (vpnsite)"
     ]
   },
   "sections": {
@@ -668,6 +676,34 @@
       "Overview",
       "Configuration",
       "IPsec",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Hub ExpressRoute gateway": [
+      "Overview",
+      "Configuration",
+      "Connections",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Hub P2S gateway": [
+      "Overview",
+      "Configuration",
+      "Clients",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Hub VPN gateway": [
+      "Overview",
+      "Configuration",
+      "Connections",
+      "NAT rules",
       "Access",
       "Activity",
       "Related",
@@ -1016,6 +1052,16 @@
       "Related",
       "Tags"
     ],
+    "VPN site": [
+      "Overview",
+      "Site",
+      "Links",
+      "Connections",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Virtual Machine": [
       "Overview",
       "Instance view",
@@ -1031,6 +1077,26 @@
       "Subnets",
       "Peerings",
       "Flow logs",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Virtual WAN": [
+      "Overview",
+      "WAN",
+      "Hubs",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Virtual hub": [
+      "Overview",
+      "Hub",
+      "Gateways",
+      "Connections",
+      "Routing",
       "Access",
       "Activity",
       "Related",
