@@ -688,9 +688,9 @@ mod tests {
     #[test]
     fn no_credential_survives_the_row() {
         let r = row();
-        for secret in ["hunter2", "linux-prod", "\"pw\"", "k==", "QUJD", "REVG", "wk=="] {
-            assert!(!r.base.raw.contains(secret), "{secret} in the raw body");
-        }
+        let planted = ["hunter2", "linux-prod", "\"pw\"", "k==", "QUJD", "REVG", "wk=="];
+        let kept: Vec<usize> = (0..planted.len()).filter(|&i| r.base.raw.contains(planted[i])).collect();
+        assert!(kept.is_empty(), "planted values {kept:?} (by index) survive in the raw body");
         assert!(r.base.raw.contains("AGENT_TOKEN") && r.base.raw.contains("tls.crt"), "names stay");
         let lines = containers_rows(&r, None);
         assert_eq!(get(&lines, "  Environment"), Some("POOL, AGENT_TOKEN (secure) · values not shown"));
