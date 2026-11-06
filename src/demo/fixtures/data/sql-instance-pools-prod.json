@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Sql/instancePools/sqlpool-legacy-prod",
+      "name": "sqlpool-legacy-prod",
+      "type": "Microsoft.Sql/instancePools",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "legacy",
+        "owner": "legacy-team@contoso.com",
+        "costCenter": "CC-3300"
+      },
+      "sku": {
+        "name": "GP_Gen5",
+        "tier": "GeneralPurpose",
+        "family": "Gen5",
+        "capacity": 16
+      },
+      "properties": {
+        "subnetId": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-sqlmi",
+        "vCores": 16,
+        "licenseType": "BasePrice",
+        "dnsZone": "7c3e9a1b5d2f",
+        "maintenanceConfigurationId": "/subscriptions/{{prod}}/providers/Microsoft.Maintenance/publicMaintenanceConfigurations/SQL_WestEurope_MI_1"
+      }
+    }
+  ]
+}

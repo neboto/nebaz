@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    advisor, aks, alerts, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
+    advisor, aks, alerts, sql_managed, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager, virtual_wan,
 };
@@ -1287,6 +1287,40 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                         "name": "cpu-high",
                         "location": "global",
                         "properties": {"essentials": {"severity": "Sev2", "alertState": "New", "monitorCondition": "Fired", "targetResource": arm_id("Microsoft.Compute/virtualMachines/vm-1"), "signalType": "Metric"}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::ManagedInstances,
+            "ManagedInstanceRow",
+            parse(
+                "ManagedInstanceRow",
+                sql_managed::ManagedInstanceRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Sql/managedInstances/sqlmi-1"),
+                        "name": "sqlmi-1",
+                        "location": "eastus",
+                        "sku": {"name": "GP_Gen5", "tier": "GeneralPurpose", "family": "Gen5"},
+                        "properties": {"provisioningState": "Succeeded", "state": "Ready", "vCores": 8, "storageSizeInGB": 256, "subnetId": arm_id("Microsoft.Network/virtualNetworks/vnet-1/subnets/snet-mi")}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::InstancePools,
+            "InstancePoolRow",
+            parse(
+                "InstancePoolRow",
+                sql_managed::InstancePoolRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Sql/instancePools/pool-1"),
+                        "name": "pool-1",
+                        "location": "eastus",
+                        "sku": {"name": "GP_Gen5", "tier": "GeneralPurpose", "family": "Gen5"},
+                        "properties": {"vCores": 16, "licenseType": "LicenseIncluded"}
                     }),
                     t,
                 ),

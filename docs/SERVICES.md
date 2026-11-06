@@ -85,7 +85,7 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
    `az keyvault show`, `az aks show`, `az aks nodepool show`,
    `az cognitiveservices account show`, `az acr show`,
    `az functionapp show`, `az logicapp show`, `az vmss show`,
-   `az network p2s-vpn-gateway show`), which use the name form with `--subscription`.
+   `az network p2s-vpn-gateway show`, `az sql instance-pool show`), which use the name form with `--subscription`.
    `vmss show` re-declares the scale-set name with `id_part=None`
    (because of `--instance-id`; azure-cli `_params.py`, 2026-10-26).
    `functionapp show` re-declares its name argument without an `id_part`,
@@ -865,6 +865,27 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     configuration (all dropped before the row keeps the JSON), a phone
     number beyond its last four digits, an alert's state change
     (`changestate`, a POST), a log alert's query run (it is KQL text).
+37. **SQL Managed Instance is two SQL sub-tabs** (#195,
+    `src/azure/services/sql_managed.rs`, glue `src/app/sql_managed.rs`):
+    managed instances (`@sqlmi`) and instance pools (`@sqlpool`), one
+    subscription-wide list each. Instances are listed and read with
+    `$expand=administrators/activedirectory`, the only way the Entra admin
+    comes back. An instance's **Databases** (`{instance}/databases`) and
+    **Failover group** are lazy sections; failover groups have no
+    subscription-wide or per-instance list, so the instance's group and
+    region are listed
+    (`{group}/providers/Microsoft.Sql/locations/{region}/instanceFailoverGroups`)
+    and the group matched by `managedInstancePairs`; its partner instance
+    joins Related. A pool's Instances are matched in the warm Managed
+    instances list (`instancePoolId`), with the vCores used. State: an
+    instance is the ladder, then `state` (`Ready` → available, `Stopped`
+    → stopped, the rest pending: stop/start schedules make Stopped a real
+    state); a pool the ladder only. The **public data endpoint** is
+    flagged ⚠ with its derived host and port 3342 (the subnet's NSG
+    decides who reaches it). **Never**: `administratorLoginPassword`
+    (write-only, never returned), a database's `storageContainerSasToken`
+    (create-only, not marked secret, stripped before the store keeps the
+    list), a connection to the instance (its hosts are text).
 
 ## The catalog
 
@@ -944,6 +965,8 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | App Service · Functions | the same rows as Apps, filtered to `kind` containing `functionapp` (Logic Apps Standard included) | as Apps | as Apps | as Apps |
 | App Service · Plans | — (Overview: SKU · tier, OS, workers of max, apps, zone redundancy, per-app and elastic scaling) | ladder, then `status` (`Ready` → Available) | — (apps list their plan) | `az appservice plan show` |
 | SQL · Servers | Security (Entra admin, Entra-only auth, SQL admin login, min TLS, TDE key service- or customer-managed, identity) · Databases ⧗ (user databases: SKU, status, max size, zone redundancy, backup redundancy, serverless auto-pause, elastic pool; system databases as a note) · Firewall ⧗ (IP rules; `AllowAllWindowsAzureIps` flagged) · Networking (public access, outbound restriction, IPv6, private endpoints) | `state` (`Ready` → Available; no `provisioningState` on servers) | private endpoints, user-assigned and primary identities | `az sql server show` |
+| SQL · Managed instances (rule 37) | Instance (SKU, hardware, vCores and memory, storage, GPv2 IOPS and throughput, licence and Hybrid Benefit, hybrid secondary, zone redundancy, backup redundancy, update policy, collation, time zone, maintenance window, instance pool, created) · Security (Entra admin, Entra-only auth, SQL admin login, min TLS, TDE key, identity) · Networking (subnet, host, DNS zone, connection type, ⚠ public endpoint, private endpoints) · Databases (lazy: status with ⚠ when not online, created, earliest restore point, failover group, ledger) · Failover group (lazy: role, replication, failover policy and grace, read-only endpoint, secondary type, partner regions, partner instance) | ladder, then `state` | VNet, subnet, instance pool, private endpoints, identities, failover partner | `az sql mi show` |
+| SQL · Instance pools | Pool (SKU, hardware, vCores, licence, DNS zone, subnet, maintenance window) · Instances (the warm Managed instances list: each with vCores and state, vCores used of the pool's) | ladder only | VNet, subnet, its instances | `az sql instance-pool show` (name form) |
 | Cosmos DB · Accounts | Replication (consistency, bounded-staleness limits, multi-region writes, automatic failover, write regions, every region by failover priority with zone redundancy) · Security (public access, network access all / selected / private only, IP and VNet rules, ACL bypass, key auth, metadata writes by key, min TLS, encryption service- or customer-managed, identity, private endpoints) · Backup (periodic interval, retention, redundancy; or the continuous tier; a mode migration in progress) · Databases ⧗ (on the path the API picks; names only, containers not listed) · (Overview: API from `kind` + `capabilities`, endpoint as text, capacity mode, free tier, analytical storage) | ladder only; `location` is a display name (`West US`), stored as `westus` so `R` matches | VNet rule subnets, private endpoints, user-assigned identities (the CMK key is a URL, shown in Security) | `az cosmosdb show` |
 | PostgreSQL & MySQL · PostgreSQL, MySQL (flexible servers; Single Server is retired and stays out) | Networking (how it is reached: VNet integration, public, private endpoints or none; public access; FQDN as text; delegated subnet and its VNet; private DNS zone, flagged when its name does not end in the FQDN's domain; private endpoints with approval status, flagged unless Approved; what a caller in another VNet needs) · Firewall ⧗ (IP rules; 0.0.0.0 "allow Azure services", the whole internet and ranges of 65,536+ addresses flagged; says when the rules do not apply: VNet-integrated, or public access off) · Security (auth: password / Entra / both on PostgreSQL; admin login, never the password; Entra admins ⧗, a service principal jumping to its Graph row, MySQL's Graph lookup identity; encryption service- or customer-managed with key, status and identity; managed identity) · Parameters ⧗ (`configurations`, one call; only `require_secure_transport` (off flagged), the TLS minimum / maximum, `password_encryption`, `pgbouncer.enabled`, `aad_auth_only`, `max_connections`, each with its default) · HA & backup (HA mode, state, standby zone; retention, interval, geo-redundant backup, earliest restore; replication role, replica capacity, source server; maintenance window) · Databases ⧗ (charset, collation; system databases as a note) · (Overview: version, SKU, storage size, tier and autogrow, IOPS, zone, FQDN, connectivity, admin login, created) | ladder, then `state` (`Ready` → Available, `Stopped` → Stopped, `Disabled` / `Inaccessible` → Unavailable, the rest Pending) | delegated subnet, its VNet, private DNS zone (DNS tab), private endpoints, source server, user-assigned and key identities, the system identity's service principal (Graph) | `az postgres flexible-server show` · `az mysql flexible-server show` |
 | Monitor · Workspaces | — (Overview: customer id, SKU and commitment tier, retention, daily cap and reset time, ingestion status, public ingestion and query, local auth, access mode, created) | ladder only | dedicated cluster (AKS clusters and App Insights components link here from their own Related) | `az monitor log-analytics workspace show` |
@@ -1141,6 +1164,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Plans | 1 | `/providers/Microsoft.Web/serverfarms` · `2026-03-15` |
 | App Configuration | 1 per app, on demand | `{site}/config/web` · `2026-03-15` |
 | SQL servers | 1 | `/providers/Microsoft.Sql/servers` · `2025-01-01` |
+| SQL managed instances, instance pools (rule 37) | 1 each (instances with `$expand=administrators/activedirectory`) | `/providers/Microsoft.Sql/{managedInstances,instancePools}` · `2025-01-01` |
+| Managed instance sections | 1 per instance each: Databases (`{instance}/databases`), Failover group (`/resourceGroups/{rg}/providers/Microsoft.Sql/locations/{region}/instanceFailoverGroups`) | `2025-01-01` |
 | Databases, Firewall | 1 each per server, on demand (no subscription-wide database list exists) | `{server}/databases` · `{server}/firewallRules` · `2025-01-01` |
 | Cosmos DB accounts | 1 | `/providers/Microsoft.DocumentDB/databaseAccounts` · `2026-03-15` |
 | Cosmos databases | 1 per account, on demand; the API picks the path (containers would be one call per database, so they are not listed) | `{account}/sqlDatabases` · `mongodbDatabases` · `cassandraKeyspaces` · `gremlinDatabases` · `tables` · `2026-03-15` |
@@ -1233,6 +1258,17 @@ it; that floor is #63.
   express-route show`, `vnet-gateway show`, `vpn-connection show` and
   `local-gateway show` take `--ids` (each `-n` carries `id_part='name'`);
   the Hybrid tab at 80×24 on a real estate.
+- SQL Managed Instance (#195), built without an Azure login from
+  azure-rest-api-specs (`SQL/stable/2025-01-01`) and the azure-cli `sql`
+  module. To check: the list answers with `$expand=administrators/activedirectory`
+  and carries the Entra admin; the instance `state` values beyond Ready
+  and Stopped; the failover groups list takes the region's short name
+  (`westeurope`; the spec's example sends `Japan East`); the public
+  endpoint's derived host (`{name}.public.{dnszone}…`); whether a
+  database list body ever carries `storageContainerSasToken` (stripped
+  regardless); `az sql instance-pool show` and `az sql
+  instance-failover-group show` argument forms; the instance metrics
+  (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
 - Alert rules (#194), built without an Azure login from azure-rest-api-specs
   (`Insights/stable`, `AlertsManagement`) and the CLI sources. To check:
   each list answers on the older stable version chosen; a metric alert

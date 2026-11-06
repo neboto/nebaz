@@ -424,6 +424,35 @@
                 }
               ]
             }
+          },
+          {
+            "name": "snet-sqlmi",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-sqlmi",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "addressPrefix": "10.10.16.0/26",
+              "networkSecurityGroup": {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-sqlmi"
+              },
+              "delegations": [
+                {
+                  "name": "dlg-sqlmi",
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-hub-prod/subnets/snet-sqlmi/delegations/dlg-sqlmi",
+                  "properties": {
+                    "serviceName": "Microsoft.Sql/managedInstances",
+                    "actions": [
+                      "Microsoft.Network/virtualNetworks/subnets/join/action",
+                      "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action",
+                      "Microsoft.Network/virtualNetworks/subnets/unprepareNetworkPolicies/action"
+                    ]
+                  }
+                }
+              ],
+              "privateEndpointNetworkPolicies": "Disabled",
+              "privateLinkServiceNetworkPolicies": "Enabled",
+              "ipConfigurations": []
+            }
           }
         ],
         "virtualNetworkPeerings": [

@@ -41,6 +41,7 @@ const PLANTED: &[(&str, &str)] = &[
     ("/connections/cn-vpn-branch-office", "NotConnected"),
     ("/vpnGateways/vpngw-vhub-neu-prod", "link-vodafone"),
     ("/vpnSites/vst-branch-cork", "link-vodafone"),
+    ("/managedInstances/sqlmi-legacy-prod", "on port 3342"),
     // network: contoso-dev's endpoint to the partner Private Link service
     // waits for approval; Traffic Manager's on-premises DR endpoint is
     // degraded.

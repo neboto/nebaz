@@ -318,7 +318,9 @@
       "eventhub-namespaces (eh)"
     ],
     "sql": [
-      "sql-servers (sql)"
+      "sql-servers (sql)",
+      "managed-instances (sqlmi)",
+      "instance-pools (sqlpool)"
     ],
     "storage": [
       "accounts (storage)"
@@ -1029,6 +1031,27 @@
       "Databases",
       "Firewall",
       "Networking",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "SQL instance pool": [
+      "Overview",
+      "Pool",
+      "Instances",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "SQL managed instance": [
+      "Overview",
+      "Instance",
+      "Security",
+      "Networking",
+      "Databases",
+      "Failover group",
       "Access",
       "Activity",
       "Related",

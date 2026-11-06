@@ -108,7 +108,13 @@ run app-service-func ok func '[]' \
 
 # The SQL tab loads and lists servers through ARM.
 run sql-tab ok sql '[]' \
-  "SQL servers & databases" \
+  "SQL servers, managed instances & pools" \
+  "cannot reach 127.0.0.1"
+
+# SQL managed instances load through a routing prefix.
+run sql-managed-instances ok sqlmi '[]' \
+  "SQL servers, managed instances & pools" \
+  "2 Managed instances" \
   "cannot reach 127.0.0.1"
 
 # The Container Registry tab loads and lists registries through ARM.
