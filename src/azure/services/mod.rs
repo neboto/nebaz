@@ -34,6 +34,7 @@ pub mod keyvault;
 pub mod messaging;
 pub mod monitor;
 pub mod network;
+pub mod network_asg;
 pub mod network_dns;
 pub mod network_edge;
 pub mod network_hub;

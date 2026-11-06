@@ -558,6 +558,20 @@ where
             nsg_id: nic.nsg_id.clone(),
             known: true,
         };
+        // A rule naming `asg:x` applies to this NIC only if it is in x;
+        // the note says so and jumps to the ASG.
+        let mut asgs: Vec<&String> = Vec::new();
+        for a in nic.ip_configs.iter().flat_map(|c| &c.asg_ids) {
+            if !asgs.iter().any(|x| x.eq_ignore_ascii_case(a)) {
+                asgs.push(a);
+            }
+        }
+        for a in asgs {
+            out.notes.push(Note {
+                text: format!("NIC {} is in ASG {}: rules naming asg:{} apply to it", nic.base.name, name_of_id(a), name_of_id(a)),
+                id: Some(a.clone()),
+            });
+        }
         let mut subnet_ids: Vec<String> = Vec::new();
         for c in &nic.ip_configs {
             if let Some(s) = &c.subnet_id {
@@ -1205,6 +1219,18 @@ mod tests {
             .filter_map(|l| l.rule.as_ref())
             .find(|r| r.name == name && r.dir == dir)
             .unwrap_or_else(|| panic!("no rule {}", name))
+    }
+
+    #[test]
+    fn a_nics_asg_membership_is_a_note_that_jumps_to_the_asg() {
+        let asg = format!("{}/applicationSecurityGroups/web-asg", RG);
+        let mut nic = nic_body(None);
+        nic["properties"]["ipConfigurations"][0]["properties"]["applicationSecurityGroups"] = json!([{"id": asg}]);
+        let seed = Seed { nics: vec![format!("{}/networkInterfaces/vm-1-nic", RG)], ..Default::default() };
+        let r = block_on(resolve(seed, Known::default(), arm(vec![nic, vnet_body()])));
+        let lines = build_lines(&r, &[Dir::Inbound]);
+        let note = lines.iter().find(|l| l.text.contains("is in ASG web-asg")).expect("the membership note");
+        assert_eq!(note.jump.as_deref(), Some(asg.as_str()));
     }
 
     #[test]

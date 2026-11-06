@@ -336,7 +336,8 @@
       "vms (vm)",
       "disks (disk)",
       "nics (nic)",
-      "scale-sets (vmss)"
+      "scale-sets (vmss)",
+      "asgs (asg)"
     ],
     "vnet": [
       "vnets (vnet)",
@@ -454,6 +455,15 @@
     ],
     "Application Insights": [
       "Overview",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Application Security Group": [
+      "Overview",
+      "Members",
+      "Rules",
       "Access",
       "Activity",
       "Related",

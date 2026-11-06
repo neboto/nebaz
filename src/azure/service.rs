@@ -129,6 +129,9 @@ pub enum JumpView {
     /// `Microsoft.Compute/virtualMachineScaleSets`; Uniform instances are a
     /// lazy section, Flexible ones are VMs.
     ScaleSets,
+    /// `Microsoft.Network/applicationSecurityGroups` (#203): beside the
+    /// NICs they group, since Network is at the digit-key ceiling.
+    ApplicationSecurityGroups,
     // Storage
     StorageAccounts,
     // Network
@@ -321,7 +324,7 @@ impl JumpView {
         use JumpView::*;
         match self {
             Subscriptions | ResourceGroups | AllResources => ServiceType::Subscriptions,
-            VirtualMachines | Disks | Nics | ScaleSets => ServiceType::VirtualMachines,
+            VirtualMachines | Disks | Nics | ScaleSets | ApplicationSecurityGroups => ServiceType::VirtualMachines,
             StorageAccounts => ServiceType::Storage,
             VirtualNetworks | Subnets | NetworkSecurityGroups | PublicIps | LoadBalancers | RouteTables
             | NatGateways | PrivateEndpoints | BastionHosts | DdosPlans => ServiceType::Network,
@@ -380,6 +383,7 @@ impl JumpView {
             PrivateEndpoints => "private-endpoints",
             BastionHosts => "bastion-hosts",
             DdosPlans => "ddos-plans",
+            ApplicationSecurityGroups => "asgs",
             PrivateDnsZones => "private-dns-zones",
             DnsZones => "dns-zones",
             DnsResolvers => "dns-resolvers",
@@ -484,6 +488,7 @@ impl JumpView {
             PrivateEndpoints => "PEs",
             BastionHosts => "Bastion",
             DdosPlans => "DDoS",
+            ApplicationSecurityGroups => "ASGs",
             PrivateDnsZones => "Private DNS",
             DnsZones => "DNS zones",
             DnsResolvers => "Resolvers",
@@ -595,6 +600,7 @@ impl JumpView {
             ("microsoft.network", ["privateendpoints"]) => JumpView::PrivateEndpoints,
             ("microsoft.network", ["bastionhosts"]) => JumpView::BastionHosts,
             ("microsoft.network", ["ddosprotectionplans"]) => JumpView::DdosPlans,
+            ("microsoft.network", ["applicationsecuritygroups"]) => JumpView::ApplicationSecurityGroups,
             ("microsoft.network", ["privatednszones"]) => JumpView::PrivateDnsZones,
             ("microsoft.network", ["dnszones"]) => JumpView::DnsZones,
             ("microsoft.network", ["dnsresolvers"]) => JumpView::DnsResolvers,
@@ -904,7 +910,7 @@ impl ServiceType {
     pub fn description(&self) -> &str {
         match self {
             ServiceType::Subscriptions => "Subscriptions, groups & all resources",
-            ServiceType::VirtualMachines => "Virtual Machines, Disks, NICs & Scale Sets",
+            ServiceType::VirtualMachines => "Virtual Machines, Disks, NICs, Scale Sets & ASGs",
             ServiceType::Storage => "Storage Accounts & Containers",
             ServiceType::Backup => "Recovery Services & Backup vaults: protected items, policies, jobs",
             ServiceType::Network => "VNets, NSGs, IPs, LBs, NAT, Bastion & DDoS",
@@ -941,7 +947,7 @@ impl ServiceType {
         use JumpView::*;
         match self {
             ServiceType::Subscriptions => &[Subscriptions, ResourceGroups, AllResources],
-            ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics, ScaleSets],
+            ServiceType::VirtualMachines => &[VirtualMachines, Disks, Nics, ScaleSets, ApplicationSecurityGroups],
             ServiceType::Storage => &[StorageAccounts],
             ServiceType::Backup => &[RecoveryVaults, BackupVaults],
             ServiceType::Network => &[
@@ -1062,6 +1068,9 @@ impl ServiceType {
             }
             "ddos" | "ddosplan" | "ddosplans" | "ddosprotection" | "ddosprotectionplans" => {
                 (ServiceType::Network, Some(JumpView::DdosPlans))
+            }
+            "asg" | "asgs" | "applicationsecuritygroup" | "applicationsecuritygroups" => {
+                (ServiceType::VirtualMachines, Some(JumpView::ApplicationSecurityGroups))
             }
             "dns" => (ServiceType::Dns, None),
             "changes" | "change" | "changed" | "recent" => (ServiceType::Changes, None),
@@ -1262,7 +1271,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1562,6 +1571,11 @@ mod tests {
             Some(JumpView::ContainerAppEnvironments)
         );
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.App/jobs/nightly")), Some(JumpView::ContainerAppJobs));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.Network/applicationSecurityGroups/asg-web")),
+            Some(JumpView::ApplicationSecurityGroups)
+        );
+        assert_eq!(ServiceType::from_prefix("@asg"), Some((ServiceType::VirtualMachines, Some(JumpView::ApplicationSecurityGroups))));
         assert_eq!(
             JumpView::for_arm_id(&p("Microsoft.ContainerInstance/containerGroups/cg-agents")),
             Some(JumpView::ContainerGroups)

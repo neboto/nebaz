@@ -8,7 +8,7 @@ use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
     advisor, ai_search, aks, alerts, sql_managed, all_resources, app_service, backup, changes, compute, container_apps, container_instances, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
-    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
+    hybrid, identity, keyvault, messaging, monitor, network, network_asg, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager, virtual_wan,
 };
 use serde_json::{json, Value};
@@ -285,6 +285,11 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             JumpView::BastionHosts,
             "BastionRow",
             parse("BastionRow", network_hub::BastionRow::from_json(&simple("Microsoft.Network/bastionHosts/bas-1"), t)),
+        ),
+        m(
+            JumpView::ApplicationSecurityGroups,
+            "AsgRow",
+            parse("AsgRow", network_asg::AsgRow::from_json(&simple("Microsoft.Network/applicationSecurityGroups/asg-1"), t)),
         ),
         m(
             JumpView::DdosPlans,

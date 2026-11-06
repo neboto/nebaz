@@ -558,7 +558,7 @@ impl SecurityRule {
         }
     }
 
-    fn line(&self) -> (String, String) {
+    pub(crate) fn line(&self) -> (String, String) {
         (
             format!("{} {}", json::num(self.priority), self.name),
             format!(
@@ -687,6 +687,15 @@ impl Resource for NsgRow {
         }
         for n in &self.nic_ids {
             v.push((format!("NIC {}", name_of_id(n)), n.clone()));
+        }
+        let mut asgs: Vec<&String> = Vec::new();
+        for a in self.rules.iter().flat_map(|r| r.source_asgs.iter().chain(&r.destination_asgs)) {
+            if !asgs.iter().any(|x| x.eq_ignore_ascii_case(a)) {
+                asgs.push(a);
+            }
+        }
+        for a in asgs {
+            v.push((format!("ASG {}", name_of_id(a)), a.clone()));
         }
         v
     }

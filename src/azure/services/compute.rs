@@ -11,6 +11,7 @@
 
 use crate::azure::resource::{name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::network_asg::{AsgRow, ASGS_PATH};
 use crate::azure::services::scale_sets::ScaleSetRow;
 use crate::azure::services::{
     arm_row, error_rows, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope,
@@ -591,6 +592,8 @@ pub struct IpConfig {
     pub primary: Option<bool>,
     pub subnet_id: Option<String>,
     pub public_ip_id: Option<String>,
+    /// The application security groups the configuration is a member of.
+    pub asg_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -628,6 +631,7 @@ impl NicRow {
                     primary: json::bool_at(c, "/properties/primary"),
                     subnet_id: json::arm_id(json::id_at(c, "/properties/subnet")),
                     public_ip_id: json::arm_id(json::id_at(c, "/properties/publicIPAddress")),
+                    asg_ids: json::ids_at(c, "/properties/applicationSecurityGroups"),
                 })
                 .collect(),
             dns_servers: json::strings_at(v, &format!("{}/dnsSettings/dnsServers", p)),
@@ -704,6 +708,9 @@ impl Resource for NicRow {
             if let Some(pip) = &c.public_ip_id {
                 v.push((format!("Public IP {} · {}", name_of_id(pip), c.name), pip.clone()));
             }
+            for a in &c.asg_ids {
+                v.push((format!("ASG {} · {}", name_of_id(a), c.name), a.clone()));
+            }
         }
         v
     }
@@ -735,6 +742,9 @@ pub fn nic_section_lines(r: &NicRow, section: NicDetailSection) -> Vec<(String, 
                     "  Public IP".into(),
                     c.public_ip_id.clone().unwrap_or_else(|| "-".into()),
                 ));
+                for a in &c.asg_ids {
+                    lines.push((format!("  ASG · {}", name_of_id(a)), a.clone()));
+                }
             }
             lines
         }
@@ -801,6 +811,14 @@ impl AzureService for ComputeService {
                     .filter_map(|v| NicRow::from_json(v, tenant))
                     .collect(),
             ),
+            JumpView::ApplicationSecurityGroups => Self::boxed(
+                self.scope
+                    .list(ASGS_PATH, NIC_API_VERSION)
+                    .await?
+                    .iter()
+                    .filter_map(|v| AsgRow::from_json(v, tenant))
+                    .collect(),
+            ),
             JumpView::ScaleSets => Self::boxed(
                 self.scope
                     .list(VMSS_PATH, VMSS_API_VERSION)
@@ -853,6 +871,15 @@ impl AzureService for ComputeService {
                     .scope
                     .stream(NIC_PATH, NIC_API_VERSION, &[], service_type, "Listing network interfaces…", &event_tx, |page| {
                         Self::boxed(page.iter().filter_map(|v| NicRow::from_json(v, tenant.as_deref())).collect())
+                    })
+                    .await;
+                finish_stream(service_type, r, &event_tx)
+            }
+            JumpView::ApplicationSecurityGroups => {
+                let r = self
+                    .scope
+                    .stream(ASGS_PATH, NIC_API_VERSION, &[], service_type, "Listing application security groups…", &event_tx, |page| {
+                        Self::boxed(page.iter().filter_map(|v| AsgRow::from_json(v, tenant.as_deref())).collect())
                     })
                     .await;
                 finish_stream(service_type, r, &event_tx)
@@ -933,6 +960,10 @@ impl AzureService for ComputeService {
             Some(JumpView::Nics) => {
                 let v = self.scope.get(id, NIC_API_VERSION).await?;
                 Ok(Box::new(NicRow::from_json(&v, tenant).ok_or_else(not_found)?))
+            }
+            Some(JumpView::ApplicationSecurityGroups) => {
+                let v = self.scope.get(id, NIC_API_VERSION).await?;
+                Ok(Box::new(AsgRow::from_json(&v, tenant).ok_or_else(not_found)?))
             }
             Some(JumpView::ScaleSets) => {
                 let v = self.scope.get(id, VMSS_API_VERSION).await?;

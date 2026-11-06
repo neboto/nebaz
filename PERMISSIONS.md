@@ -102,7 +102,9 @@ each one backs are in the catalog table
   `Microsoft.Compute/virtualMachineScaleSets/read`, and the lazy Instances
   section `Microsoft.Compute/virtualMachineScaleSets/virtualMachines/read`
   (a Uniform set's instances; a Flexible set's are VMs, the VM list's
-  action above).
+  action above); ASGs: `Microsoft.Network/applicationSecurityGroups/read`
+  (Members and Rules read the NICs and NSGs lists, the actions above and
+  under Network).
 - **Storage**: `Microsoft.Storage/storageAccounts/read`; the lazy
   Containers section: `Microsoft.Storage/storageAccounts/blobServices/containers/read`
   (container metadata through ARM, never a blob).
