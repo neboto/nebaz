@@ -8,6 +8,7 @@
 pub mod access;
 pub mod activity;
 pub mod advisor;
+pub mod alerts;
 pub mod aks;
 pub mod backup;
 pub mod all_resources;
@@ -127,6 +128,24 @@ pub fn related_lines(mut lines: Vec<(String, String)>) -> Vec<(String, String)> 
     }
     lines.push((String::new(), String::new()));
     lines.push((String::new(), "⏎ on a line jumps to it (y copies the id)".into()));
+    lines
+}
+
+/// A Related body with cross-type links added (the vault that backs a row
+/// up, the alert rules that watch it): `extra` goes before the ⏎ footer,
+/// or becomes the whole body when there was nothing related.
+pub fn splice_related(mut lines: Vec<(String, String)>, extra: Vec<(String, String)>) -> Vec<(String, String)> {
+    if extra.is_empty() {
+        return lines;
+    }
+    if lines.len() == 1 && lines[0].1 == "No related resources" {
+        return related_lines(extra);
+    }
+    // The footer is a blank line then the ⏎ hint.
+    let at = lines.iter().rposition(|(k, v)| k.is_empty() && v.is_empty()).unwrap_or(lines.len());
+    let footer = lines.split_off(at);
+    lines.extend(extra);
+    lines.extend(footer);
     lines
 }
 

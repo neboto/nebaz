@@ -828,6 +828,43 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     effective, inbound and outbound routes, BGP learned and advertised
     routes, P2S connection health and the VPN configuration download are
     `POST`s (`C` copies `vhub get-effective-routes`, nebaz never sends it).
+36. **Alert rules are Monitor sub-tabs, and every row names the rules
+    that watch it** (#194, `src/azure/services/alerts.rs`, glue
+    `src/app/alerts.rs`): metric alerts (`@malert`), log search alerts
+    (`@logalert`, `scheduledQueryRules`), activity log alerts
+    (`@activityalert`, Service Health among them), action groups (`@ag`),
+    alert processing rules (`@apr`) and the alerts that fired in the last
+    30 days (`@alert`, the longest the list allows, newest first). One
+    subscription-wide list each, no lazy calls. **Every type's Related**
+    adds the rules that watch the row, spliced in by the app beside the
+    backup vault (`splice_related`): entering Related loads the three rule
+    lists once per subscription (`SectionDescriptor::enter`, so keys, the
+    flat view and `X` all do), `Loading…` while they are in flight, a
+    warning line when one fails. A rule **watches** a resource its scopes
+    name, or one inside a scope it names (a group, the subscription, a
+    parent) when it also names the resource's type (a metric alert's
+    `targetResourceType`, a log alert's `targetResourceTypes`, an activity
+    log alert's `resourceType` condition), on a segment boundary: a
+    subscription-wide Service Health alert is not on every row. An action
+    group's **Used by** lists every rule and processing rule naming it
+    (the same lists plus the processing rules, loaded on entering it). A
+    rule with no action group says it tells no one; an action group with
+    no receivers, that it reaches no one. State: a rule or group the
+    ladder, then `enabled` (enabled → running, disabled → stopped); a fired
+    alert `Fired` and `New` → unavailable (red), `Acknowledged` → pending,
+    `Resolved` → available, `Closed` → stopped. A fired alert is no ARM
+    resource of its own: no RBAC or tags (tail Activity, Related), its
+    portal link is the resource's page, no `az` command reads it. API
+    versions are the established stables (`2018-03-01`, `2023-12-01`,
+    `2020-10-01`, `2023-01-01`, `2021-08-08`, `2019-03-01`); each has a
+    2026 stable not yet everywhere. **Never**: a receiver URL beyond its
+    scheme and host (a webhook's, a Logic App callback's `sig=`, a
+    Function trigger's `code=`, an Automation webhook's token; a Slack
+    webhook's is in the path), the free-form `webHookProperties`,
+    `customProperties` and `actionProperties` maps, an ITSM ticket
+    configuration (all dropped before the row keeps the JSON), a phone
+    number beyond its last four digits, an alert's state change
+    (`changestate`, a POST), a log alert's query run (it is KQL text).
 
 ## The catalog
 
@@ -911,6 +948,12 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | PostgreSQL & MySQL · PostgreSQL, MySQL (flexible servers; Single Server is retired and stays out) | Networking (how it is reached: VNet integration, public, private endpoints or none; public access; FQDN as text; delegated subnet and its VNet; private DNS zone, flagged when its name does not end in the FQDN's domain; private endpoints with approval status, flagged unless Approved; what a caller in another VNet needs) · Firewall ⧗ (IP rules; 0.0.0.0 "allow Azure services", the whole internet and ranges of 65,536+ addresses flagged; says when the rules do not apply: VNet-integrated, or public access off) · Security (auth: password / Entra / both on PostgreSQL; admin login, never the password; Entra admins ⧗, a service principal jumping to its Graph row, MySQL's Graph lookup identity; encryption service- or customer-managed with key, status and identity; managed identity) · Parameters ⧗ (`configurations`, one call; only `require_secure_transport` (off flagged), the TLS minimum / maximum, `password_encryption`, `pgbouncer.enabled`, `aad_auth_only`, `max_connections`, each with its default) · HA & backup (HA mode, state, standby zone; retention, interval, geo-redundant backup, earliest restore; replication role, replica capacity, source server; maintenance window) · Databases ⧗ (charset, collation; system databases as a note) · (Overview: version, SKU, storage size, tier and autogrow, IOPS, zone, FQDN, connectivity, admin login, created) | ladder, then `state` (`Ready` → Available, `Stopped` → Stopped, `Disabled` / `Inaccessible` → Unavailable, the rest Pending) | delegated subnet, its VNet, private DNS zone (DNS tab), private endpoints, source server, user-assigned and key identities, the system identity's service principal (Graph) | `az postgres flexible-server show` · `az mysql flexible-server show` |
 | Monitor · Workspaces | — (Overview: customer id, SKU and commitment tier, retention, daily cap and reset time, ingestion status, public ingestion and query, local auth, access mode, created) | ladder only | dedicated cluster (AKS clusters and App Insights components link here from their own Related) | `az monitor log-analytics workspace show` |
 | Monitor · App Insights | — (Overview: application type, kind, app id, ingestion mode, workspace, retention, sampling, public ingestion and query, local auth, IP masking, created; the instrumentation key, connection string and HockeyApp token are stripped from the JSON before the row keeps it) | ladder only | workspace (`WorkspaceResourceId`; none for a classic component). App Service apps cannot link here: the link is an app setting | `az monitor app-insights component show` (the `application-insights` CLI extension) |
+| Monitor · Metric alerts (rule 36) | Condition (severity, frequency and window, each criterion: metric, aggregation, operator, threshold or dynamic sensitivity, dimensions, failing periods; availability tests: the web test and locations; resource type, region, auto-resolve) · Scopes · Actions (⚠ when none) | ladder, then enabled | scopes, action groups, web test and App Insights | `az monitor metrics alert show` |
+| Monitor · Log alerts | Condition (kind, severity, frequency and window, aggregation, operator, threshold, failing periods, split by resource, the KQL query as code, never run; resource types, mute, auto-resolve) · Scopes · Actions | ladder, then enabled | scopes (the workspace or component), action groups | `az monitor scheduled-query show` (the `scheduled-query` extension) |
+| Monitor · Activity alerts | Condition (category, each condition and any-of) · Scopes · Actions | ladder, then enabled | scopes, action groups | `az monitor activity-log alert show` |
+| Monitor · Action groups | Receivers (email, SMS and voice masked, app push, webhook / Logic App / Function / runbook to their host or resource, Event Hub, ITSM, ARM role; status, common schema) · Used by (the warm rule lists and processing rules) | ladder, then enabled | the resources its receivers call, the rules using it | `az monitor action-group show` |
+| Monitor · Processing rules | Rule (suppress or add action groups, each condition, schedule and recurrences) · Scopes | ladder, then enabled | scopes, action groups | `az monitor alert-processing-rule show` (the `alertsmanagement` extension) |
+| Monitor · Fired alerts | Alert (severity, condition and state, fired, resolved, last changed and by whom, monitor service and signal, resource, rule, suppressed, description) | Fired → unavailable, Acknowledged → pending, Resolved → available, Closed → stopped | resource, rule | — (none reads a fired alert) |
 | Container Apps · Apps | Ingress (external / internal, FQDN as text, transport, ports, insecure HTTP flagged, client certificate mode, sticky sessions, IP restrictions as an allow- or deny-list, CORS, traffic split by revision and label, custom domains with their certificates) · Scale (min / max replicas, rules by kind with metadata and auth as trigger parameter → secret **name**) · Containers (init first; image, CPU / memory, probes, env var **names** with secret refs named, volume mounts) · Revisions ⧗ (active first: active, traffic, replicas, health, running state, created, last active, provisioning error) · Auth ⧗ (`authConfigs`: on / off, unauthenticated action, excluded paths, per provider the client id; Entra ID issuer, client secret setting **name**, audiences, allowed client apps and identities) · Identity (system principal; each user-assigned identity with client and principal id; lifecycle; registry pull identities) · Secrets (names, Key Vault references and the identity reading them; registries) · (Overview: environment, workload profile, running status, ingress, FQDN, revisions mode, latest and latest-ready revision, Dapr, outbound IPs). Secret and env var `value`s are stripped from the JSON before the row keeps it | ladder, then `runningStatus` (`Running`, `Ready` → Available, `Stopped` / `Suspended` → Stopped, `Progressing` → Pending); `location` is a display name, stored as `eastus` | environment, user-assigned identities, registry pull identities, Express outbound subnet | `az containerapp show` |
 | Container Apps · Environments | Network (public access, internal only, static IP, default domain, infrastructure subnet, Docker bridge and platform reserved ranges, reserved DNS IP, the private DNS a VNet caller needs when internal, custom DNS suffix with its certificate subject / thumbprint / expiry / Key Vault source, peer mTLS, peer traffic encryption, the ingress tier, private endpoints) · Workload profiles (name, type, node bounds) · (Overview: mode, default domain, static IP, zone redundancy, logs destination and workspace customer id, Dapr / KEDA versions, deployment errors). The Log Analytics shared key, Dapr App Insights key and connection string, App Insights connection string and certificate blob and password are stripped | ladder only | infrastructure subnet, infrastructure resource group, private endpoints, user-assigned identities. The workspace is a customer id, not an ARM id: no link (search `@law` for it) | `az containerapp env show` |
 | Container Apps · Jobs | Trigger (manual, schedule with cron, or event with KEDA rules; parallelism, completions, replica timeout, retry limit) · Executions ⧗ (newest first: status, a failed one `⚠`, start and end) · Containers · Identity · Secrets (as Apps) · (Overview: environment, workload profile, running state, trigger, outbound IPs) | ladder only | environment, user-assigned identities, registry pull identities | `az containerapp job show` |
@@ -1105,6 +1148,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Flexible server Databases, Firewall, Entra admins (Security), Parameters | 1 each per server, on demand | `{server}/databases` · `{server}/firewallRules` · `{server}/administrators` · `{server}/configurations` · the engine's version above |
 | Workspaces | 1 | `/providers/Microsoft.OperationalInsights/workspaces` · `2026-03-01` |
 | App Insights | 1 | `/providers/Microsoft.Insights/components` · `2020-02-02` (the newest stable that has components) |
+| Metric, log and activity log alerts, action groups, processing rules (rule 36) | 1 each; the three rule lists also load on entering any Related | `/providers/Microsoft.Insights/{metricAlerts,scheduledQueryRules,activityLogAlerts,actionGroups}` · `2018-03-01`, `2023-12-01`, `2020-10-01`, `2023-01-01`; `/providers/Microsoft.AlertsManagement/actionRules` · `2021-08-08` |
+| Fired alerts | 1, the last 30 days. Never `changestate` (a POST) | `/providers/Microsoft.AlertsManagement/alerts?timeRange=30d&sortBy=startDateTime&sortOrder=desc` · `2019-03-01` |
 | Container apps | 1 | `/providers/Microsoft.App/containerApps` · `2026-07-01` |
 | Container Apps environments | 1 | `/providers/Microsoft.App/managedEnvironments` · `2026-07-01` |
 | Container Apps jobs | 1 | `/providers/Microsoft.App/jobs` · `2026-07-01` |
@@ -1188,6 +1233,16 @@ it; that floor is #63.
   express-route show`, `vnet-gateway show`, `vpn-connection show` and
   `local-gateway show` take `--ids` (each `-n` carries `id_part='name'`);
   the Hybrid tab at 80×24 on a real estate.
+- Alert rules (#194), built without an Azure login from azure-rest-api-specs
+  (`Insights/stable`, `AlertsManagement`) and the CLI sources. To check:
+  each list answers on the older stable version chosen; a metric alert
+  scoped to a group or subscription carries `targetResourceType` so the
+  Related join finds its resources; a log alert's scope is the workspace
+  or component and `targetResourceTypes` is what it watches; the
+  action group list's `nextLink` (the spec marks it unpaged); how a fired
+  alert's `name` reads (the rule's name?) and whether `alertRule` is an
+  ARM id for every monitor service; the three rule lists' cost on a
+  large subscription, loaded on the first Related.
 - Virtual WAN (#158), built without an Azure login from azure-rest-api-specs
   (`virtualWan.json`, read at `2026-03-01`; requested on `2025-09-01`,
   the Network service's version) and the `virtual-wan` CLI extension. To

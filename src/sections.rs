@@ -35,10 +35,18 @@ impl SectionDescriptor {
         self.sections.len()
     }
 
-    /// Fire a section's on-enter hook, when it has one.
+    /// Fire a section's on-enter hook, when it has one. Every type's
+    /// Related also loads the alert rule lists it is matched in (#194),
+    /// once per subscription.
     pub fn enter(&self, idx: usize, app: &mut App, event_tx: &mpsc::UnboundedSender<Event>) {
-        if let Some(hook) = self.sections.get(idx).and_then(|s| s.on_enter) {
+        let Some(section) = self.sections.get(idx) else {
+            return;
+        };
+        if let Some(hook) = section.on_enter {
             hook(app, event_tx);
+        }
+        if section.label == "Related" {
+            App::trigger_alert_rules(app, event_tx);
         }
     }
 }

@@ -1,0 +1,57 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/scheduledQueryRules/orders-api-exceptions",
+      "name": "orders-api-exceptions",
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "location": "westeurope",
+      "kind": "LogAlert",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders-team@contoso.com",
+        "costCenter": "CC-2100"
+      },
+      "properties": {
+        "displayName": "orders-api exceptions",
+        "description": "More than 10 exceptions from ca-orders-api in 15 minutes",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "targetResourceTypes": [
+          "microsoft.insights/components"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "exceptions\n| where cloud_RoleName == 'ca-orders-api'\n| summarize count() by bin(timestamp, 5m)",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 10,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "autoMitigate": true,
+        "muteActionsDuration": "PT30M",
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/actionGroups/ag-orders-oncall"
+          ],
+          "customProperties": {
+            "runbook": "never-shown"
+          }
+        },
+        "isWorkspaceAlertsStorageConfigured": false,
+        "createdWithApiVersion": "2023-12-01"
+      }
+    }
+  ]
+}

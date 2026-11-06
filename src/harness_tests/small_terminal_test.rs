@@ -113,6 +113,26 @@ async fn the_hybrid_tab_fits_80_by_24() {
     }
 }
 
+/// Monitor's eight sub-tabs (#194: the alert rules and fired alerts)
+/// reach their chip and every section at 80×24.
+#[tokio::test]
+async fn the_monitor_tab_with_alerts_fits_80_by_24() {
+    let mut h = Harness::sized(80, 24).await;
+    assert_eq!(ServiceType::Monitor.views().len(), 8);
+    for view in ServiceType::Monitor.views().iter().copied() {
+        let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
+        h.install(mock).await;
+        let screen = h.render();
+        assert!(screen.contains(view.label()), "{view:?}:\n{screen}");
+        h.press(KeyCode::Enter).await;
+        for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9'] {
+            h.press(KeyCode::Char(c)).await;
+            h.render();
+        }
+        h.press(KeyCode::Esc).await;
+    }
+}
+
 /// Virtual WAN's six sub-tabs (#158) reach their chip and every section
 /// at 80×24; a hub's lazy sections stay in flight without a panic.
 #[tokio::test]

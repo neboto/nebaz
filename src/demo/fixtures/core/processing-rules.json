@@ -1,0 +1,53 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.AlertsManagement/actionRules/apr-weekend-maintenance",
+      "name": "apr-weekend-maintenance",
+      "type": "Microsoft.AlertsManagement/actionRules",
+      "location": "Global",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1200"
+      },
+      "properties": {
+        "description": "Patch window: no Sev3 or Sev4 notifications on weekend nights",
+        "enabled": true,
+        "scopes": [
+          "/subscriptions/{{prod}}"
+        ],
+        "conditions": [
+          {
+            "field": "Severity",
+            "operator": "Equals",
+            "values": [
+              "Sev3",
+              "Sev4"
+            ]
+          }
+        ],
+        "schedule": {
+          "effectiveFrom": "2026-01-01T00:00:00",
+          "timeZone": "W. Europe Standard Time",
+          "recurrences": [
+            {
+              "recurrenceType": "Weekly",
+              "startTime": "00:00:00",
+              "endTime": "06:00:00",
+              "daysOfWeek": [
+                "Saturday",
+                "Sunday"
+              ]
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionType": "RemoveAllActionGroups"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -294,7 +294,13 @@
     ],
     "monitor": [
       "log-workspaces (monitor)",
-      "app-insights (appi)"
+      "app-insights (appi)",
+      "metric-alerts (malert)",
+      "log-alerts (logalert)",
+      "activity-log-alerts (activityalert)",
+      "action-groups (ag)",
+      "alert-processing-rules (apr)",
+      "fired-alerts (alert)"
     ],
     "pg": [
       "postgres-servers (pg)",
@@ -361,9 +367,28 @@
       "Related",
       "Tags"
     ],
+    "Action group": [
+      "Overview",
+      "Receivers",
+      "Used by",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Activity Log": [
       "Overview",
       "Related"
+    ],
+    "Activity log alert": [
+      "Overview",
+      "Condition",
+      "Scopes",
+      "Actions",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
     ],
     "Advisor recommendation": [
       "Overview",
@@ -384,6 +409,15 @@
       "Suppression",
       "Activity",
       "Related"
+    ],
+    "Alert processing rule": [
+      "Overview",
+      "Rule",
+      "Scopes",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
     ],
     "App Registration": [
       "Overview",
@@ -651,6 +685,12 @@
       "Related",
       "Tags"
     ],
+    "Fired alert": [
+      "Overview",
+      "Alert",
+      "Activity",
+      "Related"
+    ],
     "Firewall policy": [
       "Overview",
       "Settings",
@@ -755,6 +795,16 @@
       "Related",
       "Tags"
     ],
+    "Log search alert": [
+      "Overview",
+      "Condition",
+      "Scopes",
+      "Actions",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Managed Cluster": [
       "Overview",
       "Network",
@@ -791,6 +841,16 @@
       "Assignments",
       "Activity",
       "Related"
+    ],
+    "Metric alert": [
+      "Overview",
+      "Condition",
+      "Scopes",
+      "Actions",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
     ],
     "Microsoft.Network/publicIPPrefixes": [
       "Overview",

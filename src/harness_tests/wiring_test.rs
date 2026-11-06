@@ -73,12 +73,13 @@ async fn split_pane_sections_follow_the_descriptor() {
             continue;
         }
         // A governance row (ADR 0009), a Defender row (ADR 0010) or an
-        // Advisor row (ADR 0011) has no RBAC and no tags of its own:
+        // Advisor row (ADR 0011), or a fired alert, has no RBAC and no tags of its own:
         // Activity, Related.
         let governance = h.app.get_selected_resource().is_some_and(|r| {
             crate::azure::services::governance::is_governance_id(r.id())
                 || crate::azure::services::defender::is_defender_id(r.id())
                 || crate::azure::services::advisor::is_advisor_id(r.id())
+                || crate::azure::services::alerts::is_fired_alert_id(r.id())
         });
         assert!(n >= if governance { 4 } else { 5 }, "{label}: no descriptor, or a short one: {labels:?}");
         // A directory row (Graph, no ARM id) has no ARM scope for Access or

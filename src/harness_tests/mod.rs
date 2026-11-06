@@ -50,6 +50,7 @@ mod search_edit_test;
 mod search_follow_test;
 mod export_test;
 mod advisor_test;
+mod alerts_test;
 mod defender_test;
 mod governance_test;
 mod help_filter_test;

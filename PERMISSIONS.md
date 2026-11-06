@@ -371,7 +371,15 @@ each one backs are in the catalog table
   ever run (the query hosts are on the guard's list), a workspace's shared
   keys are a `POST` nebaz never sends, and a component's instrumentation
   key and connection string, which its `GET` does return, are stripped
-  before the row keeps the JSON.
+  before the row keeps the JSON. Alerts: `Microsoft.Insights/metricAlerts/read`,
+  `Microsoft.Insights/scheduledQueryRules/read`,
+  `Microsoft.Insights/activityLogAlerts/read`,
+  `Microsoft.Insights/actionGroups/read`,
+  `Microsoft.AlertsManagement/actionRules/read`,
+  `Microsoft.AlertsManagement/alerts/read`. Receiver URLs are cut to their
+  host, free-form webhook and custom properties dropped and phone numbers
+  masked before the row keeps the JSON; acknowledging or closing an alert
+  (`changestate`) is a `POST` nebaz never sends.
 - **Container Apps**: `Microsoft.App/containerApps/read`,
   `Microsoft.App/managedEnvironments/read`, `Microsoft.App/jobs/read`; the
   lazy Revisions and Auth sections:

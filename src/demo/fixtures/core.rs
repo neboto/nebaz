@@ -79,11 +79,14 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Advisor/recommendations", "advisor-recommendations-prod.json"),
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Advisor/advisorScore", "advisor-score-prod.json"),
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Advisor/suppressions", "advisor-suppressions-prod.json"),
-    // Resources no service browses: All resources lists them (the alert
-    // rules behind the fired alerts, their action groups, the watchers).
+    // Monitor's alert sub-tabs (#194): the rules behind the fired alerts
+    // (generated), their action groups and the processing rule.
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/metricAlerts", "metric-alerts.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/scheduledQueryRules", "log-alerts.json"),
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/activityLogAlerts", "activity-log-alerts.json"),
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Insights/actionGroups", "action-groups.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.AlertsManagement/actionRules", "processing-rules.json"),
+    // Resources no service browses: All resources lists them (the watchers).
     fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Network/networkWatchers", "network-watchers-prod.json"),
     fx!("core", "/subscriptions/{{dev}}/providers/Microsoft.Network/networkWatchers", "network-watchers-dev.json"),
 ];

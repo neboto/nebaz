@@ -238,6 +238,19 @@ pub enum JumpView {
     // Monitor
     LogWorkspaces,
     AppInsights,
+    /// `Microsoft.Insights/metricAlerts` (#194).
+    MetricAlerts,
+    /// `Microsoft.Insights/scheduledQueryRules`: log search alerts.
+    LogAlerts,
+    /// `Microsoft.Insights/activityLogAlerts` (Service Health too).
+    ActivityLogAlerts,
+    /// `Microsoft.Insights/actionGroups`: who an alert notifies.
+    ActionGroups,
+    /// `Microsoft.AlertsManagement/actionRules`: alert processing rules.
+    AlertProcessingRules,
+    /// `Microsoft.AlertsManagement/alerts`: the alerts that fired, the
+    /// last 30 days.
+    FiredAlerts,
     // Power Platform
     EnterprisePolicies,
     // Container Apps
@@ -323,7 +336,8 @@ impl JumpView {
             CosmosAccounts => ServiceType::Cosmos,
             PostgresServers | MysqlServers => ServiceType::PostgresMysql,
             AiAccounts => ServiceType::Foundry,
-            LogWorkspaces | AppInsights => ServiceType::Monitor,
+            LogWorkspaces | AppInsights | MetricAlerts | LogAlerts | ActivityLogAlerts | ActionGroups | AlertProcessingRules
+            | FiredAlerts => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
@@ -401,6 +415,12 @@ impl JumpView {
             MysqlServers => "mysql-servers",
             AiAccounts => "ai-accounts",
             LogWorkspaces => "log-workspaces",
+            MetricAlerts => "metric-alerts",
+            LogAlerts => "log-alerts",
+            ActivityLogAlerts => "activity-log-alerts",
+            ActionGroups => "action-groups",
+            AlertProcessingRules => "alert-processing-rules",
+            FiredAlerts => "fired-alerts",
             AppInsights => "app-insights",
             EnterprisePolicies => "enterprise-policies",
             ContainerApps => "container-apps",
@@ -495,6 +515,12 @@ impl JumpView {
             MysqlServers => "MySQL",
             AiAccounts => "Resources",
             LogWorkspaces => "Workspaces",
+            MetricAlerts => "Metric alerts",
+            LogAlerts => "Log alerts",
+            ActivityLogAlerts => "Activity alerts",
+            ActionGroups => "Action groups",
+            AlertProcessingRules => "Processing rules",
+            FiredAlerts => "Fired alerts",
             AppInsights => "App Insights",
             EnterprisePolicies => "Enterprise policies",
             ContainerApps => "Apps",
@@ -598,6 +624,12 @@ impl JumpView {
             ("microsoft.cognitiveservices", ["accounts"]) => JumpView::AiAccounts,
             ("microsoft.operationalinsights", ["workspaces"]) => JumpView::LogWorkspaces,
             ("microsoft.insights", ["components"]) => JumpView::AppInsights,
+            ("microsoft.insights", ["metricalerts"]) => JumpView::MetricAlerts,
+            ("microsoft.insights", ["scheduledqueryrules"]) => JumpView::LogAlerts,
+            ("microsoft.insights", ["activitylogalerts"]) => JumpView::ActivityLogAlerts,
+            ("microsoft.insights", ["actiongroups"]) => JumpView::ActionGroups,
+            ("microsoft.alertsmanagement", ["actionrules"]) => JumpView::AlertProcessingRules,
+            ("microsoft.alertsmanagement", ["alerts"]) => JumpView::FiredAlerts,
             ("microsoft.powerplatform", ["enterprisepolicies"]) => JumpView::EnterprisePolicies,
             ("microsoft.app", ["containerapps"]) => JumpView::ContainerApps,
             ("microsoft.app", ["managedenvironments"]) => JumpView::ContainerAppEnvironments,
@@ -870,7 +902,7 @@ impl ServiceType {
             ServiceType::Cosmos => "Cosmos DB accounts",
             ServiceType::PostgresMysql => "PostgreSQL & MySQL flexible servers",
             ServiceType::Foundry => "Foundry, AI Services & OpenAI (metadata only)",
-            ServiceType::Monitor => "Log Analytics & App Insights",
+            ServiceType::Monitor => "Log Analytics, App Insights & alerts",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::ContainerApps => "Container apps, environments & jobs",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
@@ -925,7 +957,16 @@ impl ServiceType {
             ServiceType::Cosmos => &[CosmosAccounts],
             ServiceType::PostgresMysql => &[PostgresServers, MysqlServers],
             ServiceType::Foundry => &[AiAccounts],
-            ServiceType::Monitor => &[LogWorkspaces, AppInsights],
+            ServiceType::Monitor => &[
+                LogWorkspaces,
+                AppInsights,
+                MetricAlerts,
+                LogAlerts,
+                ActivityLogAlerts,
+                ActionGroups,
+                AlertProcessingRules,
+                FiredAlerts,
+            ],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
@@ -1097,6 +1138,18 @@ impl ServiceType {
                 (ServiceType::Foundry, None)
             }
             "monitor" | "monitoring" => (ServiceType::Monitor, None),
+            "malert" | "malerts" | "metricalert" | "metricalerts" => (ServiceType::Monitor, Some(JumpView::MetricAlerts)),
+            "logalert" | "logalerts" | "sqr" | "scheduledquery" | "scheduledqueryrules" => {
+                (ServiceType::Monitor, Some(JumpView::LogAlerts))
+            }
+            "activityalert" | "activityalerts" | "activitylogalert" | "activitylogalerts" => {
+                (ServiceType::Monitor, Some(JumpView::ActivityLogAlerts))
+            }
+            "ag" | "actiongroup" | "actiongroups" => (ServiceType::Monitor, Some(JumpView::ActionGroups)),
+            "apr" | "processingrule" | "processingrules" | "actionrule" | "actionrules" => {
+                (ServiceType::Monitor, Some(JumpView::AlertProcessingRules))
+            }
+            "alert" | "alerts" | "fired" | "firedalerts" => (ServiceType::Monitor, Some(JumpView::FiredAlerts)),
             "law" | "laws" | "loganalytics" | "workspace" | "workspaces" => {
                 (ServiceType::Monitor, Some(JumpView::LogWorkspaces))
             }
@@ -1181,7 +1234,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1338,6 +1391,11 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@pricing"), Some((ServiceType::Defender, Some(JumpView::DefenderPlans))));
         assert_eq!(ServiceType::from_prefix("@advisor"), Some((ServiceType::Advisor, None)));
         assert_eq!(ServiceType::from_prefix("@vwan"), Some((ServiceType::VirtualWan, None)));
+        assert_eq!(ServiceType::from_prefix("@malert"), Some((ServiceType::Monitor, Some(JumpView::MetricAlerts))));
+        assert_eq!(ServiceType::from_prefix("@ag"), Some((ServiceType::Monitor, Some(JumpView::ActionGroups))));
+        assert_eq!(ServiceType::from_prefix("@alert"), Some((ServiceType::Monitor, Some(JumpView::FiredAlerts))));
+        // Defender's alerts keep their own prefix.
+        assert_eq!(ServiceType::from_prefix("@secalert"), Some((ServiceType::Defender, Some(JumpView::DefenderAlerts))));
         assert_eq!(ServiceType::from_prefix("@hub"), Some((ServiceType::VirtualWan, Some(JumpView::VirtualHubs))));
         assert_eq!(ServiceType::from_prefix("@p2s"), Some((ServiceType::VirtualWan, Some(JumpView::P2sGateways))));
         assert_eq!(ServiceType::from_prefix("@vpnsite"), Some((ServiceType::VirtualWan, Some(JumpView::VpnSites))));
