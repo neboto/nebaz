@@ -1,0 +1,43 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod/sharedPrivateLinkResources/spl-st-orders-blob",
+      "name": "spl-st-orders-blob",
+      "type": "Microsoft.Search/searchServices/sharedPrivateLinkResources",
+      "properties": {
+        "privateLinkResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+        "groupId": "blob",
+        "requestMessage": "orders indexer",
+        "resourceRegion": null,
+        "status": "Approved",
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod/sharedPrivateLinkResources/spl-ai-contoso-prod",
+      "name": "spl-ai-contoso-prod",
+      "type": "Microsoft.Search/searchServices/sharedPrivateLinkResources",
+      "properties": {
+        "privateLinkResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.CognitiveServices/accounts/ai-contoso-prod",
+        "groupId": "openai_account",
+        "requestMessage": "vectorizer",
+        "resourceRegion": null,
+        "status": "Approved",
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod/providers/Microsoft.Search/searchServices/srch-contoso-prod/sharedPrivateLinkResources/spl-cosmos-legacy",
+      "name": "spl-cosmos-legacy",
+      "type": "Microsoft.Search/searchServices/sharedPrivateLinkResources",
+      "properties": {
+        "privateLinkResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.DocumentDB/databaseAccounts/cosmos-legacy",
+        "groupId": "Sql",
+        "requestMessage": "legacy catalogue indexer",
+        "resourceRegion": null,
+        "status": "Pending",
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

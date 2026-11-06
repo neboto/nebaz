@@ -366,6 +366,15 @@ const SQL_MANAGED_INSTANCE: &[MetricSpec] = &[
     m("reserved_storage_mb", "Storage reserved (MB)", Max),
     m("io_requests", "IO requests", Avg),
 ];
+/// An AI Search service: query latency and rate, how much of it is
+/// throttled, and indexing work.
+const SEARCH_SERVICE: &[MetricSpec] = &[
+    m("SearchLatency", "Query latency (s)", Avg),
+    m("SearchQueriesPerSecond", "Queries per second", Avg),
+    m("ThrottledSearchQueriesPercentage", "Throttled queries %", Avg),
+    m("DocumentsProcessedCount", "Documents indexed", Total),
+    m("SkillExecutionCount", "Skill executions", Total),
+];
 /// A Virtual WAN hub's router: BGP with the hub's peers, its route
 /// counts, the routing infrastructure units and the data it processed.
 const VIRTUAL_HUB: &[MetricSpec] = &[
@@ -468,6 +477,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.network", ["virtualnetworkgateways"]) => VNET_GATEWAY,
         ("microsoft.network", ["virtualhubs"]) => VIRTUAL_HUB,
         ("microsoft.sql", ["managedinstances"]) => SQL_MANAGED_INSTANCE,
+        ("microsoft.search", ["searchservices"]) => SEARCH_SERVICE,
         ("microsoft.network", ["vpngateways"]) => VWAN_VPN_GATEWAY,
         ("microsoft.network", ["expressroutegateways"]) => VWAN_ER_GATEWAY,
         ("microsoft.network", ["p2svpngateways"]) => P2S_GATEWAY,

@@ -268,7 +268,8 @@
       "local-gateways (lgw)"
     ],
     "foundry": [
-      "ai-accounts (foundry)"
+      "ai-accounts (foundry)",
+      "search-services (search)"
     ],
     "fw": [
       "azure-firewalls (fw)",
@@ -1052,6 +1053,17 @@
       "Networking",
       "Databases",
       "Failover group",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Search service": [
+      "Overview",
+      "Service",
+      "Network",
+      "Security",
+      "Shared private links",
       "Access",
       "Activity",
       "Related",

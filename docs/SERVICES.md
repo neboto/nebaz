@@ -886,6 +886,22 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     (write-only, never returned), a database's `storageContainerSasToken`
     (create-only, not marked secret, stripped before the store keeps the
     list), a connection to the instance (its hosts are text).
+38. **AI Search is the Foundry tab's Search services sub-tab** (#196,
+    `src/azure/services/ai_search.rs`, glue `src/app/ai_search.rs`):
+    one subscription-wide list of `Microsoft.Search/searchServices`
+    (`@search`), beside the AI accounts it is usually paired with. A
+    service's **Shared private links** (its outbound private connections
+    to storage, Cosmos or a Foundry account) are a lazy section, one
+    `{service}/sharedPrivateLinkResources` list per service; Related fires
+    it too and adds each link's target (the service body's own copy of the
+    links feeds Related before it lands). A link that is not `Approved` is
+    ⚠: an indexer cannot use it until the target's owner approves. State:
+    the ladder, then `status` (`running` → available, `provisioning` →
+    creating, `degraded` / `error` → unavailable, `disabled` / `stopped`
+    → stopped). **Never**: `listAdminKeys` / `listQueryKeys` (POSTs that
+    return the keys), anything on the service's own endpoint (indexes,
+    indexers, skillsets, documents: data plane, #69; the guard names the
+    host). The endpoint is text.
 
 ## The catalog
 
@@ -985,10 +1001,11 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Messaging · Service Bus | Network ⧗ (effective access in one line; public network access; from the rule set: default action, trusted services, IP rules, VNet rules with each subnet jumpable and whether the service endpoint is required; private endpoints jumpable with connection state; the endpoint host as text, the `privatelink.` zone a private caller must resolve through; IP address type, min TLS, local auth; the tier's limits: VNet rules and private endpoints are Premium only. Deny with no IP or VNet rule is flagged: the service does not enforce it) · Security (local auth, min TLS, Microsoft- or customer-managed keys with the reading identity, infrastructure encryption, identity system / user-assigned) · Queues ⧗ (active, dead-lettered, scheduled and transfer counts from `countDetails`, size, lock duration, max deliveries, sessions, duplicate detection, TTL, partitioning, forwarding) · Topics ⧗ (subscription count, size, TTL, ordering, partitioning) · Access policies ⧗ (names and rights; never keys) · (Overview: status, SKU and messaging units, partitions, zone redundancy, endpoint, geo-replication) | ladder, then `status` (`Active` → available, `Disabled` → stopped) | private endpoints, user-assigned identities, a CMK identity, VNet rule subnets (once the rule set loads) | `az servicebus namespace show` |
 | Messaging · Event Hubs | Network ⧗ · Security · Access policies ⧗ (as Service Bus; Basic has no firewall, VNet rules or private endpoints) · Event hubs ⧗ (partitions, retention and cleanup policy, status, capture on / off with format, window, destination storage account jumpable or Data Lake, container, identity) · (Overview: SKU, throughput / processing / capacity units, auto-inflate maximum, Kafka, dedicated cluster, zone redundancy) | ladder, then `status` | as Service Bus, plus the dedicated cluster and each capture storage account (once Event hubs loads) | `az eventhubs namespace show` |
 | Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless); `location` is a Power Platform geography, so the row passes every `R` filter like `global` | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
+| Foundry · Search services (rule 38) | Service (status details, replicas, partitions, search units, hosting mode, compute, semantic ranker, upgrade) · Network (public access, bypass, IP rules, data exfiltration blocks, private endpoints with their approval) · Security (key / Entra ID auth and the failure mode, identity, CMK enforcement and compliance) · Shared private links ⧗ (target jumpable, sub-resource, status, ⚠ unless approved) · (Overview: status, SKU, endpoint) | ladder, then `status` | private endpoints, each shared link's target, user-assigned identities | `az search service show --ids` |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1191,6 +1208,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
 | Enterprise policies | 1 (every kind; `kind` on the row) | `/providers/Microsoft.PowerPlatform/enterprisePolicies` · `2020-10-30-preview` (the only version in the specs; not yet tried live) |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
+| Search services (rule 38) | 1 | `/providers/Microsoft.Search/searchServices` · `2025-05-01` |
+| Shared private links | 1 per service, on demand (Related fires it too) | `{service}/sharedPrivateLinkResources` · `2025-05-01` |
 
 A full tour of every sub-tab in one subscription is one list call per
 sub-tab. Only
@@ -1269,6 +1288,17 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- AI Search (#196), built without an Azure login from azure-rest-api-specs
+  (`search/…/Search/stable/2025-05-01`) and the azure-cli `search`
+  module. To check: the subscription list's body carries
+  `sharedPrivateLinkResources` (Related reads it before the lazy list
+  lands; the spec marks it read-only, the example list is empty);
+  `status` values beyond `running`; `authOptions` reads as one key
+  (`apiKeyOnly` / `aadOrApiKey`); the shared link list's `status` on a
+  link to a Foundry account (`openai_account`); the metric defaults
+  (`SearchLatency`, `SearchQueriesPerSecond`,
+  `ThrottledSearchQueriesPercentage`, `DocumentsProcessedCount`,
+  `SkillExecutionCount`).
 - Alert rules (#194), built without an Azure login from azure-rest-api-specs
   (`Insights/stable`, `AlertsManagement`) and the CLI sources. To check:
   each list answers on the older stable version chosen; a metric alert

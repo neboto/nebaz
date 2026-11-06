@@ -270,6 +270,9 @@ pub struct LazyStore {
     /// `GET {account}/projects` — Foundry projects, keyed by account id;
     /// only ever fetched for accounts with project management on.
     pub foundry_projects: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {service}/sharedPrivateLinkResources`, keyed by search service
+    /// id (#196).
+    pub search_shared_links: LazyMap<Vec<serde_json::Value>>,
 
     // ── Container Apps ───────────────────────────────────────────────────
     /// `GET {app}/revisions`, keyed by app id. The template (env) is

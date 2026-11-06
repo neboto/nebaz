@@ -1,5 +1,6 @@
 //! The Foundry service (issue #12): every `Microsoft.CognitiveServices`
-//! account from the subscription-wide list — Foundry resources (`kind`
+//! account from the subscription-wide list (the tab's Search services
+//! sub-tab is `ai_search.rs`, #196) — Foundry resources (`kind`
 //! `AIServices`), Azure OpenAI and the single-purpose kinds alike, `kind`
 //! telling them apart. Model deployments and Foundry projects are
 //! per-account lists, so they are lazy sections, never sub-tabs.
@@ -14,6 +15,7 @@ use crate::azure::resource::{
     ResourceState,
 };
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::ai_search::SearchLists;
 use crate::azure::services::{
     arm_row, finish_stream, json, lazy_list_rows, overview_rows, related_rows, tag_rows, ArmBase, Scope,
 };
@@ -424,7 +426,10 @@ impl AzureService for FoundryService {
         "Foundry"
     }
 
-    async fn list_resources(&self, _view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+    async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+        if view == JumpView::SearchServices {
+            return SearchLists { scope: &self.scope }.list().await;
+        }
         let tenant = self.scope.tenant();
         Ok(self
             .scope
@@ -438,10 +443,13 @@ impl AzureService for FoundryService {
 
     async fn list_resources_streaming(
         &self,
-        _view: JumpView,
+        view: JumpView,
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
+        if view == JumpView::SearchServices {
+            return SearchLists { scope: &self.scope }.stream(&event_tx, service_type).await;
+        }
         let tenant = self.scope.tenant().map(str::to_string);
         let r = self
             .scope
@@ -456,6 +464,9 @@ impl AzureService for FoundryService {
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
+        if JumpView::for_arm_id(id) == Some(JumpView::SearchServices) {
+            return SearchLists { scope: &self.scope }.get(id).await;
+        }
         let v = self.scope.get(id, FOUNDRY_API_VERSION).await?;
         FoundryRow::from_json(&v, self.scope.tenant())
             .map(|r| Box::new(r) as Box<dyn Resource>)

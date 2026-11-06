@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    advisor, aks, alerts, sql_managed, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
+    advisor, ai_search, aks, alerts, sql_managed, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager, virtual_wan,
 };
@@ -487,6 +487,11 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             JumpView::AiAccounts,
             "FoundryRow",
             parse("FoundryRow", foundry::FoundryRow::from_json(&simple("Microsoft.CognitiveServices/accounts/ai-1"), t)),
+        ),
+        m(
+            JumpView::SearchServices,
+            "SearchServiceRow",
+            parse("SearchServiceRow", ai_search::SearchServiceRow::from_json(&simple("Microsoft.Search/searchServices/srch-1"), t)),
         ),
         m(
             JumpView::LogWorkspaces,

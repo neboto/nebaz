@@ -106,6 +106,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `cosmos-legacy`: public network, key auth on | `@audit` |
 | `redis-orders-cache`: non-TLS port 6379 enabled | `@audit` |
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
+| `srch-contoso-prod`'s shared private link to `cosmos-legacy` waits for approval | Foundry › Search services |
 | `sqlmi-legacy-prod`'s public data endpoint is enabled (port 3342; `nsg-sqlmi` admits only the office), and the instance has no failover group | SQL › Managed instances |
 | `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
 | `vst-branch-cork`'s only link, `link-vodafone`, is `NotConnected` to the hub's VPN gateway (Dublin's is up): the gateway's list line says `⚠ 1 down` | Virtual WAN |
@@ -284,6 +285,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 
 **`rg-ai-prod`** (team data)
 - `ai-contoso-prod` (Foundry / `AIServices`, public network on, key auth on) with project `orders-assistant` and deployment `gpt-4o`
+- `srch-contoso-prod` (AI Search, standard, 2 replicas × 1 partition, semantic ranker free, Entra ID or API key, public network on behind one IP rule) with shared private links to `stcontosoordersprod` (blob) and `ai-contoso-prod` (approved) and to `cosmos-legacy` (**pending**)
 
 **Core's own** (no service browses these; All resources lists them)
 - Groups `MC_rg-platform-prod_aks-platform-prod_westeurope` (managed by the cluster) and `NetworkWatcherRG` (`NetworkWatcher_westeurope`, `NetworkWatcher_northeurope`; dev has its own)
@@ -311,4 +313,4 @@ Graph (`directoryObjects`) is `identity`'s.
 | `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Virtual WAN, Firewall |
 | `compute` | VMs, disks, AKS, Container Registry, App Service, Container Apps |
 | `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, Backup |
-| `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry |
+| `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry, AI Search |

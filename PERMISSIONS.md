@@ -421,6 +421,11 @@ each one backs are in the catalog table
   are a `POST` nebaz never sends, and no model is ever called: the AI
   data-plane hosts are on the guard's list, and
   `az cognitiveservices account keys` is named forbidden.
+  AI Search (the tab's Search services): `Microsoft.Search/searchServices/read`,
+  and for the lazy Shared private links section
+  `Microsoft.Search/searchServices/sharedPrivateLinkResources/read`. The
+  admin and query keys are `POST`s nebaz never sends, and the service's
+  own endpoint (indexes, documents) is on the guard's list.
 - **`@audit`**: no action of its own. Its checks read lists and sections
   already loaded (ADR 0007); `r` there runs the same list loads and lazy
   reads listed above for Network, Storage, Key Vault, SQL (servers and
