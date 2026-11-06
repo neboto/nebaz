@@ -25,7 +25,7 @@ Safe to re-port by copying and re-applying the same renames.
 | nebaz file | neboto file | edit |
 |---|---|---|
 | `src/cli.rs` | `src/cli.rs` | `--region/--profile` → `--location/--subscription` |
-| `src/export.rs` | `src/export.rs` | `crate::aws` → `crate::azure`; `neboto-` file prefix and `NEBOTO_EXPORT_DIR` → `nebaz-` / `NEBAZ_EXPORT_DIR`; re-ported at `03760c0` without `detail_text` and the `--regions` variants (headless `neboto get` / `ls`), see below |
+| `src/export.rs` | `src/export.rs` | `crate::aws` → `crate::azure`; `neboto-` file prefix and `NEBOTO_EXPORT_DIR` → `nebaz-` / `NEBAZ_EXPORT_DIR`; re-ported at `03760c0` without `detail_text` and the `--regions` variants (headless `neboto get` / `ls`), see below; an export whose stem a same-second export took gets `-2`, `-3`… (`reserve_stem`; neboto overwrites) |
 | `src/search/fuzzy.rs` | `src/search/fuzzy.rs` | path |
 | `src/search/query_parser.rs` | `src/search/query_parser.rs` | path; tests rewritten for the Azure prefixes |
 | `src/bookmarks.rs` | `src/bookmarks.rs` | env var / path; tests rewritten (`NavLocation` no longer carries `EcsView` / S3 paths) |
