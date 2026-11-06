@@ -9,7 +9,7 @@ use crate::azure::service::JumpView;
 use crate::azure::services::{
     advisor, aks, all_resources, app_service, backup, changes, compute, container_apps, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
-    traffic_manager,
+    traffic_manager, virtual_wan,
 };
 use serde_json::{json, Value};
 
@@ -1094,6 +1094,102 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                             "gatewayIpAddress": "203.0.113.10",
                             "localNetworkAddressSpace": {"addressPrefixes": ["192.168.0.0/16"]}
                         }
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::VirtualWans,
+            "VirtualWanRow",
+            parse(
+                "VirtualWanRow",
+                virtual_wan::VirtualWanRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/virtualWans/vwan-1"),
+                        "name": "vwan-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "type": "Standard", "virtualHubs": [{"id": arm_id("Microsoft.Network/virtualHubs/vhub-1")}]}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::VirtualHubs,
+            "VirtualHubRow",
+            parse(
+                "VirtualHubRow",
+                virtual_wan::VirtualHubRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/virtualHubs/vhub-1"),
+                        "name": "vhub-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "routingState": "Provisioned", "addressPrefix": "10.100.0.0/23", "sku": "Standard", "virtualWan": {"id": arm_id("Microsoft.Network/virtualWans/vwan-1")}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::VwanVpnGateways,
+            "VwanVpnGatewayRow",
+            parse(
+                "VwanVpnGatewayRow",
+                virtual_wan::VwanVpnGatewayRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/vpnGateways/vpngw-1"),
+                        "name": "vpngw-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "vpnGatewayScaleUnit": 1, "virtualHub": {"id": arm_id("Microsoft.Network/virtualHubs/vhub-1")}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::VwanErGateways,
+            "VwanErGatewayRow",
+            parse(
+                "VwanErGatewayRow",
+                virtual_wan::VwanErGatewayRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/expressRouteGateways/ergw-1"),
+                        "name": "ergw-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "autoScaleConfiguration": {"bounds": {"min": 1}}, "virtualHub": {"id": arm_id("Microsoft.Network/virtualHubs/vhub-1")}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::P2sGateways,
+            "P2sGatewayRow",
+            parse(
+                "P2sGatewayRow",
+                virtual_wan::P2sGatewayRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/p2sVpnGateways/p2sgw-1"),
+                        "name": "p2sgw-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "vpnGatewayScaleUnit": 1, "virtualHub": {"id": arm_id("Microsoft.Network/virtualHubs/vhub-1")}}
+                    }),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::VpnSites,
+            "VpnSiteRow",
+            parse(
+                "VpnSiteRow",
+                virtual_wan::VpnSiteRow::from_json(
+                    &json!({
+                        "id": arm_id("Microsoft.Network/vpnSites/vst-1"),
+                        "name": "vst-1",
+                        "location": "eastus",
+                        "properties": {"provisioningState": "Succeeded", "addressSpace": {"addressPrefixes": ["192.168.40.0/24"]}}
                     }),
                     t,
                 ),

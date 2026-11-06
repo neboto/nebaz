@@ -1,0 +1,36 @@
+{
+  "value": [
+    {
+      "name": "conn-vnet-pp-dr",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubVirtualNetworkConnections/conn-vnet-pp-dr",
+      "type": "Microsoft.Network/virtualHubs/hubVirtualNetworkConnections",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "remoteVirtualNetwork": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr"
+        },
+        "allowHubToRemoteVnetTransit": true,
+        "allowRemoteVnetToUseHubVnetGateways": true,
+        "enableInternetSecurity": true,
+        "routingConfiguration": {
+          "associatedRouteTable": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/defaultRouteTable"
+          },
+          "propagatedRouteTables": {
+            "labels": [
+              "none"
+            ],
+            "ids": [
+              {
+                "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/noneRouteTable"
+              }
+            ]
+          },
+          "vnetRoutes": {
+            "staticRoutes": []
+          }
+        }
+      }
+    }
+  ]
+}

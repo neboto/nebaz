@@ -113,6 +113,25 @@ async fn the_hybrid_tab_fits_80_by_24() {
     }
 }
 
+/// Virtual WAN's six sub-tabs (#158) reach their chip and every section
+/// at 80×24; a hub's lazy sections stay in flight without a panic.
+#[tokio::test]
+async fn the_virtual_wan_tab_fits_80_by_24() {
+    let mut h = Harness::sized(80, 24).await;
+    for view in ServiceType::VirtualWan.views().iter().copied() {
+        let mock = mocks::all_mocks().into_iter().find(|m| m.view == view).unwrap();
+        h.install(mock).await;
+        let screen = h.render();
+        assert!(screen.contains(view.label()), "{view:?}:\n{screen}");
+        h.press(KeyCode::Enter).await;
+        for c in ['1', '2', '3', '4', '5', '6', '7', '8', '9'] {
+            h.press(KeyCode::Char(c)).await;
+            h.render();
+        }
+        h.press(KeyCode::Esc).await;
+    }
+}
+
 /// Network's ten sub-tabs (#137: Bastion and DDoS reach the digit-key
 /// ceiling) all reach their chip and every digit at 80×24; the last
 /// sub-tab is `0`.

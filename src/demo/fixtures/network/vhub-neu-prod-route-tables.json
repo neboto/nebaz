@@ -1,0 +1,61 @@
+{
+  "value": [
+    {
+      "name": "defaultRouteTable",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/defaultRouteTable",
+      "type": "Microsoft.Network/virtualHubs/hubRouteTables",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "labels": [
+          "default"
+        ],
+        "routes": [
+          {
+            "name": "_policy_PrivateTraffic",
+            "destinationType": "CIDR",
+            "destinations": [
+              "10.0.0.0/8",
+              "172.16.0.0/12",
+              "192.168.0.0/16"
+            ],
+            "nextHopType": "ResourceId",
+            "nextHop": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-vhub-neu-prod"
+          },
+          {
+            "name": "_policy_PublicTraffic",
+            "destinationType": "CIDR",
+            "destinations": [
+              "0.0.0.0/0"
+            ],
+            "nextHopType": "ResourceId",
+            "nextHop": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-vhub-neu-prod"
+          }
+        ],
+        "associatedConnections": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubVirtualNetworkConnections/conn-vnet-pp-dr",
+          "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod/vpnConnections/Connection-vst-branch-dublin",
+          "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod/vpnConnections/Connection-vst-branch-cork",
+          "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/expressRouteGateways/ergw-vhub-neu-prod/expressRouteConnections/conn-erc-contoso-ams",
+          "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/p2sVpnGateways/p2sgw-vhub-neu-prod/p2sConnectionConfigurations/p2s-config-staff"
+        ],
+        "propagatingConnections": []
+      }
+    },
+    {
+      "name": "noneRouteTable",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/noneRouteTable",
+      "type": "Microsoft.Network/virtualHubs/hubRouteTables",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "labels": [
+          "none"
+        ],
+        "routes": [],
+        "associatedConnections": [],
+        "propagatingConnections": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubVirtualNetworkConnections/conn-vnet-pp-dr"
+        ]
+      }
+    }
+  ]
+}

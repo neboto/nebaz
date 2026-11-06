@@ -1,0 +1,168 @@
+{
+  "name": "vpngw-vhub-neu-prod",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod",
+  "type": "Microsoft.Network/vpnGateways",
+  "location": "northeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200",
+    "pilot": "vwan-neu"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "virtualHub": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod"
+    },
+    "vpnGatewayScaleUnit": 1,
+    "isRoutingPreferenceInternet": false,
+    "enableBgpRouteTranslationForNat": false,
+    "bgpSettings": {
+      "asn": 65515,
+      "peerWeight": 0,
+      "bgpPeeringAddress": "10.100.0.12,10.100.0.13",
+      "bgpPeeringAddresses": [
+        {
+          "ipconfigurationId": "Instance0",
+          "defaultBgpIpAddresses": [
+            "10.100.0.12"
+          ],
+          "customBgpIpAddresses": [],
+          "tunnelIpAddresses": [
+            "20.107.12.30",
+            "10.100.0.4"
+          ]
+        },
+        {
+          "ipconfigurationId": "Instance1",
+          "defaultBgpIpAddresses": [
+            "10.100.0.13"
+          ],
+          "customBgpIpAddresses": [],
+          "tunnelIpAddresses": [
+            "20.107.12.31",
+            "10.100.0.5"
+          ]
+        }
+      ]
+    },
+    "ipConfigurations": [
+      {
+        "id": "Instance0",
+        "publicIpAddress": "20.107.12.30",
+        "privateIpAddress": "10.100.0.4"
+      },
+      {
+        "id": "Instance1",
+        "publicIpAddress": "20.107.12.31",
+        "privateIpAddress": "10.100.0.5"
+      }
+    ],
+    "natRules": [],
+    "connections": [
+      {
+        "name": "Connection-vst-branch-dublin",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod/vpnConnections/Connection-vst-branch-dublin",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "remoteVpnSite": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-dublin"
+          },
+          "connectionStatus": "Unknown",
+          "enableInternetSecurity": true,
+          "sharedKey": "conn-psk-never-shown",
+          "routingConfiguration": {
+            "associatedRouteTable": {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/defaultRouteTable"
+            },
+            "propagatedRouteTables": {
+              "labels": [
+                "none"
+              ],
+              "ids": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/noneRouteTable"
+                }
+              ]
+            }
+          },
+          "vpnLinkConnections": [
+            {
+              "name": "link-eir-conn",
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod/vpnConnections/Connection-vst-branch-dublin/vpnLinkConnections/link-eir-conn",
+              "properties": {
+                "provisioningState": "Succeeded",
+                "vpnSiteLink": {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-dublin/vpnSiteLinks/link-eir"
+                },
+                "connectionStatus": "Connected",
+                "vpnConnectionProtocolType": "IKEv2",
+                "connectionBandwidth": 100,
+                "enableBgp": true,
+                "routingWeight": 0,
+                "sharedKey": "link-eir-conn-psk-never-shown",
+                "ingressBytesTransferred": 48213904385,
+                "egressBytesTransferred": 12874031122,
+                "usePolicyBasedTrafficSelectors": false,
+                "vpnLinkConnectionMode": "Default",
+                "ipsecPolicies": []
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Connection-vst-branch-cork",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod/vpnConnections/Connection-vst-branch-cork",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "remoteVpnSite": {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-cork"
+          },
+          "connectionStatus": "Unknown",
+          "enableInternetSecurity": true,
+          "sharedKey": "conn-psk-never-shown",
+          "routingConfiguration": {
+            "associatedRouteTable": {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/defaultRouteTable"
+            },
+            "propagatedRouteTables": {
+              "labels": [
+                "none"
+              ],
+              "ids": [
+                {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/hubRouteTables/noneRouteTable"
+                }
+              ]
+            }
+          },
+          "vpnLinkConnections": [
+            {
+              "name": "link-vodafone-conn",
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnGateways/vpngw-vhub-neu-prod/vpnConnections/Connection-vst-branch-cork/vpnLinkConnections/link-vodafone-conn",
+              "properties": {
+                "provisioningState": "Succeeded",
+                "vpnSiteLink": {
+                  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-cork/vpnSiteLinks/link-vodafone"
+                },
+                "connectionStatus": "NotConnected",
+                "vpnConnectionProtocolType": "IKEv2",
+                "connectionBandwidth": 100,
+                "enableBgp": true,
+                "routingWeight": 0,
+                "sharedKey": "link-vodafone-conn-psk-never-shown",
+                "ingressBytesTransferred": 0,
+                "egressBytesTransferred": 0,
+                "usePolicyBasedTrafficSelectors": false,
+                "vpnLinkConnectionMode": "Default",
+                "ipsecPolicies": []
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

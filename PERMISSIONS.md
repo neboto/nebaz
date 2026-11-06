@@ -229,6 +229,18 @@ each one backs are in the catalog table
   routes are `POST`s outside `Reader`: `C` copies the commands, nebaz never
   sends them. `az network vpn-connection shared-key`, `az network
   express-route auth` and `show-device-config-script` are named forbidden.
+- **Virtual WAN** (WANs, hubs, hub gateways, VPN sites):
+  `Microsoft.Network/virtualWans/read`, `Microsoft.Network/virtualHubs/read`
+  (and, per hub, `virtualHubs/hubVirtualNetworkConnections/read`,
+  `virtualHubs/hubRouteTables/read`, `virtualHubs/routingIntent/read`),
+  `Microsoft.Network/vpnGateways/read`,
+  `Microsoft.Network/expressRouteGateways/read`,
+  `Microsoft.Network/p2sVpnGateways/read`,
+  `Microsoft.Network/vpnSites/read`. Connection shared keys, ExpressRoute
+  authorization keys, site keys and RADIUS secrets are stripped before the
+  row keeps the JSON; the `sharedKeys` reads are never sent. A hub's
+  effective, inbound and outbound routes and P2S connection health are
+  `POST`s outside `Reader`: `C` copies the command, nebaz never sends it.
 - **Firewall** (Azure Firewall, firewall policies, IP groups, Cloud NGFW):
   `Microsoft.Network/azureFirewalls/read` (IP configurations and classic
   rule collections arrive embedded), `Microsoft.Network/firewallPolicies/read`,

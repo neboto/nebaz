@@ -1,0 +1,57 @@
+{
+  "name": "vst-branch-dublin",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-dublin",
+  "type": "Microsoft.Network/vpnSites",
+  "location": "northeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1200",
+    "pilot": "vwan-neu"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "virtualWan": {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualWans/vwan-contoso"
+    },
+    "deviceProperties": {
+      "deviceVendor": "Cisco",
+      "deviceModel": "ISR4451",
+      "linkSpeedInMbps": 100
+    },
+    "addressSpace": {
+      "addressPrefixes": [
+        "192.168.40.0/24"
+      ]
+    },
+    "isSecuritySite": false,
+    "siteKey": "vst-branch-dublin-key-never-shown",
+    "vpnSiteLinks": [
+      {
+        "name": "link-eir",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/vpnSites/vst-branch-dublin/vpnSiteLinks/link-eir",
+        "type": "Microsoft.Network/vpnSites/vpnSiteLinks",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "ipAddress": "198.51.100.10",
+          "linkProperties": {
+            "linkProviderName": "eir",
+            "linkSpeedInMbps": 100
+          },
+          "bgpProperties": {
+            "asn": 65060,
+            "bgpPeeringAddress": "192.168.40.1"
+          }
+        }
+      }
+    ],
+    "o365Policy": {
+      "breakOutCategories": {
+        "allow": false,
+        "optimize": true,
+        "default": false
+      }
+    }
+  }
+}

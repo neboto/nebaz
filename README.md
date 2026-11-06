@@ -188,6 +188,7 @@ all).
 | `dns` | DNS | Private DNS zones, DNS zones (`dnsz`), Private resolvers (`dnsr`), Forwarding rulesets (`dnsfr`), DNS security policies (`dnsp`), Traffic Manager profiles (`tm`, endpoints) |
 | `agw` | Edge | Application gateways, Front Door (`afd`), WAF policies (`waf`), Private Link services (`pls`, consumer connections) |
 | `er` | Hybrid | ExpressRoute circuits, VNet gateways (`vgw`), Connections (`cn`), Local network gateways (`lgw`) |
+| `vwan` | Virtual WAN | Virtual WANs, Hubs (`hub`: VNet connections, route tables and routing intent), hub VPN gateways (`hubvpn`), ExpressRoute gateways (`huber`), point-to-site gateways (`p2s`), VPN sites (`vpnsite`) |
 | `fw` | Firewall | Azure Firewalls, Firewall policies (`fwp`, rule collection groups), IP groups (`ipg`), Palo Alto Cloud NGFW (`ngfw`), Local rulestacks (`rulestack`, rules) |
 | `kv` | Key Vault | Vaults (secret and key *names*, never values) |
 | `id` | Identity | Managed identities, Service principals (`sp`), App registrations (`appreg`) |

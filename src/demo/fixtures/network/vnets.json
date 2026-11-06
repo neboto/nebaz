@@ -583,6 +583,28 @@
               },
               "routeServiceVips": {}
             }
+          },
+          {
+            "name": "RemoteVnetToHubPeering_5b2c8e14-3d7a-4f69-a0b1-c2d3e4f5a6b7",
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualNetworks/vnet-pp-dr/virtualNetworkPeerings/RemoteVnetToHubPeering_5b2c8e14-3d7a-4f69-a0b1-c2d3e4f5a6b7",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "peeringState": "Connected",
+              "peeringSyncLevel": "FullyInSync",
+              "remoteVirtualNetwork": {
+                "id": "/subscriptions/a1b2c3d4-0000-4e5f-8a9b-1c2d3e4f5a6b/resourceGroups/RG_vhub-neu-prod_5b2c8e14-3d7a-4f69-a0b1-c2d3e4f5a6b7/providers/Microsoft.Network/virtualNetworks/HV_vhub-neu-prod_5b2c8e14-3d7a-4f69-a0b1-c2d3e4f5a6b7"
+              },
+              "allowVirtualNetworkAccess": true,
+              "allowForwardedTraffic": false,
+              "allowGatewayTransit": false,
+              "useRemoteGateways": true,
+              "remoteAddressSpace": {
+                "addressPrefixes": [
+                  "10.100.0.0/23"
+                ]
+              }
+            }
           }
         ],
         "enableDdosProtection": false,

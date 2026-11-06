@@ -1,0 +1,28 @@
+{
+  "value": [
+    {
+      "name": "ri-vhub-neu-prod",
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/virtualHubs/vhub-neu-prod/routingIntent/ri-vhub-neu-prod",
+      "type": "Microsoft.Network/virtualHubs/routingIntent",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "routingPolicies": [
+          {
+            "name": "PrivateTraffic",
+            "destinations": [
+              "PrivateTraffic"
+            ],
+            "nextHop": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-vhub-neu-prod"
+          },
+          {
+            "name": "PublicTraffic",
+            "destinations": [
+              "Internet"
+            ],
+            "nextHop": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/azureFirewalls/afw-vhub-neu-prod"
+          }
+        ]
+      }
+    }
+  ]
+}

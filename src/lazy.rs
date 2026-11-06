@@ -304,6 +304,14 @@ pub struct LazyStore {
     /// `GET {ns}/eventhubs`, keyed by Event Hubs namespace id.
     pub eh_hubs: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Virtual WAN (#158) ───────────────────────────────────────────────
+    /// `GET {hub}/hubVirtualNetworkConnections`, keyed by virtual hub id.
+    pub vwan_hub_connections: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {hub}/hubRouteTables`, keyed by virtual hub id.
+    pub vwan_route_tables: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {hub}/routingIntent`, keyed by virtual hub id (at most one).
+    pub vwan_routing_intent: LazyMap<Vec<serde_json::Value>>,
+
     // ── Ownership ribbon (every type) ────────────────────────────────────
     /// `GET {group}/providers/Microsoft.Resources/deployments` (and the
     /// operations of its newest unfinished ones), keyed by the lowercased

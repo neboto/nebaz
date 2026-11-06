@@ -39,6 +39,8 @@ const PLANTED: &[(&str, &str)] = &[
     ("/vaults/rsv-contoso-prod", "vm-nva-01"),
     // network: the branch office's backup VPN tunnel is down.
     ("/connections/cn-vpn-branch-office", "NotConnected"),
+    ("/vpnGateways/vpngw-vhub-neu-prod", "link-vodafone"),
+    ("/vpnSites/vst-branch-cork", "link-vodafone"),
     // network: contoso-dev's endpoint to the partner Private Link service
     // waits for approval; Traffic Manager's on-premises DR endpoint is
     // degraded.

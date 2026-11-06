@@ -18,6 +18,7 @@ use crate::azure::services::network_edge::{
 };
 use crate::azure::services::network_hub::{BastionRow, DdosPlanRow, BASTION_HOSTS_PATH, DDOS_PLANS_PATH};
 use crate::azure::services::network_private::{PrivateEndpointRow, PRIVATE_ENDPOINTS_PATH};
+use crate::azure::services::virtual_wan::managed_hub_name;
 use crate::azure::services::{arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope};
 use crate::error::{Error, Result};
 use crate::event::Event;
@@ -193,7 +194,11 @@ impl Resource for VnetRow {
         }
         for p in &self.peerings {
             if let Some(r) = &p.remote_id {
-                v.push((format!("Peered VNet {}", name_of_id(r)), r.clone()));
+                let label = match managed_hub_name(name_of_id(r)) {
+                    Some(hub) => format!("Virtual WAN hub {} (its managed VNet)", hub),
+                    None => format!("Peered VNet {}", name_of_id(r)),
+                };
+                v.push((label, r.clone()));
             }
         }
         if let Some(d) = &self.ddos_plan_id {
@@ -262,6 +267,12 @@ pub fn vnet_section_lines(r: &VnetRow, section: VnetDetailSection) -> Vec<(Strin
                     .into(),
                 ));
                 lines.push(("  Gateway transit".into(), p.transit().into()));
+                if let Some(hub) = p.remote_id.as_deref().and_then(|r| managed_hub_name(name_of_id(r))) {
+                    lines.push((
+                        "  Virtual WAN".into(),
+                        format!("the peer is hub {}'s managed VNet: this VNet is connected to that hub (vWAN › Hubs, @hub)", hub),
+                    ));
+                }
             }
             lines
         }

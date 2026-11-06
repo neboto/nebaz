@@ -183,6 +183,9 @@ const AZ_READ_VERBS: &[&str] = &[
     "list-arp-tables",
     "list-bgp-peer-status",
     "list-learned-routes",
+    // A Virtual WAN hub's effective routes (#158): a POST action outside
+    // `Reader`. Copied, never sent.
+    "get-effective-routes",
 ];
 
 /// The `C` command catalogue (ADR 0005, #47): the one file that may hold
@@ -578,7 +581,8 @@ fn az_problems(rel_path: &str, text: &str) -> (usize, Vec<String>) {
                 .split_whitespace()
                 .take_while(|w| !w.starts_with('-'))
                 .map(|w| w.trim_matches(|c: char| !c.is_ascii_alphanumeric()).to_ascii_lowercase())
-                .take_while(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
+                // Digits inside a word too: `p2s-vpn-gateway` is a group.
+                .take_while(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'))
                 .take(5)
                 .collect();
             let words: Vec<&str> = words.iter().map(String::as_str).collect();

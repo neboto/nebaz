@@ -38,6 +38,7 @@ use crate::azure::services::directory::{AppRegistrationRow, ServicePrincipalRow}
 use crate::azure::services::edge::{AppGatewayRow, FrontDoorProfileRow, WafKind, WafPolicyRow};
 use crate::azure::services::firewall::{AzureFirewallRow, CloudNgfwRow, FirewallPolicyRow, NgfwManagement, RulestackRow};
 use crate::azure::services::hybrid::{CircuitRow, ConnectionRow, GatewayRow};
+use crate::azure::services::virtual_wan::{VirtualHubRow, VwanVpnGatewayRow};
 use crate::azure::services::keyvault::VaultRow;
 use crate::azure::services::messaging::{EventHubsRow, ServiceBusRow};
 use crate::azure::services::network::{NsgRow, SubnetRow, VnetRow};
@@ -260,6 +261,10 @@ fn type_actions(r: &dyn Resource) -> Vec<CliAction> {
         Some(vnet_gateway_actions(g))
     } else if let Some(c) = any.downcast_ref::<ConnectionRow>() {
         connection_actions(c)
+    } else if let Some(h) = any.downcast_ref::<VirtualHubRow>() {
+        virtual_hub_actions(h)
+    } else if let Some(g) = any.downcast_ref::<VwanVpnGatewayRow>() {
+        vwan_vpn_gateway_actions(g)
     } else if let Some(f) = any.downcast_ref::<AzureFirewallRow>() {
         azure_firewall_actions(f)
     } else if let Some(p) = any.downcast_ref::<FirewallPolicyRow>() {
@@ -881,6 +886,38 @@ fn connection_actions(c: &ConnectionRow) -> Option<Vec<CliAction>> {
         shell_quote(&c.base.name),
         rg_sub(&c.base.id)?
     ))])
+}
+
+// ── Virtual WAN ──────────────────────────────────────────────────────
+
+/// A hub's child lists (`vhub connection / route-table list` take
+/// `--vhub-name`, `routing-intent list` takes `--vhub`, all `id_part=None`)
+/// and its effective routes on the default route table (`get-effective-routes`
+/// takes `--ids`; a POST). All are in the `virtual-wan` CLI extension.
+fn virtual_hub_actions(h: &VirtualHubRow) -> Option<Vec<CliAction>> {
+    if h.is_route_server() {
+        return Some(Vec::new());
+    }
+    let id = &h.base.id;
+    let ext = "the virtual-wan CLI extension";
+    Some(vec![
+        inspect(format!("az network vhub connection list {}", parent("--vhub-name", id)?)).note(ext),
+        inspect(format!("az network vhub route-table list {}", parent("--vhub-name", id)?)).note(ext),
+        inspect(format!("az network vhub routing-intent list {}", parent("--vhub", id)?)).note(ext),
+        inspect(format!(
+            "az network vhub get-effective-routes {} --resource-type RouteTable --resource-id {}",
+            ids(id),
+            shell_quote(&format!("{}/hubRouteTables/defaultRouteTable", id))
+        ))
+        .note("a POST action: not in the Reader role; nebaz never sends it"),
+    ])
+}
+
+/// A hub VPN gateway's site connections (`vpn-gateway connection list`
+/// takes `--gateway-name`, `id_part=None`). Never the shared key reads.
+fn vwan_vpn_gateway_actions(g: &VwanVpnGatewayRow) -> Option<Vec<CliAction>> {
+    Some(vec![inspect(format!("az network vpn-gateway connection list {}", parent("--gateway-name", &g.base.id)?))
+        .note("the virtual-wan CLI extension")])
 }
 
 // ── Firewall ─────────────────────────────────────────────────────────

@@ -84,7 +84,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
    whose `show` takes no `--ids` (`az account show`, `az group show`,
    `az keyvault show`, `az aks show`, `az aks nodepool show`,
    `az cognitiveservices account show`, `az acr show`,
-   `az functionapp show`, `az logicapp show`, `az vmss show`), which use the name form with `--subscription`.
+   `az functionapp show`, `az logicapp show`, `az vmss show`,
+   `az network p2s-vpn-gateway show`), which use the name form with `--subscription`.
    `vmss show` re-declares the scale-set name with `id_part=None`
    (because of `--instance-id`; azure-cli `_params.py`, 2026-10-26).
    `functionapp show` re-declares its name argument without an `id_part`,
@@ -793,6 +794,40 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     which has an Advisor blade. **Never**: `generateRecommendations`,
     Advisor rows as `@audit` findings, anything that snoozes, dismisses
     or reactivates a recommendation.
+35. **Virtual WAN is its own tab** (#158, `src/azure/services/virtual_wan.rs`,
+    glue `src/app/virtual_wan.rs`): virtual WANs (`@vwan`), hubs (`@hub`),
+    the hub gateways (site-to-site `@hubvpn`, ExpressRoute `@huber`,
+    point-to-site `@p2s`) and VPN sites (`@vpnsite`). Six more sub-tabs on
+    Hybrid would pass the digit keys (rule 15), and a vWAN estate is
+    debugged hub first. **One subscription-wide list each**; a hub's VNet
+    connections, route tables and routing intent are lazy sections (one
+    list per hub, on entering Connections or Routing; Related fires the
+    connections so the connected VNets join it). A gateway's connections
+    are on its own body: the site-to-site gateway's `connections[]` with
+    each link connection, the ExpressRoute gateway's
+    `expressRouteConnections[]` (each one's circuit is the peering id's
+    top level, a jump to the Hybrid circuit). A WAN's Hubs and a VPN site's
+    Connections are matched in the warm Hubs and VPN gateways lists,
+    loaded for the section when their sub-tab has not been opened.
+    `virtualHubs` also lists **Azure Route Servers** (`kind` RouteServer,
+    no WAN): their row says so and has no gateways. A route or routing
+    policy whose next hop is an ARM id (the hub's firewall) is a jump. A
+    VNet peered with a hub's managed VNet (`HV_{hub}_{guid}`, in a
+    Microsoft subscription) names the hub on its peering and Related line.
+    State: a hub is the ladder, then `routingState` (`Provisioned` →
+    available, `Failed` → unavailable, the rest pending); every other type
+    the ladder only, and a site-to-site gateway's list line counts the
+    connections that are `NotConnected` (its own status, or every link's
+    when its own is `Unknown`). The scale-unit hints (500 Mbps per VPN and
+    P2S unit, 2 Gbps per ExpressRoute unit, 3 Gbps and 2,000 VMs for the
+    hub's two default routing units, 1 Gbps and 1,000 VMs per unit above)
+    are Azure's published sizing, not measurements. **Never**: a
+    connection's or link connection's `sharedKey`, an ExpressRoute
+    connection's `authorizationKey`, a site's `siteKey`, a RADIUS secret
+    (all stripped before the row keeps the JSON), the `sharedKeys` reads;
+    effective, inbound and outbound routes, BGP learned and advertised
+    routes, P2S connection health and the VPN configuration download are
+    `POST`s (`C` copies `vhub get-effective-routes`, nebaz never sends it).
 
 ## The catalog
 
@@ -836,6 +871,12 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Hybrid · VNet gateways | Configuration (gateway type, SKU and tier, zone redundancy from an `…AZ` SKU, active-active; VPN: VPN type, generation, private IP; ExpressRoute: FastPath is per connection, remote VNet and Virtual WAN traffic; BGP, admin state, custom routes) · IP configurations (allocation, private IP, subnet and public IP jumpable; ⚠ a subnet not named GatewaySubnet) · BGP (ASN, peer weight, peering addresses; per IP configuration the default, APIPA and tunnel addresses) · Point-to-site (address pool, tunnel types, auth types, Entra tenant / audience / issuer, RADIUS server addresses, root certificate **names**, revoked count, custom IPsec policies) · Connections (warm list) · (Overview: type, SKU, zone redundancy, active-active, BGP, ASN, VNet, public IPs) | ladder, then `adminState` `Disabled` → stopped | VNet, GatewaySubnet, public IPs; then each connection in the warm list | `az network vnet-gateway show` |
 | Hybrid · Connections | Configuration (type, status, ⚠ when `NotConnected`, routing weight, ingress / egress bytes; ExpressRoute: FastPath, Private Link FastPath; IPsec / VNet-to-VNet: protocol, BGP, policy-based selectors, DPD timeout, mode, authentication (the key is never read); each tunnel's status, bytes and last connect) · IPsec (custom policies: IKE and IPsec proposals, SA lifetime; or Azure's defaults; traffic selectors) · (Overview: type, status, gateway, other side, routing weight) | ladder, then `connectionStatus` (rule 28) | the gateway, the circuit (any subscription), the local gateway, the VNet-to-VNet peer gateway | `az network vpn-connection show` |
 | Hybrid · Local gateways | On-premises (gateway IP, FQDN, address space, BGP ASN, peer address, weight) · Connections (warm list) · (Overview: endpoint, address space, BGP ASN) | ladder only | each connection in the warm list | `az network local-gateway show` |
+| Virtual WAN · WANs (rule 35) | WAN (type and what Basic lacks, branch-to-branch, VNet-to-VNet, VPN encryption, Office 365 breakout) · Hubs (each hub from the warm Hubs list: region, address prefix, routing state, secured) | ladder only | hubs, VPN sites | `az network vwan show` |
+| Virtual WAN · Hubs | Hub (WAN, address prefix, SKU, routing state with ⚠ when Failed, router ASN and IPs, routing capacity, routing preference, branch-to-branch, secured) · Gateways (VPN, ExpressRoute, P2S, firewall, security partner) · Connections (lazy: each VNet, transit, internet security, associated and propagated route tables, static routes) · Routing (lazy: routing intent, then each route table's routes with jumpable next hops) | ladder, then `routingState` | WAN, gateways, firewall, connected VNets (once Connections loaded) | `az network vhub show` |
+| Virtual WAN · VPN gateways | Configuration (scale units and bandwidth, routing preference, BGP and its peering addresses, instance IPs) · Connections (each site: status, internet security, routing; each link: status, protocol, bandwidth, BGP, IPsec policy, bytes) · NAT rules | ladder only; the list counts connections down | hub, VPN sites | `az network vpn-gateway show` |
+| Virtual WAN · ER gateways | Configuration (scale units and bandwidth, non-vWAN traffic) · Connections (each circuit: peering, routing weight, internet security, FastPath, routing) | ladder only | hub, circuits | `az network express-route gateway show` |
+| Virtual WAN · P2S gateways | Configuration (scale units, VPN server configuration, client pools, custom DNS, routing preference, each configuration's routing) · Clients (connected count, allocated addresses, bytes; per-user sessions are a POST) | ladder only | hub, VPN server configuration | `az network p2s-vpn-gateway show` (name form) |
+| Virtual WAN · VPN sites | Site (device, link speed, address space, BGP, security site, Office 365 breakout) · Links (endpoint, provider, speed, BGP) · Connections (the warm VPN gateways list: each gateway, its hub, the connection and links) | ladder only | WAN, hub VPN gateways (warm) | `az network vpn-site show` |
 | Firewall · Firewalls (rule 29) | Network (**UDR next hop**: the private IP; VNet and `AzureFirewallSubnet`, virtual hub, each IP configuration with its public IP, vWAN hub IPs, management IP configuration (forced tunnelling), zones; the warm route tables routing here with their subnets) · Policy (the policy jumpable with its tier, threat intel, IDPS, TLS inspection, DNS proxy and base from the warm policy list, a tier mismatch flagged; or the classic threat intel, DNS proxy and `additionalProperties`; IP groups) · Rules ⧗ (the policy's rule collection groups, rule 29; or the classic NAT, network and application collections) · (Overview: UDR next hop, SKU · tier, policy, threat intel, public IPs, forced tunnelling, zones, autoscale) | ladder, then `allocated` / `deallocated` | policy, VNet, subnet, virtual hub, public IPs, management subnet and IP, IP groups | `az network firewall show` (the `azure-firewall` CLI extension) |
 | Firewall · Policies | Settings (tier; threat intel and its allow-list; IDPS mode, profile, signature overrides, bypass rules, private ranges; TLS inspection CA name and its Key Vault secret id as text, the reading identity; DNS servers, proxy, proxy required for network rules; SNAT private ranges; explicit proxy; SQL redirect; policy analytics workspace) · Rule collection groups ⧗ (rule 29) · Hierarchy (base policy, child policies and firewalls from the body and the warm lists, each firewall with its private IP) · (Overview: tier, threat intel, IDPS, TLS, DNS proxy, base, counts) | ladder only | base and child policies, firewalls, identities, analytics workspace | `az network firewall policy show` (the `azure-firewall` extension) |
 | Firewall · IP groups | Addresses · Used by (firewalls and policies from the body) · (Overview: counts; addresses searchable) | ladder only | each firewall and policy using it | `az network ip-group show` (the `ip-group` extension) |
@@ -1018,6 +1059,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Front Door Endpoints, Origins, Domains, Security (and Related) | once per profile, on demand: `4 + endpoints + origin groups`, the first 50 of each followed; only the endpoints failing fails it, any other child is a warning line. Never `{profile}/secrets` | `{profile}/afdEndpoints` · `{endpoint}/routes` · `{profile}/originGroups` · `{group}/origins` · `{profile}/customDomains` · `{profile}/securityPolicies` · `2026-07-01` |
 | Hybrid ER circuits | 1 (peerings, authorizations and Global Reach connections embedded; authorization and shared keys stripped, the service key masked) | `/providers/Microsoft.Network/expressRouteCircuits` · `2025-09-01` |
 | Hybrid VNet gateways, Connections, Local gateways (rule 28) | 1 + 1 per group holding the type (no subscription-wide list exists); a failed group beside others is a warning. Never `{connection}/sharedkey` | `/resources?$filter=resourceType eq 'Microsoft.Network/{virtualNetworkGateways,connections,localNetworkGateways}'` · `2025-04-01`, then `/resourceGroups/{rg}/providers/Microsoft.Network/{type}` · `2025-09-01` |
+| Virtual WAN WANs, Hubs, VPN gateways, ER gateways, P2S gateways, VPN sites (rule 35) | 1 each (gateway connections embedded; keys stripped) | `/providers/Microsoft.Network/{virtualWans,virtualHubs,vpnGateways,expressRouteGateways,p2svpnGateways,vpnSites}` · `2025-09-01` |
+| Virtual WAN hub sections | 1 per hub per section: Connections, Routing (2: route tables and routing intent). Never `effectiveRoutes`, `inboundRoutes`, `outboundRoutes` (POSTs) | `{hub}/hubVirtualNetworkConnections` · `{hub}/hubRouteTables` · `{hub}/routingIntent` · `2025-09-01` |
 | Firewalls, Policies, IP groups | 1 each (IP configurations and classic rules embedded) | `/providers/Microsoft.Network/azureFirewalls` · `firewallPolicies` · `ipGroups` · `2025-09-01` |
 | Rule collection groups (a policy's, a firewall's Rules) | 1 per policy, on demand, plus 1 for its base | `{policy}/ruleCollectionGroups` · `2025-09-01` |
 | Cloud NGFW, Rulestacks | 1 each | `/providers/PaloAltoNetworks.Cloudngfw/firewalls` · `localRulestacks` · `2025-10-08` (the CLI extension's; `2026-06-01` is newer, six weeks in the specs) |
@@ -1145,6 +1188,18 @@ it; that floor is #63.
   express-route show`, `vnet-gateway show`, `vpn-connection show` and
   `local-gateway show` take `--ids` (each `-n` carries `id_part='name'`);
   the Hybrid tab at 80×24 on a real estate.
+- Virtual WAN (#158), built without an Azure login from azure-rest-api-specs
+  (`virtualWan.json`, read at `2026-03-01`; requested on `2025-09-01`,
+  the Network service's version) and the `virtual-wan` CLI extension. To
+  check: every list answers on `2025-09-01`; a site-to-site gateway's list
+  body carries `connections[]` with `connectionStatus` and the byte
+  counters, and how often the connection's own status is `Unknown` while
+  the links report; whether a secured hub's `routingIntent` list is empty
+  or absent without routing intent; the scale-unit sizing hints; whether
+  `p2s-vpn-gateway show` takes `--ids` (the extension declares the name
+  without an `id_part`, so the name form is used); the hub metrics'
+  names (`BgpPeerStatus`, `RoutingInfrastructureUnits`…) answer at the
+  hub id; a Route Server row on a real estate.
 - Bastion, DDoS plans and appliance next hops (#137), built without an
   Azure login from azure-rest-api-specs `2025-09-01` (Network's version).
   To check: both subscription-wide lists answer on that version; a
