@@ -774,6 +774,30 @@ pub use crate::paths::expand_home;
 
 /// Write the enabled formats, each built lazily so a skipped format costs
 /// nothing. Returns the written paths in json/csv/md order.
+/// `base`, or `base-2`, `base-3`… when an export in the same second took
+/// it: the first enabled format's file is created with `create_new`, which
+/// is atomic, so two exports never share (and overwrite) a stem.
+fn reserve_stem(base: &std::path::Path, formats: ExportFormats) -> Result<PathBuf> {
+    let ext = if formats.json {
+        "json"
+    } else if formats.csv {
+        "csv"
+    } else if formats.md {
+        "md"
+    } else {
+        return Ok(base.to_path_buf());
+    };
+    for n in 1..1000 {
+        let stem = if n == 1 { base.to_path_buf() } else { PathBuf::from(format!("{}-{}", base.display(), n)) };
+        match fs::OpenOptions::new().write(true).create_new(true).open(stem.with_extension(ext)) {
+            Ok(_) => return Ok(stem),
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(base.to_path_buf())
+}
+
 fn write_formats(
     base: &std::path::Path,
     formats: ExportFormats,
@@ -781,6 +805,7 @@ fn write_formats(
     csv: impl FnOnce() -> String,
     md: impl FnOnce() -> String,
 ) -> Result<Vec<PathBuf>> {
+    let base = &reserve_stem(base, formats)?;
     let mut written = Vec::new();
     if formats.json {
         let path = base.with_extension("json");
@@ -997,6 +1022,19 @@ pub(crate) fn multi_detail_csv(items: &[(&dyn Resource, DetailSections)]) -> Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn two_exports_in_the_same_second_never_share_a_stem() {
+        let dir = tempfile::tempdir().unwrap();
+        let base = dir.path().join("nebaz-vms-20261106-120000");
+        let formats = ExportFormats::default();
+        let first = write_formats(&base, formats, || Ok("first".into()), || "first".into(), || "first".into()).unwrap();
+        let second = write_formats(&base, formats, || Ok("second".into()), || "second".into(), || "second".into()).unwrap();
+        assert!(first[0].ends_with("nebaz-vms-20261106-120000.json"), "{first:?}");
+        assert!(second[0].ends_with("nebaz-vms-20261106-120000-2.json"), "{second:?}");
+        assert_eq!(std::fs::read_to_string(&first[0]).unwrap(), "first", "the first export is not overwritten");
+        assert!(second.iter().all(|p| p.file_stem().unwrap().to_string_lossy().ends_with("-2")), "{second:?}");
+    }
 
     #[test]
     fn lines_to_markdown_maps_row_conventions() {
