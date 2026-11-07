@@ -15,7 +15,7 @@ pub struct Card {
 }
 
 pub static CARDS: &[Card] = &[
-    Card { views: &[JumpView::VirtualNetworks], source: include_str!("../docs/cards/vnets.md") },
+    Card { views: &[JumpView::VirtualNetworks, JumpView::Subnets], source: include_str!("../docs/cards/vnets.md") },
     Card { views: &[JumpView::StorageAccounts], source: include_str!("../docs/cards/storage-accounts.md") },
     Card { views: &[JumpView::RecoveryVaults, JumpView::BackupVaults], source: include_str!("../docs/cards/backup.md") },
     Card { views: &[JumpView::SqlServers], source: include_str!("../docs/cards/sql-servers.md") },
@@ -295,18 +295,15 @@ mod tests {
         }
     }
 
-    /// Not a gate until every sub-tab has a card (they land in batches). Prints which
-    /// sub-tabs still have none (`cargo test cards -- --nocapture`).
     #[test]
-    fn sub_tabs_without_a_card_are_listed() {
+    fn every_sub_tab_has_a_card() {
         let missing: Vec<&str> = ServiceType::all()
             .iter()
             .flat_map(|s| s.views().iter())
             .filter(|v| for_view(**v).is_none())
             .map(|v| v.as_str())
             .collect();
-        println!("{} sub-tabs without a card: {}", missing.len(), missing.join(", "));
-        assert!(for_view(JumpView::VirtualNetworks).is_some());
+        assert!(missing.is_empty(), "sub-tabs without a card in docs/cards: {}", missing.join(", "));
     }
 
     #[test]

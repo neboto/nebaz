@@ -181,8 +181,8 @@ Learn links (`o` opens the one under the cursor, `1`–`9` copy one;
 nothing is fetched). The cursor, `V`,
 `Ctrl-A` and `y` work on blocks (a paragraph, a bullet), not wrapped
 lines, so a copy pastes unwrapped. Built in with
-`include_str!`; a sub-tab without a card toasts so. The "In nebaz" part
-follows `docs/SERVICES.md`, which stays the reference.
+`include_str!`; every sub-tab has one (`every_sub_tab_has_a_card`). The
+"In nebaz" part follows `docs/SERVICES.md`, which stays the reference.
 
 **Copy** (`src/clipboard.rs`): OSC 52 to the terminal (tmux passthrough)
 plus one long-lived arboard handle; `y` copies the id. `C` opens the
@@ -225,6 +225,9 @@ verbatim where the concept is unchanged.
 8. Demo fixtures (`docs/DEMO.md`): rows for the new sub-tab in the area
    that owns it; `src/headless/demo_tests.rs` fails until it lists rows
    and opens them without a `⚠`.
+9. The info card (`docs/cards/`, its README is the format; registered in
+   `src/cards.rs`): a new card, or the sub-tab added to the card of the
+   same idea. `every_sub_tab_has_a_card` fails until it has one.
 
 ## Conventions & gotchas
 
