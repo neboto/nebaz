@@ -158,6 +158,7 @@ mod container_instances;
 mod static_web_apps;
 mod automation;
 mod arc;
+mod info_card;
 mod network_asg;
 mod gallery;
 mod virtual_wan;
@@ -551,6 +552,10 @@ pub struct App {
     pub help_max_scroll: Cell<u16>,
     /// Type-to-filter text in the help overlay (empty = the full table).
     pub help_query: String,
+    /// The `i` info card, while open.
+    pub info_card: Option<info_card::InfoCardState>,
+    /// The open card's block count, from the last draw (the cursor's range).
+    pub info_block_count: Cell<usize>,
     pub service_selector: ServiceSelectorState,
     pub location_selector: LocationSelectorState,
     pub subscription_selector: SubscriptionSelectorState,
@@ -586,6 +591,11 @@ pub struct App {
     pub redraw_requested: bool,
     /// One long-lived clipboard handle (see `clipboard.rs` for why).
     clipboard: crate::clipboard::Clipboard,
+    /// The browser opener (`O`, `o` in a card; see `browser.rs`).
+    pub browser: crate::browser::Browser,
+    /// An SSH session: links are copied, since a browser would open on
+    /// the remote machine. Never under test.
+    pub remote_session: bool,
     pub bookmarks: Vec<NavLocation>,
     pub bookmarks_visible: bool,
     pub bookmarks_selected: usize,
@@ -790,6 +800,8 @@ impl App {
             help_scroll: 0,
             help_max_scroll: Cell::new(0),
             help_query: String::new(),
+            info_card: None,
+            info_block_count: Cell::new(0),
             service_selector: ServiceSelectorState::new(),
             location_selector: LocationSelectorState::new(),
             subscription_selector: SubscriptionSelectorState::new(),
@@ -805,6 +817,8 @@ impl App {
             pending_jump: None,
             redraw_requested: false,
             clipboard: crate::clipboard::Clipboard::new(),
+            browser: crate::browser::Browser::default(),
+            remote_session: !cfg!(test) && crate::browser::is_remote(|k| std::env::var(k).ok()),
             bookmarks: crate::bookmarks::load(),
             bookmarks_visible: false,
             bookmarks_selected: 0,
@@ -2849,6 +2863,19 @@ impl App {
         }
     }
 
+    /// Open `url` in the browser; copy it instead over SSH (the browser
+    /// would be the remote machine's) or when the opener fails, saying why.
+    fn open_url(&mut self, url: &str, what: &str) {
+        if self.remote_session {
+            self.copy_to_clipboard(url, &format!("the link to {} (SSH session: no browser here)", what));
+            return;
+        }
+        match self.browser.open(url) {
+            Ok(()) => self.toast(format!("Opened {} in the browser", what)),
+            Err(e) => self.copy_to_clipboard(url, &format!("the link to {} (could not open a browser: {})", what, e)),
+        }
+    }
+
     // ── `$EDITOR` ───────────────────────────────────────────────────────
 
     /// Called by `main` after the TUI is torn down: open the selected
@@ -3534,6 +3561,7 @@ impl App {
 
     fn any_modal_open(&self) -> bool {
         self.help_visible
+            || self.info_card.is_some()
             || self.service_selector.visible
             || self.location_selector.visible
             || self.subscription_selector.visible
@@ -3918,6 +3946,10 @@ impl App {
                 KeyCode::End => self.help_scroll = max,
                 _ => {}
             }
+            return;
+        }
+        if self.info_card.is_some() {
+            self.handle_info_card_key(key);
             return;
         }
         if self.service_selector.visible {
@@ -4340,6 +4372,7 @@ impl App {
                 self.start_subscription_fanout(_event_tx);
             }
             KeyCode::Char('N') => self.open_network_lens(_event_tx),
+            KeyCode::Char('i') => self.open_info_card(),
             KeyCode::Char('U') => self.open_refs_lens(_event_tx),
             KeyCode::Char('m') => self.open_metrics(_event_tx),
             KeyCode::Char('W') => self.open_timeline(_event_tx),
@@ -4360,7 +4393,7 @@ impl App {
             KeyCode::Char('O') => {
                 let url = self.get_selected_resource().and_then(|r| r.portal_url());
                 match url {
-                    Some(url) => self.copy_to_clipboard(&url, "portal URL"),
+                    Some(url) => self.open_url(&url, "the portal"),
                     None => self.error_message = Some("No portal page for this resource".into()),
                 }
             }

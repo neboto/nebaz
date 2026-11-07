@@ -684,6 +684,27 @@ fn the_cli_catalogue_is_only_copied() {
     assert!(problems.is_empty(), "read-only guard (C catalogue):\n  {}", problems.join("\n  "));
 }
 
+/// The files that may start a process: `az` itself (the login and the
+/// account list), `$EDITOR`, and the browser opener, which takes only an
+/// allowlisted `https://` link.
+const SPAWNING_FILES: &[&str] = &["src/azure/auth.rs", "src/editor.rs", "src/browser.rs"];
+
+#[test]
+fn only_the_known_files_start_a_process() {
+    let mut problems = Vec::new();
+    for path in rust_sources() {
+        let r = rel(&path);
+        let text = without_line_comments(&fs::read_to_string(&path).unwrap());
+        let text = non_test_part(&text);
+        if (text.contains("process::Command") || text.contains("Command::new")) && !SPAWNING_FILES.contains(&r.as_str()) {
+            problems.push(format!("{}: starts a process (only {:?} may)", r, SPAWNING_FILES));
+        }
+    }
+    let browser = fs::read_to_string(root().join("src/browser.rs")).unwrap();
+    assert!(browser.contains("if !allowed(url)"), "src/browser.rs opens only allowlisted links");
+    assert!(problems.is_empty(), "read-only guard (processes):\n  {}", problems.join("\n  "));
+}
+
 /// The `az` rules on synthetic files: a regression here means a real
 /// violation could pass unnoticed.
 #[test]

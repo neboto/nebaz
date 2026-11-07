@@ -13,6 +13,8 @@ impl App {
     pub(super) fn keycast_view(&self) -> View {
         let overlay = if self.help_visible {
             Some("help")
+        } else if self.info_card.is_some() {
+            Some("info card")
         } else if self.service_selector.visible {
             Some("services")
         } else if self.location_selector.visible {

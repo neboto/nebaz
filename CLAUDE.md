@@ -174,6 +174,16 @@ section, the status bar's conditional hints and the `:` key picker
 `:` replays the row's key through the event channel. `: ? q` are pinned on
 the bar and never trimmed.
 
+**Info cards** (`i`; `src/cards.rs`, `src/ui/widgets/info_card.rs`, the
+text in `docs/cards/`, whose README is the format): a modal per sub-tab on
+what the service is, its key ideas, what nebaz shows of it, and Microsoft
+Learn links (`o` opens the one under the cursor, `1`–`9` copy one;
+nothing is fetched). The cursor, `V`,
+`Ctrl-A` and `y` work on blocks (a paragraph, a bullet), not wrapped
+lines, so a copy pastes unwrapped. Built in with
+`include_str!`; a sub-tab without a card toasts so. The "In nebaz" part
+follows `docs/SERVICES.md`, which stays the reference.
+
 **Copy** (`src/clipboard.rs`): OSC 52 to the terminal (tmux passthrough)
 plus one long-lived arboard handle; `y` copies the id. `C` opens the
 command picker (#47; catalogue `src/azure/cli_actions.rs`, glue
@@ -275,7 +285,11 @@ verbatim where the concept is unchanged.
   rule per command (an `exec`, `logs` or `list-instances` often resets
   `id_part`); a value-taking one is prefilled with the current value.
   The app never runs a copied command; it runs `az account list` and, via
-  azure_identity, `az account get-access-token`, nothing else.
+  azure_identity, `az account get-access-token`, plus `$EDITOR` (`e`) and
+  the system's link opener (`src/browser.rs`: `O` opens the portal, `o` a
+  card's Learn link; only an `https://` link on its host allowlist, and
+  over SSH it copies instead). The guard keeps process spawning to
+  `auth.rs`, `editor.rs` and `browser.rs`.
 - **Clipboard**: no `eprintln!` anywhere in the TUI path; arboard's
   dropped-handle warning over the raw terminal was a real rendering bug.
 - **Copied files carry a one-line origin header**; the per-file table in
@@ -306,6 +320,7 @@ verbatim where the concept is unchanged.
 | `src/azure/cache.rs` | the list cache |
 | `src/sections.rs` | section descriptors and the section index |
 | `src/commands.rs` | the command table: help rows, status-bar gates and hints, the `:` picker's rows |
+| `src/cards.rs`, `docs/cards/` | the `i` info cards: sub-tab → card, the Markdown subset they use |
 | `src/clipboard.rs` | OSC 52 + arboard |
 | `tests/readonly_guard.rs` | the guard |
 | `src/harness_tests/` | the offline wiring harness (`Harness`), its mocks and tests |

@@ -179,6 +179,7 @@ pub static COMMANDS: &[Command] = &[
     cmd(Actions, "y", "copy resource id").runs(Key('y')),
     cmd(Actions, "e", "open in $EDITOR").runs(Key('e')),
     gated(Actions, "N", "network access (NSG rules)", App::supports_network_lens, ("N", "access"), false),
+    gated(Actions, "i", "about this service (info card)", App::supports_info_card, ("i", "about"), false),
     gated(Actions, "m", "metrics (Azure Monitor)", App::supports_metrics, ("m", "metrics"), true),
     gated(
         Actions,

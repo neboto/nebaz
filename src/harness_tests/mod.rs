@@ -55,6 +55,7 @@ mod container_instances_test;
 mod static_web_apps_test;
 mod automation_test;
 mod arc_test;
+mod info_card_test;
 mod defender_test;
 mod governance_test;
 mod help_filter_test;

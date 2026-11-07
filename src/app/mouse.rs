@@ -210,6 +210,8 @@ pub fn record_hint_regions(app: &App, line: &Line, skip: usize, x: u16, y: u16, 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Modal {
     Help,
+    /// The `i` info card: scroll only, a click outside closes it.
+    Info,
     Service,
     Location,
     Subscription,
@@ -447,6 +449,8 @@ impl App {
     fn open_modal(&self) -> Option<Modal> {
         Some(if self.help_visible {
             Modal::Help
+        } else if self.info_card.is_some() {
+            Modal::Info
         } else if self.service_selector.visible {
             Modal::Service
         } else if self.location_selector.visible {
@@ -500,7 +504,7 @@ impl App {
                 let len = crate::commands::picker_rows(self, &self.key_picker.query).len();
                 (&mut self.key_picker.selected_index, len)
             }
-            Modal::Help => return None,
+            Modal::Help | Modal::Info => return None,
         };
         if idx >= len {
             return None;
@@ -528,7 +532,7 @@ impl App {
         match mouse.kind {
             MouseEventKind::ScrollDown | MouseEventKind::ScrollUp => {
                 let code = if matches!(mouse.kind, MouseEventKind::ScrollDown) { KeyCode::Down } else { KeyCode::Up };
-                let notches = if modal == Modal::Help { 3 } else { 1 };
+                let notches = if matches!(modal, Modal::Help | Modal::Info) { 3 } else { 1 };
                 for _ in 0..notches {
                     self.handle_key(press(code), event_tx);
                 }
