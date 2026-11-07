@@ -274,6 +274,10 @@ pub struct LazyStore {
     /// id (#196).
     pub search_shared_links: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Azure Arc (#199) ─────────────────────────────────────────────────
+    /// `GET {machine}/extensions`, keyed by machine id, settings stripped.
+    pub arc_extensions: LazyMap<Vec<serde_json::Value>>,
+
     // ── Automation (#202) ────────────────────────────────────────────────
     /// `GET {account}/runbooks`, keyed by account id, scrubbed.
     pub aa_runbooks: LazyMap<Vec<serde_json::Value>>,

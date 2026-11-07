@@ -80,6 +80,10 @@ pub enum ServiceType {
     /// hybrid workers lazy. Never variables, credentials, certificates,
     /// connections, runbook content or job output.
     Automation,
+    /// Azure Arc (#199): Arc-enabled servers (extensions lazy), Arc
+    /// Kubernetes clusters and Arc private link scopes. Never an
+    /// extension's settings, never a run command or a patch install.
+    Arc,
     /// Container apps, their environments and jobs (`Microsoft.App`);
     /// revisions and auth settings lazy. Never a secret or env var value.
     ContainerApps,
@@ -273,6 +277,10 @@ pub enum JumpView {
     EnterprisePolicies,
     /// `Microsoft.Automation/automationAccounts` (#202).
     AutomationAccounts,
+    // Azure Arc (#199)
+    ArcMachines,
+    ArcClusters,
+    ArcPrivateLinkScopes,
     // Container Apps
     ContainerApps,
     ContainerAppEnvironments,
@@ -364,6 +372,7 @@ impl JumpView {
             | FiredAlerts => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
             AutomationAccounts => ServiceType::Automation,
+            ArcMachines | ArcClusters | ArcPrivateLinkScopes => ServiceType::Arc,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
@@ -455,6 +464,9 @@ impl JumpView {
             AppInsights => "app-insights",
             EnterprisePolicies => "enterprise-policies",
             AutomationAccounts => "automation-accounts",
+            ArcMachines => "arc-machines",
+            ArcClusters => "arc-kubernetes",
+            ArcPrivateLinkScopes => "arc-private-link-scopes",
             ContainerApps => "container-apps",
             ContainerAppEnvironments => "container-app-environments",
             ContainerAppJobs => "container-app-jobs",
@@ -564,6 +576,9 @@ impl JumpView {
             AppInsights => "App Insights",
             EnterprisePolicies => "Enterprise policies",
             AutomationAccounts => "Accounts",
+            ArcMachines => "Servers",
+            ArcClusters => "Kubernetes",
+            ArcPrivateLinkScopes => "Private link scopes",
             ContainerApps => "Apps",
             ContainerAppEnvironments => "Environments",
             ContainerAppJobs => "Jobs",
@@ -681,6 +696,9 @@ impl JumpView {
             ("microsoft.alertsmanagement", ["alerts"]) => JumpView::FiredAlerts,
             ("microsoft.powerplatform", ["enterprisepolicies"]) => JumpView::EnterprisePolicies,
             ("microsoft.automation", ["automationaccounts"]) => JumpView::AutomationAccounts,
+            ("microsoft.hybridcompute", ["machines"]) => JumpView::ArcMachines,
+            ("microsoft.kubernetes", ["connectedclusters"]) => JumpView::ArcClusters,
+            ("microsoft.hybridcompute", ["privatelinkscopes"]) => JumpView::ArcPrivateLinkScopes,
             ("microsoft.app", ["containerapps"]) => JumpView::ContainerApps,
             ("microsoft.app", ["managedenvironments"]) => JumpView::ContainerAppEnvironments,
             ("microsoft.app", ["jobs"]) => JumpView::ContainerAppJobs,
@@ -789,6 +807,7 @@ impl ServiceType {
         vec![
             ServiceType::Subscriptions,
             ServiceType::VirtualMachines,
+            ServiceType::Arc,
             ServiceType::Storage,
             ServiceType::Backup,
             ServiceType::Network,
@@ -855,6 +874,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitoring",
             ServiceType::PowerPlatform => "Management",
             ServiceType::Automation => "Management",
+            ServiceType::Arc => "Compute",
             ServiceType::ContainerApps => "Containers",
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
@@ -890,6 +910,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Platform",
             ServiceType::Automation => "Automation",
+            ServiceType::Arc => "Azure Arc",
             ServiceType::ContainerApps => "Container Apps",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
@@ -926,6 +947,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Plat",
             ServiceType::Automation => "Automation",
+            ServiceType::Arc => "Arc",
             ServiceType::ContainerApps => "ACA",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
@@ -961,6 +983,7 @@ impl ServiceType {
             ServiceType::Monitor => "Log Analytics, App Insights & alerts",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::Automation => "Runbooks, schedules, jobs & hybrid workers",
+            ServiceType::Arc => "Servers, Kubernetes & private link scopes",
             ServiceType::ContainerApps => "Container apps, environments, jobs & instances",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
@@ -1026,6 +1049,7 @@ impl ServiceType {
             ],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::Automation => &[AutomationAccounts],
+            ServiceType::Arc => &[ArcMachines, ArcClusters, ArcPrivateLinkScopes],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
@@ -1234,6 +1258,14 @@ impl ServiceType {
             "automation" | "aa" | "automationaccount" | "automationaccounts" | "runbook" | "runbooks" => {
                 (ServiceType::Automation, None)
             }
+            "arc" | "azurearc" | "arcserver" | "arcservers" | "arcmachine" | "arcmachines" | "connectedmachine"
+            | "connectedmachines" | "hybridcompute" => (ServiceType::Arc, None),
+            "arck8s" | "arckubernetes" | "connectedk8s" | "connectedcluster" | "connectedclusters" => {
+                (ServiceType::Arc, Some(JumpView::ArcClusters))
+            }
+            "arcpls" | "arcprivatelinkscope" | "arcprivatelinkscopes" => {
+                (ServiceType::Arc, Some(JumpView::ArcPrivateLinkScopes))
+            }
             "aca" | "containerapp" | "containerapps" => (ServiceType::ContainerApps, None),
             "acaenv" | "acaenvs" | "cae" | "managedenvironment" | "managedenvironments" => {
                 (ServiceType::ContainerApps, Some(JumpView::ContainerAppEnvironments))
@@ -1300,6 +1332,7 @@ impl ServiceType {
             ServiceType::Monitor => "@monitor",
             ServiceType::PowerPlatform => "@pp",
             ServiceType::Automation => "@automation",
+            ServiceType::Arc => "@arc",
             ServiceType::ContainerApps => "@aca",
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
@@ -1314,12 +1347,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@arc", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1532,6 +1565,15 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@aa"), Some((ServiceType::Automation, None)));
         // A runbook is a child: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Automation/automationAccounts/aa/runbooks/r")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.HybridCompute/machines/srv")), Some(JumpView::ArcMachines));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Kubernetes/connectedClusters/k")), Some(JumpView::ArcClusters));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.HybridCompute/privateLinkScopes/pls")),
+            Some(JumpView::ArcPrivateLinkScopes)
+        );
+        assert_eq!(ServiceType::from_prefix("@arc"), Some((ServiceType::Arc, None)));
+        assert_eq!(ServiceType::from_prefix("@arck8s"), Some((ServiceType::Arc, Some(JumpView::ArcClusters))));
+        assert_eq!(ServiceType::from_prefix("@arcpls"), Some((ServiceType::Arc, Some(JumpView::ArcPrivateLinkScopes))));
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp")), Some(JumpView::AllResources));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));

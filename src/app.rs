@@ -157,6 +157,7 @@ mod ai_search;
 mod container_instances;
 mod static_web_apps;
 mod automation;
+mod arc;
 mod network_asg;
 mod gallery;
 mod virtual_wan;
@@ -2941,6 +2942,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.automation_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.arc_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(lines) = self.container_group_section_lines(resource, idx) {

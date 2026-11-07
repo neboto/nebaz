@@ -1,0 +1,17 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/privateLinkScopes/pls-arc-legacy",
+  "name": "pls-arc-legacy",
+  "type": "Microsoft.HybridCompute/privateLinkScopes",
+  "location": "westeurope",
+  "tags": {
+    "team": "legacy",
+    "env": "prod",
+    "owner": "infra@contoso.com"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "publicNetworkAccess": "Enabled",
+    "privateLinkScopeId": "7d3b9e21-4c5a-4f8e-9b16-2a0c8e5f1d34",
+    "privateEndpointConnections": []
+  }
+}

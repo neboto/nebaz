@@ -1006,6 +1006,28 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     content links and parameters and a job schedule's parameters are
     removed before the store keeps a body. A retired Run As account is
     a connection and a certificate, so nebaz cannot see it.
+45. **Azure Arc is its own tab** (#199, `src/azure/services/arc.rs`,
+    Compute group, after Virtual Machines: an operator looks for a server
+    among servers, and the Hybrid tab is the network's way on-premises).
+    Three subscription-wide lists: Servers
+    (`Microsoft.HybridCompute/machines`, `@arc`), Kubernetes
+    (`Microsoft.Kubernetes/connectedClusters`, `@arck8s`) and Private
+    link scopes (`Microsoft.HybridCompute/privateLinkScopes`, `@arcpls`),
+    at `2025-01-13` and `2024-01-01`. A server's state is the ladder, then
+    `status`; a machine `Disconnected` for over 45 days reads **Expired**
+    (ARM still says Disconnected; its identity certificate has lapsed and
+    it must be onboarded again), the portal's word. A cluster's is the
+    ladder, then `connectivityStatus` (`Offline` and `Expired` are
+    trouble). Extensions are one lazy call per server. An extension's
+    `settings` and `protectedSettings` (and a cluster's agentry
+    configurations' pair) are removed before the store keeps a body, so
+    the MMA workspace an extension names is not read either. **Never**:
+    run commands (PUTs, their script and output GETs), patch assessment
+    and installation (POSTs), a cluster's user credential
+    (`listClusterUserCredential`, a POST, and `az connectedk8s proxy`);
+    the guard names those paths and commands, and the agents' service
+    hosts. An Automation hybrid worker and a Defender row on an Arc
+    server now open here instead of All resources.
 
 ## The catalog
 
@@ -1110,11 +1132,14 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Messaging · Service Bus | Network ⧗ (effective access in one line; public network access; from the rule set: default action, trusted services, IP rules, VNet rules with each subnet jumpable and whether the service endpoint is required; private endpoints jumpable with connection state; the endpoint host as text, the `privatelink.` zone a private caller must resolve through; IP address type, min TLS, local auth; the tier's limits: VNet rules and private endpoints are Premium only. Deny with no IP or VNet rule is flagged: the service does not enforce it) · Security (local auth, min TLS, Microsoft- or customer-managed keys with the reading identity, infrastructure encryption, identity system / user-assigned) · Queues ⧗ (active, dead-lettered, scheduled and transfer counts from `countDetails`, size, lock duration, max deliveries, sessions, duplicate detection, TTL, partitioning, forwarding) · Topics ⧗ (subscription count, size, TTL, ordering, partitioning) · Access policies ⧗ (names and rights; never keys) · (Overview: status, SKU and messaging units, partitions, zone redundancy, endpoint, geo-replication) | ladder, then `status` (`Active` → available, `Disabled` → stopped) | private endpoints, user-assigned identities, a CMK identity, VNet rule subnets (once the rule set loads) | `az servicebus namespace show` |
 | Messaging · Event Hubs | Network ⧗ · Security · Access policies ⧗ (as Service Bus; Basic has no firewall, VNet rules or private endpoints) · Event hubs ⧗ (partitions, retention and cleanup policy, status, capture on / off with format, window, destination storage account jumpable or Data Lake, container, identity) · (Overview: SKU, throughput / processing / capacity units, auto-inflate maximum, Kafka, dedicated cluster, zone redundancy) | ladder, then `status` | as Service Bus, plus the dedicated cluster and each capture storage account (once Event hubs loads) | `az eventhubs namespace show` |
 | Automation · Accounts (rule 44) | Runbooks ⧗ (type, state with drafts and never-published marked, runtime environment, modified, logging, the schedules that start it, its newest job in the window with ⚠ when failed) · Schedules ⧗ (recurrence, enabled, next run, expiry with ⚠ when an enabled schedule has expired, time zone, the runbooks it starts and the worker group they run on) · Jobs ⧗ (the last 7 days: count and failures, then the newest 25 with runbook, status, ⚠ failed / suspended / blocked / stopped, ended, started by, ran on) · Hybrid workers ⧗ (each group's type and Run As credential name; each worker's type, machine jumpable, IP, last seen with ⚠ after a day) · Configuration (SKU, local auth, public network access, encryption key and identity, identity, hybrid service URL as text, private endpoints) · (Overview: state, SKU, created, modified, description) | ladder, then `state` (`Ok` → Available, `Suspended` / `Unavailable` → Unavailable) | private endpoints, user-assigned and encryption identities; ⧗ the linked Log Analytics workspace, each hybrid worker's VM or Arc machine | `az automation account show --ids` (the `automation` extension) |
+| Azure Arc · Servers (rule 45) | Machine (computer name, FQDN, domain, OS SKU, version and type, kind, cloud provider, manufacturer, model, logical cores, memory, IP addresses, SQL Server discovered, parent cluster) · Agent (status with ⚠ and how long when disconnected or expired, last status change, agent version, automatic upgrade and the last attempt, config mode, extensions and guest configuration allowed, both services, proxy, incoming ports, private link scope jumpable, each error ⚠) · Extensions ⧗ (type, version, automatic upgrade, state ⚠ when failed or at error level, the status message's first line; never settings) · Licensing & patching (license status, Software Assurance, ESU eligibility and licence with ⚠ when eligible and unassigned, key state, the licence jumpable, patch assessment and patch mode) · (Overview: status, OS, agent version, cloud provider, FQDN, identity) | ladder, then `status` (`Connected` → Available, `Disconnected` / `Error` → Unavailable, Expired after 45 days disconnected, `AwaitingConnection` → Pending) | the private link scope, the parent cluster, the ESU licence | `az connectedmachine show --ids` (the `connectedmachine` extension) |
+| Azure Arc · Kubernetes | Cluster (Kubernetes version, distribution and its version, infrastructure, offering, kind, nodes, cores, Azure RBAC, Entra admin group count, Azure Hybrid Benefit, identity) · Agent (connectivity ⚠ when offline or expired, last connected, identity certificate expiry ⚠ within 14 days or past, agent version, auto-upgrade, desired version, agent state, private link scope or state, each agent error ⚠) · (Overview: connectivity, Kubernetes version, distribution, nodes, agent version) | ladder, then `connectivityStatus` (`Connected` → Available, `Offline` / `Expired` → Unavailable, `Connecting` → Pending) | the private link scope | `az connectedk8s show --ids` (the `connectedk8s` extension) |
+| Azure Arc · Private link scopes | Network (public network access, scope id as text, private endpoints jumpable with ⚠ unless approved) · (Overview: public network access, endpoint count) | ladder only | private endpoints | `az connectedmachine private-link-scope show --ids` |
 | Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless); `location` is a Power Platform geography, so the row passes every `R` filter like `global` | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
 | Foundry · Search services (rule 38) | Service (status details, replicas, partitions, search units, hosting mode, compute, semantic ranker, upgrade) · Network (public access, bypass, IP rules, data exfiltration blocks, private endpoints with their approval) · Security (key / Entra ID auth and the failure mode, identity, CMK enforcement and compliance) · Shared private links ⧗ (target jumpable, sub-resource, status, ⚠ unless approved) · (Overview: status, SKU, endpoint) | ladder, then `status` | private endpoints, each shared link's target, user-assigned identities | `az search service show --ids` |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
-Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @storage @vnet @subnet @nsg @pip
+Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @arc @arck8s @arcpls @storage @vnet @subnet @nsg @pip
 @lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @automation @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
@@ -1163,6 +1188,9 @@ has a fixture test there.
 | `aks-rbac-disabled` | Clusters | `enableRBAC` false | high |
 | `acr-admin-user` | Registries | `adminUserEnabled` | medium |
 | `automation-local-auth` | Automation accounts | `disableLocalAuth` not true (webhooks and agent keys work) | low |
+| `arc-machine-disconnected` | Arc servers | `status` Disconnected or Error (low); disconnected over 45 days, expired (medium) | low · medium |
+| `arc-cluster-offline` | Arc Kubernetes | `connectivityStatus` Offline (low) or Expired (medium) | low · medium |
+| `arc-agent-behind` | Arc servers | `agentVersion` 12 or more monthly releases behind the newest agent in the list (an older major version counts) | low |
 | `acr-anonymous-pull` | Registries | `anonymousPullEnabled` | high |
 | `app-https-only` | Apps | `httpsOnly` false | high |
 | `app-min-tls` | Apps + Configuration ⧗ | `minTlsVersion` below 1.2 | medium |
@@ -1325,6 +1353,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
 | Automation accounts (rule 44) | 1, then per opened account: runbooks, schedules, job schedules, jobs (7 days, ≤ 200), worker groups + 1 per group (≤ 25), the linked workspace | `/providers/Microsoft.Automation/automationAccounts` · `2024-10-23` |
+| Arc servers, Kubernetes, private link scopes (rule 45) | 1 each, then per opened server: its extensions | `/providers/Microsoft.HybridCompute/machines` · `{machine}/extensions` · `/providers/Microsoft.HybridCompute/privateLinkScopes` · `2025-01-13`; `/providers/Microsoft.Kubernetes/connectedClusters` · `2024-01-01` |
 | Enterprise policies | 1 (every kind; `kind` on the row) | `/providers/Microsoft.PowerPlatform/enterprisePolicies` · `2020-10-30-preview` (the only version in the specs; not yet tried live) |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
 | Search services (rule 38) | 1 | `/providers/Microsoft.Search/searchServices` · `2025-05-01` |
@@ -1407,6 +1436,16 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- Azure Arc (#199), built without an Azure login from azure-rest-api-specs
+  (`hybridcompute/…/HybridCompute/stable/2025-01-13`,
+  `hybridkubernetes/…/HybridKubernetes/stable/2024-01-01`) and the CLI
+  `connectedmachine` and `connectedk8s` extensions (both take `--ids`).
+  To check: whether the machine list carries `networkProfile`,
+  `licenseProfile` and `detectedProperties` (the spec marks them
+  read-only; some may only come with the single GET); the casing of
+  `detectedProperties` keys (`logicalCoreCount`, `cloudprovider`);
+  whether `esuProfile.assignedLicense` is an id string or an object; the
+  45-day expiry against what the portal shows.
 - Automation (#202), built without an Azure login from azure-rest-api-specs
   (`automation/…/Automation/stable/2024-10-23`) and the CLI `automation`
   extension's reference. To check: the jobs `$filter` form (an unquoted

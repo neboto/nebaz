@@ -5,7 +5,7 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, backup, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
+    aks, app_service, arc, backup, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
     governance, keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
     sql, storage,
 };
@@ -1506,4 +1506,48 @@ fn an_exemption_is_graded_by_when_it_ends() {
         findings(&audit("policy-exemption-expiry", &lists, None)),
         vec![("soon".into(), Severity::Low), ("ended".into(), Severity::Info)]
     );
+}
+
+// ── Azure Arc ──
+
+fn arc_machine(name: &str, status: &str, changed: &str, agent: &str) -> Box<dyn Resource> {
+    let props = json!({"status": status, "lastStatusChange": changed, "agentVersion": agent});
+    boxed(arc::ArcMachineRow::from_json(&body(&format!("Microsoft.HybridCompute/machines/{}", name), props), None))
+}
+
+#[test]
+fn an_arc_server_disconnected_is_low_and_expired_after_45_days_is_medium() {
+    // NOW is 2027-01-15.
+    let rows = vec![
+        arc_machine("srv-ok", "Connected", "2026-01-01T00:00:00Z", "1.58.0.1"),
+        arc_machine("srv-recent", "Disconnected", "2027-01-10T00:00:00Z", "1.58.0.1"),
+        arc_machine("srv-gone", "Disconnected", "2026-10-01T00:00:00Z", "1.58.0.1"),
+    ];
+    let f = audit("arc-machine-disconnected", &[(JumpView::ArcMachines, rows)], None);
+    assert_eq!(findings(&f), [("srv-gone".to_string(), Severity::Medium), ("srv-recent".to_string(), Severity::Low)]);
+}
+
+#[test]
+fn an_arc_agent_a_year_behind_the_newest_in_the_list_is_low() {
+    let rows = vec![
+        arc_machine("srv-new", "Connected", "2026-01-01T00:00:00Z", "1.58.03007.1"),
+        arc_machine("srv-near", "Connected", "2026-01-01T00:00:00Z", "1.50.02900.1"),
+        arc_machine("srv-old", "Connected", "2026-01-01T00:00:00Z", "1.41.02664.1629"),
+        arc_machine("srv-v0", "Connected", "2026-01-01T00:00:00Z", "0.99.1.1"),
+    ];
+    let f = audit("arc-agent-behind", &[(JumpView::ArcMachines, rows)], None);
+    assert_eq!(findings(&f), [("srv-old".to_string(), Severity::Low), ("srv-v0".to_string(), Severity::Low)]);
+}
+
+#[test]
+fn an_offline_arc_cluster_is_low_and_an_expired_one_medium() {
+    let cluster = |name: &str, status: &str| {
+        boxed(arc::ArcClusterRow::from_json(
+            &body(&format!("Microsoft.Kubernetes/connectedClusters/{}", name), json!({"connectivityStatus": status})),
+            None,
+        ))
+    };
+    let rows = vec![cluster("k-ok", "Connected"), cluster("k-off", "Offline"), cluster("k-exp", "Expired")];
+    let f = audit("arc-cluster-offline", &[(JumpView::ArcClusters, rows)], None);
+    assert_eq!(findings(&f), [("k-exp".to_string(), Severity::Medium), ("k-off".to_string(), Severity::Low)]);
 }

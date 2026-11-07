@@ -1,0 +1,79 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-web-03",
+  "name": "srv-ams-web-03",
+  "type": "Microsoft.HybridCompute/machines",
+  "location": "westeurope",
+  "kind": "VMware",
+  "identity": {
+    "type": "SystemAssigned",
+    "principalId": "00000000-0000-0000-0000-00000000a014",
+    "tenantId": "{{tenant}}"
+  },
+  "tags": {
+    "team": "legacy",
+    "env": "prod",
+    "owner": "infra@contoso.com",
+    "site": "ams-dc1"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "status": "Connected",
+    "lastStatusChange": "{{iso:now-21d}}",
+    "osName": "linux",
+    "osType": "linux",
+    "osSku": "Ubuntu 22.04.4 LTS",
+    "osVersion": "5.15.0-118-generic",
+    "agentVersion": "1.57.02969.1801",
+    "displayName": "srv-ams-web-03",
+    "machineFqdn": "srv-ams-web-03.corp.contoso.com",
+    "detectedProperties": {
+      "cloudprovider": "N/A",
+      "manufacturer": "VMware, Inc.",
+      "model": "VMware7,1",
+      "logicalCoreCount": "4",
+      "totalPhysicalMemoryInGigabytes": "8"
+    },
+    "networkProfile": {
+      "networkInterfaces": [
+        {
+          "ipAddresses": [
+            {
+              "address": "192.168.10.43",
+              "ipAddressVersion": "IPv4"
+            }
+          ]
+        }
+      ]
+    },
+    "agentConfiguration": {
+      "extensionsEnabled": "true",
+      "guestConfigurationEnabled": "true",
+      "configMode": "full",
+      "incomingConnectionsPorts": []
+    },
+    "agentUpgrade": {
+      "enableAutomaticUpgrade": true,
+      "lastAttemptStatus": "Success"
+    },
+    "serviceStatuses": {
+      "extensionService": {
+        "status": "Running",
+        "startupType": "Automatic"
+      },
+      "guestConfigurationService": {
+        "status": "Running",
+        "startupType": "Automatic"
+      }
+    },
+    "osProfile": {
+      "computerName": "srv-ams-web-03",
+      "linuxConfiguration": {
+        "patchSettings": {
+          "assessmentMode": "AutomaticByPlatform",
+          "patchMode": "AutomaticByPlatform"
+        }
+      }
+    },
+    "errorDetails": []
+  }
+}

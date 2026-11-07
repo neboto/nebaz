@@ -23,6 +23,7 @@ use crate::azure::resource::{name_of_id, Resource};
 use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::app_service::SiteRow;
+use crate::azure::services::arc::{self, ArcClusterRow, ArcMachineRow};
 use crate::azure::services::automation::AutomationAccountRow;
 use crate::azure::services::backup::{self, BackupVaultRow, RecoveryVaultRow};
 use crate::azure::services::compute::{DiskRow, NicRow};
@@ -94,9 +95,11 @@ const BVS: &[V] = &[V::BackupVaults];
 const ASSIGNMENTS: &[V] = &[V::PolicyAssignments];
 const EXEMPTIONS: &[V] = &[V::PolicyExemptions];
 const AUTOMATION: &[V] = &[V::AutomationAccounts];
+const ARC_MACHINES: &[V] = &[V::ArcMachines];
+const ARC_CLUSTERS: &[V] = &[V::ArcClusters];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 77] = [
+pub static CHECKS: [Check; 80] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -734,6 +737,31 @@ pub static CHECKS: [Check; 77] = [
         fix: "Move callers to Entra ID (a managed identity calling the runbook start API, or an Azure Monitor action group), then set disableLocalAuth to true. Hybrid workers must be extension-based (V2) first.",
         sources: &[AUTOMATION],
         run: automation_local_auth,
+    },
+    // ── Azure Arc ──
+    Check {
+        id: "arc-machine-disconnected",
+        title: "Arc server disconnected or expired",
+        why: "A disconnected Arc server sends no heartbeat: its extensions (Defender, Azure Monitor, Update Manager) report nothing and policy cannot evaluate it. After 45 days its identity certificate lapses and it can only be onboarded again.",
+        fix: "Check the machine is running and can reach the Arc endpoints (azcmagent check). An expired one must be disconnected and onboarded again; a decommissioned one should be deleted from Azure.",
+        sources: &[ARC_MACHINES],
+        run: arc_machine_disconnected,
+    },
+    Check {
+        id: "arc-cluster-offline",
+        title: "Arc Kubernetes cluster offline or expired",
+        why: "An offline cluster's agents cannot reach Azure: GitOps, policy and monitoring extensions stop reporting. Offline past its identity certificate's expiry (90 days), the cluster is expired and must be connected again.",
+        fix: "Check the azure-arc agents (kubectl get pods -n azure-arc) and their outbound access. An expired cluster must be deleted from Azure and connected again.",
+        sources: &[ARC_CLUSTERS],
+        run: arc_cluster_offline,
+    },
+    Check {
+        id: "arc-agent-behind",
+        title: "Arc server agent far behind",
+        why: "The Connected Machine agent ships about monthly and versions older than a year are not supported; an old agent misses security fixes and newer extension features.",
+        fix: "Enable automatic agent upgrade on the machine, or upgrade through the package manager, WSUS or Update Manager.",
+        sources: &[ARC_MACHINES],
+        run: arc_agent_behind,
     },
 ];
 
@@ -1816,6 +1844,66 @@ fn automation_local_auth(check: &'static Check, input: &AuditInput, out: &mut Ve
                 AuditFinding::about(check, Severity::Low, r, "local auth on (webhooks and agent keys)")
                     .with_evidence(vec![format!("disableLocalAuth: {}", json::yes_no(r.disable_local_auth))]),
             );
+        }
+    }
+}
+
+// ── Azure Arc ─────────────────────────────────────────────────────────
+
+/// Releases behind the newest agent in the list before a machine is
+/// flagged: about a year of monthly releases.
+const ARC_AGENT_RELEASES_BEHIND: u32 = 12;
+
+fn arc_machine_disconnected(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for r in input.of::<ArcMachineRow>(V::ArcMachines) {
+        let status = r.effective_status(input.now()).unwrap_or_default();
+        let (severity, reason) = match status.to_lowercase().as_str() {
+            "expired" => (Severity::Medium, "expired: disconnected over 45 days"),
+            "disconnected" => (Severity::Low, "disconnected"),
+            "error" => (Severity::Low, "agent in error"),
+            _ => continue,
+        };
+        out.push(
+            AuditFinding::about(check, severity, r, reason).with_evidence(vec![format!(
+                "status: {} since {}",
+                json::opt(r.status.clone()),
+                json::time(r.last_status_change.clone())
+            )]),
+        );
+    }
+}
+
+fn arc_cluster_offline(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for r in input.of::<ArcClusterRow>(V::ArcClusters) {
+        if r.is_offline() {
+            let status = json::opt(r.connectivity.clone());
+            let severity = if status.eq_ignore_ascii_case("expired") { Severity::Medium } else { Severity::Low };
+            out.push(
+                AuditFinding::about(check, severity, r, status.to_lowercase()).with_evidence(vec![format!(
+                    "connectivityStatus: {}, last connected {}",
+                    status,
+                    json::time(r.last_connectivity.clone())
+                )]),
+            );
+        }
+    }
+}
+
+fn arc_agent_behind(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let rows: Vec<&ArcMachineRow> = input.of::<ArcMachineRow>(V::ArcMachines).collect();
+    let release = |r: &ArcMachineRow| r.agent_version.as_deref().and_then(arc::agent_release);
+    let Some(newest) = rows.iter().filter_map(|r| release(r)).max() else { return };
+    for r in rows {
+        let Some(v) = release(r) else { continue };
+        let behind = if v.0 < newest.0 { u32::MAX } else { newest.1.saturating_sub(v.1) };
+        if behind >= ARC_AGENT_RELEASES_BEHIND {
+            let reason = if behind == u32::MAX { "an older major version".to_string() } else { format!("{} releases behind", behind) };
+            out.push(AuditFinding::about(check, Severity::Low, r, reason).with_evidence(vec![format!(
+                "agentVersion: {} (newest in the list: {}.{})",
+                json::opt(r.agent_version.clone()),
+                newest.0,
+                newest.1
+            )]));
         }
     }
 }
