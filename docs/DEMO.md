@@ -109,6 +109,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `srch-contoso-prod`'s shared private link to `cosmos-legacy` waits for approval | Foundry › Search services |
 | `ci-agents-prod`'s build agent crash-loops (14 restarts, last exit 1) and pulls from `acrcontosoprod` with the registry's admin user | Container Apps › Container groups |
 | `aa-platform-ops`: `Patch-LegacyVms` failed on its hybrid worker `vm-legacy-app-01`, unseen since the VM was deallocated; local auth on | Automation, `@audit` (low) |
+| Arc in the Amsterdam datacentre: `srv-ams-file-02` disconnected 52 days ago (**expired**, agent 17 releases behind); `srv-ams-sql-01` (Windows Server 2012 R2) eligible for ESU with **no licence assigned** and its Defender extension **failed**; the k3s cluster `arck8s-ams-edge` **offline** for 3 days | Azure Arc, `@audit` (medium · low · low) |
 | `swa-orders-storefront`'s custom domain `beta.shop.contoso.example` failed validation (no CNAME) | App Service › Static sites |
 | `gal_contoso_prod`'s `win2019-legacy-app` image definition and its version 2023.11.0 are past end of life | Virtual Machines › Galleries |
 | `sqlmi-legacy-prod`'s public data endpoint is enabled (port 3342; `nsg-sqlmi` admits only the office), and the instance has no failover group | SQL › Managed instances |
@@ -288,6 +289,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `sqlmi-legacy-prod` (SQL managed instance, GP_Gen5 8 vCores, 512 GB, Azure Hybrid Benefit, SQL Server 2022 update policy) in the instance pool `sqlpool-legacy-prod` (16 vCores, 8 used) on `snet-sqlmi`; Entra admin `Contoso Legacy DBAs` but Entra-only auth off; databases `legacy_erp` and `legacy_reporting`; **its public data endpoint is enabled** and it has **no failover group** (the failover-group list of rg-legacy-prod in westeurope is empty)
 - `vm-jump-01` (Standard_B2s, Ubuntu 22.04, running, zone 1, NIC `nic-vm-jump-01` (in `rg-legacy-prod`) in `snet-jump` with `pip-vm-jump-01`; OS disk `vm-jump-01_OsDisk_1_3f9a2c7e8b1d4e6fa0c5b7d9e2f41a68`)
 - `vm-legacy-app-01` (Standard_D4s_v3, Windows Server 2019, deallocated 40 days, NIC `nic-vm-legacy-app-01` (in `rg-legacy-prod`) in `snet-jump` behind `lb-legacy-internal`; OS disk `vm-legacy-app-01_OsDisk_1_8d2e4f6a1b3c4d5e9f7a0b2c4d6e8f13`, Reserved)
+- Azure Arc, the Amsterdam datacentre (`site: ams-dc1`, 192.168.10.0/24, VMware): `srv-ams-sql-01` (Windows Server 2012 R2 Datacenter, Connected, agent 1.58 with automatic upgrade, SQL Server discovered, reports through private link scope `pls-arc-legacy`; ESU eligible, **not assigned**; extensions AzureMonitorWindowsAgent, WindowsPatchExtension and MDE.Windows, which **failed** to onboard), `srv-ams-file-02` (Windows Server 2016, **Disconnected 52 days**, so expired; agent 1.41, no automatic upgrade; MicrosoftMonitoringAgent), `srv-ams-web-03` (Ubuntu 22.04, Connected, agent 1.57; Azure Monitor and MDE.Linux); Arc Kubernetes `arck8s-ams-edge` (k3s 1.28.9 on vSphere, 3 nodes, **Offline** 3 days, its cluster-connect agent cannot resolve the Arc data-plane host, auto-upgrade disabled); private link scope `pls-arc-legacy` (public network enabled, no private endpoint yet). Every extension's settings in the bodies is a `never-shown` placeholder the rows strip
 - `disk-legacy-data-01` (1024 GiB Premium_LRS P30, Unattached; last owner change 40 days ago)
 - `nic-vm-legacy-batch-01` (in `snet-jump`, 10.10.8.6) and `pip-vm-legacy-batch-01` (in `rg-network-prod`): what was left of `vm-legacy-batch-01` when it was deleted, a NIC with no VM and a static public IP attached to nothing
 - `kv-legacy-prod` (access policies, public network on, purge protection off)
@@ -323,6 +325,6 @@ Graph (`directoryObjects`) is `identity`'s.
 |---|---|
 | `core` | Subscriptions (subscription details, locations, resource groups, All resources), budgets, Automation, the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
 | `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, ASGs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Virtual WAN, Firewall |
-| `compute` | VMs, disks, Compute Gallery, AKS, Container Registry, App Service, Static Web Apps, Container Apps, Container Instances |
+| `compute` | VMs, disks, Compute Gallery, Azure Arc, AKS, Container Registry, App Service, Static Web Apps, Container Apps, Container Instances |
 | `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, Backup |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry, AI Search |

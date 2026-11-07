@@ -50,6 +50,19 @@ pub static FIXTURES: &[Fixture] = &[
     // ── App Service: sites (web and function apps), their `config/web`, plans ──
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.Web/sites", "sites.json"),
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.Web/serverfarms", "serverfarms.json"),
+    // ── Azure Arc (#199): three servers in the Amsterdam datacentre, an edge
+    //    k3s cluster and the private link scope the SQL server reports through ──
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.HybridCompute/machines", "arc-machines.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-sql-01/extensions", "srv-ams-sql-01.extensions.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-sql-01", "srv-ams-sql-01.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-file-02/extensions", "srv-ams-file-02.extensions.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-file-02", "srv-ams-file-02.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-web-03/extensions", "srv-ams-web-03.extensions.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-web-03", "srv-ams-web-03.json"),
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.Kubernetes/connectedClusters", "arc-clusters.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Kubernetes/connectedClusters/arck8s-ams-edge", "arck8s-ams-edge.json"),
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.HybridCompute/privateLinkScopes", "arc-private-link-scopes.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/privateLinkScopes/pls-arc-legacy", "pls-arc-legacy.json"),
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.Web/staticSites", "static-sites.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront", "swa-orders-storefront.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront/builds", "swa-orders-storefront.builds.json"),

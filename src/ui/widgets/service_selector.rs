@@ -627,7 +627,7 @@ mod tests {
     fn every_short_name_is_followed_by_a_gap() {
         // "Power Plat" is exactly 10 wide: a fixed 10-column name slot ran
         // it straight into "Power Platform enterprise policies".
-        let mut t = ratatui::Terminal::new(ratatui::backend::TestBackend::new(120, 60)).unwrap();
+        let mut t = ratatui::Terminal::new(ratatui::backend::TestBackend::new(120, 70)).unwrap();
         let mut state = ServiceSelectorState::new();
         state.show(None);
         let hits = std::cell::RefCell::new(crate::app::PopupHits::default());

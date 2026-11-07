@@ -1,0 +1,91 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-file-02",
+  "name": "srv-ams-file-02",
+  "type": "Microsoft.HybridCompute/machines",
+  "location": "westeurope",
+  "kind": "VMware",
+  "identity": {
+    "type": "SystemAssigned",
+    "principalId": "00000000-0000-0000-0000-00000000a015",
+    "tenantId": "{{tenant}}"
+  },
+  "tags": {
+    "team": "legacy",
+    "env": "prod",
+    "owner": "infra@contoso.com",
+    "site": "ams-dc1"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "status": "Disconnected",
+    "lastStatusChange": "{{iso:now-52d}}",
+    "osName": "windows",
+    "osType": "windows",
+    "osSku": "Windows Server 2016 Standard",
+    "osVersion": "10.0.14393.6897",
+    "agentVersion": "1.41.02664.1629",
+    "displayName": "SRV-AMS-FILE-02",
+    "machineFqdn": "srv-ams-file-02.corp.contoso.com",
+    "domainName": "corp.contoso.com",
+    "detectedProperties": {
+      "cloudprovider": "N/A",
+      "manufacturer": "VMware, Inc.",
+      "model": "VMware7,1",
+      "logicalCoreCount": "4",
+      "totalPhysicalMemoryInGigabytes": "16"
+    },
+    "networkProfile": {
+      "networkInterfaces": [
+        {
+          "ipAddresses": [
+            {
+              "address": "192.168.10.32",
+              "ipAddressVersion": "IPv4"
+            }
+          ]
+        }
+      ]
+    },
+    "agentConfiguration": {
+      "extensionsEnabled": "true",
+      "guestConfigurationEnabled": "true",
+      "configMode": "full",
+      "incomingConnectionsPorts": []
+    },
+    "agentUpgrade": {
+      "enableAutomaticUpgrade": false
+    },
+    "serviceStatuses": {
+      "extensionService": {
+        "status": "Running",
+        "startupType": "Automatic"
+      },
+      "guestConfigurationService": {
+        "status": "Running",
+        "startupType": "Automatic"
+      }
+    },
+    "licenseProfile": {
+      "licenseStatus": "Licensed",
+      "esuProfile": {
+        "esuEligibility": "Ineligible",
+        "licenseAssignmentState": "NotAssigned"
+      }
+    },
+    "osProfile": {
+      "computerName": "SRV-AMS-FILE-02",
+      "windowsConfiguration": {
+        "patchSettings": {
+          "assessmentMode": "ImageDefault",
+          "patchMode": "AutomaticByOS"
+        }
+      }
+    },
+    "errorDetails": [
+      {
+        "code": "AZCM0026",
+        "message": "The machine has not sent a heartbeat since its last status change"
+      }
+    ]
+  }
+}

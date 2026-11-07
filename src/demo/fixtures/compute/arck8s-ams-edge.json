@@ -1,0 +1,54 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Kubernetes/connectedClusters/arck8s-ams-edge",
+  "name": "arck8s-ams-edge",
+  "type": "Microsoft.Kubernetes/connectedClusters",
+  "location": "westeurope",
+  "identity": {
+    "type": "SystemAssigned",
+    "principalId": "00000000-0000-0000-0000-00000000c001",
+    "tenantId": "{{tenant}}"
+  },
+  "tags": {
+    "team": "legacy",
+    "env": "prod",
+    "owner": "infra@contoso.com",
+    "site": "ams-dc1"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "connectivityStatus": "Offline",
+    "lastConnectivityTime": "{{iso:now-3d}}",
+    "managedIdentityCertificateExpirationTime": "{{iso:now+60d}}",
+    "agentPublicKeyCertificate": "MIICCgKCAgEA-public-key-placeholder",
+    "distribution": "k3s",
+    "distributionVersion": "v1.28.9+k3s1",
+    "infrastructure": "vsphere",
+    "offering": "",
+    "kubernetesVersion": "1.28.9",
+    "totalNodeCount": 3,
+    "totalCoreCount": 12,
+    "agentVersion": "1.18.3",
+    "privateLinkState": "Disabled",
+    "azureHybridBenefit": "NotApplicable",
+    "aadProfile": {
+      "enableAzureRBAC": true,
+      "adminGroupObjectIDs": [
+        "6a1f2e3d-0000-4000-8000-00000000ad01"
+      ],
+      "tenantID": "{{tenant}}"
+    },
+    "arcAgentProfile": {
+      "agentAutoUpgrade": "Disabled",
+      "desiredAgentVersion": "1.18.3",
+      "agentState": "Succeeded",
+      "agentErrors": [
+        {
+          "component": "clusterconnect-agent",
+          "severity": "Error",
+          "message": "dial tcp: lookup westeurope.dp.kubernetesconfiguration.azure.com: i/o timeout",
+          "time": "{{iso:now-3d}}"
+        }
+      ]
+    }
+  }
+}

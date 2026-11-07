@@ -1,0 +1,275 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-sql-01",
+      "name": "srv-ams-sql-01",
+      "type": "Microsoft.HybridCompute/machines",
+      "location": "westeurope",
+      "kind": "VMware",
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "00000000-0000-0000-0000-00000000a014",
+        "tenantId": "{{tenant}}"
+      },
+      "tags": {
+        "team": "legacy",
+        "env": "prod",
+        "owner": "dba@contoso.com",
+        "site": "ams-dc1"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "status": "Connected",
+        "lastStatusChange": "{{iso:now-6d}}",
+        "osName": "windows",
+        "osType": "windows",
+        "osSku": "Windows Server 2012 R2 Datacenter",
+        "osVersion": "6.3.9600.21620",
+        "agentVersion": "1.58.03007.2023",
+        "displayName": "SRV-AMS-SQL-01",
+        "machineFqdn": "srv-ams-sql-01.corp.contoso.com",
+        "domainName": "corp.contoso.com",
+        "vmUuid": "4210c1a8-5d1e-7f2b-3c9d-0e4a6b8c2d17",
+        "detectedProperties": {
+          "cloudprovider": "N/A",
+          "manufacturer": "VMware, Inc.",
+          "model": "VMware7,1",
+          "logicalCoreCount": "8",
+          "totalPhysicalMemoryInGigabytes": "64",
+          "mssqlinstancename": "MSSQLSERVER"
+        },
+        "mssqlDiscovered": "true",
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "ipAddresses": [
+                {
+                  "address": "192.168.10.21",
+                  "ipAddressVersion": "IPv4",
+                  "subnet": {
+                    "addressPrefix": "192.168.10.0/24"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "privateLinkScopeResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/privateLinkScopes/pls-arc-legacy",
+        "agentConfiguration": {
+          "extensionsEnabled": "true",
+          "guestConfigurationEnabled": "true",
+          "configMode": "full",
+          "incomingConnectionsPorts": [],
+          "proxyUrl": ""
+        },
+        "agentUpgrade": {
+          "enableAutomaticUpgrade": true,
+          "lastAttemptStatus": "Success"
+        },
+        "serviceStatuses": {
+          "extensionService": {
+            "status": "Running",
+            "startupType": "Automatic"
+          },
+          "guestConfigurationService": {
+            "status": "Running",
+            "startupType": "Automatic"
+          }
+        },
+        "licenseProfile": {
+          "licenseStatus": "Licensed",
+          "licenseChannel": "Volume",
+          "softwareAssurance": {
+            "softwareAssuranceCustomer": true
+          },
+          "esuProfile": {
+            "esuEligibility": "Eligible",
+            "licenseAssignmentState": "NotAssigned",
+            "esuKeyState": "Inactive",
+            "serverType": "Datacenter"
+          }
+        },
+        "osProfile": {
+          "computerName": "SRV-AMS-SQL-01",
+          "windowsConfiguration": {
+            "patchSettings": {
+              "assessmentMode": "AutomaticByPlatform",
+              "patchMode": "Manual"
+            }
+          }
+        },
+        "errorDetails": []
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-file-02",
+      "name": "srv-ams-file-02",
+      "type": "Microsoft.HybridCompute/machines",
+      "location": "westeurope",
+      "kind": "VMware",
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "00000000-0000-0000-0000-00000000a015",
+        "tenantId": "{{tenant}}"
+      },
+      "tags": {
+        "team": "legacy",
+        "env": "prod",
+        "owner": "infra@contoso.com",
+        "site": "ams-dc1"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "status": "Disconnected",
+        "lastStatusChange": "{{iso:now-52d}}",
+        "osName": "windows",
+        "osType": "windows",
+        "osSku": "Windows Server 2016 Standard",
+        "osVersion": "10.0.14393.6897",
+        "agentVersion": "1.41.02664.1629",
+        "displayName": "SRV-AMS-FILE-02",
+        "machineFqdn": "srv-ams-file-02.corp.contoso.com",
+        "domainName": "corp.contoso.com",
+        "detectedProperties": {
+          "cloudprovider": "N/A",
+          "manufacturer": "VMware, Inc.",
+          "model": "VMware7,1",
+          "logicalCoreCount": "4",
+          "totalPhysicalMemoryInGigabytes": "16"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "ipAddresses": [
+                {
+                  "address": "192.168.10.32",
+                  "ipAddressVersion": "IPv4"
+                }
+              ]
+            }
+          ]
+        },
+        "agentConfiguration": {
+          "extensionsEnabled": "true",
+          "guestConfigurationEnabled": "true",
+          "configMode": "full",
+          "incomingConnectionsPorts": []
+        },
+        "agentUpgrade": {
+          "enableAutomaticUpgrade": false
+        },
+        "serviceStatuses": {
+          "extensionService": {
+            "status": "Running",
+            "startupType": "Automatic"
+          },
+          "guestConfigurationService": {
+            "status": "Running",
+            "startupType": "Automatic"
+          }
+        },
+        "licenseProfile": {
+          "licenseStatus": "Licensed",
+          "esuProfile": {
+            "esuEligibility": "Ineligible",
+            "licenseAssignmentState": "NotAssigned"
+          }
+        },
+        "osProfile": {
+          "computerName": "SRV-AMS-FILE-02",
+          "windowsConfiguration": {
+            "patchSettings": {
+              "assessmentMode": "ImageDefault",
+              "patchMode": "AutomaticByOS"
+            }
+          }
+        },
+        "errorDetails": [
+          {
+            "code": "AZCM0026",
+            "message": "The machine has not sent a heartbeat since its last status change"
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-web-03",
+      "name": "srv-ams-web-03",
+      "type": "Microsoft.HybridCompute/machines",
+      "location": "westeurope",
+      "kind": "VMware",
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "00000000-0000-0000-0000-00000000a014",
+        "tenantId": "{{tenant}}"
+      },
+      "tags": {
+        "team": "legacy",
+        "env": "prod",
+        "owner": "infra@contoso.com",
+        "site": "ams-dc1"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "status": "Connected",
+        "lastStatusChange": "{{iso:now-21d}}",
+        "osName": "linux",
+        "osType": "linux",
+        "osSku": "Ubuntu 22.04.4 LTS",
+        "osVersion": "5.15.0-118-generic",
+        "agentVersion": "1.57.02969.1801",
+        "displayName": "srv-ams-web-03",
+        "machineFqdn": "srv-ams-web-03.corp.contoso.com",
+        "detectedProperties": {
+          "cloudprovider": "N/A",
+          "manufacturer": "VMware, Inc.",
+          "model": "VMware7,1",
+          "logicalCoreCount": "4",
+          "totalPhysicalMemoryInGigabytes": "8"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "ipAddresses": [
+                {
+                  "address": "192.168.10.43",
+                  "ipAddressVersion": "IPv4"
+                }
+              ]
+            }
+          ]
+        },
+        "agentConfiguration": {
+          "extensionsEnabled": "true",
+          "guestConfigurationEnabled": "true",
+          "configMode": "full",
+          "incomingConnectionsPorts": []
+        },
+        "agentUpgrade": {
+          "enableAutomaticUpgrade": true,
+          "lastAttemptStatus": "Success"
+        },
+        "serviceStatuses": {
+          "extensionService": {
+            "status": "Running",
+            "startupType": "Automatic"
+          },
+          "guestConfigurationService": {
+            "status": "Running",
+            "startupType": "Automatic"
+          }
+        },
+        "osProfile": {
+          "computerName": "srv-ams-web-03",
+          "linuxConfiguration": {
+            "patchSettings": {
+              "assessmentMode": "AutomaticByPlatform",
+              "patchMode": "AutomaticByPlatform"
+            }
+          }
+        },
+        "errorDetails": []
+      }
+    }
+  ]
+}

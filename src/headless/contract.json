@@ -233,6 +233,11 @@
       "plans (plan)",
       "static-sites (swa)"
     ],
+    "arc": [
+      "arc-machines (arc)",
+      "arc-kubernetes (arck8s)",
+      "arc-private-link-scopes (arcpls)"
+    ],
     "audit": [
       "audit (audit)"
     ],
@@ -482,6 +487,34 @@
       "Rules",
       "Backends",
       "WAF",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Arc Kubernetes cluster": [
+      "Overview",
+      "Cluster",
+      "Agent",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Arc private link scope": [
+      "Overview",
+      "Network",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Arc server": [
+      "Overview",
+      "Machine",
+      "Agent",
+      "Extensions",
+      "Licensing & patching",
       "Access",
       "Activity",
       "Related",
