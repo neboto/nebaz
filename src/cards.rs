@@ -90,6 +90,38 @@ pub static CARDS: &[Card] = &[
     Card { views: &[JumpView::SearchServices], source: include_str!("../docs/cards/ai-search.md") },
     Card { views: &[JumpView::ServiceBusNamespaces], source: include_str!("../docs/cards/service-bus.md") },
     Card { views: &[JumpView::EventHubNamespaces], source: include_str!("../docs/cards/event-hubs.md") },
+    Card {
+        views: &[JumpView::Subscriptions, JumpView::ResourceGroups],
+        source: include_str!("../docs/cards/subscriptions.md"),
+    },
+    Card { views: &[JumpView::AllResources], source: include_str!("../docs/cards/all-resources.md") },
+    Card { views: &[JumpView::LogWorkspaces], source: include_str!("../docs/cards/log-analytics.md") },
+    Card { views: &[JumpView::AppInsights], source: include_str!("../docs/cards/app-insights.md") },
+    Card {
+        views: &[JumpView::MetricAlerts, JumpView::LogAlerts, JumpView::ActivityLogAlerts, JumpView::ActionGroups, JumpView::AlertProcessingRules, JumpView::FiredAlerts],
+        source: include_str!("../docs/cards/monitor-alerts.md"),
+    },
+    Card { views: &[JumpView::EnterprisePolicies], source: include_str!("../docs/cards/power-platform.md") },
+    Card {
+        views: &[JumpView::PolicyAssignments, JumpView::PolicyExemptions, JumpView::PolicyDefinitions],
+        source: include_str!("../docs/cards/azure-policy.md"),
+    },
+    Card { views: &[JumpView::ResourceLocks], source: include_str!("../docs/cards/resource-locks.md") },
+    Card { views: &[JumpView::ManagementGroups], source: include_str!("../docs/cards/management-groups.md") },
+    Card { views: &[JumpView::Budgets], source: include_str!("../docs/cards/budgets.md") },
+    Card {
+        views: &[JumpView::DefenderRecommendations, JumpView::DefenderAlerts, JumpView::SecureScore, JumpView::DefenderPlans],
+        source: include_str!("../docs/cards/defender.md"),
+    },
+    Card {
+        views: &[JumpView::AdvisorRecommendations, JumpView::AdvisorScore, JumpView::AdvisorSuppressions],
+        source: include_str!("../docs/cards/advisor.md"),
+    },
+    Card {
+        views: &[JumpView::ChangesAll, JumpView::ChangesActivity, JumpView::ChangesDeployments, JumpView::ChangesHealth],
+        source: include_str!("../docs/cards/changes.md"),
+    },
+    Card { views: &[JumpView::Audit], source: include_str!("../docs/cards/audit.md") },
 ];
 
 /// The card for a sub-tab, if one is written.
