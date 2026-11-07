@@ -1,0 +1,87 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-sql-01/extensions/AzureMonitorWindowsAgent",
+      "name": "AzureMonitorWindowsAgent",
+      "type": "Microsoft.HybridCompute/machines/extensions",
+      "location": "westeurope",
+      "properties": {
+        "publisher": "Microsoft.Azure.Monitor",
+        "type": "AzureMonitorWindowsAgent",
+        "typeHandlerVersion": "1.30.0.0",
+        "enableAutomaticUpgrade": true,
+        "autoUpgradeMinorVersion": true,
+        "provisioningState": "Succeeded",
+        "settings": {
+          "note": "never-shown"
+        },
+        "instanceView": {
+          "name": "AzureMonitorWindowsAgent",
+          "type": "AzureMonitorWindowsAgent",
+          "typeHandlerVersion": "1.30.0.0",
+          "status": {
+            "code": "success",
+            "level": "Information",
+            "displayStatus": "Provisioning succeeded",
+            "message": "ExtensionOperation:enable. Status:Success"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-sql-01/extensions/MDE.Windows",
+      "name": "MDE.Windows",
+      "type": "Microsoft.HybridCompute/machines/extensions",
+      "location": "westeurope",
+      "properties": {
+        "publisher": "Microsoft.Azure.AzureDefenderForServers",
+        "type": "MDE.Windows",
+        "typeHandlerVersion": "1.0.10.1",
+        "enableAutomaticUpgrade": false,
+        "autoUpgradeMinorVersion": true,
+        "provisioningState": "Failed",
+        "settings": {
+          "note": "never-shown"
+        },
+        "instanceView": {
+          "name": "MDE.Windows",
+          "type": "MDE.Windows",
+          "typeHandlerVersion": "1.0.10.1",
+          "status": {
+            "code": "1",
+            "level": "Error",
+            "displayStatus": "Provisioning failed",
+            "message": "Onboarding to Microsoft Defender for Endpoint failed: Windows Server 2012 R2 needs the unified agent package (KB5005292)\nat Install-MDE.ps1:212"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-sql-01/extensions/WindowsPatchExtension",
+      "name": "WindowsPatchExtension",
+      "type": "Microsoft.HybridCompute/machines/extensions",
+      "location": "westeurope",
+      "properties": {
+        "publisher": "Microsoft.CPlat.Core",
+        "type": "WindowsPatchExtension",
+        "typeHandlerVersion": "1.5.62",
+        "enableAutomaticUpgrade": false,
+        "autoUpgradeMinorVersion": true,
+        "provisioningState": "Succeeded",
+        "settings": {
+          "note": "never-shown"
+        },
+        "instanceView": {
+          "name": "WindowsPatchExtension",
+          "type": "WindowsPatchExtension",
+          "typeHandlerVersion": "1.5.62",
+          "status": {
+            "code": "success",
+            "level": "Information",
+            "displayStatus": "Provisioning succeeded"
+          }
+        }
+      }
+    }
+  ]
+}

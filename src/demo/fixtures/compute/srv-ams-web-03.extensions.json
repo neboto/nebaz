@@ -1,0 +1,58 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-web-03/extensions/AzureMonitorLinuxAgent",
+      "name": "AzureMonitorLinuxAgent",
+      "type": "Microsoft.HybridCompute/machines/extensions",
+      "location": "westeurope",
+      "properties": {
+        "publisher": "Microsoft.Azure.Monitor",
+        "type": "AzureMonitorLinuxAgent",
+        "typeHandlerVersion": "1.31.1",
+        "enableAutomaticUpgrade": true,
+        "autoUpgradeMinorVersion": true,
+        "provisioningState": "Succeeded",
+        "settings": {
+          "note": "never-shown"
+        },
+        "instanceView": {
+          "name": "AzureMonitorLinuxAgent",
+          "type": "AzureMonitorLinuxAgent",
+          "typeHandlerVersion": "1.31.1",
+          "status": {
+            "code": "success",
+            "level": "Information",
+            "displayStatus": "Provisioning succeeded"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-web-03/extensions/MDE.Linux",
+      "name": "MDE.Linux",
+      "type": "Microsoft.HybridCompute/machines/extensions",
+      "location": "westeurope",
+      "properties": {
+        "publisher": "Microsoft.Azure.AzureDefenderForServers",
+        "type": "MDE.Linux",
+        "typeHandlerVersion": "1.0.4.1",
+        "enableAutomaticUpgrade": false,
+        "autoUpgradeMinorVersion": true,
+        "provisioningState": "Succeeded",
+        "settings": {
+          "note": "never-shown"
+        },
+        "instanceView": {
+          "name": "MDE.Linux",
+          "type": "MDE.Linux",
+          "typeHandlerVersion": "1.0.4.1",
+          "status": {
+            "code": "success",
+            "level": "Information",
+            "displayStatus": "Provisioning succeeded"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -7,7 +7,7 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    advisor, ai_search, aks, automation, alerts, sql_managed, all_resources, app_service, backup, budgets, changes, compute, container_apps, container_instances, container_registry, cosmos, defender, directory, edge, firewall, foundry, gallery, governance,
+    advisor, ai_search, aks, arc, automation, alerts, sql_managed, all_resources, app_service, backup, budgets, changes, compute, container_apps, container_instances, container_registry, cosmos, defender, directory, edge, firewall, foundry, gallery, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_asg, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, static_web_apps, storage, subscriptions,
     traffic_manager, virtual_wan,
 };
@@ -545,6 +545,24 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
                 "AutomationAccountRow",
                 automation::AutomationAccountRow::from_json(&simple("Microsoft.Automation/automationAccounts/aa-1"), t),
             ),
+        ),
+        m(
+            JumpView::ArcMachines,
+            "ArcMachineRow",
+            parse("ArcMachineRow", arc::ArcMachineRow::from_json(&simple("Microsoft.HybridCompute/machines/arc-1"), t)),
+        ),
+        m(
+            JumpView::ArcClusters,
+            "ArcClusterRow",
+            parse(
+                "ArcClusterRow",
+                arc::ArcClusterRow::from_json(&simple("Microsoft.Kubernetes/connectedClusters/arck8s-1"), t),
+            ),
+        ),
+        m(
+            JumpView::ArcPrivateLinkScopes,
+            "ArcScopeRow",
+            parse("ArcScopeRow", arc::ArcScopeRow::from_json(&simple("Microsoft.HybridCompute/privateLinkScopes/pls-1"), t)),
         ),
         m(
             JumpView::EnterprisePolicies,

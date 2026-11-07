@@ -321,6 +321,11 @@ each one backs are in the catalog table
   `…/linkedWorkspace/read`. Never read, though `Reader` allows most of
   them: variables, credentials, certificates, connections, runbook
   content, job output and streams; the guard names those paths.
+- **Azure Arc** (#199): `Microsoft.HybridCompute/machines/read`,
+  `Microsoft.HybridCompute/machines/extensions/read` (the lazy
+  Extensions), `Microsoft.HybridCompute/privateLinkScopes/read`,
+  `Microsoft.Kubernetes/connectedClusters/read`. Never: run commands,
+  patch assessment or installation, a cluster's user credential.
 - **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
   Environments and their policy links are in the Power Platform admin
   API, not ARM: nebaz never calls it, and its hosts are on the guard's
@@ -462,7 +467,7 @@ each one backs are in the catalog table
   and `config/web`), Container Apps, Redis (caches, Managed Redis and cache
   firewall rules), PostgreSQL and MySQL (servers, and each one's firewall
   rules, parameters and Entra admins), Service Bus and Event Hubs (namespaces and their
-  network rule sets), Power Platform, Automation accounts, the subscription's
+  network rule sets), Power Platform, Automation accounts, Arc servers and Kubernetes clusters, the subscription's
   Access list, and the Graph directory reads (app registrations, service
   principals, principal names). A denied one leaves its checks "not
   checked". `nebaz audit` makes the same calls.

@@ -55,6 +55,15 @@ const PLANTED: &[(&str, &str)] = &[
     ("/automationAccounts/aa-platform-ops", "⚠ failed"),
     ("/automationAccounts/aa-platform-ops", "Failed or stopped"),
     ("/automationAccounts/aa-platform-ops", "Last seen"),
+    // compute: the Amsterdam SQL server's Defender extension failed and
+    // its ESU licence was never assigned; the file server has been
+    // disconnected for 52 days (expired); the edge cluster is offline.
+    ("/machines/srv-ams-sql-01", "⚠ Provisioning failed"),
+    ("/machines/srv-ams-sql-01", "⚠ NotAssigned"),
+    ("/machines/srv-ams-file-02", "⚠ Expired"),
+    ("/machines/srv-ams-file-02", "heartbeat"),
+    ("/connectedClusters/arck8s-ams-edge", "⚠ Offline"),
+    ("/connectedClusters/arck8s-ams-edge", "i/o timeout"),
     // compute: the legacy app's Windows image definition and its one
     // version are past end of life.
     ("/galleries/gal_contoso_prod", "end of life"),
@@ -91,6 +100,11 @@ fn planted(id: &str, line: &str) -> bool {
 const AUDIT_EXPECTED: &[&str] = &[
     // core: aa-platform-ops keeps local auth on.
     "automation-local-auth",
+    // compute: srv-ams-file-02 is expired and 17 agent releases behind;
+    // arck8s-ams-edge is offline.
+    "arc-machine-disconnected",
+    "arc-agent-behind",
+    "arc-cluster-offline",
     // core: github-actions-deploy holds User Access Administrator and
     // Contributor on the subscription.
     "sub-privileged-guest-or-sp",

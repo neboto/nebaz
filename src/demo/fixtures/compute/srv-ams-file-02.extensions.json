@@ -1,0 +1,31 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/machines/srv-ams-file-02/extensions/MicrosoftMonitoringAgent",
+      "name": "MicrosoftMonitoringAgent",
+      "type": "Microsoft.HybridCompute/machines/extensions",
+      "location": "westeurope",
+      "properties": {
+        "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+        "type": "MicrosoftMonitoringAgent",
+        "typeHandlerVersion": "1.0.18069.0",
+        "enableAutomaticUpgrade": false,
+        "autoUpgradeMinorVersion": true,
+        "provisioningState": "Succeeded",
+        "settings": {
+          "note": "never-shown"
+        },
+        "instanceView": {
+          "name": "MicrosoftMonitoringAgent",
+          "type": "MicrosoftMonitoringAgent",
+          "typeHandlerVersion": "1.0.18069.0",
+          "status": {
+            "code": "success",
+            "level": "Information",
+            "displayStatus": "Provisioning succeeded"
+          }
+        }
+      }
+    }
+  ]
+}

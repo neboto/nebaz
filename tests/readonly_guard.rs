@@ -75,6 +75,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "azurestaticapps.net",
     // Automation (#202): the account's job runtime and webhook endpoints.
     "azure-automation.net",
+    // Azure Arc (#199): the agents' identity and notification services.
+    "his.arc.azure.com",
+    "guestnotificationservice.azure.com",
     // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).
     "database.windows.net",
     // Container Registry: repositories, tags and manifests (the registry's
@@ -275,6 +278,10 @@ const AZ_FORBIDDEN: &[&str] = &[
     // the ARM side) and a DSC configuration's script (#202).
     "automation account list-keys",
     "automation configuration show-content",
+    // An Arc cluster's user credential (`listClusterUserCredential`, a
+    // POST) and a command run on an Arc server (#199).
+    "connectedk8s proxy",
+    "connectedmachine run-command",
     // Cosmos DB account keys, read-only keys and connection strings.
     "cosmosdb keys",
     // Container Apps secrets: `secret list --show-values` and `secret
@@ -806,6 +813,10 @@ const SECRET_READS: &[&str] = &[
     "/streams",
     "}/content",
     "}/output",
+    // Azure Arc (#199): a cluster's user credential and an Arc server's
+    // run commands (the commands' script and output).
+    "listclusterusercredential",
+    "/runcommands",
 ];
 
 #[test]
