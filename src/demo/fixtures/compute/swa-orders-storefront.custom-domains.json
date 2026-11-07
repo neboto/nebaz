@@ -1,0 +1,25 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront/customDomains/shop.contoso.example",
+      "name": "shop.contoso.example",
+      "type": "Microsoft.Web/staticSites/customDomains",
+      "properties": {
+        "domainName": "shop.contoso.example",
+        "createdOn": "{{iso:now-212d}}",
+        "status": "Ready"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront/customDomains/beta.shop.contoso.example",
+      "name": "beta.shop.contoso.example",
+      "type": "Microsoft.Web/staticSites/customDomains",
+      "properties": {
+        "domainName": "beta.shop.contoso.example",
+        "createdOn": "{{iso:now-3d}}",
+        "status": "Failed",
+        "errorMessage": "CNAME record for beta.shop.contoso.example not found"
+      }
+    }
+  ]
+}

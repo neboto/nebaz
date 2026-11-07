@@ -52,6 +52,7 @@ mod export_test;
 mod advisor_test;
 mod alerts_test;
 mod container_instances_test;
+mod static_web_apps_test;
 mod defender_test;
 mod governance_test;
 mod help_filter_test;

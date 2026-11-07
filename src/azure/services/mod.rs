@@ -48,6 +48,7 @@ pub mod redis;
 pub mod scale_sets;
 pub mod sql;
 pub mod sql_managed;
+pub mod static_web_apps;
 pub mod storage;
 pub mod subscriptions;
 pub mod traffic_manager;

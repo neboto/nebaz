@@ -274,6 +274,14 @@ pub struct LazyStore {
     /// id (#196).
     pub search_shared_links: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Static Web Apps (#200) ───────────────────────────────────────────
+    /// `GET {site}/builds` (the environments), keyed by site id.
+    pub swa_builds: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {site}/customDomains`, keyed by site id.
+    pub swa_domains: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {site}/linkedBackends`, keyed by site id.
+    pub swa_backends: LazyMap<Vec<serde_json::Value>>,
+
     // ── Container Apps ───────────────────────────────────────────────────
     /// `GET {app}/revisions`, keyed by app id. The template (env) is
     /// never rendered.

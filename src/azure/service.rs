@@ -231,6 +231,8 @@ pub enum JumpView {
     /// The same sites list, function and logic apps only.
     FunctionApps,
     AppServicePlans,
+    /// `Microsoft.Web/staticSites` (#200).
+    StaticSites,
     // SQL
     SqlServers,
     /// `Microsoft.Sql/managedInstances` (#195).
@@ -347,7 +349,7 @@ impl JumpView {
             Identities | ServicePrincipals | AppRegistrations => ServiceType::Identity,
             Clusters | NodePools => ServiceType::Aks,
             Registries => ServiceType::ContainerRegistry,
-            WebApps | FunctionApps | AppServicePlans => ServiceType::AppService,
+            WebApps | FunctionApps | AppServicePlans | StaticSites => ServiceType::AppService,
             SqlServers | ManagedInstances | InstancePools => ServiceType::Sql,
             CosmosAccounts => ServiceType::Cosmos,
             PostgresServers | MysqlServers => ServiceType::PostgresMysql,
@@ -427,6 +429,7 @@ impl JumpView {
             WebApps => "apps",
             FunctionApps => "function-apps",
             AppServicePlans => "plans",
+            StaticSites => "static-sites",
             SqlServers => "sql-servers",
             ManagedInstances => "managed-instances",
             InstancePools => "instance-pools",
@@ -534,6 +537,7 @@ impl JumpView {
             WebApps => "Apps",
             FunctionApps => "Functions",
             AppServicePlans => "Plans",
+            StaticSites => "Static sites",
             SqlServers => "Servers",
             ManagedInstances => "Managed instances",
             InstancePools => "Instance pools",
@@ -649,6 +653,7 @@ impl JumpView {
             // A site's id does not say its kind; Apps lists every site.
             ("microsoft.web", ["sites"]) => JumpView::WebApps,
             ("microsoft.web", ["serverfarms"]) => JumpView::AppServicePlans,
+            ("microsoft.web", ["staticsites"]) => JumpView::StaticSites,
             ("microsoft.sql", ["servers"]) => JumpView::SqlServers,
             ("microsoft.sql", ["managedinstances"]) => JumpView::ManagedInstances,
             ("microsoft.sql", ["instancepools"]) => JumpView::InstancePools,
@@ -934,7 +939,7 @@ impl ServiceType {
             ServiceType::Identity => "Managed identities, service principals & app registrations",
             ServiceType::Aks => "Kubernetes Clusters & Node Pools",
             ServiceType::ContainerRegistry => "Container registries",
-            ServiceType::AppService => "Web & function apps, plans",
+            ServiceType::AppService => "Web & function apps, plans, static web apps",
             ServiceType::Sql => "SQL servers, managed instances & pools",
             ServiceType::Cosmos => "Cosmos DB accounts",
             ServiceType::PostgresMysql => "PostgreSQL & MySQL flexible servers",
@@ -989,7 +994,7 @@ impl ServiceType {
             ServiceType::Identity => &[Identities, ServicePrincipals, AppRegistrations],
             ServiceType::Aks => &[Clusters, NodePools],
             ServiceType::ContainerRegistry => &[Registries],
-            ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans],
+            ServiceType::AppService => &[WebApps, FunctionApps, AppServicePlans, StaticSites],
             ServiceType::Sql => &[SqlServers, ManagedInstances, InstancePools],
             ServiceType::Cosmos => &[CosmosAccounts],
             ServiceType::PostgresMysql => &[PostgresServers, MysqlServers],
@@ -1179,6 +1184,9 @@ impl ServiceType {
             "plan" | "plans" | "asp" | "serverfarm" | "serverfarms" => {
                 (ServiceType::AppService, Some(JumpView::AppServicePlans))
             }
+            "swa" | "staticwebapp" | "staticwebapps" | "staticsite" | "staticsites" => {
+                (ServiceType::AppService, Some(JumpView::StaticSites))
+            }
             "foundry" | "aifoundry" | "aiservices" | "openai" | "aoai" | "cognitive" | "cognitiveservices" | "cog" => {
                 (ServiceType::Foundry, None)
             }
@@ -1286,7 +1294,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1495,8 +1503,12 @@ mod tests {
         // An instance database is a child: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/managedInstances/sqlmi-prod/databases/orders")), None);
         assert_eq!(ServiceType::from_prefix("@sqlmi"), Some((ServiceType::Sql, Some(JumpView::ManagedInstances))));
-        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/staticSites/docs")), None);
-        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Web/staticSites/docs")), Some(JumpView::AllResources));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/staticSites/docs")), Some(JumpView::StaticSites));
+        assert_eq!(ServiceType::from_prefix("@swa"), Some((ServiceType::AppService, Some(JumpView::StaticSites))));
+        // An environment is a child: in no list of its own.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Web/staticSites/docs/builds/12")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Automation/automationAccounts/aa")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Automation/automationAccounts/aa")), Some(JumpView::AllResources));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.KeyVault/vaults/kv/secrets/db")), None);
         assert_eq!(

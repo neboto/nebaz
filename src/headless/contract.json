@@ -230,7 +230,8 @@
     "app": [
       "apps (app)",
       "function-apps (func)",
-      "plans (plan)"
+      "plans (plan)",
+      "static-sites (swa)"
     ],
     "audit": [
       "audit (audit)"
@@ -1137,6 +1138,17 @@
       "OAuth2 grants",
       "Owners",
       "Azure roles",
+      "Related",
+      "Tags"
+    ],
+    "Static web app": [
+      "Overview",
+      "Configuration",
+      "Environments",
+      "Custom domains",
+      "Backends",
+      "Access",
+      "Activity",
       "Related",
       "Tags"
     ],

@@ -111,6 +111,11 @@ run app-service-func ok func '[]' \
   "2 Functions" \
   "cannot reach 127.0.0.1"
 
+# Static Web Apps is the App Service tab's fourth sub-tab.
+run swa ok swa '[]' \
+  "4 Static sites" \
+  "cannot reach 127.0.0.1"
+
 # The SQL tab loads and lists servers through ARM.
 run sql-tab ok sql '[]' \
   "SQL servers, managed instances & pools" \

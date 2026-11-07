@@ -336,6 +336,12 @@ each one backs are in the catalog table
   settings, connection strings, publishing credentials and function keys
   are all `POST` actions nebaz never sends; the guard names the `az`
   commands that would print them.
+  Static Web Apps (the tab's Static sites, #200):
+  `Microsoft.Web/staticSites/read`; the lazy Environments, Custom domains
+  and Backends sections: `Microsoft.Web/staticSites/builds/read`,
+  `Microsoft.Web/staticSites/customDomains/read`,
+  `Microsoft.Web/staticSites/linkedBackends/read`. The deployment token
+  and app settings are `POST`s nebaz never sends.
 - **SQL**: `Microsoft.Sql/servers/read`; the lazy Databases and
   Firewall sections: `Microsoft.Sql/servers/databases/read`,
   `Microsoft.Sql/servers/firewallRules/read`. Metadata only: nebaz never

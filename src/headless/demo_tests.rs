@@ -47,6 +47,9 @@ const PLANTED: &[(&str, &str)] = &[
     // run exited 1).
     ("/containerGroups/ci-agents-prod", "⚠ waiting"),
     ("/containerGroups/ci-agents-prod", "⚠ terminated"),
+    // compute: the storefront's beta domain never validated (no CNAME).
+    ("/staticSites/swa-orders-storefront", "⚠ failed"),
+    ("/staticSites/swa-orders-storefront", "⚠ CNAME"),
     // compute: the legacy app's Windows image definition and its one
     // version are past end of life.
     ("/galleries/gal_contoso_prod", "end of life"),

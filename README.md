@@ -194,7 +194,7 @@ all).
 | `id` | Identity | Managed identities, Service principals (`sp`), App registrations (`appreg`) |
 | `aks` | AKS | Clusters, Node pools (`pool`) |
 | `acr` | Container Registry | Registries (replications, webhooks) |
-| `app` | App Service | Apps, Function apps (`func`), Plans (`plan`) |
+| `app` | App Service | Apps, Function apps (`func`), Plans (`plan`), Static sites (`swa`: Static Web Apps, environments, custom domains, linked backends) |
 | `sql` | SQL | Servers (databases, firewall rules), Managed instances (`sqlmi`: databases, failover group), Instance pools (`sqlpool`) |
 | `cosmos` | Cosmos DB | Accounts (databases on whichever API) |
 | `pg` | PostgreSQL & MySQL | PostgreSQL flexible servers, MySQL (`mysql`) |

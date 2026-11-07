@@ -71,6 +71,8 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "azurecontainer.io",
     // App Service: the apps themselves and their Kudu (SCM) sites.
     "azurewebsites.net",
+    // Static Web Apps (#200): the sites and their preview environments.
+    "azurestaticapps.net",
     // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).
     "database.windows.net",
     // Container Registry: repositories, tags and manifests (the registry's
@@ -263,6 +265,10 @@ const AZ_FORBIDDEN: &[&str] = &[
     "functionapp keys",
     "functionapp function keys",
     "logicapp config appsettings",
+    // A static web app's deployment token (`secrets list`, the ARM side
+    // is the `listSecrets` POST) and its app settings (#200).
+    "staticwebapp secrets",
+    "staticwebapp appsettings",
     // Cosmos DB account keys, read-only keys and connection strings.
     "cosmosdb keys",
     // Container Apps secrets: `secret list --show-values` and `secret
