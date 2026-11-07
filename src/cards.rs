@@ -43,9 +43,37 @@ pub static CARDS: &[Card] = &[
     Card { views: &[JumpView::DdosPlans], source: include_str!("../docs/cards/ddos-plans.md") },
     Card { views: &[JumpView::PrivateDnsZones], source: include_str!("../docs/cards/private-dns-zones.md") },
     Card { views: &[JumpView::DnsZones], source: include_str!("../docs/cards/dns-zones.md") },
-    Card { views: &[JumpView::DnsResolvers, JumpView::DnsForwardingRulesets], source: include_str!("../docs/cards/dns-resolvers.md") },
+    Card {
+        views: &[JumpView::DnsResolvers, JumpView::DnsForwardingRulesets],
+        source: include_str!("../docs/cards/dns-resolvers.md"),
+    },
     Card { views: &[JumpView::DnsResolverPolicies], source: include_str!("../docs/cards/dns-security-policies.md") },
     Card { views: &[JumpView::TrafficManagerProfiles], source: include_str!("../docs/cards/traffic-manager.md") },
+    Card { views: &[JumpView::AppGateways], source: include_str!("../docs/cards/app-gateways.md") },
+    Card { views: &[JumpView::FrontDoorProfiles], source: include_str!("../docs/cards/front-door.md") },
+    Card { views: &[JumpView::WafPolicies], source: include_str!("../docs/cards/waf-policies.md") },
+    Card { views: &[JumpView::PrivateLinkServices], source: include_str!("../docs/cards/private-link-services.md") },
+    Card { views: &[JumpView::ExpressRouteCircuits], source: include_str!("../docs/cards/expressroute-circuits.md") },
+    Card {
+        views: &[JumpView::VnetGateways, JumpView::GatewayConnections, JumpView::LocalGateways],
+        source: include_str!("../docs/cards/vnet-gateways.md"),
+    },
+    Card {
+        views: &[JumpView::VirtualWans, JumpView::VirtualHubs],
+        source: include_str!("../docs/cards/virtual-wan.md"),
+    },
+    Card {
+        views: &[JumpView::VwanVpnGateways, JumpView::VwanErGateways, JumpView::P2sGateways, JumpView::VpnSites],
+        source: include_str!("../docs/cards/vwan-gateways.md"),
+    },
+    Card {
+        views: &[JumpView::AzureFirewalls, JumpView::FirewallPolicies, JumpView::IpGroups],
+        source: include_str!("../docs/cards/azure-firewall.md"),
+    },
+    Card {
+        views: &[JumpView::CloudNgfws, JumpView::NgfwRulestacks],
+        source: include_str!("../docs/cards/cloud-ngfw.md"),
+    },
 ];
 
 /// The card for a sub-tab, if one is written.
