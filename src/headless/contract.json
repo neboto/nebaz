@@ -284,7 +284,8 @@
       "policy-exemptions (exempt)",
       "policy-definitions (pdef)",
       "resource-locks (lock)",
-      "management-groups (mg)"
+      "management-groups (mg)",
+      "budgets (budget)"
     ],
     "id": [
       "identities (id)",
@@ -336,7 +337,9 @@
       "vms (vm)",
       "disks (disk)",
       "nics (nic)",
-      "scale-sets (vmss)"
+      "scale-sets (vmss)",
+      "asgs (asg)",
+      "galleries (gallery)"
     ],
     "vnet": [
       "vnets (vnet)",
@@ -459,6 +462,15 @@
       "Related",
       "Tags"
     ],
+    "Application Security Group": [
+      "Overview",
+      "Members",
+      "Rules",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Application gateway": [
       "Overview",
       "Frontends",
@@ -501,6 +513,14 @@
       "Related",
       "Tags"
     ],
+    "Budget": [
+      "Overview",
+      "Budget",
+      "Notifications",
+      "Filter",
+      "Activity",
+      "Related"
+    ],
     "Cloud NGFW": [
       "Overview",
       "Network",
@@ -519,6 +539,15 @@
       "Objects",
       "Security services",
       "Firewalls",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Compute Gallery": [
+      "Overview",
+      "Images",
+      "Sharing",
       "Access",
       "Activity",
       "Related",

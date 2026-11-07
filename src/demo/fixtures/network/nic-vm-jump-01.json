@@ -30,7 +30,12 @@
           "privateIPAddressVersion": "IPv4",
           "publicIPAddress": {
             "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/publicIPAddresses/pip-vm-jump-01"
-          }
+          },
+          "applicationSecurityGroups": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/applicationSecurityGroups/asg-jump"
+            }
+          ]
         }
       }
     ],

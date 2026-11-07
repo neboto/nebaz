@@ -25,6 +25,7 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/networkInterfaces", "nics.json"),
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/bastionHosts", "bastion-hosts.json"),
     fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/ddosProtectionPlans", "ddos-plans.json"),
+    fx!("network", "/subscriptions/{{prod}}/providers/Microsoft.Network/applicationSecurityGroups", "application-security-groups.json"),
     // contoso-dev
     fx!("network", "/subscriptions/{{dev}}/providers/Microsoft.Network/virtualNetworks", "dev-vnets.json"),
     fx!("network", "/subscriptions/{{dev}}/providers/Microsoft.Network/networkSecurityGroups", "dev-nsgs.json"),
@@ -189,6 +190,12 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/loadBalancers/lb-pls-orders", "lb-pls-orders.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/bastionHosts/bas-hub-prod", "bas-hub-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/ddosProtectionPlans/ddos-contoso", "ddos-contoso.json"),
+    fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/applicationSecurityGroups/asg-jump", "asg-jump.json"),
+    fx!(
+        "network",
+        "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/applicationSecurityGroups/asg-legacy-app",
+        "asg-legacy-app.json"
+    ),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/routeTables/rt-spoke-egress", "rt-spoke-egress.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/natGateways/ng-prod", "ng-prod.json"),
     fx!("network", "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/privateEndpoints/pe-kv-orders", "pe-kv-orders.json"),

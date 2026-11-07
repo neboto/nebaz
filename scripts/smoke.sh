@@ -196,7 +196,7 @@ run firewall-ngfw ok ngfw '[]' \
 
 # VM scale sets load through a routing prefix (the VMs tab's fourth chip).
 run vm-scale-sets ok vmss '[]' \
-  "Virtual Machines, Disks, NICs & Scale Sets" \
+  "VMs, disks, NICs, scale sets, ASGs & galleries" \
   "4 Scale sets" \
   "cannot reach 127.0.0.1"
 

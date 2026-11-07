@@ -23,6 +23,7 @@
 //! Activity and Related; and no region (an assignment's `location` is
 //! where its identity lives), so they pass every `R` filter.
 
+use crate::azure::services::budgets::{BudgetRow, BUDGETS_API_VERSION, BUDGETS_PATH};
 use crate::azure::resource::{extension_scope, name_of_id, scope_related, shell_quote, state_ladder, Resource, ResourceState};
 use crate::azure::service::{AzureService, JumpView, ServiceType};
 use crate::azure::services::directory::{now_unix, Expiry};
@@ -127,6 +128,7 @@ pub fn is_governance_id(id: &str) -> bool {
                 | JumpView::PolicyDefinitions
                 | JumpView::ResourceLocks
                 | JumpView::ManagementGroups
+                | JumpView::Budgets
         )
     )
 }
@@ -1171,6 +1173,7 @@ impl GovernanceService {
             JumpView::PolicyDefinitions => Self::boxed(page.iter().filter_map(|v| PolicyDefinitionRow::from_json(v, tenant)).collect()),
             JumpView::ResourceLocks => Self::boxed(page.iter().filter_map(|v| LockRow::from_json(v, tenant)).collect()),
             JumpView::ManagementGroups => Self::boxed(page.iter().filter_map(|v| ManagementGroupRow::from_json(v, tenant)).collect()),
+            JumpView::Budgets => Self::boxed(page.iter().filter_map(|v| BudgetRow::from_json(v, tenant)).collect()),
             _ => Self::boxed(page.iter().filter_map(|v| PolicyAssignmentRow::from_json(v, tenant)).collect()),
         }
     }
@@ -1185,6 +1188,7 @@ impl GovernanceService {
                 (SET_DEFINITIONS_PATH, POLICY_API_VERSION, &[CUSTOM], "Listing custom initiatives…"),
             ],
             JumpView::ResourceLocks => &[(LOCKS_PATH, LOCKS_API_VERSION, &[], "Listing resource locks…")],
+            JumpView::Budgets => &[(BUDGETS_PATH, BUDGETS_API_VERSION, &[], "Listing budgets…")],
             JumpView::ManagementGroups => {
                 &[(MANAGEMENT_GROUPS_PATH, MANAGEMENT_GROUPS_API_VERSION, &[], "Listing management groups…")]
             }
@@ -1208,6 +1212,8 @@ impl GovernanceService {
             EXEMPTIONS_API_VERSION
         } else if lower.contains("/locks/") {
             LOCKS_API_VERSION
+        } else if lower.contains("/microsoft.consumption/budgets/") {
+            BUDGETS_API_VERSION
         } else if JumpView::for_arm_id(id) == Some(JumpView::ManagementGroups) {
             MANAGEMENT_GROUPS_API_VERSION
         } else {

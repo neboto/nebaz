@@ -1,0 +1,17 @@
+{
+  "name": "asg-legacy-app",
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/applicationSecurityGroups/asg-legacy-app",
+  "etag": "W/\"5e2a9c41-7b3d-4f18-a6c0-1d9e8b7f2a14\"",
+  "type": "Microsoft.Network/applicationSecurityGroups",
+  "location": "westeurope",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform-team@contoso.com",
+    "costCenter": "CC-1010"
+  },
+  "properties": {
+    "resourceGuid": "8a2f6d4c-1b3e-4c7a-9e5d-2f4a6c8e0b31",
+    "provisioningState": "Succeeded"
+  }
+}

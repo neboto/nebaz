@@ -335,6 +335,14 @@ async fn h_and_l_step_sub_tabs_from_either_pane() {
     assert_eq!(h.app.current_view, JumpView::ScaleSets);
     h.land(vec![scale_set("vmss-1", "westeurope")]).await;
     assert!(h.app.details_focused);
+    h.press(KeyCode::Char('L')).await;
+    assert_eq!(h.app.current_view, JumpView::ApplicationSecurityGroups);
+    h.land(vec![all_mocks().into_iter().find(|m| m.label == "AsgRow").unwrap().resource]).await;
+    assert!(h.app.details_focused);
+    h.press(KeyCode::Char('L')).await;
+    assert_eq!(h.app.current_view, JumpView::Galleries);
+    h.land(vec![all_mocks().into_iter().find(|m| m.label == "GalleryRow").unwrap().resource]).await;
+    assert!(h.app.details_focused);
 
     // Wrapping round to the first tab.
     h.press(KeyCode::Char('L')).await;

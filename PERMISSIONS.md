@@ -102,7 +102,11 @@ each one backs are in the catalog table
   `Microsoft.Compute/virtualMachineScaleSets/read`, and the lazy Instances
   section `Microsoft.Compute/virtualMachineScaleSets/virtualMachines/read`
   (a Uniform set's instances; a Flexible set's are VMs, the VM list's
-  action above).
+  action above); ASGs: `Microsoft.Network/applicationSecurityGroups/read`
+  (Members and Rules read the NICs and NSGs lists, the actions above and
+  under Network); Galleries: `Microsoft.Compute/galleries/read`, and the
+  lazy Images section `Microsoft.Compute/galleries/images/read`,
+  `Microsoft.Compute/galleries/images/versions/read`.
 - **Storage**: `Microsoft.Storage/storageAccounts/read`; the lazy
   Containers section: `Microsoft.Storage/storageAccounts/blobServices/containers/read`
   (container metadata through ARM, never a blob).
@@ -114,7 +118,10 @@ each one backs are in the catalog table
   built-in definition is read by id at the tenant root, which anyone
   signed in may read), `Microsoft.Authorization/locks/read`,
   `Microsoft.Management/managementGroups/read` (only the groups where the
-  role is assigned at a group; none is not an error). All in
+  role is assigned at a group; none is not an error),
+  `Microsoft.Consumption/budgets/read` (Budgets; whether `Reader` also
+  sees each budget's current spend and forecast is to be checked live,
+  else Cost Management Reader). All in
   `Reader` at subscription scope. Never sent: Policy Insights'
   `queryResults` and `summarize` (compliance; `POST`s).
 - **Defender** (ADR 0010): `Microsoft.Security/assessments/read`,

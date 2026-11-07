@@ -1,0 +1,44 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/win2019-legacy-app/versions/2023.11.0",
+      "name": "2023.11.0",
+      "type": "Microsoft.Compute/galleries/images/versions",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1010"
+      },
+      "properties": {
+        "publishingProfile": {
+          "targetRegions": [
+            {
+              "name": "West Europe",
+              "regionalReplicaCount": 1,
+              "storageAccountType": "Standard_ZRS",
+              "excludeFromLatest": false
+            }
+          ],
+          "replicaCount": 1,
+          "excludeFromLatest": false,
+          "publishedDate": "{{iso:now-700d}}",
+          "endOfLifeDate": "{{iso:now-30d}}",
+          "storageAccountType": "Standard_ZRS"
+        },
+        "storageProfile": {
+          "osDiskImage": {
+            "sizeInGB": 30,
+            "hostCaching": "ReadWrite"
+          }
+        },
+        "safetyProfile": {
+          "allowDeletionOfReplicatedLocations": false,
+          "reportedForPolicyViolation": false
+        },
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

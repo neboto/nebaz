@@ -108,6 +108,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
 | `srch-contoso-prod`'s shared private link to `cosmos-legacy` waits for approval | Foundry › Search services |
 | `ci-agents-prod`'s build agent crash-loops (14 restarts, last exit 1) and pulls from `acrcontosoprod` with the registry's admin user | Container Apps › Container groups |
+| `gal_contoso_prod`'s `win2019-legacy-app` image definition and its version 2023.11.0 are past end of life | Virtual Machines › Galleries |
 | `sqlmi-legacy-prod`'s public data endpoint is enabled (port 3342; `nsg-sqlmi` admits only the office), and the instance has no failover group | SQL › Managed instances |
 | `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
 | `vst-branch-cork`'s only link, `link-vodafone`, is `NotConnected` to the hub's VPN gateway (Dublin's is up): the gateway's list line says `⚠ 1 down` | Virtual WAN |
@@ -132,6 +133,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | Policy from the management groups `contoso` (Microsoft cloud security benchmark), `contoso-landingzones` (deny public IPs on NICs) and `contoso-corp` (deploy private DNS records, a custom initiative with an identity); `Allowed locations` on the subscription set to `DoNotEnforce` for the DR build 62 days ago and never set back | Governance · Assignments, `@audit` (low) |
 | `jump-box-public-ip` exempts `nic-vm-jump-01` from the NIC public-IP deny until 6 days from now (made by alex 3 days ago, with the SSH rule); `legacy-mcsb` on `rg-legacy-prod` expired 20 days ago | Governance · Exemptions, `@audit` (low · info) |
 | `CanNotDelete` locks on `rg-network-prod` and `kv-orders-prod` | Governance · Locks |
+| Budget `contoso-prod-monthly` (20,000 EUR): 82% spent, forecast 107%; its 80% actual and 100% forecast notifications have both crossed. `orders-team-monthly` (6,000 EUR, tag `team: orders` in `rg-orders-prod`) is within | Governance · Budgets |
 | The hierarchy: Tenant Root Group → `contoso` → `contoso-platform`, `contoso-landingzones` → `contoso-corp` (contoso-prod), `contoso-sandbox` (contoso-dev) | Governance · Management groups |
 | Defender: an active High alert, a failed SSH brute force on `vm-jump-01` from 185.220.101.4 two days ago (the same open port `@audit` flags); a resolved suspicious-IP access on `stcontosoordersprod`. Six unhealthy recommendations (management ports on `vm-jump-01`, MFA for owners, storage public access, `kv-legacy-prod`'s deletion protection, `aks-platform-prod`'s Kubernetes version, the ACR admin user), two healthy and one not applicable (hidden until `a`). Secure score 31% (11 of 36). Plans: Servers P2, Storage and SQL on, the rest Free, three retired | Defender, every sub-tab |
 | Advisor: `vm-jump-01` and `vm-nva-01` oversized (1,260 and 2,940 EUR a year, one recommendation type, so each lists the other under Resources), `disk-legacy-data-01` unattached, `cae-orders-prod` without zone redundancy, `sql-orders-prod` without a failover group, no Service Health alert on the subscription, `redis-orders-cache` under load; two Security ones relaying Defender's (hidden until `a`). Score 64% overall. `vm-legacy-app-01`'s recommendation snoozed for 30 days, `afw-hub-prod`'s dismissed | Advisor, every sub-tab |
@@ -232,7 +234,8 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
   - `GatewaySubnet` 10.10.255.0/27: `vgw-er-hub-prod` and `vgw-vpn-hub-prod`
   - `snet-pls` 10.10.15.0/24, Private Link service network policies off: `lb-pls-orders`'s frontend `fe-pls` 10.10.15.4 and `pls-orders-partner`'s NAT IP 10.10.15.10
 - `vnet-pp-dr` (northeurope) 10.20.0.0/16, peered with `vnet-hub-prod`, subnet `snet-pp-injection-dr` 10.20.4.0/24 delegated `Microsoft.PowerPlatform/enterprisePolicies`, **no NSG**
-- NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`, "temp vendor access"; `AllowRdpFromOnPrem` 110 from 192.168.0.0/16), `nsg-appgw-prod` (GatewayManager 65200–65535, 443 from `AzureFrontDoor.Backend`)
+- NSGs: `nsg-aca` (inbound 443 from 10.10.4.0/24, 10.20.4.0/24 and 10.10.6.0/24), `nsg-pp-injection` (outbound `DenyAllOutbound` 4000, added 2h10m ago), `nsg-jump-prod` (inbound `AllowSSHInbound` 100 from `*`, "temp vendor access"; `AllowRdpFromOnPrem` 110 from 192.168.0.0/16; `AllowRdpJumpToLegacy` 120, RDP from ASG `asg-jump` to ASG `asg-legacy-app`), `nsg-appgw-prod` (GatewayManager 65200–65535, 443 from `AzureFrontDoor.Backend`)
+- Application security groups (the VMs tab's ASGs): `asg-jump` (`nic-vm-jump-01`) and `asg-legacy-app` (`nic-vm-legacy-app-01`), the two sides of `nsg-jump-prod`'s rule 120
 - Public IPs: `pip-agw-prod` (20.103.45.10, DNS label `agw-contoso-prod` → `agw-contoso-prod.westeurope.cloudapp.azure.com`), `pip-ng-prod` (20.103.45.11), `pip-vm-jump-01` (20.103.45.12), `pip-afw-prod` (20.103.45.17, `afw-hub-prod`), `pip-ngfw-prod` (20.103.45.18, `ngfw-hub-prod`'s public and egress NAT IP), `pip-bas-hub-prod` (20.103.45.16), the gateways' (20.103.45.13–15, below), `pip-vm-legacy-batch-01` (20.103.45.19, static, attached to nothing)
 - `ng-prod` (NAT gateway), `rt-spoke-egress` (`default-to-firewall` 0.0.0.0/0 → 10.10.11.4, the Cloud NGFW's trust IP, which resolves to `ngfw-hub-prod` once `@ngfw` is loaded, `onprem-via-nva` 192.168.0.0/16 → 10.10.13.10), `lb-legacy-internal` (internal LB in front of `vm-legacy-app-01`: pool `be-legacy-app`, rule `lbr-https` 443), `lb-nva-internal` (internal LB in front of `vm-nva-01`: pool `be-nva`, HA ports)
 - `ddos-contoso` (DDoS protection plan covering `vnet-hub-prod`)
@@ -267,6 +270,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 **`rg-platform-prod`** (team platform)
 - `acrcontosoprod` (Premium, admin user on, public network disabled, behind `pe-acr-prod`; replicated to `northeurope`; webhook `ordersapipush` on `orders-api:*` pushes)
 - `aks-platform-prod`: 1.28.9, Free tier, Azure CNI overlay (managed VNet, no subnet of ours), Entra integration with `Contoso Platform Admins` as admins, monitoring to `law-contoso-prod`, node resource group `MC_rg-platform-prod_aks-platform-prod_westeurope`; node pools `system` (3 × Standard_D4s_v5, Succeeded) and `batch` (autoscale 0 → 4 × Standard_D8s_v5, Failed)
+- Compute Gallery `gal_contoso_prod`: `ubuntu-2404-batch` (versions 1.3.0 and 1.4.0, two regions; `vmss-batch-flex` is built from 1.4.0) and `win2019-legacy-app`, whose definition and only version passed **end of life** 30 days ago
 - Container group `ci-agents-prod` (Container Instances, Linux, restart `Always`, no IP): build `agent` (2 CPU, 4 GB) **crash-looping**, 14 restarts, last exit 1, and a `docker-cache` registry mirror (running, port 5000); both pull from `acrcontosoprod` with its admin user; logs to `law-contoso-prod`
 - `agw-contoso-prod` (WAF_v2, in `snet-appgw`, `pip-agw-prod`): listener `api.contoso-demo.com` → backend pool `orders-api` → `ca-orders-api`'s FQDN `ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (the app's `ingress.fqdn` must be exactly this for the backend to match); WAF policy `wafp-agw-prod` in **Detection**
 - Traffic Manager `tm-contoso-api` (global, Priority, `contoso-api.trafficmanager.net`, HTTPS probe on `/healthz`): `agw-westeurope` (Azure endpoint → `pip-agw-prod`, priority 1, Online) and `dr-onprem` (external `api-dr.contoso-demo.com`, priority 2, **Degraded**)
@@ -312,8 +316,8 @@ Graph (`directoryObjects`) is `identity`'s.
 
 | Area | Services |
 |---|---|
-| `core` | Subscriptions (subscription details, locations, resource groups, All resources), the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
-| `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Virtual WAN, Firewall |
-| `compute` | VMs, disks, AKS, Container Registry, App Service, Container Apps, Container Instances |
+| `core` | Subscriptions (subscription details, locations, resource groups, All resources), budgets, the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
+| `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, ASGs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Virtual WAN, Firewall |
+| `compute` | VMs, disks, Compute Gallery, AKS, Container Registry, App Service, Container Apps, Container Instances |
 | `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, Backup |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry, AI Search |

@@ -207,10 +207,7 @@
               "diskSizeGB": 64
             },
             "imageReference": {
-              "publisher": "Canonical",
-              "offer": "ubuntu-24_04-lts",
-              "sku": "server",
-              "version": "latest"
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/ubuntu-2404-batch/versions/1.4.0"
             },
             "diskControllerType": "SCSI"
           },

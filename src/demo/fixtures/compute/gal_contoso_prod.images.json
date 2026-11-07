@@ -1,0 +1,59 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/ubuntu-2404-batch",
+      "name": "ubuntu-2404-batch",
+      "type": "Microsoft.Compute/galleries/images",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1010"
+      },
+      "properties": {
+        "osType": "Linux",
+        "osState": "Generalized",
+        "hyperVGeneration": "V2",
+        "architecture": "x64",
+        "features": [
+          {
+            "name": "SecurityType",
+            "value": "TrustedLaunch"
+          }
+        ],
+        "identifier": {
+          "publisher": "contoso",
+          "offer": "ubuntu-batch",
+          "sku": "24_04"
+        },
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/galleries/gal_contoso_prod/images/win2019-legacy-app",
+      "name": "win2019-legacy-app",
+      "type": "Microsoft.Compute/galleries/images",
+      "location": "westeurope",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform-team@contoso.com",
+        "costCenter": "CC-1010"
+      },
+      "properties": {
+        "osType": "Windows",
+        "osState": "Generalized",
+        "hyperVGeneration": "V1",
+        "architecture": "x64",
+        "identifier": {
+          "publisher": "contoso",
+          "offer": "windows-legacy",
+          "sku": "2019-app"
+        },
+        "provisioningState": "Succeeded",
+        "endOfLifeDate": "{{iso:now-30d}}"
+      }
+    }
+  ]
+}

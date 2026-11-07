@@ -926,6 +926,48 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     that returns the workload's output; the guard names the path), `exec`
     and `attach` (POSTs). The group's FQDN is text; the guard names the
     host.
+40. **Application security groups are a Virtual Machines sub-tab** (#203,
+    `src/azure/services/network_asg.rs`, glue `src/app/network_asg.rs`):
+    one subscription-wide list of `Microsoft.Network/applicationSecurityGroups`
+    (`@asg`). They are a Network type, but Network is at the digit-key
+    ceiling (rule 26), and an ASG is a set of NICs, which are a VMs
+    sub-tab. An ASG body is only a name; its sections are joins over
+    lists, never a call per group: **Members** (the NICs whose IP
+    configurations name it) and **Rules** (the NSG rules that use it as a
+    source or a destination, under their NSG). Each reads the current
+    subscription's list (the cache, else loaded for the section through
+    the tab's own call, `section_lists`); Related fires both and names
+    each member NIC and each NSG. A NIC's IP configurations and Related,
+    and an NSG's Related, name the ASGs; the network lens adds a note
+    (jumping to the ASG) for each ASG a NIC is in, since a rule naming
+    `asg:x` applies to it only then.
+41. **Compute Gallery is a Virtual Machines sub-tab** (#203,
+    `src/azure/services/gallery.rs`, glue `src/app/gallery.rs`): one
+    subscription-wide list of `Microsoft.Compute/galleries` (`@gallery`).
+    Image definitions and their versions are per-gallery lists, so they
+    are one lazy section, **Images**: `{gallery}/images`, then
+    `{image}/versions` for the first 25 definitions, in one read (a failed
+    versions list stays on its image; past 25 the section says how many
+    were not expanded). Versions render newest first with their regions
+    and replica counts; a definition or version past its end-of-life date
+    is ⚠, as is a version reported for a policy violation. Sharing
+    `Community` is ⚠ (every Azure user can use the images). A VM's or
+    scale set's `imageReference.id` under a gallery is a Related line to
+    the gallery (the definition is a child, in no list); a managed image
+    lands in All resources. The gallery's Related names the warm VMs and
+    scale sets built from it (never a call). Replication status needs
+    `$expand=ReplicationStatus` on a per-version GET and is left out.
+42. **Budgets are a Governance sub-tab** (#203,
+    `src/azure/services/budgets.rs`): the subscription's
+    `Microsoft.Consumption/budgets` (`@budget`), one list whose bodies
+    carry the current spend and the forecast, so nothing else is read. A
+    budget is a governance row (no Access section; `location`-less, it
+    passes every `R` filter). The list writes ids without the leading
+    slash; the row adds it. The state is spend and forecast against the
+    amount (a budget has no lifecycle word of its own); a notification is
+    ⚠ crossed when the spend (actual) or forecast (forecasted) it watches
+    is past its threshold. **Never**: actual cost and usage (the Cost
+    Management query API is a `POST`).
 
 ## The catalog
 
@@ -940,10 +982,12 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Changes · All / Activity / Deployments / Health (rule 24) | — (an event: Overview is its named fields, then Related; no Access, Activity or Tags) | `failed` on a failed operation or deployment, an unavailable or degraded transition; else none; noise per rule 22 | what it happened to; a deployment's group and what it deployed; an alert's rule | `az monitor activity-log list --correlation-id {c} --subscription {sub}` · `az deployment group show -g {rg} -n {name} --subscription {sub}` · none for health |
 | Subscriptions · All resources | — (Overview: type, kind, SKU, identity, managed by, created, changed, and whether nebaz browses the type) | ladder on the expanded `provisioningState` | `Open in {Service › Sub-tab}` when browsed (Enter on the list row does the same), `managedBy` | `az resource show --ids` |
 | Subscriptions · Resource Groups | — | stateless when `Succeeded` | `managedBy` id when set | `az group show -n {name} --subscription {sub}` |
-| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) · (Overview and list summary: the marketplace plan as the kind, rule 27; the scale set a Flexible instance belongs to) | power state | each NIC, OS and data disks, availability set, the scale set (`virtualMachineScaleSet.id`), user-assigned identities | `az vm show` |
+| Virtual Machines · VMs | Instance view ⧗ (agent, OS, boot diagnostics, disk statuses) · Networking (NICs, primary) · Storage (OS disk, data disks with LUN, size) · (Overview and list summary: the marketplace plan as the kind, rule 27; the scale set a Flexible instance belongs to) | power state | each NIC, OS and data disks, availability set, the scale set (`virtualMachineScaleSet.id`), user-assigned identities, the gallery its image is from (`imageReference.id`) | `az vm show` |
 | Virtual Machines · Disks | — | `diskState` | `managedBy` VM | `az disk show` |
-| Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP) | attached / unattached | VM, NSG, each IP config's subnet and public IP | `az network nic show` |
-| Virtual Machines · Scale sets | Model (image, VM size, OS disk type and size, ephemeral, data disks, security type, computer name prefix, extensions by **name and type only**: `settings`, `protectedSettings`, `customData` and `userData` are stripped before the raw JSON is kept) · Scaling (capacity, orchestration Uniform / Flexible, upgrade policy and automatic OS upgrades, overprovision (Uniform), zones, zone balance, fault domains, single placement group, priority, eviction and max price, Spot restore, priority mix, automatic repairs, scale-in policy) · Network (each NIC configuration: accelerated networking, IP forwarding, NSG; each IP configuration's subnet, load balancer backend and NAT pools and application gateway pools as their parent, per-instance public IP; the health probe's load balancer) · Instances ⧗ (name, power state, zone, latest model for Uniform; a Uniform instance's id is copied, a Flexible set's VM jumps) · (list summary: mode · size × capacity) | ladder only | subnets, load balancers, application gateways, NSGs, user-assigned identities, proximity placement group and host group (All resources: not browsed) | `az vmss show -n {name} -g {rg} --subscription {sub}` |
+| Virtual Machines · NICs | IP configurations (name, private IP, allocation, primary, public IP, ASGs) | attached / unattached | VM, NSG, each IP config's subnet, public IP and ASGs | `az network nic show` |
+| Virtual Machines · Galleries (rule 41) | Images ⧗ (each definition: OS, state, generation, architecture, security type, publisher:offer:sku, end of life; its versions newest first: published, end of life, excluded from latest, regions with replica counts, storage type, provisioning and policy flags) · Sharing (private, groups or community with public names and EULA; soft delete; identity) · (Overview: description, unique name) | ladder only | the warm VMs and scale sets built from its images | `az sig show` |
+| Virtual Machines · ASGs (rule 40) | Members (the NICs that name it, each with its IP configuration and VM) · Rules (each NSG with a rule that names it, the rule and whether the group is its source or destination) | ladder only | member NICs, NSGs whose rules name it (once the lists load) | `az network asg show` |
+| Virtual Machines · Scale sets | Model (image, VM size, OS disk type and size, ephemeral, data disks, security type, computer name prefix, extensions by **name and type only**: `settings`, `protectedSettings`, `customData` and `userData` are stripped before the raw JSON is kept) · Scaling (capacity, orchestration Uniform / Flexible, upgrade policy and automatic OS upgrades, overprovision (Uniform), zones, zone balance, fault domains, single placement group, priority, eviction and max price, Spot restore, priority mix, automatic repairs, scale-in policy) · Network (each NIC configuration: accelerated networking, IP forwarding, NSG; each IP configuration's subnet, load balancer backend and NAT pools and application gateway pools as their parent, per-instance public IP; the health probe's load balancer) · Instances ⧗ (name, power state, zone, latest model for Uniform; a Uniform instance's id is copied, a Flexible set's VM jumps) · (list summary: mode · size × capacity) | ladder only | the gallery its image is from, subnets, load balancers, application gateways, NSGs, user-assigned identities, proximity placement group and host group (All resources: not browsed) | `az vmss show -n {name} -g {rg} --subscription {sub}` |
 | Storage · Accounts | Endpoints · Security (public blob access, shared key, min TLS, HTTPS only, public network access, network default action, encryption key source, HNS) · Containers ⧗ | `statusOfPrimary` | — | `az storage account show` |
 | Network · VNets | Subnets (embedded) · Peerings (state; forwarded traffic allowed or blocked; gateway transit: offers this VNet's gateway, uses the peer's, or none) · Flow logs ⧗ (rule 30) · (Overview: DDoS protection on / off and the DDoS plan, jumpable) | stateless | each subnet, each peered VNet, the DDoS plan; ⧗ (rule 16) the DNS resolvers in it and the rulesets, DNS security policies and private DNS zones linked to it | `az network vnet show` |
 | Network · Subnets | — (Overview: prefix, NSG, route table, NAT gateway, delegations, service endpoints, IP configuration count) | stateless | VNet, NSG, route table, NAT gateway, each appliance next hop of its route table (rule 27; the warm route tables list), the Power Platform policy whose network injection names it (matched in the warm policies list, no call; else "delegated to Power Platform" when the delegation says so); ⧗ (rule 16) the DNS resolver endpoints in it | `az network vnet subnet show` |
@@ -993,6 +1037,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Advisor · Score (rule 34) | Score (score, possible gain, impacted resources, computed, the trend and the daily history) · Recommendations (the warm ones in its category, high impact first) | stateless | its subscription | none (the CLI has no score command) |
 | Advisor · Suppressions (rule 34) | Suppression (snoozed or dismissed, for how long, expiry, the resource, the recommendation id) | `snoozed` or `dismissed` (stopped) | the resource | none (the CLI has no suppression command) |
 | Governance · Management groups (rule 32; tail Activity, Related) | Group ⧗ (parent, direct children: groups and subscriptions, the current one marked; updated when and by whom) · Assignments (the warm Assignments made at the group) · (Overview: display name, group name, tenant; the root group reads `tenant root`) | stateless | none (the Group section's lines jump) | `az account management-group show --name {name} --expand` |
+| Governance · Budgets (rule 42; tail Activity, Related) | Budget (amount, spent and forecast with their share of it, ⚠ at or past 100%, time grain, period, category) · Notifications (each threshold, lowest first: actual or forecasted, operator, ⚠ crossed / not reached / off; emails, roles, action groups jumpable) · Filter (each dimension or tag clause, `not` kept) | spent ≥ amount → unavailable `over budget`, forecast ≥ amount → pending `forecast over`, else available `within`; no spend on the body → stateless | the subscription, the resource groups and resources the filter names, action groups | `az consumption budget show --budget-name {name} --subscription {sub}` (no `--ids`) |
 | Firewall · Rulestacks | Rules ⧗ (by priority: action, sources and destinations with negation, prefix and FQDN lists, countries, feeds, applications, ports, URL categories, decryption, logging off, disabled rules marked) · Objects ⧗ (prefix lists and FQDN lists with their entries) · Security services (vulnerability, anti-spyware, antivirus, URL filtering, file blocking, DNS security profiles, outbound certificates by name) · Firewalls (the warm Cloud NGFWs using it, with their UDR IP) · (Overview: scope, default mode, min App-ID version, description) | ladder only | the warm Cloud NGFWs using it | `az palo-alto cloudngfw local-rulestack show` (extension) |
 | Key Vault · Vaults | Access model (policies, or "Azure RBAC") · Network (default action, bypass, IP and VNet rules, private endpoints) · Secrets ⧗ · Keys ⧗ | stateless | each network-rule subnet | `az keyvault show -n {name} -g {rg} --subscription {sub}` |
 | Identity · Service principals (Graph, rule 13) | Credentials (secrets and certificates: name, key id, start, end, expiry; never a value or hint) · Single sign-on (mode; when `saml`: identifiers less the app id, reply URLs, sign-on and logout URLs, relay state, the signing certificate matched by `preferredTokenSigningKeyThumbprint` against each certificate's `customKeyIdentifier`, expiry notification addresses) · Claims ⧗ (the custom claims policy the portal's Attributes & Claims edits, Graph beta: basic claim set, audience override, app id in issuer, group filter, each claim NameID first with its source attribute, constant or transformation chain and any condition, a condition's groups named; then any claims-mapping policy's ClaimsSchema and transformations, which overrides it; a 403 names the directory role it needs) · App role assignments ⧗ (each API and role, the role named from the API's service principal) · OAuth2 grants ⧗ (API, consent all-users or one user, scopes) · Owners ⧗ · Azure roles ⧗ (rule 11's Can do over the current subscription) · Tags (Graph's string list); no Access or Activity. Search also reads reply URLs, service principal names, home page, login / logout URLs, app display name, description, notes | worst credential expiry | the managed identity it belongs to (`alternativeNames`), this tenant's app registration (by app id) | `az ad sp show --id {appId}` |
@@ -1029,8 +1074,8 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Search services (rule 38) | Service (status details, replicas, partitions, search units, hosting mode, compute, semantic ranker, upgrade) · Network (public access, bypass, IP rules, data exfiltration blocks, private endpoints with their approval) · Security (key / Entra ID auth and the failure mode, identity, CMK enforcement and compliance) · Shared private links ⧗ (target jumpable, sub-resource, status, ⚠ unless approved) · (Overview: status, SKU, endpoint) | ladder, then `status` | private endpoints, each shared link's target, user-assigned identities | `az search service show --ids` |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
-Routing prefixes: `@sub @rg @vm @disk @nic @vmss @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @storage @vnet @subnet @nsg @pip
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1127,6 +1172,9 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Disks | 1 | `/providers/Microsoft.Compute/disks` · `2026-03-02` |
 | NICs | 1 | `/providers/Microsoft.Network/networkInterfaces` · `2025-09-01` |
 | Scale sets | 1 | `/providers/Microsoft.Compute/virtualMachineScaleSets` · `2026-04-01` (the VM version: one Compute spec) |
+| Galleries (rule 41) | 1 | `/providers/Microsoft.Compute/galleries` · `2025-03-03` (the gallery spec's own version) |
+| Gallery Images | 1 + 1 per definition (up to 25), on demand | `{gallery}/images` · `{image}/versions` · `2025-03-03` |
+| ASGs (rule 40) | 1; Members and Rules read the NICs and NSGs lists, loaded for the section only when cold | `/providers/Microsoft.Network/applicationSecurityGroups` · `2025-09-01` (the NIC version) |
 | Scale set Instances | 1 per set, on demand | Uniform: `{vmss}/virtualMachines?$expand=instanceView` · Flexible: `/providers/Microsoft.Compute/virtualMachines?$filter='virtualMachineScaleSet/id' eq '{vmss}'&$expand=instanceView` (the filter the VM list documents, and the one `az vm list --vmss` sends) · `2026-04-01` |
 | Accounts | 1 (Storage RP: 100 list calls / 5 min) | `/providers/Microsoft.Storage/storageAccounts` · `2026-06-01` |
 | Containers | 1 per account, on demand (same budget) | `{account}/blobServices/default/containers` · `2026-06-01` |
@@ -1183,6 +1231,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Advisor · Suppressions (rule 34) | 1 | `/providers/Microsoft.Advisor/suppressions` · `2025-01-01` |
 | Assignments · Exemptions · Locks (rule 32) | 1 each, unfiltered | `/providers/Microsoft.Authorization/policyAssignments` · `2025-03-01` · `/providers/Microsoft.Authorization/policyExemptions` · `2022-07-01-preview` (no stable version) · `/providers/Microsoft.Authorization/locks` · `2020-05-01` |
 | Management groups (rule 32) | 1, above the subscription | `/providers/Microsoft.Management/managementGroups` · `2023-04-01` |
+| Budgets (rule 42) | 1 (spend and forecast are on each body) | `/providers/Microsoft.Consumption/budgets` · `2024-08-01` |
 | A management group's Group | 1 per group, on demand | `/providers/Microsoft.Management/managementGroups/{name}?$expand=children` · `2023-04-01` |
 | Definitions (rule 32) | 2 | `/providers/Microsoft.Authorization/policyDefinitions?$filter=policyType eq 'Custom'` · `/providers/Microsoft.Authorization/policySetDefinitions?$filter=policyType eq 'Custom'` · `2025-03-01` |
 | An assignment's built-in Definition | 1 per built-in, on demand (tenant root, not under a subscription) | `/providers/Microsoft.Authorization/policyDefinitions/{id}` or `policySetDefinitions/{id}` · `2025-03-01` |
@@ -1315,6 +1364,14 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- The #203 small adds, built without an Azure login from azure-rest-api-specs
+  (`network`, `compute/…/Compute/stable/2025-03-03` GalleryRP,
+  `consumption/…/stable/2024-08-01`). To check: whether `Reader` sees a
+  budget's `currentSpend` and `forecastSpend` (Cost Management Reader may
+  be needed; without them the row is stateless and Spent reads `-`);
+  whether the subscription list returns resource-group budgets too (it is
+  documented per scope); the gallery list's `location` form; a VM's
+  `imageReference.id` casing for a gallery version.
 - Container Instances (#197), built without an Azure login from
   azure-rest-api-specs (`containerinstance/…/ContainerInstance/stable/2026-07-01`)
   and the azure-cli `container` module. To check: whether the

@@ -1,0 +1,61 @@
+{
+  "id": "subscriptions/{{prod}}/providers/Microsoft.Consumption/budgets/orders-team-monthly",
+  "name": "orders-team-monthly",
+  "type": "Microsoft.Consumption/budgets",
+  "eTag": "\"1dc7a3e2f04b8c1\"",
+  "properties": {
+    "timePeriod": {
+      "startDate": "2026-01-01T00:00:00Z",
+      "endDate": "2027-12-31T00:00:00Z"
+    },
+    "timeGrain": "Monthly",
+    "amount": 6000,
+    "currentSpend": {
+      "amount": 2143.8,
+      "unit": "EUR"
+    },
+    "forecastSpend": {
+      "amount": 4380.15,
+      "unit": "EUR"
+    },
+    "category": "Cost",
+    "notifications": {
+      "Actual_GreaterThanOrEqualTo_90_Percent": {
+        "enabled": true,
+        "operator": "GreaterThanOrEqualTo",
+        "threshold": 90,
+        "thresholdType": "Actual",
+        "contactEmails": [
+          "orders-team@contoso.com"
+        ],
+        "contactRoles": [],
+        "locale": "en-us",
+        "contactGroups": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/actionGroups/ag-orders-oncall"
+        ]
+      }
+    },
+    "filter": {
+      "and": [
+        {
+          "dimensions": {
+            "name": "ResourceGroupName",
+            "operator": "In",
+            "values": [
+              "rg-orders-prod"
+            ]
+          }
+        },
+        {
+          "tags": {
+            "name": "team",
+            "operator": "In",
+            "values": [
+              "orders"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

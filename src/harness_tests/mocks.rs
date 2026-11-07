@@ -7,8 +7,8 @@ use crate::azure::auth::SubscriptionEntry;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
 use crate::azure::services::{
-    advisor, ai_search, aks, alerts, sql_managed, all_resources, app_service, backup, changes, compute, container_apps, container_instances, container_registry, cosmos, defender, directory, edge, firewall, foundry, governance,
-    hybrid, identity, keyvault, messaging, monitor, network, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
+    advisor, ai_search, aks, alerts, sql_managed, all_resources, app_service, backup, budgets, changes, compute, container_apps, container_instances, container_registry, cosmos, defender, directory, edge, firewall, foundry, gallery, governance,
+    hybrid, identity, keyvault, messaging, monitor, network, network_asg, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, storage, subscriptions,
     traffic_manager, virtual_wan,
 };
 use serde_json::{json, Value};
@@ -285,6 +285,28 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             JumpView::BastionHosts,
             "BastionRow",
             parse("BastionRow", network_hub::BastionRow::from_json(&simple("Microsoft.Network/bastionHosts/bas-1"), t)),
+        ),
+        m(
+            JumpView::Budgets,
+            "BudgetRow",
+            parse(
+                "BudgetRow",
+                budgets::BudgetRow::from_json(
+                    &json!({"id": format!("/subscriptions/{}/providers/Microsoft.Consumption/budgets/budget-1", SUB_DEV),
+                        "name": "budget-1", "properties": {"amount": 100, "timeGrain": "Monthly"}}),
+                    t,
+                ),
+            ),
+        ),
+        m(
+            JumpView::Galleries,
+            "GalleryRow",
+            parse("GalleryRow", gallery::GalleryRow::from_json(&simple("Microsoft.Compute/galleries/gal_1"), t)),
+        ),
+        m(
+            JumpView::ApplicationSecurityGroups,
+            "AsgRow",
+            parse("AsgRow", network_asg::AsgRow::from_json(&simple("Microsoft.Network/applicationSecurityGroups/asg-1"), t)),
         ),
         m(
             JumpView::DdosPlans,

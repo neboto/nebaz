@@ -57,6 +57,36 @@
           "destinationPortRange": "3389",
           "destinationAddressPrefix": "*"
         }
+      },
+      {
+        "name": "AllowRdpJumpToLegacy",
+        "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-jump-prod/securityRules/AllowRdpJumpToLegacy",
+        "etag": "W/\"3b1d7c2a-9e4f-5a60-8b17-2c4d6e8f0a13\"",
+        "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+        "properties": {
+          "provisioningState": "Succeeded",
+          "protocol": "Tcp",
+          "sourcePortRange": "*",
+          "access": "Allow",
+          "priority": 120,
+          "direction": "Inbound",
+          "sourcePortRanges": [],
+          "destinationPortRanges": [],
+          "sourceAddressPrefixes": [],
+          "destinationAddressPrefixes": [],
+          "description": "admins on the jump box reach the legacy app servers",
+          "sourceApplicationSecurityGroups": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/applicationSecurityGroups/asg-jump"
+            }
+          ],
+          "destinationApplicationSecurityGroups": [
+            {
+              "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod/providers/Microsoft.Network/applicationSecurityGroups/asg-legacy-app"
+            }
+          ],
+          "destinationPortRange": "3389"
+        }
       }
     ],
     "defaultSecurityRules": [
