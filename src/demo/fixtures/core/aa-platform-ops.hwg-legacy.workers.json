@@ -1,0 +1,17 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/hybridRunbookWorkerGroups/hwg-legacy/hybridRunbookWorkers/7a3e1f9c-2b5d-4c86-a0e4-8d1f6b3c9e52",
+      "name": "7a3e1f9c-2b5d-4c86-a0e4-8d1f6b3c9e52",
+      "type": "Microsoft.Automation/AutomationAccounts/HybridRunbookWorkerGroups/HybridRunbookWorkers",
+      "properties": {
+        "ip": "10.10.8.5",
+        "registeredDateTime": "{{iso:now-700d}}",
+        "lastSeenDateTime": "{{iso:now-40d}}",
+        "vmResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/virtualMachines/vm-legacy-app-01",
+        "workerType": "HybridV2",
+        "workerName": "vm-legacy-app-01"
+      }
+    }
+  ]
+}

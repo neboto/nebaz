@@ -370,6 +370,7 @@ impl AzureClients {
             ServiceType::Governance => Arc::new(GovernanceService::new(scope)),
             ServiceType::Defender => Arc::new(DefenderService::new(scope)),
             ServiceType::Advisor => Arc::new(AdvisorService::new(scope)),
+            ServiceType::Automation => Arc::new(crate::azure::services::automation::AutomationService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Hybrid => Arc::new(HybridService::new(scope)),

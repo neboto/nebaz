@@ -1,0 +1,99 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/jobs/6c2a9e14-3f7b-4d81-a5e0-9b1c7d3f2a48",
+      "name": "6c2a9e14-3f7b-4d81-a5e0-9b1c7d3f2a48",
+      "type": "Microsoft.Automation/AutomationAccounts/Jobs",
+      "properties": {
+        "runbook": {
+          "name": "Stop-DevVms"
+        },
+        "jobId": "6c2a9e14-3f7b-4d81-a5e0-9b1c7d3f2a48",
+        "startedBy": "Schedule",
+        "creationTime": "{{iso:now-13h}}",
+        "status": "Completed",
+        "startTime": "{{iso:now-13h}}",
+        "endTime": "{{iso:now-13h}}",
+        "lastModifiedTime": "{{iso:now-13h}}",
+        "provisioningState": "Succeeded",
+        "runOn": ""
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/jobs/a91f3c07-5e2d-4b68-8c4a-1f6e9d2b7c35",
+      "name": "a91f3c07-5e2d-4b68-8c4a-1f6e9d2b7c35",
+      "type": "Microsoft.Automation/AutomationAccounts/Jobs",
+      "properties": {
+        "runbook": {
+          "name": "Stop-DevVms"
+        },
+        "jobId": "a91f3c07-5e2d-4b68-8c4a-1f6e9d2b7c35",
+        "startedBy": "Schedule",
+        "creationTime": "{{iso:now-37h}}",
+        "status": "Completed",
+        "startTime": "{{iso:now-37h}}",
+        "endTime": "{{iso:now-37h}}",
+        "lastModifiedTime": "{{iso:now-37h}}",
+        "provisioningState": "Succeeded",
+        "runOn": ""
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/jobs/d4b7e2a9-1c5f-4a38-9e06-7f2b8c1d5a63",
+      "name": "d4b7e2a9-1c5f-4a38-9e06-7f2b8c1d5a63",
+      "type": "Microsoft.Automation/AutomationAccounts/Jobs",
+      "properties": {
+        "runbook": {
+          "name": "Stop-DevVms"
+        },
+        "jobId": "d4b7e2a9-1c5f-4a38-9e06-7f2b8c1d5a63",
+        "startedBy": "Schedule",
+        "creationTime": "{{iso:now-61h}}",
+        "status": "Completed",
+        "startTime": "{{iso:now-61h}}",
+        "endTime": "{{iso:now-61h}}",
+        "lastModifiedTime": "{{iso:now-61h}}",
+        "provisioningState": "Succeeded",
+        "runOn": ""
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/jobs/2e8f5b1c-9a4d-4c73-b6e2-0d7a3f9c1b84",
+      "name": "2e8f5b1c-9a4d-4c73-b6e2-0d7a3f9c1b84",
+      "type": "Microsoft.Automation/AutomationAccounts/Jobs",
+      "properties": {
+        "runbook": {
+          "name": "Patch-LegacyVms"
+        },
+        "jobId": "2e8f5b1c-9a4d-4c73-b6e2-0d7a3f9c1b84",
+        "startedBy": "Schedule",
+        "creationTime": "{{iso:now-5d}}",
+        "status": "Failed",
+        "startTime": "{{iso:now-5d}}",
+        "endTime": "{{iso:now-5d}}",
+        "lastModifiedTime": "{{iso:now-5d}}",
+        "provisioningState": "Succeeded",
+        "runOn": "hwg-legacy"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/jobs/f7c3a8d2-4b9e-4e15-a0c6-5d2f1b8e7a49",
+      "name": "f7c3a8d2-4b9e-4e15-a0c6-5d2f1b8e7a49",
+      "type": "Microsoft.Automation/AutomationAccounts/Jobs",
+      "properties": {
+        "runbook": {
+          "name": "Export-CostReport"
+        },
+        "jobId": "f7c3a8d2-4b9e-4e15-a0c6-5d2f1b8e7a49",
+        "startedBy": "platform@contoso.com",
+        "creationTime": "{{iso:now-6d}}",
+        "status": "Completed",
+        "startTime": "{{iso:now-6d}}",
+        "endTime": "{{iso:now-6d}}",
+        "lastModifiedTime": "{{iso:now-6d}}",
+        "provisioningState": "Succeeded",
+        "runOn": ""
+      }
+    }
+  ]
+}

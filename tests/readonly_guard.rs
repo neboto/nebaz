@@ -73,6 +73,8 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     "azurewebsites.net",
     // Static Web Apps (#200): the sites and their preview environments.
     "azurestaticapps.net",
+    // Automation (#202): the account's job runtime and webhook endpoints.
+    "azure-automation.net",
     // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).
     "database.windows.net",
     // Container Registry: repositories, tags and manifests (the registry's
@@ -269,6 +271,10 @@ const AZ_FORBIDDEN: &[&str] = &[
     // is the `listSecrets` POST) and its app settings (#200).
     "staticwebapp secrets",
     "staticwebapp appsettings",
+    // An Automation account's registration keys (`list-keys`, a POST on
+    // the ARM side) and a DSC configuration's script (#202).
+    "automation account list-keys",
+    "automation configuration show-content",
     // Cosmos DB account keys, read-only keys and connection strings.
     "cosmosdb keys",
     // Container Apps secrets: `secret list --show-values` and `secret
@@ -787,6 +793,19 @@ const SECRET_READS: &[&str] = &[
     // the workload's output, which is data, not metadata. Matched after a
     // format placeholder, so a field like `/logScrubbing` is not a hit.
     "}/logs",
+    // An Automation account's secret stores (#202): a variable's value,
+    // credentials, certificates and connections come back on a GET; a
+    // runbook's content and draft, a job's output, streams and the
+    // runbook content it ran, a DSC configuration's script.
+    "/variables",
+    "/credentials",
+    "}/certificates",
+    "}/connections",
+    "/draft",
+    "/runbookcontent",
+    "/streams",
+    "}/content",
+    "}/output",
 ];
 
 #[test]

@@ -985,6 +985,27 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     deployment token (`listSecrets`), app and function settings
     (`listAppSettings`, `listFunctionAppSettings`), all `POST`s; the guard
     names `az staticwebapp secrets` and `appsettings`, and the site host.
+44. **Automation is its own tab** (#202, `src/azure/services/automation.rs`,
+    Management group): the subscription's
+    `Microsoft.Automation/automationAccounts` (`@automation`, `@aa`) at
+    `2024-10-23`. Runbooks, Schedules, Jobs and Hybrid workers are lazy
+    sections: Runbooks reads the runbooks with the job schedules and
+    jobs its lines use (each runbook's schedules and newest job, ⚠ when
+    it failed); Schedules reads the schedules and job schedules (what
+    each starts and where); Jobs reads the last 7 days
+    (`$filter=properties/startTime ge …`), at most 200, newest first;
+    Hybrid workers reads the groups, then each group's workers (at most
+    25 groups), each worker's machine a jump and ⚠ when not seen for a
+    day. Related reads the linked workspace. The state is the ladder,
+    then the account's `state` (`Ok`; `Suspended` and `Unavailable` are
+    trouble). **Never**, though most are GETs: variables (an unencrypted
+    value comes back in the body), credentials, certificates,
+    connections, runbook content and drafts, job output, streams and the
+    runbook content a job ran, DSC configuration scripts; the guard names
+    those paths and `az automation account list-keys`. A runbook's
+    content links and parameters and a job schedule's parameters are
+    removed before the store keeps a body. A retired Run As account is
+    a connection and a certificate, so nebaz cannot see it.
 
 ## The catalog
 
@@ -1088,12 +1109,13 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Redis · Managed Redis | Security (min TLS, encryption service- or customer-managed with the key identity, public access, identity) · Network (public access, host name as text, private endpoints with status; no firewall or VNet injection exists) · Databases ⧗ (port, client protocol (`Plaintext` flagged), access-key auth, clustering and eviction policy, persistence, modules, Redis version, state, geo-replication group with each linked cluster jumpable) · (Overview: kind, SKU, capacity, high availability, redundancy, zones, Redis version, resource state, host name) | ladder, then `resourceState` (`Running` → Available, `Disabled` / `…Failed` → Unavailable, else Pending) | private endpoints, user-assigned identities, the CMK identity | `az redisenterprise show` (the `redisenterprise` CLI extension) |
 | Messaging · Service Bus | Network ⧗ (effective access in one line; public network access; from the rule set: default action, trusted services, IP rules, VNet rules with each subnet jumpable and whether the service endpoint is required; private endpoints jumpable with connection state; the endpoint host as text, the `privatelink.` zone a private caller must resolve through; IP address type, min TLS, local auth; the tier's limits: VNet rules and private endpoints are Premium only. Deny with no IP or VNet rule is flagged: the service does not enforce it) · Security (local auth, min TLS, Microsoft- or customer-managed keys with the reading identity, infrastructure encryption, identity system / user-assigned) · Queues ⧗ (active, dead-lettered, scheduled and transfer counts from `countDetails`, size, lock duration, max deliveries, sessions, duplicate detection, TTL, partitioning, forwarding) · Topics ⧗ (subscription count, size, TTL, ordering, partitioning) · Access policies ⧗ (names and rights; never keys) · (Overview: status, SKU and messaging units, partitions, zone redundancy, endpoint, geo-replication) | ladder, then `status` (`Active` → available, `Disabled` → stopped) | private endpoints, user-assigned identities, a CMK identity, VNet rule subnets (once the rule set loads) | `az servicebus namespace show` |
 | Messaging · Event Hubs | Network ⧗ · Security · Access policies ⧗ (as Service Bus; Basic has no firewall, VNet rules or private endpoints) · Event hubs ⧗ (partitions, retention and cleanup policy, status, capture on / off with format, window, destination storage account jumpable or Data Lake, container, identity) · (Overview: SKU, throughput / processing / capacity units, auto-inflate maximum, Kafka, dedicated cluster, zone redundancy) | ladder, then `status` | as Service Bus, plus the dedicated cluster and each capture storage account (once Event hubs loads) | `az eventhubs namespace show` |
+| Automation · Accounts (rule 44) | Runbooks ⧗ (type, state with drafts and never-published marked, runtime environment, modified, logging, the schedules that start it, its newest job in the window with ⚠ when failed) · Schedules ⧗ (recurrence, enabled, next run, expiry with ⚠ when an enabled schedule has expired, time zone, the runbooks it starts and the worker group they run on) · Jobs ⧗ (the last 7 days: count and failures, then the newest 25 with runbook, status, ⚠ failed / suspended / blocked / stopped, ended, started by, ran on) · Hybrid workers ⧗ (each group's type and Run As credential name; each worker's type, machine jumpable, IP, last seen with ⚠ after a day) · Configuration (SKU, local auth, public network access, encryption key and identity, identity, hybrid service URL as text, private endpoints) · (Overview: state, SKU, created, modified, description) | ladder, then `state` (`Ok` → Available, `Suspended` / `Unavailable` → Unavailable) | private endpoints, user-assigned and encryption identities; ⧗ the linked Log Analytics workspace, each hybrid worker's VM or Arc machine | `az automation account show --ids` (the `automation` extension) |
 | Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless); `location` is a Power Platform geography, so the row passes every `R` filter like `global` | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
 | Foundry · Search services (rule 38) | Service (status details, replicas, partitions, search units, hosting mode, compute, semantic ranker, upgrade) · Network (public access, bypass, IP rules, data exfiltration blocks, private endpoints with their approval) · Security (key / Entra ID auth and the failure mode, identity, CMK enforcement and compliance) · Shared private links ⧗ (target jumpable, sub-resource, status, ⚠ unless approved) · (Overview: status, SKU, endpoint) | ladder, then `status` | private endpoints, each shared link's target, user-assigned identities | `az search service show --ids` |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @automation @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1140,6 +1162,7 @@ has a fixture test there.
 | `aks-local-accounts` | Clusters | `disableLocalAccounts` not true (raw JSON) | medium |
 | `aks-rbac-disabled` | Clusters | `enableRBAC` false | high |
 | `acr-admin-user` | Registries | `adminUserEnabled` | medium |
+| `automation-local-auth` | Automation accounts | `disableLocalAuth` not true (webhooks and agent keys work) | low |
 | `acr-anonymous-pull` | Registries | `anonymousPullEnabled` | high |
 | `app-https-only` | Apps | `httpsOnly` false | high |
 | `app-min-tls` | Apps + Configuration ⧗ | `minTlsVersion` below 1.2 | medium |
@@ -1301,6 +1324,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Network (firewall), Access policies | 1 each per namespace, on demand (Related fires the rule set too; a policy's keys are the `listKeys` POST, never sent) | `{ns}/networkRuleSets/default` · `{ns}/authorizationRules` · `2026-01-01` |
 | Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
+| Automation accounts (rule 44) | 1, then per opened account: runbooks, schedules, job schedules, jobs (7 days, ≤ 200), worker groups + 1 per group (≤ 25), the linked workspace | `/providers/Microsoft.Automation/automationAccounts` · `2024-10-23` |
 | Enterprise policies | 1 (every kind; `kind` on the row) | `/providers/Microsoft.PowerPlatform/enterprisePolicies` · `2020-10-30-preview` (the only version in the specs; not yet tried live) |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
 | Search services (rule 38) | 1 | `/providers/Microsoft.Search/searchServices` · `2025-05-01` |
@@ -1383,6 +1407,13 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- Automation (#202), built without an Azure login from azure-rest-api-specs
+  (`automation/…/Automation/stable/2024-10-23`) and the CLI `automation`
+  extension's reference. To check: the jobs `$filter` form (an unquoted
+  ISO time, as Az PowerShell sends it) and whether ARM pages the jobs
+  newest first; whether `linkedWorkspace` answers 404 or an empty id
+  when none is linked; whether the list body carries `sku` under
+  `properties` (the spec) or at the top level; the `TotalJob` metric.
 - Static Web Apps (#200), built without an Azure login from
   azure-rest-api-specs (`web/…/Web/stable`, the tab's version) and the
   azure-cli `appservice` module. To check: whether the list body carries

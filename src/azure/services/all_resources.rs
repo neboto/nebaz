@@ -252,9 +252,9 @@ mod tests {
 
     #[test]
     fn an_unbrowsed_type_says_so_and_has_no_open_line() {
-        let r = GenericResourceRow::from_json(&row("Microsoft.Automation/automationAccounts", "aa-ops"), None).unwrap();
+        let r = GenericResourceRow::from_json(&row("Microsoft.DesktopVirtualization/hostPools", "hp-ops"), None).unwrap();
         assert_eq!(r.view, None);
-        assert_eq!(r.list_cell(), "· Microsoft.Automation/automationAccounts");
+        assert_eq!(r.list_cell(), "· Microsoft.DesktopVirtualization/hostPools");
         assert!(r.details().iter().any(|(k, v)| k == "In nebaz" && v.starts_with("not browsed")));
         assert!(!r.related().iter().any(|(l, _)| l.starts_with("Open in")));
         assert!(r.details().iter().any(|(k, v)| k == "SKU" && v == "Free"));
