@@ -33,6 +33,19 @@ pub static CARDS: &[Card] = &[
         source: include_str!("../docs/cards/container-apps.md"),
     },
     Card { views: &[JumpView::ContainerGroups], source: include_str!("../docs/cards/container-groups.md") },
+    Card { views: &[JumpView::NetworkSecurityGroups], source: include_str!("../docs/cards/nsgs.md") },
+    Card { views: &[JumpView::PublicIps], source: include_str!("../docs/cards/public-ips.md") },
+    Card { views: &[JumpView::LoadBalancers], source: include_str!("../docs/cards/load-balancers.md") },
+    Card { views: &[JumpView::RouteTables], source: include_str!("../docs/cards/route-tables.md") },
+    Card { views: &[JumpView::NatGateways], source: include_str!("../docs/cards/nat-gateways.md") },
+    Card { views: &[JumpView::PrivateEndpoints], source: include_str!("../docs/cards/private-endpoints.md") },
+    Card { views: &[JumpView::BastionHosts], source: include_str!("../docs/cards/bastion-hosts.md") },
+    Card { views: &[JumpView::DdosPlans], source: include_str!("../docs/cards/ddos-plans.md") },
+    Card { views: &[JumpView::PrivateDnsZones], source: include_str!("../docs/cards/private-dns-zones.md") },
+    Card { views: &[JumpView::DnsZones], source: include_str!("../docs/cards/dns-zones.md") },
+    Card { views: &[JumpView::DnsResolvers, JumpView::DnsForwardingRulesets], source: include_str!("../docs/cards/dns-resolvers.md") },
+    Card { views: &[JumpView::DnsResolverPolicies], source: include_str!("../docs/cards/dns-security-policies.md") },
+    Card { views: &[JumpView::TrafficManagerProfiles], source: include_str!("../docs/cards/traffic-manager.md") },
 ];
 
 /// The card for a sub-tab, if one is written.
