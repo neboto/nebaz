@@ -1,0 +1,90 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront",
+      "name": "swa-orders-storefront",
+      "type": "Microsoft.Web/staticSites",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "orders-team@contoso.com"
+      },
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+      },
+      "properties": {
+        "defaultHostname": "gentle-river-0a1b2c3d4.5.azurestaticapps.net",
+        "repositoryUrl": "https://github.com/contoso/orders-storefront",
+        "branch": "main",
+        "provider": "GitHub",
+        "customDomains": [
+          "shop.contoso.example",
+          "beta.shop.contoso.example"
+        ],
+        "buildProperties": {
+          "appLocation": "/",
+          "apiLocation": "",
+          "outputLocation": "dist",
+          "skipGithubActionWorkflowGeneration": false
+        },
+        "stagingEnvironmentPolicy": "Enabled",
+        "allowConfigFileUpdates": true,
+        "contentDistributionEndpoint": "",
+        "enterpriseGradeCdnStatus": "Disabled",
+        "publicNetworkAccess": "",
+        "privateEndpointConnections": [],
+        "userProvidedFunctionApps": [],
+        "linkedBackends": [
+          {
+            "backendResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-api",
+            "region": "westeurope",
+            "createdOn": "{{iso:now-212d}}",
+            "provisioningState": "Succeeded"
+          }
+        ],
+        "databaseConnections": [],
+        "keyVaultReferenceIdentity": "SystemAssigned"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Web/staticSites/swa-platform-docs",
+      "name": "swa-platform-docs",
+      "type": "Microsoft.Web/staticSites",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform@contoso.com"
+      },
+      "sku": {
+        "name": "Free",
+        "tier": "Free"
+      },
+      "properties": {
+        "defaultHostname": "polite-meadow-9f8e7d6c5.5.azurestaticapps.net",
+        "repositoryUrl": "https://github.com/contoso/platform-docs",
+        "branch": "main",
+        "provider": "GitHub",
+        "customDomains": [],
+        "buildProperties": {
+          "appLocation": "/site",
+          "apiLocation": "",
+          "outputLocation": "public",
+          "skipGithubActionWorkflowGeneration": false
+        },
+        "stagingEnvironmentPolicy": "Disabled",
+        "allowConfigFileUpdates": true,
+        "contentDistributionEndpoint": "",
+        "enterpriseGradeCdnStatus": "Disabled",
+        "publicNetworkAccess": "",
+        "privateEndpointConnections": [],
+        "userProvidedFunctionApps": [],
+        "linkedBackends": [],
+        "databaseConnections": [],
+        "keyVaultReferenceIdentity": "SystemAssigned"
+      }
+    }
+  ]
+}

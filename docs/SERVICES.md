@@ -85,7 +85,10 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
    `az keyvault show`, `az aks show`, `az aks nodepool show`,
    `az cognitiveservices account show`, `az acr show`,
    `az functionapp show`, `az logicapp show`, `az vmss show`,
-   `az network p2s-vpn-gateway show`, `az sql instance-pool show`), which use the name form with `--subscription`.
+   `az network p2s-vpn-gateway show`, `az sql instance-pool show`,
+   `az staticwebapp show`), which use the name form with `--subscription`.
+   `staticwebapp` declares `--name` without an `id_part` (azure-cli
+   `appservice/_params.py`, 2026-11-07).
    `vmss show` re-declares the scale-set name with `id_part=None`
    (because of `--instance-id`; azure-cli `_params.py`, 2026-10-26).
    `functionapp show` re-declares its name argument without an `id_part`,
@@ -968,6 +971,20 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     ⚠ crossed when the spend (actual) or forecast (forecasted) it watches
     is past its threshold. **Never**: actual cost and usage (the Cost
     Management query API is a `POST`).
+43. **Static Web Apps are an App Service sub-tab** (#200,
+    `src/azure/services/static_web_apps.rs`): the subscription's
+    `Microsoft.Web/staticSites` (`@swa`) at the tab's `Microsoft.Web`
+    version. Environments (`builds`), Custom domains and Backends
+    (`linkedBackends`) are lazy sections, one list per site each; the body
+    already names its linked backends, so Related links them before any
+    list lands. A site has no runtime status: the ladder's provisioning
+    rung, else stateless. A preview environment that failed or detached,
+    and a custom domain that failed or is unhealthy, are ⚠. A
+    `repositoryToken` and a database connection's `configurationFiles`
+    are removed before the row or the store keeps the JSON. **Never**: the
+    deployment token (`listSecrets`), app and function settings
+    (`listAppSettings`, `listFunctionAppSettings`), all `POST`s; the guard
+    names `az staticwebapp secrets` and `appsettings`, and the site host.
 
 ## The catalog
 
@@ -1049,6 +1066,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | App Service · Apps | Configuration ⧗ (`config/web`: runtime, always on, TLS, FTPS, HTTP/2, health check, VNet routing, access restrictions; never app settings or connection strings) · Hostnames (TLS state, SCM flagged) · Networking (public access, VNet integration subnet, outbound IPs) | ladder, then `state` (`Running` / `Stopped`) | plan, VNet integration subnet, Container Apps environment, user-assigned identities, Key Vault reference identity | web apps `az webapp show --ids`; function and logic apps `az functionapp` / `az logicapp show -n {name} -g {rg} --subscription {sub}` |
 | App Service · Functions | the same rows as Apps, filtered to `kind` containing `functionapp` (Logic Apps Standard included) | as Apps | as Apps | as Apps |
 | App Service · Plans | — (Overview: SKU · tier, OS, workers of max, apps, zone redundancy, per-app and elastic scaling) | ladder, then `status` (`Ready` → Available) | — (apps list their plan) | `az appservice plan show` |
+| App Service · Static sites (rule 43) | Configuration (staging environments, config file updates, enterprise-grade CDN, public access, app / API / output locations, workflow file, identity, Key Vault reference identity, private endpoints with their approval, database connections) · Environments ⧗ (production first, previews newest first: hostname as text, branch, pull request, status with Failed / Detached ⚠, updated, linked backends) · Custom domains ⧗ (status with Failed / Unhealthy ⚠, added, error) · Backends ⧗ (each linked backend jumpable with its kind, region and provisioning; bring-your-own function apps from the body) · (Overview: SKU, default hostname, custom domains, repository, branch, provider) | ladder (provisioning only), else stateless | linked backends (Function apps, Container apps, API Management), bring-your-own function apps, private endpoints, database connections, user-assigned identities | `az staticwebapp show -n {name} -g {rg} --subscription {sub}` |
 | SQL · Servers | Security (Entra admin, Entra-only auth, SQL admin login, min TLS, TDE key service- or customer-managed, identity) · Databases ⧗ (user databases: SKU, status, max size, zone redundancy, backup redundancy, serverless auto-pause, elastic pool; system databases as a note) · Firewall ⧗ (IP rules; `AllowAllWindowsAzureIps` flagged) · Networking (public access, outbound restriction, IPv6, private endpoints) | `state` (`Ready` → Available; no `provisioningState` on servers) | private endpoints, user-assigned and primary identities | `az sql server show` |
 | SQL · Managed instances (rule 37) | Instance (SKU, hardware, vCores and memory, storage, GPv2 IOPS and throughput, licence and Hybrid Benefit, hybrid secondary, zone redundancy, backup redundancy, update policy, collation, time zone, maintenance window, instance pool, created) · Security (Entra admin, Entra-only auth, SQL admin login, min TLS, TDE key, identity) · Networking (subnet, host, DNS zone, connection type, ⚠ public endpoint, private endpoints) · Databases (lazy: status with ⚠ when not online, created, earliest restore point, failover group, ledger) · Failover group (lazy: role, replication, failover policy and grace, read-only endpoint, secondary type, partner regions, partner instance) | ladder, then `state` | VNet, subnet, instance pool, private endpoints, identities, failover partner | `az sql mi show` |
 | SQL · Instance pools | Pool (SKU, hardware, vCores, licence, DNS zone, subnet, maintenance window) · Instances (the warm Managed instances list: each with vCores and state, vCores used of the pool's) | ladder only | VNet, subnet, its instances | `az sql instance-pool show` (name form) |
@@ -1075,7 +1093,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1253,6 +1271,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Replications, Webhooks | 1 each per registry, on demand (replications only for Premium) | `{registry}/replications` · `{registry}/webhooks` · `2025-11-01` |
 | Apps, Functions | 1 each (the same sites list; Apps is every site because a site id does not say its kind) | `/providers/Microsoft.Web/sites` · `2026-03-15` |
 | Plans | 1 | `/providers/Microsoft.Web/serverfarms` · `2026-03-15` |
+| Static sites (rule 43) | 1, then 3 lazy lists per opened site (`builds`, `customDomains`, `linkedBackends`) | `/providers/Microsoft.Web/staticSites` · `2026-03-15` |
 | App Configuration | 1 per app, on demand | `{site}/config/web` · `2026-03-15` |
 | SQL servers | 1 | `/providers/Microsoft.Sql/servers` · `2025-01-01` |
 | SQL managed instances, instance pools (rule 37) | 1 each (instances with `$expand=administrators/activedirectory`) | `/providers/Microsoft.Sql/{managedInstances,instancePools}` · `2025-01-01` |
@@ -1364,6 +1383,13 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- Static Web Apps (#200), built without an Azure login from
+  azure-rest-api-specs (`web/…/Web/stable`, the tab's version) and the
+  azure-cli `appservice` module. To check: whether the list body carries
+  `linkedBackends` (Related reads it before the lazy list); the list's
+  `location` form (a display name is collapsed, as for galleries);
+  whether a Free site's `builds` list answers; the metric names
+  (`SiteHits`, `SiteErrors`, `BytesSent`, `FunctionErrors`).
 - The #203 small adds, built without an Azure login from azure-rest-api-specs
   (`network`, `compute/…/Compute/stable/2025-03-03` GalleryRP,
   `consumption/…/stable/2024-08-01`). To check: whether `Reader` sees a

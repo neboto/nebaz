@@ -207,6 +207,14 @@ const WEB_SITE: &[MetricSpec] = &[
     m("HttpResponseTime", "Response time", Avg),
     m("CpuTime", "CPU time", Total),
 ];
+/// A static web app: requests and errors at the edge, bytes served, and
+/// the managed functions' errors.
+const STATIC_SITE: &[MetricSpec] = &[
+    m("SiteHits", "Requests", Total),
+    m("SiteErrors", "Errors", Total),
+    m("BytesSent", "Bytes sent", Total),
+    m("FunctionErrors", "Function errors", Total),
+];
 const APP_SERVICE_PLAN: &[MetricSpec] = &[
     m("CpuPercentage", "CPU", Avg),
     m("MemoryPercentage", "Memory", Avg),
@@ -462,6 +470,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.containerservice", ["managedclusters"]) => AKS,
         ("microsoft.app", ["containerapps"]) => CONTAINER_APP,
         ("microsoft.web", ["sites"]) | ("microsoft.web", ["sites", "slots"]) => WEB_SITE,
+        ("microsoft.web", ["staticsites"]) => STATIC_SITE,
         ("microsoft.web", ["serverfarms"]) => APP_SERVICE_PLAN,
         ("microsoft.sql", ["servers", "databases"]) => SQL_DATABASE,
         ("microsoft.dbforpostgresql", ["flexibleservers"]) => POSTGRES_FLEXIBLE,

@@ -11,12 +11,15 @@
 //! body's own `appSettings` / `connectionStrings` fields are never
 //! rendered even when present. The guard names the `az` commands that
 //! would print them.
+//!
+//! The tab's Static sites sub-tab is `static_web_apps.rs` (#200).
 
 use crate::azure::resource::{
     name_of_id, resource_group_of, scope_related, shell_quote, state_ladder, subscription_of, Resource,
     ResourceState,
 };
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::static_web_apps::StaticSiteLists;
 use crate::azure::services::{
     arm_row, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope,
 };
@@ -597,6 +600,9 @@ impl AzureService for AppServiceService {
     }
 
     async fn list_resources(&self, view: JumpView) -> Result<Vec<Box<dyn Resource>>> {
+        if view == JumpView::StaticSites {
+            return StaticSiteLists { scope: &self.scope }.list().await;
+        }
         let (path, _) = Self::list_of(view);
         Ok(Self::rows(view, &self.scope.list(path, WEB_API_VERSION).await?, self.scope.tenant()))
     }
@@ -607,6 +613,9 @@ impl AzureService for AppServiceService {
         event_tx: mpsc::UnboundedSender<Event>,
         service_type: ServiceType,
     ) -> Result<()> {
+        if view == JumpView::StaticSites {
+            return StaticSiteLists { scope: &self.scope }.stream(&event_tx, service_type).await;
+        }
         let tenant = self.scope.tenant().map(str::to_string);
         let (path, label) = Self::list_of(view);
         let r = self
@@ -619,6 +628,9 @@ impl AzureService for AppServiceService {
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
+        if JumpView::for_arm_id(id) == Some(JumpView::StaticSites) {
+            return StaticSiteLists { scope: &self.scope }.get(id).await;
+        }
         let v = self.scope.get(id, WEB_API_VERSION).await?;
         let tenant = self.scope.tenant();
         let not_found = || Error::ResourceNotFound(id.to_string());

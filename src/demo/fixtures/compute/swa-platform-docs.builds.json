@@ -1,0 +1,21 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Web/staticSites/swa-platform-docs/builds/default",
+      "name": "default",
+      "type": "Microsoft.Web/staticSites/builds",
+      "properties": {
+        "buildId": "default",
+        "sourceBranch": "main",
+        "pullRequestTitle": "",
+        "hostname": "polite-meadow-9f8e7d6c5.5.azurestaticapps.net",
+        "createdTimeUtc": "{{iso:now-212d}}",
+        "lastUpdatedOn": "{{iso:now-6d}}",
+        "status": "Ready",
+        "userProvidedFunctionApps": [],
+        "linkedBackends": [],
+        "databaseConnections": []
+      }
+    }
+  ]
+}

@@ -108,6 +108,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
 | `srch-contoso-prod`'s shared private link to `cosmos-legacy` waits for approval | Foundry › Search services |
 | `ci-agents-prod`'s build agent crash-loops (14 restarts, last exit 1) and pulls from `acrcontosoprod` with the registry's admin user | Container Apps › Container groups |
+| `swa-orders-storefront`'s custom domain `beta.shop.contoso.example` failed validation (no CNAME) | App Service › Static sites |
 | `gal_contoso_prod`'s `win2019-legacy-app` image definition and its version 2023.11.0 are past end of life | Virtual Machines › Galleries |
 | `sqlmi-legacy-prod`'s public data endpoint is enabled (port 3342; `nsg-sqlmi` admits only the office), and the instance has no failover group | SQL › Managed instances |
 | `cn-vpn-branch-office`, the site-to-site backup to the branch office, is `NotConnected` (the ExpressRoute path `cn-er-hub-ams` is up) | Hybrid, `@audit` |
@@ -256,6 +257,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `ca-orders-worker`: no ingress, system-assigned identity (pulls from ACR with it), KEDA `azure-servicebus` scale rule on `sb-orders-prod`/`orders`; app provisioning state Failed, latest revision `ca-orders-worker--v119` failed (image `orders-worker:1.19.0` not found, the revision's `provisioningError`), previous `ca-orders-worker--v118` (`orders-worker:1.18.2`, 2 replicas) still running
 - Job `caj-nightly-export`: scheduled `0 2 * * *`, identity `id-orders-api`, image `orders-export:1.4.2`; last execution (`caj-nightly-export-q7k2m9x`, 6h ago) Failed, the three before Succeeded (the `executions` fixture, read by the job's Executions section)
 - Container group `cg-orders-reindex` (Container Instances, Linux, restart `Never`): one `reindex` container from `acrcontosoprod` pulled with `id-orders-api`, ran yesterday and exited 0 (`Succeeded`); `ORDERS_DB_PASSWORD` is a secure env var, shown by name
+- Static web app `swa-orders-storefront` (Standard, GitHub `contoso/orders-storefront` on `main`): production plus preview `318` (`feature/checkout-v2`), both ready; `/api` linked to `ca-orders-api`; custom domain `shop.contoso.example` ready, **`beta.shop.contoso.example` failed** (no CNAME)
 - `id-orders-api` (user-assigned): AcrPull on `acrcontosoprod`, Key Vault Secrets User on `kv-orders-prod`
 - `kv-orders-prod`: RBAC, public network disabled, purge protection on, behind `pe-kv-orders`
 - `stcontosoordersprod`: StorageV2, behind `pe-st-orders-blob` but public network still enabled, blob public access allowed, TLS 1.0
@@ -272,6 +274,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `aks-platform-prod`: 1.28.9, Free tier, Azure CNI overlay (managed VNet, no subnet of ours), Entra integration with `Contoso Platform Admins` as admins, monitoring to `law-contoso-prod`, node resource group `MC_rg-platform-prod_aks-platform-prod_westeurope`; node pools `system` (3 × Standard_D4s_v5, Succeeded) and `batch` (autoscale 0 → 4 × Standard_D8s_v5, Failed)
 - Compute Gallery `gal_contoso_prod`: `ubuntu-2404-batch` (versions 1.3.0 and 1.4.0, two regions; `vmss-batch-flex` is built from 1.4.0) and `win2019-legacy-app`, whose definition and only version passed **end of life** 30 days ago
 - Container group `ci-agents-prod` (Container Instances, Linux, restart `Always`, no IP): build `agent` (2 CPU, 4 GB) **crash-looping**, 14 restarts, last exit 1, and a `docker-cache` registry mirror (running, port 5000); both pull from `acrcontosoprod` with its admin user; logs to `law-contoso-prod`
+- Static web app `swa-platform-docs` (Free, GitHub `contoso/platform-docs`, staging environments off): production only, no custom domains, no backend
 - `agw-contoso-prod` (WAF_v2, in `snet-appgw`, `pip-agw-prod`): listener `api.contoso-demo.com` → backend pool `orders-api` → `ca-orders-api`'s FQDN `ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io` (the app's `ingress.fqdn` must be exactly this for the backend to match); WAF policy `wafp-agw-prod` in **Detection**
 - Traffic Manager `tm-contoso-api` (global, Priority, `contoso-api.trafficmanager.net`, HTTPS probe on `/healthz`): `agw-westeurope` (Azure endpoint → `pip-agw-prod`, priority 1, Online) and `dr-onprem` (external `api-dr.contoso-demo.com`, priority 2, **Degraded**)
 - Front Door `afd-contoso` (Premium, global): endpoint `contoso-web` (host `contoso-web-c7d9e2f4a1b3.z01.azurefd.net`) with route `route-web` for the custom domain `www.contoso-demo.com`, origin group `og-agw-prod` → origin `origin-agw-prod` at `pip-agw-prod`'s FQDN, WAF policy `wafpafdcontoso` in Prevention (through security policy `sp-wafpafdcontoso`)
@@ -318,6 +321,6 @@ Graph (`directoryObjects`) is `identity`'s.
 |---|---|
 | `core` | Subscriptions (subscription details, locations, resource groups, All resources), budgets, the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
 | `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, ASGs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Virtual WAN, Firewall |
-| `compute` | VMs, disks, Compute Gallery, AKS, Container Registry, App Service, Container Apps, Container Instances |
+| `compute` | VMs, disks, Compute Gallery, AKS, Container Registry, App Service, Static Web Apps, Container Apps, Container Instances |
 | `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, Backup |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry, AI Search |

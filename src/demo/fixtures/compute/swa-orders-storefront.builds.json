@@ -1,0 +1,45 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront/builds/default",
+      "name": "default",
+      "type": "Microsoft.Web/staticSites/builds",
+      "properties": {
+        "buildId": "default",
+        "sourceBranch": "main",
+        "pullRequestTitle": "",
+        "hostname": "gentle-river-0a1b2c3d4.5.azurestaticapps.net",
+        "createdTimeUtc": "{{iso:now-212d}}",
+        "lastUpdatedOn": "{{iso:now-1d}}",
+        "status": "Ready",
+        "userProvidedFunctionApps": [],
+        "linkedBackends": [
+          {
+            "backendResourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerapps/ca-orders-api",
+            "region": "westeurope",
+            "createdOn": "{{iso:now-212d}}",
+            "provisioningState": "Succeeded"
+          }
+        ],
+        "databaseConnections": []
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront/builds/318",
+      "name": "318",
+      "type": "Microsoft.Web/staticSites/builds",
+      "properties": {
+        "buildId": "318",
+        "sourceBranch": "feature/checkout-v2",
+        "pullRequestTitle": "Checkout v2",
+        "hostname": "gentle-river-0a1b2c3d4-318.westeurope.5.azurestaticapps.net",
+        "createdTimeUtc": "{{iso:now-2d}}",
+        "lastUpdatedOn": "{{iso:now-2d}}",
+        "status": "Ready",
+        "userProvidedFunctionApps": [],
+        "linkedBackends": [],
+        "databaseConnections": []
+      }
+    }
+  ]
+}

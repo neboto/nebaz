@@ -1,0 +1,38 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Web/staticSites/swa-platform-docs",
+  "name": "swa-platform-docs",
+  "type": "Microsoft.Web/staticSites",
+  "location": "West Europe",
+  "tags": {
+    "env": "prod",
+    "team": "platform",
+    "owner": "platform@contoso.com"
+  },
+  "sku": {
+    "name": "Free",
+    "tier": "Free"
+  },
+  "properties": {
+    "defaultHostname": "polite-meadow-9f8e7d6c5.5.azurestaticapps.net",
+    "repositoryUrl": "https://github.com/contoso/platform-docs",
+    "branch": "main",
+    "provider": "GitHub",
+    "customDomains": [],
+    "buildProperties": {
+      "appLocation": "/site",
+      "apiLocation": "",
+      "outputLocation": "public",
+      "skipGithubActionWorkflowGeneration": false
+    },
+    "stagingEnvironmentPolicy": "Disabled",
+    "allowConfigFileUpdates": true,
+    "contentDistributionEndpoint": "",
+    "enterpriseGradeCdnStatus": "Disabled",
+    "publicNetworkAccess": "",
+    "privateEndpointConnections": [],
+    "userProvidedFunctionApps": [],
+    "linkedBackends": [],
+    "databaseConnections": [],
+    "keyVaultReferenceIdentity": "SystemAssigned"
+  }
+}

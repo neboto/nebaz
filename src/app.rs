@@ -155,6 +155,7 @@ mod alerts;
 mod sql_managed;
 mod ai_search;
 mod container_instances;
+mod static_web_apps;
 mod network_asg;
 mod gallery;
 mod virtual_wan;
@@ -2933,6 +2934,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.ai_search_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.static_site_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(lines) = self.container_group_section_lines(resource, idx) {
