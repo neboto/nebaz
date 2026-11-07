@@ -16,6 +16,18 @@ pub struct Card {
 
 pub static CARDS: &[Card] = &[
     Card { views: &[JumpView::VirtualNetworks], source: include_str!("../docs/cards/vnets.md") },
+    Card { views: &[JumpView::StorageAccounts], source: include_str!("../docs/cards/storage-accounts.md") },
+    Card { views: &[JumpView::RecoveryVaults, JumpView::BackupVaults], source: include_str!("../docs/cards/backup.md") },
+    Card { views: &[JumpView::SqlServers], source: include_str!("../docs/cards/sql-servers.md") },
+    Card {
+        views: &[JumpView::ManagedInstances, JumpView::InstancePools],
+        source: include_str!("../docs/cards/sql-managed-instances.md"),
+    },
+    Card { views: &[JumpView::CosmosAccounts], source: include_str!("../docs/cards/cosmos.md") },
+    Card { views: &[JumpView::PostgresServers], source: include_str!("../docs/cards/postgres.md") },
+    Card { views: &[JumpView::MysqlServers], source: include_str!("../docs/cards/mysql.md") },
+    Card { views: &[JumpView::RedisCaches], source: include_str!("../docs/cards/redis-caches.md") },
+    Card { views: &[JumpView::ManagedRedis], source: include_str!("../docs/cards/managed-redis.md") },
     Card { views: &[JumpView::ArcMachines], source: include_str!("../docs/cards/arc-servers.md") },
     Card { views: &[JumpView::AutomationAccounts], source: include_str!("../docs/cards/automation-accounts.md") },
 ];
