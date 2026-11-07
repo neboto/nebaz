@@ -20,6 +20,7 @@ mod macros;
 mod paths;
 mod search;
 mod sections;
+mod cards;
 mod tui;
 mod ui;
 mod update_check;
@@ -244,6 +245,9 @@ fn render_app(app: &App, frame: &mut ratatui::Frame) {
     search_bar::render_service_completions(app, layout.search_area, frame);
     if app.help_visible {
         help_overlay::render_help_overlay(app, frame);
+    }
+    if app.info_card.is_some() {
+        crate::ui::widgets::info_card::render_info_card(app, frame);
     }
     if app.location_selector.visible {
         location_selector::render_location_selector(

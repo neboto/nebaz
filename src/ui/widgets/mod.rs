@@ -2,6 +2,7 @@ pub mod banner;
 pub mod command_picker;
 pub mod details_pane;
 pub mod help_overlay;
+pub mod info_card;
 pub mod jump_list;
 pub mod key_picker;
 pub mod keycast_box;

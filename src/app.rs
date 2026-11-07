@@ -158,6 +158,7 @@ mod container_instances;
 mod static_web_apps;
 mod automation;
 mod arc;
+mod info_card;
 mod network_asg;
 mod gallery;
 mod virtual_wan;
@@ -551,6 +552,9 @@ pub struct App {
     pub help_max_scroll: Cell<u16>,
     /// Type-to-filter text in the help overlay (empty = the full table).
     pub help_query: String,
+    /// The `i` info card, while open.
+    pub info_card: Option<info_card::InfoCardState>,
+    pub info_max_scroll: Cell<u16>,
     pub service_selector: ServiceSelectorState,
     pub location_selector: LocationSelectorState,
     pub subscription_selector: SubscriptionSelectorState,
@@ -790,6 +794,8 @@ impl App {
             help_scroll: 0,
             help_max_scroll: Cell::new(0),
             help_query: String::new(),
+            info_card: None,
+            info_max_scroll: Cell::new(0),
             service_selector: ServiceSelectorState::new(),
             location_selector: LocationSelectorState::new(),
             subscription_selector: SubscriptionSelectorState::new(),
@@ -3534,6 +3540,7 @@ impl App {
 
     fn any_modal_open(&self) -> bool {
         self.help_visible
+            || self.info_card.is_some()
             || self.service_selector.visible
             || self.location_selector.visible
             || self.subscription_selector.visible
@@ -3918,6 +3925,10 @@ impl App {
                 KeyCode::End => self.help_scroll = max,
                 _ => {}
             }
+            return;
+        }
+        if self.info_card.is_some() {
+            self.handle_info_card_key(key);
             return;
         }
         if self.service_selector.visible {
@@ -4340,6 +4351,7 @@ impl App {
                 self.start_subscription_fanout(_event_tx);
             }
             KeyCode::Char('N') => self.open_network_lens(_event_tx),
+            KeyCode::Char('i') => self.open_info_card(),
             KeyCode::Char('U') => self.open_refs_lens(_event_tx),
             KeyCode::Char('m') => self.open_metrics(_event_tx),
             KeyCode::Char('W') => self.open_timeline(_event_tx),
