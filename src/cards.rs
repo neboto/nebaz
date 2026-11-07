@@ -18,6 +18,21 @@ pub static CARDS: &[Card] = &[
     Card { views: &[JumpView::VirtualNetworks], source: include_str!("../docs/cards/vnets.md") },
     Card { views: &[JumpView::ArcMachines], source: include_str!("../docs/cards/arc-servers.md") },
     Card { views: &[JumpView::AutomationAccounts], source: include_str!("../docs/cards/automation-accounts.md") },
+    Card { views: &[JumpView::VirtualMachines], source: include_str!("../docs/cards/vms.md") },
+    Card { views: &[JumpView::Disks], source: include_str!("../docs/cards/disks.md") },
+    Card { views: &[JumpView::Nics], source: include_str!("../docs/cards/nics.md") },
+    Card { views: &[JumpView::ScaleSets], source: include_str!("../docs/cards/scale-sets.md") },
+    Card { views: &[JumpView::ApplicationSecurityGroups], source: include_str!("../docs/cards/asgs.md") },
+    Card { views: &[JumpView::Galleries], source: include_str!("../docs/cards/galleries.md") },
+    Card { views: &[JumpView::ArcClusters], source: include_str!("../docs/cards/arc-kubernetes.md") },
+    Card { views: &[JumpView::ArcPrivateLinkScopes], source: include_str!("../docs/cards/arc-private-link-scopes.md") },
+    Card { views: &[JumpView::Clusters, JumpView::NodePools], source: include_str!("../docs/cards/aks.md") },
+    Card { views: &[JumpView::Registries], source: include_str!("../docs/cards/registries.md") },
+    Card {
+        views: &[JumpView::ContainerApps, JumpView::ContainerAppEnvironments, JumpView::ContainerAppJobs],
+        source: include_str!("../docs/cards/container-apps.md"),
+    },
+    Card { views: &[JumpView::ContainerGroups], source: include_str!("../docs/cards/container-groups.md") },
 ];
 
 /// The card for a sub-tab, if one is written.
@@ -179,7 +194,7 @@ mod tests {
         }
     }
 
-    /// Not a gate yet: the prototype has three cards. Prints which
+    /// Not a gate until every sub-tab has a card (they land in batches). Prints which
     /// sub-tabs still have none (`cargo test cards -- --nocapture`).
     #[test]
     fn sub_tabs_without_a_card_are_listed() {
