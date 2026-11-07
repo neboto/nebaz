@@ -758,7 +758,7 @@ mod tests {
             "parameters": {"Password": {"defaultValue": "planted"}}
         }});
         let clean = without_secrets(&runbook).to_string();
-        assert!(!clean.contains("planted"), "{clean}");
+        assert!(!clean.contains("planted"), "a planted value survived the scrub");
         assert!(clean.contains("PowerShell"));
         let schedule_link = json!({"properties": {"parameters": {"token": "planted"}, "runbook": {"name": "Stop-Vms"}}});
         assert!(!without_secrets(&schedule_link).to_string().contains("planted"));
