@@ -50,6 +50,11 @@ const PLANTED: &[(&str, &str)] = &[
     // compute: the storefront's beta domain never validated (no CNAME).
     ("/staticSites/swa-orders-storefront", "⚠ failed"),
     ("/staticSites/swa-orders-storefront", "⚠ CNAME"),
+    // core: the legacy patching runbook failed on its hybrid worker,
+    // vm-legacy-app-01, deallocated for 40 days.
+    ("/automationAccounts/aa-platform-ops", "⚠ failed"),
+    ("/automationAccounts/aa-platform-ops", "Failed or stopped"),
+    ("/automationAccounts/aa-platform-ops", "Last seen"),
     // compute: the legacy app's Windows image definition and its one
     // version are past end of life.
     ("/galleries/gal_contoso_prod", "end of life"),
@@ -84,6 +89,8 @@ fn planted(id: &str, line: &str) -> bool {
 /// Audit checks the demo's data must trip (`nebaz --demo audit`), each a
 /// planted finding. Each area appends its own.
 const AUDIT_EXPECTED: &[&str] = &[
+    // core: aa-platform-ops keeps local auth on.
+    "automation-local-auth",
     // core: github-actions-deploy holds User Access Administrator and
     // Contributor on the subscription.
     "sub-privileged-guest-or-sp",

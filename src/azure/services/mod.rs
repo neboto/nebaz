@@ -13,6 +13,7 @@ pub mod alerts;
 pub mod aks;
 pub mod backup;
 pub mod budgets;
+pub mod automation;
 pub mod all_resources;
 pub mod app_service;
 pub mod changes;

@@ -313,6 +313,14 @@ each one backs are in the catalog table
   `servicePrincipals(appId='{id}')`), with directory read as above;
   without it, callers stay unclassified. Resource Graph's
   `resourcechanges` is a `POST` and is never sent.
+- **Automation** (#202): `Microsoft.Automation/automationAccounts/read`;
+  the lazy sections: `…/runbooks/read`, `…/schedules/read`,
+  `…/jobSchedules/read`, `…/jobs/read`,
+  `…/hybridRunbookWorkerGroups/read`,
+  `…/hybridRunbookWorkerGroups/hybridRunbookWorkers/read`,
+  `…/linkedWorkspace/read`. Never read, though `Reader` allows most of
+  them: variables, credentials, certificates, connections, runbook
+  content, job output and streams; the guard names those paths.
 - **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
   Environments and their policy links are in the Power Platform admin
   API, not ARM: nebaz never calls it, and its hosts are on the guard's
@@ -454,7 +462,7 @@ each one backs are in the catalog table
   and `config/web`), Container Apps, Redis (caches, Managed Redis and cache
   firewall rules), PostgreSQL and MySQL (servers, and each one's firewall
   rules, parameters and Entra admins), Service Bus and Event Hubs (namespaces and their
-  network rule sets), Power Platform, the subscription's
+  network rule sets), Power Platform, Automation accounts, the subscription's
   Access list, and the Graph directory reads (app registrations, service
   principals, principal names). A denied one leaves its checks "not
   checked". `nebaz audit` makes the same calls.

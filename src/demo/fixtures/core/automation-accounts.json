@@ -1,0 +1,38 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops",
+      "name": "aa-platform-ops",
+      "type": "Microsoft.Automation/AutomationAccounts",
+      "location": "West Europe",
+      "tags": {
+        "env": "prod",
+        "team": "platform",
+        "owner": "platform@contoso.com"
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "5d2f8a41-9c3e-4b7d-a1f6-0e8c2b4d6f19",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "sku": {
+          "name": "Basic"
+        },
+        "state": "Ok",
+        "creationTime": "{{iso:now-1460d}}",
+        "lastModifiedTime": "{{iso:now-30d}}",
+        "lastModifiedBy": "",
+        "description": "Start/stop and patching for the platform estate",
+        "encryption": {
+          "keySource": "Microsoft.Automation",
+          "identity": {}
+        },
+        "publicNetworkAccess": true,
+        "disableLocalAuth": false,
+        "automationHybridServiceUrl": "https://5d2f8a41-9c3e-4b7d-a1f6-0e8c2b4d6f19.jrds.we.azure-automation.example/automationAccounts/5d2f8a41",
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

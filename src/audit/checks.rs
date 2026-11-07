@@ -23,6 +23,7 @@ use crate::azure::resource::{name_of_id, Resource};
 use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::app_service::SiteRow;
+use crate::azure::services::automation::AutomationAccountRow;
 use crate::azure::services::backup::{self, BackupVaultRow, RecoveryVaultRow};
 use crate::azure::services::compute::{DiskRow, NicRow};
 use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, JobRow, Workload};
@@ -92,9 +93,10 @@ const RSVS: &[V] = &[V::RecoveryVaults];
 const BVS: &[V] = &[V::BackupVaults];
 const ASSIGNMENTS: &[V] = &[V::PolicyAssignments];
 const EXEMPTIONS: &[V] = &[V::PolicyExemptions];
+const AUTOMATION: &[V] = &[V::AutomationAccounts];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 76] = [
+pub static CHECKS: [Check; 77] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -723,6 +725,15 @@ pub static CHECKS: [Check; 76] = [
         fix: "Fix what the exemption covered and let it lapse, or extend expiresOn if the waiver is still agreed. Delete an expired exemption so the list shows only waivers in force.",
         sources: &[EXEMPTIONS],
         run: policy_exemption_expiry,
+    },
+    // ── Automation ──
+    Check {
+        id: "automation-local-auth",
+        title: "Automation account allows local authentication",
+        why: "With local auth on, webhooks and the agent registration keys work: a webhook URL is a bearer secret that starts a runbook as the account's identity, with no Entra ID sign-in and nothing in the caller's audit trail.",
+        fix: "Move callers to Entra ID (a managed identity calling the runbook start API, or an Azure Monitor action group), then set disableLocalAuth to true. Hybrid workers must be extension-based (V2) first.",
+        sources: &[AUTOMATION],
+        run: automation_local_auth,
     },
 ];
 
@@ -1791,6 +1802,19 @@ fn acr_admin_user(check: &'static Check, input: &AuditInput, out: &mut Vec<Audit
             out.push(
                 AuditFinding::about(check, Severity::Medium, r, "admin user enabled")
                     .with_evidence(vec!["adminUserEnabled: true".into()]),
+            );
+        }
+    }
+}
+
+// ── Automation ────────────────────────────────────────────────────────
+
+fn automation_local_auth(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for r in input.of::<AutomationAccountRow>(V::AutomationAccounts) {
+        if r.disable_local_auth != Some(true) {
+            out.push(
+                AuditFinding::about(check, Severity::Low, r, "local auth on (webhooks and agent keys)")
+                    .with_evidence(vec![format!("disableLocalAuth: {}", json::yes_no(r.disable_local_auth))]),
             );
         }
     }

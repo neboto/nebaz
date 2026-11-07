@@ -1,0 +1,15 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/hybridRunbookWorkerGroups/hwg-legacy",
+      "name": "hwg-legacy",
+      "type": "Microsoft.Automation/AutomationAccounts/HybridRunbookWorkerGroups",
+      "properties": {
+        "groupType": "User",
+        "credential": {
+          "name": "svc-legacy-patching"
+        }
+      }
+    }
+  ]
+}

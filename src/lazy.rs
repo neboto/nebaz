@@ -274,6 +274,20 @@ pub struct LazyStore {
     /// id (#196).
     pub search_shared_links: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Automation (#202) ────────────────────────────────────────────────
+    /// `GET {account}/runbooks`, keyed by account id, scrubbed.
+    pub aa_runbooks: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {account}/schedules`, keyed by account id.
+    pub aa_schedules: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {account}/jobSchedules`, keyed by account id, scrubbed.
+    pub aa_job_schedules: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {account}/jobs` over the window, keyed by account id.
+    pub aa_jobs: LazyMap<Vec<serde_json::Value>>,
+    /// The worker groups and their workers, keyed by account id.
+    pub aa_workers: LazyMap<crate::azure::services::automation::WorkerGroups>,
+    /// `GET {account}/linkedWorkspace`, keyed by account id.
+    pub aa_linked_workspace: LazyMap<serde_json::Value>,
+
     // ── Static Web Apps (#200) ───────────────────────────────────────────
     /// `GET {site}/builds` (the environments), keyed by site id.
     pub swa_builds: LazyMap<Vec<serde_json::Value>>,

@@ -248,6 +248,9 @@ const STORAGE: &[MetricSpec] = &[
     m("Availability", "Availability", Avg),
     m("UsedCapacity", "Used capacity", Avg),
 ];
+/// An Automation account: the jobs it ran (split by status in the
+/// portal; the total here).
+const AUTOMATION_ACCOUNT: &[MetricSpec] = &[m("TotalJob", "Jobs", Total)];
 const KEY_VAULT: &[MetricSpec] = &[
     m("ServiceApiHit", "API hits", Total),
     m("ServiceApiLatency", "API latency", Avg),
@@ -471,6 +474,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.app", ["containerapps"]) => CONTAINER_APP,
         ("microsoft.web", ["sites"]) | ("microsoft.web", ["sites", "slots"]) => WEB_SITE,
         ("microsoft.web", ["staticsites"]) => STATIC_SITE,
+        ("microsoft.automation", ["automationaccounts"]) => AUTOMATION_ACCOUNT,
         ("microsoft.web", ["serverfarms"]) => APP_SERVICE_PLAN,
         ("microsoft.sql", ["servers", "databases"]) => SQL_DATABASE,
         ("microsoft.dbforpostgresql", ["flexibleservers"]) => POSTGRES_FLEXIBLE,

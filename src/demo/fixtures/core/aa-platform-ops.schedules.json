@@ -1,0 +1,53 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/schedules/weekday-19h",
+      "name": "weekday-19h",
+      "type": "Microsoft.Automation/AutomationAccounts/Schedules",
+      "properties": {
+        "startTime": "{{iso:now-400d}}",
+        "expiryTime": "9999-12-31T23:59:00+00:00",
+        "isEnabled": true,
+        "nextRun": "{{iso:now+11h}}",
+        "interval": 1,
+        "frequency": "Week",
+        "timeZone": "Europe/Amsterdam",
+        "creationTime": "{{iso:now-400d}}",
+        "lastModifiedTime": "{{iso:now-90d}}",
+        "description": "Mon–Fri 19:00"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/schedules/sunday-02h",
+      "name": "sunday-02h",
+      "type": "Microsoft.Automation/AutomationAccounts/Schedules",
+      "properties": {
+        "startTime": "{{iso:now-400d}}",
+        "expiryTime": "9999-12-31T23:59:00+00:00",
+        "isEnabled": true,
+        "nextRun": "{{iso:now+2d}}",
+        "interval": 1,
+        "frequency": "Week",
+        "timeZone": "Europe/Amsterdam",
+        "creationTime": "{{iso:now-400d}}",
+        "lastModifiedTime": "{{iso:now-90d}}",
+        "description": "Sunday 02:00 patch window"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/schedules/q3-freeze",
+      "name": "q3-freeze",
+      "type": "Microsoft.Automation/AutomationAccounts/Schedules",
+      "properties": {
+        "startTime": "{{iso:now-400d}}",
+        "expiryTime": "{{iso:now-40d}}",
+        "isEnabled": false,
+        "frequency": "OneTime",
+        "timeZone": "Europe/Amsterdam",
+        "creationTime": "{{iso:now-400d}}",
+        "lastModifiedTime": "{{iso:now-90d}}",
+        "description": "One-off freeze before the Q3 release"
+      }
+    }
+  ]
+}

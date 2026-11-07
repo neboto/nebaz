@@ -1,0 +1,67 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/runbooks/Stop-DevVms",
+      "name": "Stop-DevVms",
+      "type": "Microsoft.Automation/AutomationAccounts/Runbooks",
+      "location": "West Europe",
+      "tags": {},
+      "properties": {
+        "runbookType": "PowerShell72",
+        "state": "Published",
+        "logVerbose": true,
+        "logProgress": false,
+        "logActivityTrace": 0,
+        "creationTime": "{{iso:now-1000d}}",
+        "lastModifiedTime": "{{iso:now-90d}}",
+        "description": "Deallocates contoso-dev VMs on weekday evenings",
+        "publishContentLink": {
+          "uri": "https://example.invalid/content"
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/runbooks/Patch-LegacyVms",
+      "name": "Patch-LegacyVms",
+      "type": "Microsoft.Automation/AutomationAccounts/Runbooks",
+      "location": "West Europe",
+      "tags": {},
+      "properties": {
+        "runbookType": "PowerShell",
+        "state": "Published",
+        "logVerbose": false,
+        "logProgress": false,
+        "logActivityTrace": 0,
+        "creationTime": "{{iso:now-1000d}}",
+        "lastModifiedTime": "{{iso:now-400d}}",
+        "description": "Installs updates on the legacy VMs, run on the on-prem worker group",
+        "publishContentLink": {
+          "uri": "https://example.invalid/content"
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Automation/automationAccounts/aa-platform-ops/runbooks/Export-CostReport",
+      "name": "Export-CostReport",
+      "type": "Microsoft.Automation/AutomationAccounts/Runbooks",
+      "location": "West Europe",
+      "tags": {},
+      "properties": {
+        "runbookType": "Python3",
+        "state": "Edit",
+        "logVerbose": false,
+        "logProgress": false,
+        "logActivityTrace": 0,
+        "creationTime": "{{iso:now-1000d}}",
+        "lastModifiedTime": "{{iso:now-12d}}",
+        "description": "Monthly cost export (draft in progress)",
+        "publishContentLink": {
+          "uri": "https://example.invalid/content"
+        },
+        "parameters": {}
+      }
+    }
+  ]
+}

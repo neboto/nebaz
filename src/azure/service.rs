@@ -76,6 +76,10 @@ pub enum ServiceType {
     /// Power Platform enterprise policies (network injection, encryption,
     /// identity). Never the environments: they are not in ARM.
     PowerPlatform,
+    /// Azure Automation accounts (#202): runbooks, schedules, jobs and
+    /// hybrid workers lazy. Never variables, credentials, certificates,
+    /// connections, runbook content or job output.
+    Automation,
     /// Container apps, their environments and jobs (`Microsoft.App`);
     /// revisions and auth settings lazy. Never a secret or env var value.
     ContainerApps,
@@ -267,6 +271,8 @@ pub enum JumpView {
     FiredAlerts,
     // Power Platform
     EnterprisePolicies,
+    /// `Microsoft.Automation/automationAccounts` (#202).
+    AutomationAccounts,
     // Container Apps
     ContainerApps,
     ContainerAppEnvironments,
@@ -357,6 +363,7 @@ impl JumpView {
             LogWorkspaces | AppInsights | MetricAlerts | LogAlerts | ActivityLogAlerts | ActionGroups | AlertProcessingRules
             | FiredAlerts => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
+            AutomationAccounts => ServiceType::Automation,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
@@ -447,6 +454,7 @@ impl JumpView {
             FiredAlerts => "fired-alerts",
             AppInsights => "app-insights",
             EnterprisePolicies => "enterprise-policies",
+            AutomationAccounts => "automation-accounts",
             ContainerApps => "container-apps",
             ContainerAppEnvironments => "container-app-environments",
             ContainerAppJobs => "container-app-jobs",
@@ -555,6 +563,7 @@ impl JumpView {
             FiredAlerts => "Fired alerts",
             AppInsights => "App Insights",
             EnterprisePolicies => "Enterprise policies",
+            AutomationAccounts => "Accounts",
             ContainerApps => "Apps",
             ContainerAppEnvironments => "Environments",
             ContainerAppJobs => "Jobs",
@@ -671,6 +680,7 @@ impl JumpView {
             ("microsoft.alertsmanagement", ["actionrules"]) => JumpView::AlertProcessingRules,
             ("microsoft.alertsmanagement", ["alerts"]) => JumpView::FiredAlerts,
             ("microsoft.powerplatform", ["enterprisepolicies"]) => JumpView::EnterprisePolicies,
+            ("microsoft.automation", ["automationaccounts"]) => JumpView::AutomationAccounts,
             ("microsoft.app", ["containerapps"]) => JumpView::ContainerApps,
             ("microsoft.app", ["managedenvironments"]) => JumpView::ContainerAppEnvironments,
             ("microsoft.app", ["jobs"]) => JumpView::ContainerAppJobs,
@@ -798,6 +808,7 @@ impl ServiceType {
             ServiceType::Foundry,
             ServiceType::Monitor,
             ServiceType::PowerPlatform,
+            ServiceType::Automation,
             ServiceType::ContainerApps,
             ServiceType::Redis,
             ServiceType::Messaging,
@@ -843,6 +854,7 @@ impl ServiceType {
             ServiceType::Foundry => "AI",
             ServiceType::Monitor => "Monitoring",
             ServiceType::PowerPlatform => "Management",
+            ServiceType::Automation => "Management",
             ServiceType::ContainerApps => "Containers",
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
@@ -877,6 +889,7 @@ impl ServiceType {
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Platform",
+            ServiceType::Automation => "Automation",
             ServiceType::ContainerApps => "Container Apps",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
@@ -912,6 +925,7 @@ impl ServiceType {
             ServiceType::Foundry => "Foundry",
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Plat",
+            ServiceType::Automation => "Automation",
             ServiceType::ContainerApps => "ACA",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
@@ -946,6 +960,7 @@ impl ServiceType {
             ServiceType::Foundry => "Foundry, OpenAI & AI Search (metadata only)",
             ServiceType::Monitor => "Log Analytics, App Insights & alerts",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
+            ServiceType::Automation => "Runbooks, schedules, jobs & hybrid workers",
             ServiceType::ContainerApps => "Container apps, environments, jobs & instances",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
@@ -1010,6 +1025,7 @@ impl ServiceType {
                 FiredAlerts,
             ],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
+            ServiceType::Automation => &[AutomationAccounts],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
@@ -1215,6 +1231,9 @@ impl ServiceType {
             "pp" | "powerplatform" | "enterprisepolicy" | "enterprisepolicies" => {
                 (ServiceType::PowerPlatform, None)
             }
+            "automation" | "aa" | "automationaccount" | "automationaccounts" | "runbook" | "runbooks" => {
+                (ServiceType::Automation, None)
+            }
             "aca" | "containerapp" | "containerapps" => (ServiceType::ContainerApps, None),
             "acaenv" | "acaenvs" | "cae" | "managedenvironment" | "managedenvironments" => {
                 (ServiceType::ContainerApps, Some(JumpView::ContainerAppEnvironments))
@@ -1280,6 +1299,7 @@ impl ServiceType {
             ServiceType::Foundry => "@foundry",
             ServiceType::Monitor => "@monitor",
             ServiceType::PowerPlatform => "@pp",
+            ServiceType::Automation => "@automation",
             ServiceType::ContainerApps => "@aca",
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
@@ -1299,7 +1319,7 @@ impl ServiceType {
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1507,8 +1527,13 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@swa"), Some((ServiceType::AppService, Some(JumpView::StaticSites))));
         // An environment is a child: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Web/staticSites/docs/builds/12")), None);
-        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Automation/automationAccounts/aa")), None);
-        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Automation/automationAccounts/aa")), Some(JumpView::AllResources));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Automation/automationAccounts/aa")), Some(JumpView::AutomationAccounts));
+        assert_eq!(ServiceType::from_prefix("@automation"), Some((ServiceType::Automation, None)));
+        assert_eq!(ServiceType::from_prefix("@aa"), Some((ServiceType::Automation, None)));
+        // A runbook is a child: in no list of its own.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Automation/automationAccounts/aa/runbooks/r")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp")), Some(JumpView::AllResources));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.KeyVault/vaults/kv/secrets/db")), None);
         assert_eq!(

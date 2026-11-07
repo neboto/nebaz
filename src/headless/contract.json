@@ -236,6 +236,9 @@
     "audit": [
       "audit (audit)"
     ],
+    "automation": [
+      "automation-accounts (automation)"
+    ],
     "backup": [
       "recovery-vaults (backup)",
       "backup-vaults (bvault)"
@@ -479,6 +482,18 @@
       "Rules",
       "Backends",
       "WAF",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Automation account": [
+      "Overview",
+      "Runbooks",
+      "Schedules",
+      "Jobs",
+      "Hybrid workers",
+      "Configuration",
       "Access",
       "Activity",
       "Related",
