@@ -72,36 +72,49 @@ fn split_long(word: Vec<(bool, String)>, max: usize) -> Vec<Vec<(bool, String)>>
     out
 }
 
-/// The card's lines at `width` columns.
-pub fn card_lines(card: &cards::Card, width: usize) -> Vec<Line<'static>> {
+/// The card's lines at `width` columns, each with the block it draws
+/// (`None` for the spacing between blocks): the cursor and `V` move over
+/// blocks, so a copied paragraph is one line of text, not the wrap.
+pub fn card_lines(card: &cards::Card, width: usize) -> Vec<(Line<'static>, Option<usize>)> {
     let body = Style::default().fg(theme::text_primary());
     let dim = Style::default().fg(theme::text_dim());
-    let mut out: Vec<Line<'static>> = Vec::new();
-    for block in card.blocks() {
+    let mut out: Vec<(Line<'static>, Option<usize>)> = Vec::new();
+    for (i, block) in card.blocks().into_iter().enumerate() {
+        let mut lines: Vec<Line<'static>> = Vec::new();
+        let spaced = matches!(block, Block::Heading(_) | Block::Paragraph(_));
+        if spaced {
+            out.push((Line::raw(""), None));
+        }
+        let out_block = &mut lines;
         match block {
-            Block::Title(t) => out.push(Line::from(Span::styled(
+            Block::Title(t) => out_block.push(Line::from(Span::styled(
                 t,
                 Style::default().fg(theme::accent()).add_modifier(Modifier::BOLD),
             ))),
-            Block::Heading(h) => {
-                out.push(Line::raw(""));
-                out.push(Line::from(Span::styled(h, Style::default().fg(theme::heading()).add_modifier(Modifier::BOLD))));
-            }
-            Block::Paragraph(p) => {
-                out.push(Line::raw(""));
-                out.extend(wrap(&p, width, "", "", body));
-            }
-            Block::Bullet(b) => out.extend(wrap(&b, width, "• ", "  ", body)),
+            Block::Heading(h) => out_block
+                .push(Line::from(Span::styled(h, Style::default().fg(theme::heading()).add_modifier(Modifier::BOLD)))),
+            Block::Paragraph(p) => out_block.extend(wrap(&p, width, "", "", body)),
+            Block::Bullet(b) => out_block.extend(wrap(&b, width, "• ", "  ", body)),
             Block::Link { n, label, url } => {
-                out.push(Line::from(vec![
+                out_block.push(Line::from(vec![
                     Span::styled(format!("{} ", n), Style::default().fg(theme::accent()).add_modifier(Modifier::BOLD)),
                     Span::styled(label, body),
                 ]));
-                out.extend(wrap(&url, width, "  ", "  ", dim));
+                out_block.extend(wrap(&url, width, "  ", "  ", dim));
             }
         }
+        out.extend(lines.into_iter().map(|l| (l, Some(i))));
     }
     out
+}
+
+/// A line on the selection bar, padded to `width` so the bar is solid.
+fn selected(line: Line<'static>, width: usize) -> Line<'static> {
+    let sel = theme::selection_style(true);
+    let w: usize = line.spans.iter().map(|s| s.content.width()).sum();
+    let mut spans: Vec<Span<'static>> = line.spans.into_iter().map(|s| Span::styled(s.content, sel)).collect();
+    spans.push(Span::styled(" ".repeat(width.saturating_sub(w)), sel));
+    Line::from(spans)
 }
 
 pub fn render_info_card(app: &App, frame: &mut Frame) {
@@ -110,9 +123,9 @@ pub fn render_info_card(app: &App, frame: &mut Frame) {
     let size = frame.area();
     let width = MAX_WIDTH.min(size.width.saturating_sub(4)).max(30);
     let text_w = width.saturating_sub(2 + 4) as usize; // borders + margins
-    let lines = card_lines(card, text_w);
+    let tagged = card_lines(card, text_w);
     let max_h = (size.height * 85 / 100).max(10);
-    let height = (lines.len() as u16 + 2).min(max_h);
+    let height = (tagged.len() as u16 + 2).min(max_h);
     let area = Rect {
         x: size.x + size.width.saturating_sub(width) / 2,
         y: size.y + size.height.saturating_sub(height) / 2,
@@ -120,9 +133,34 @@ pub fn render_info_card(app: &App, frame: &mut Frame) {
         height: height.min(size.height),
     };
     let viewport = height.saturating_sub(2);
-    let max_scroll = (lines.len() as u16).saturating_sub(viewport);
-    app.info_max_scroll.set(max_scroll);
-    let offset = state.scroll.min(max_scroll);
+    let max_scroll = (tagged.len() as u16).saturating_sub(viewport);
+    app.info_block_count.set(card.blocks().len());
+    // Keep the cursor's block on screen: scroll as little as it takes.
+    let (lo, hi) = state.range();
+    let rows: Vec<u16> = tagged
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, b))| *b == Some(state.cursor))
+        .map(|(i, _)| i as u16)
+        .collect();
+    let mut offset = state.scroll.get().min(max_scroll);
+    if let (Some(&first), Some(&last)) = (rows.first(), rows.last()) {
+        if last >= offset + viewport {
+            offset = (last + 1).saturating_sub(viewport);
+        }
+        if first < offset {
+            offset = first;
+        }
+    }
+    state.scroll.set(offset);
+    let total = tagged.len() as u16;
+    let lines: Vec<Line<'static>> = tagged
+        .into_iter()
+        .map(|(line, b)| match b {
+            Some(b) if (lo..=hi).contains(&b) => selected(line, text_w),
+            _ => line,
+        })
+        .collect();
 
     frame.render_widget(Clear, area);
     app.mouse.popup.borrow_mut().record_area(area);
@@ -132,14 +170,14 @@ pub fn render_info_card(app: &App, frame: &mut Frame) {
         1 => "1 copy the link · ".into(),
         n => format!("1–{} copy a link · ", n),
     };
-    let scroll = if max_scroll > 0 { "↑/↓ scroll · " } else { "" };
+    let copy = if state.anchor.is_some() { "y copy the selection · " } else { "V select · y copy · " };
     let mut block = theme::popup_block(&format!("About · {}", state.view.label())).title_bottom(
-        Line::from(Span::styled(format!(" {}{}Esc close ", scroll, keys), Style::default().fg(theme::text_dim()))).centered(),
+        Line::from(Span::styled(format!(" {}{}Esc close ", copy, keys), Style::default().fg(theme::text_dim()))).centered(),
     );
     if max_scroll > 0 {
         block = block.title_bottom(
             Line::from(Span::styled(
-                format!(" {}–{}/{} ", offset + 1, (offset + viewport).min(lines.len() as u16), lines.len()),
+                format!(" {}–{}/{} ", offset + 1, (offset + viewport).min(total), total),
                 Style::default().fg(theme::text_dim()),
             ))
             .right_aligned(),
@@ -178,7 +216,7 @@ mod tests {
     #[test]
     fn every_card_fits_a_narrow_popup_without_a_line_past_the_edge() {
         for card in cards::CARDS {
-            for line in card_lines(card, 40) {
+            for (line, _) in card_lines(card, 40) {
                 let w: usize = line.spans.iter().map(|s| s.content.width()).sum();
                 let joined: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
                 assert!(w <= 40, "{:?}: {joined:?}", card.views);

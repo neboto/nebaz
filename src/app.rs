@@ -554,7 +554,8 @@ pub struct App {
     pub help_query: String,
     /// The `i` info card, while open.
     pub info_card: Option<info_card::InfoCardState>,
-    pub info_max_scroll: Cell<u16>,
+    /// The open card's block count, from the last draw (the cursor's range).
+    pub info_block_count: Cell<usize>,
     pub service_selector: ServiceSelectorState,
     pub location_selector: LocationSelectorState,
     pub subscription_selector: SubscriptionSelectorState,
@@ -795,7 +796,7 @@ impl App {
             help_max_scroll: Cell::new(0),
             help_query: String::new(),
             info_card: None,
-            info_max_scroll: Cell::new(0),
+            info_block_count: Cell::new(0),
             service_selector: ServiceSelectorState::new(),
             location_selector: LocationSelectorState::new(),
             subscription_selector: SubscriptionSelectorState::new(),

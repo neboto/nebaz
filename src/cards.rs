@@ -75,6 +75,27 @@ impl Card {
         out
     }
 
+    /// Blocks `lo..=hi` as plain text for the clipboard: the card's own
+    /// Markdown minus the `**`, a blank line before each heading and
+    /// paragraph, so a pasted range reads as it does on screen.
+    pub fn text_of(&self, lo: usize, hi: usize) -> String {
+        let mut out = String::new();
+        for (i, b) in self.blocks().iter().enumerate().skip(lo).take(hi.saturating_sub(lo) + 1) {
+            let (gap, line) = match b {
+                Block::Title(t) => (false, t.clone()),
+                Block::Heading(h) => (true, h.clone()),
+                Block::Paragraph(p) => (true, p.replace("**", "")),
+                Block::Bullet(t) => (false, format!("- {}", t.replace("**", ""))),
+                Block::Link { label, url, .. } => (false, format!("- {}: {}", label, url)),
+            };
+            if i > lo {
+                out.push_str(if gap { "\n\n" } else { "\n" });
+            }
+            out.push_str(&line);
+        }
+        out
+    }
+
     /// The URL of link `n` (1-based).
     pub fn link(&self, n: usize) -> Option<String> {
         self.blocks().into_iter().find_map(|b| match b {
@@ -192,6 +213,9 @@ mod tests {
         );
         assert_eq!(card.link(2).as_deref(), Some("https://learn.microsoft.com/y"));
         assert_eq!(card.link(3), None);
+        assert_eq!(card.text_of(2, 3), "Key ideas\n- A: b");
+        assert_eq!(card.text_of(0, 1), "T\n\nOne line and the next.");
+        assert_eq!(card.text_of(5, 5), "- Overview: https://learn.microsoft.com/x");
         assert_eq!(
             styled_words("**Peering**: joins"),
             [vec![(true, "Peering".to_string()), (false, ":".to_string())], vec![(false, "joins".to_string())]]

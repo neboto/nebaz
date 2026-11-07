@@ -177,7 +177,9 @@ the bar and never trimmed.
 **Info cards** (`i`; `src/cards.rs`, `src/ui/widgets/info_card.rs`, the
 text in `docs/cards/`, whose README is the format): a modal per sub-tab on
 what the service is, its key ideas, what nebaz shows of it, and Microsoft
-Learn links (`1`–`9` copy one; nothing is fetched). Built in with
+Learn links (`1`–`9` copy one; nothing is fetched). The cursor, `V`,
+`Ctrl-A` and `y` work on blocks (a paragraph, a bullet), not wrapped
+lines, so a copy pastes unwrapped. Built in with
 `include_str!`; a sub-tab without a card toasts so. The "In nebaz" part
 follows `docs/SERVICES.md`, which stays the reference.
 
