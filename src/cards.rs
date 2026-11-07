@@ -74,6 +74,22 @@ pub static CARDS: &[Card] = &[
         views: &[JumpView::CloudNgfws, JumpView::NgfwRulestacks],
         source: include_str!("../docs/cards/cloud-ngfw.md"),
     },
+    Card { views: &[JumpView::KeyVaults], source: include_str!("../docs/cards/key-vaults.md") },
+    Card { views: &[JumpView::Identities], source: include_str!("../docs/cards/managed-identities.md") },
+    Card {
+        views: &[JumpView::AppRegistrations, JumpView::ServicePrincipals],
+        source: include_str!("../docs/cards/entra-apps.md"),
+    },
+    Card {
+        views: &[JumpView::WebApps, JumpView::AppServicePlans],
+        source: include_str!("../docs/cards/app-service.md"),
+    },
+    Card { views: &[JumpView::FunctionApps], source: include_str!("../docs/cards/function-apps.md") },
+    Card { views: &[JumpView::StaticSites], source: include_str!("../docs/cards/static-web-apps.md") },
+    Card { views: &[JumpView::AiAccounts], source: include_str!("../docs/cards/foundry.md") },
+    Card { views: &[JumpView::SearchServices], source: include_str!("../docs/cards/ai-search.md") },
+    Card { views: &[JumpView::ServiceBusNamespaces], source: include_str!("../docs/cards/service-bus.md") },
+    Card { views: &[JumpView::EventHubNamespaces], source: include_str!("../docs/cards/event-hubs.md") },
 ];
 
 /// The card for a sub-tab, if one is written.
