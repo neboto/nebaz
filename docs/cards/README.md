@@ -2,6 +2,8 @@
 
 What `i` shows: one card per sub-tab (or per group of sub-tabs that are
 the same idea), built into the binary from this folder by `src/cards.rs`.
+Every sub-tab has one; a new sub-tab fails `every_sub_tab_has_a_card`
+until it is added to a card there.
 
 A card is short. Four parts, in this order:
 

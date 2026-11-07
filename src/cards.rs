@@ -15,7 +15,7 @@ pub struct Card {
 }
 
 pub static CARDS: &[Card] = &[
-    Card { views: &[JumpView::VirtualNetworks], source: include_str!("../docs/cards/vnets.md") },
+    Card { views: &[JumpView::VirtualNetworks, JumpView::Subnets], source: include_str!("../docs/cards/vnets.md") },
     Card { views: &[JumpView::StorageAccounts], source: include_str!("../docs/cards/storage-accounts.md") },
     Card { views: &[JumpView::RecoveryVaults, JumpView::BackupVaults], source: include_str!("../docs/cards/backup.md") },
     Card { views: &[JumpView::SqlServers], source: include_str!("../docs/cards/sql-servers.md") },
@@ -45,6 +45,95 @@ pub static CARDS: &[Card] = &[
         source: include_str!("../docs/cards/container-apps.md"),
     },
     Card { views: &[JumpView::ContainerGroups], source: include_str!("../docs/cards/container-groups.md") },
+    Card { views: &[JumpView::NetworkSecurityGroups], source: include_str!("../docs/cards/nsgs.md") },
+    Card { views: &[JumpView::PublicIps], source: include_str!("../docs/cards/public-ips.md") },
+    Card { views: &[JumpView::LoadBalancers], source: include_str!("../docs/cards/load-balancers.md") },
+    Card { views: &[JumpView::RouteTables], source: include_str!("../docs/cards/route-tables.md") },
+    Card { views: &[JumpView::NatGateways], source: include_str!("../docs/cards/nat-gateways.md") },
+    Card { views: &[JumpView::PrivateEndpoints], source: include_str!("../docs/cards/private-endpoints.md") },
+    Card { views: &[JumpView::BastionHosts], source: include_str!("../docs/cards/bastion-hosts.md") },
+    Card { views: &[JumpView::DdosPlans], source: include_str!("../docs/cards/ddos-plans.md") },
+    Card { views: &[JumpView::PrivateDnsZones], source: include_str!("../docs/cards/private-dns-zones.md") },
+    Card { views: &[JumpView::DnsZones], source: include_str!("../docs/cards/dns-zones.md") },
+    Card {
+        views: &[JumpView::DnsResolvers, JumpView::DnsForwardingRulesets],
+        source: include_str!("../docs/cards/dns-resolvers.md"),
+    },
+    Card { views: &[JumpView::DnsResolverPolicies], source: include_str!("../docs/cards/dns-security-policies.md") },
+    Card { views: &[JumpView::TrafficManagerProfiles], source: include_str!("../docs/cards/traffic-manager.md") },
+    Card { views: &[JumpView::AppGateways], source: include_str!("../docs/cards/app-gateways.md") },
+    Card { views: &[JumpView::FrontDoorProfiles], source: include_str!("../docs/cards/front-door.md") },
+    Card { views: &[JumpView::WafPolicies], source: include_str!("../docs/cards/waf-policies.md") },
+    Card { views: &[JumpView::PrivateLinkServices], source: include_str!("../docs/cards/private-link-services.md") },
+    Card { views: &[JumpView::ExpressRouteCircuits], source: include_str!("../docs/cards/expressroute-circuits.md") },
+    Card {
+        views: &[JumpView::VnetGateways, JumpView::GatewayConnections, JumpView::LocalGateways],
+        source: include_str!("../docs/cards/vnet-gateways.md"),
+    },
+    Card {
+        views: &[JumpView::VirtualWans, JumpView::VirtualHubs],
+        source: include_str!("../docs/cards/virtual-wan.md"),
+    },
+    Card {
+        views: &[JumpView::VwanVpnGateways, JumpView::VwanErGateways, JumpView::P2sGateways, JumpView::VpnSites],
+        source: include_str!("../docs/cards/vwan-gateways.md"),
+    },
+    Card {
+        views: &[JumpView::AzureFirewalls, JumpView::FirewallPolicies, JumpView::IpGroups],
+        source: include_str!("../docs/cards/azure-firewall.md"),
+    },
+    Card {
+        views: &[JumpView::CloudNgfws, JumpView::NgfwRulestacks],
+        source: include_str!("../docs/cards/cloud-ngfw.md"),
+    },
+    Card { views: &[JumpView::KeyVaults], source: include_str!("../docs/cards/key-vaults.md") },
+    Card { views: &[JumpView::Identities], source: include_str!("../docs/cards/managed-identities.md") },
+    Card {
+        views: &[JumpView::AppRegistrations, JumpView::ServicePrincipals],
+        source: include_str!("../docs/cards/entra-apps.md"),
+    },
+    Card {
+        views: &[JumpView::WebApps, JumpView::AppServicePlans],
+        source: include_str!("../docs/cards/app-service.md"),
+    },
+    Card { views: &[JumpView::FunctionApps], source: include_str!("../docs/cards/function-apps.md") },
+    Card { views: &[JumpView::StaticSites], source: include_str!("../docs/cards/static-web-apps.md") },
+    Card { views: &[JumpView::AiAccounts], source: include_str!("../docs/cards/foundry.md") },
+    Card { views: &[JumpView::SearchServices], source: include_str!("../docs/cards/ai-search.md") },
+    Card { views: &[JumpView::ServiceBusNamespaces], source: include_str!("../docs/cards/service-bus.md") },
+    Card { views: &[JumpView::EventHubNamespaces], source: include_str!("../docs/cards/event-hubs.md") },
+    Card {
+        views: &[JumpView::Subscriptions, JumpView::ResourceGroups],
+        source: include_str!("../docs/cards/subscriptions.md"),
+    },
+    Card { views: &[JumpView::AllResources], source: include_str!("../docs/cards/all-resources.md") },
+    Card { views: &[JumpView::LogWorkspaces], source: include_str!("../docs/cards/log-analytics.md") },
+    Card { views: &[JumpView::AppInsights], source: include_str!("../docs/cards/app-insights.md") },
+    Card {
+        views: &[JumpView::MetricAlerts, JumpView::LogAlerts, JumpView::ActivityLogAlerts, JumpView::ActionGroups, JumpView::AlertProcessingRules, JumpView::FiredAlerts],
+        source: include_str!("../docs/cards/monitor-alerts.md"),
+    },
+    Card { views: &[JumpView::EnterprisePolicies], source: include_str!("../docs/cards/power-platform.md") },
+    Card {
+        views: &[JumpView::PolicyAssignments, JumpView::PolicyExemptions, JumpView::PolicyDefinitions],
+        source: include_str!("../docs/cards/azure-policy.md"),
+    },
+    Card { views: &[JumpView::ResourceLocks], source: include_str!("../docs/cards/resource-locks.md") },
+    Card { views: &[JumpView::ManagementGroups], source: include_str!("../docs/cards/management-groups.md") },
+    Card { views: &[JumpView::Budgets], source: include_str!("../docs/cards/budgets.md") },
+    Card {
+        views: &[JumpView::DefenderRecommendations, JumpView::DefenderAlerts, JumpView::SecureScore, JumpView::DefenderPlans],
+        source: include_str!("../docs/cards/defender.md"),
+    },
+    Card {
+        views: &[JumpView::AdvisorRecommendations, JumpView::AdvisorScore, JumpView::AdvisorSuppressions],
+        source: include_str!("../docs/cards/advisor.md"),
+    },
+    Card {
+        views: &[JumpView::ChangesAll, JumpView::ChangesActivity, JumpView::ChangesDeployments, JumpView::ChangesHealth],
+        source: include_str!("../docs/cards/changes.md"),
+    },
+    Card { views: &[JumpView::Audit], source: include_str!("../docs/cards/audit.md") },
 ];
 
 /// The card for a sub-tab, if one is written.
@@ -206,18 +295,15 @@ mod tests {
         }
     }
 
-    /// Not a gate until every sub-tab has a card (they land in batches). Prints which
-    /// sub-tabs still have none (`cargo test cards -- --nocapture`).
     #[test]
-    fn sub_tabs_without_a_card_are_listed() {
+    fn every_sub_tab_has_a_card() {
         let missing: Vec<&str> = ServiceType::all()
             .iter()
             .flat_map(|s| s.views().iter())
             .filter(|v| for_view(**v).is_none())
             .map(|v| v.as_str())
             .collect();
-        println!("{} sub-tabs without a card: {}", missing.len(), missing.join(", "));
-        assert!(for_view(JumpView::VirtualNetworks).is_some());
+        assert!(missing.is_empty(), "sub-tabs without a card in docs/cards: {}", missing.join(", "));
     }
 
     #[test]

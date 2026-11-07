@@ -51,23 +51,6 @@ async fn i_opens_the_vnet_card_copies_a_link_and_esc_closes_it() {
     h.press(KeyCode::Char('i')).await;
     assert!(h.app.info_card.is_some(), "i works with the detail pane focused");
 }
-
-#[tokio::test]
-async fn a_sub_tab_without_a_card_says_so() {
-    // Any sub-tab still without one; once every sub-tab has a card there is nothing to test.
-    let Some(view) = ServiceType::all().iter().flat_map(|s| s.views()).copied().find(|v| crate::cards::for_view(*v).is_none())
-    else {
-        return;
-    };
-    let mut h = Harness::new().await;
-    h.open(view).await;
-    assert!(!h.app.supports_info_card());
-    h.press(KeyCode::Char('i')).await;
-    assert!(h.app.info_card.is_none());
-    assert_eq!(h.app.success_message.as_deref(), Some(format!("No info card for {} yet", view.label()).as_str()));
-}
-
-
 #[tokio::test]
 async fn the_cursor_scrolls_the_card_and_is_drawn_on_the_selection_bar() {
     let mut h = Harness::sized(100, 24).await;
