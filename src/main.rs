@@ -21,6 +21,7 @@ mod paths;
 mod search;
 mod sections;
 mod cards;
+mod browser;
 mod tui;
 mod ui;
 mod update_check;

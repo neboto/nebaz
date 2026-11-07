@@ -1,7 +1,8 @@
 //! The info card (`i`, `src/cards.rs`): open it for the current sub-tab,
 //! move over its blocks, select and copy them, copy one of its links. A
 //! modal like `?`: it owns the keys while open. The keys are the detail
-//! pane's: `j`/`k` move, `V` selects, `Ctrl-A` selects all, `y` copies.
+//! pane's: `j`/`k` move, `V` selects, `Ctrl-A` selects all, `y` copies;
+//! `o` (or `⏎`) on a link opens it (`src/browser.rs`).
 
 use super::App;
 use crate::azure::service::JumpView;
@@ -77,6 +78,17 @@ impl App {
                 let text = crate::cards::for_view(state.view).map(|c| c.text_of(lo, hi));
                 if let Some(text) = text {
                     self.copy_to_clipboard(&text, what);
+                }
+            }
+            KeyCode::Char('o') | KeyCode::Enter => {
+                let card = crate::cards::for_view(state.view);
+                let link = card.and_then(|c| match c.blocks().into_iter().nth(state.cursor) {
+                    Some(crate::cards::Block::Link { label, url, .. }) => Some((label, url)),
+                    _ => None,
+                });
+                match link {
+                    Some((label, url)) => self.open_url(&url, &format!("“{}”", label)),
+                    None => self.toast("Move to a link to open it (1–9 copy one)"),
                 }
             }
             KeyCode::Char(c @ '1'..='9') => {

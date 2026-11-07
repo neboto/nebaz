@@ -167,8 +167,8 @@ pub fn render_info_card(app: &App, frame: &mut Frame) {
     let links = card.blocks().iter().filter(|b| matches!(b, Block::Link { .. })).count();
     let keys = match links {
         0 => String::new(),
-        1 => "1 copy the link · ".into(),
-        n => format!("1–{} copy a link · ", n),
+        1 => "o open · 1 copy the link · ".into(),
+        n => format!("o open · 1–{} copy a link · ", n),
     };
     let copy = if state.anchor.is_some() { "y copy the selection · " } else { "V select · y copy · " };
     let mut block = theme::popup_block(&format!("About · {}", state.view.label())).title_bottom(

@@ -262,9 +262,9 @@ strings, app settings and secret values are never fetched.
 | `m` | metrics (WAF view on a gateway, Front Door profile or WAF policy: `Tab` `⏎` `d` `w` `n`) |
 | `W` | change timeline (`f` one source, `[`/`]` window) |
 | `U` | referenced by |
-| `i` | about this service: what it is, what nebaz shows of it, Microsoft Learn links (`1`–`9` copy one; `j`/`k`, `V`, `^A` and `y` copy text as in the detail pane); VNets, Arc servers and Automation so far |
+| `i` | about this service: what it is, what nebaz shows of it, Microsoft Learn links (`o` opens the one under the cursor, `1`–`9` copy one; `j`/`k`, `V`, `^A` and `y` copy text as in the detail pane); VNets, Arc servers and Automation so far |
 | `C` | copy an `az` command (inspect, connect, change; never run) |
-| `y` · `O` · `e` | copy the id · open in the portal · open the JSON in `$EDITOR` |
+| `y` · `O` · `e` | copy the id · open in the portal (over SSH, or with no browser, the link is copied) · open the JSON in `$EDITOR` |
 | `X` / `^X` | export the resource / the list |
 
 **Search tokens:** `rg:name` (resource group), `tag:key=value`, and

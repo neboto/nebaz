@@ -591,6 +591,11 @@ pub struct App {
     pub redraw_requested: bool,
     /// One long-lived clipboard handle (see `clipboard.rs` for why).
     clipboard: crate::clipboard::Clipboard,
+    /// The browser opener (`O`, `o` in a card; see `browser.rs`).
+    pub browser: crate::browser::Browser,
+    /// An SSH session: links are copied, since a browser would open on
+    /// the remote machine. Never under test.
+    pub remote_session: bool,
     pub bookmarks: Vec<NavLocation>,
     pub bookmarks_visible: bool,
     pub bookmarks_selected: usize,
@@ -812,6 +817,8 @@ impl App {
             pending_jump: None,
             redraw_requested: false,
             clipboard: crate::clipboard::Clipboard::new(),
+            browser: crate::browser::Browser::default(),
+            remote_session: !cfg!(test) && crate::browser::is_remote(|k| std::env::var(k).ok()),
             bookmarks: crate::bookmarks::load(),
             bookmarks_visible: false,
             bookmarks_selected: 0,
@@ -2856,6 +2863,19 @@ impl App {
         }
     }
 
+    /// Open `url` in the browser; copy it instead over SSH (the browser
+    /// would be the remote machine's) or when the opener fails, saying why.
+    fn open_url(&mut self, url: &str, what: &str) {
+        if self.remote_session {
+            self.copy_to_clipboard(url, &format!("the link to {} (SSH session: no browser here)", what));
+            return;
+        }
+        match self.browser.open(url) {
+            Ok(()) => self.toast(format!("Opened {} in the browser", what)),
+            Err(e) => self.copy_to_clipboard(url, &format!("the link to {} (could not open a browser: {})", what, e)),
+        }
+    }
+
     // ── `$EDITOR` ───────────────────────────────────────────────────────
 
     /// Called by `main` after the TUI is torn down: open the selected
@@ -4373,7 +4393,7 @@ impl App {
             KeyCode::Char('O') => {
                 let url = self.get_selected_resource().and_then(|r| r.portal_url());
                 match url {
-                    Some(url) => self.copy_to_clipboard(&url, "portal URL"),
+                    Some(url) => self.open_url(&url, "the portal"),
                     None => self.error_message = Some("No portal page for this resource".into()),
                 }
             }

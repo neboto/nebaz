@@ -81,3 +81,38 @@ async fn the_cursor_scrolls_the_card_and_is_drawn_on_the_selection_bar() {
     assert_ne!(Some(h.terminal.backend().buffer()[(x, y)].bg), bar, "the block above is not");
 }
 
+
+#[tokio::test]
+async fn o_opens_the_link_under_the_cursor_and_over_ssh_copies_it() {
+    let mut h = Harness::new().await;
+    h.open(JumpView::VirtualNetworks).await;
+    h.land(vec![vnet("vnet-hub", "westeurope")]).await;
+    h.press(KeyCode::Char('i')).await;
+    h.press(KeyCode::Char('o')).await;
+    assert_eq!(h.app.success_message.as_deref(), Some("Move to a link to open it (1–9 copy one)"));
+    assert_eq!(h.app.browser.last(), None);
+
+    h.press(KeyCode::End).await;
+    h.press(KeyCode::Char('o')).await;
+    let limits = "https://learn.microsoft.com/azure/azure-resource-manager/management/azure-subscription-service-limits";
+    assert_eq!(h.app.browser.last(), Some(limits));
+    assert_eq!(h.app.success_message.as_deref(), Some("Opened “Limits” in the browser"));
+
+    h.app.remote_session = true;
+    h.press(KeyCode::Up).await;
+    h.press(KeyCode::Char('o')).await;
+    assert_eq!(h.app.browser.last(), Some(limits), "nothing opened over SSH");
+    assert!(h.app.success_message.as_deref().unwrap_or_default().contains("SSH session: no browser here"));
+}
+
+#[tokio::test]
+async fn shift_o_opens_the_portal_page() {
+    let mut h = Harness::new().await;
+    h.open(JumpView::VirtualNetworks).await;
+    h.land(vec![vnet("vnet-hub", "westeurope")]).await;
+    h.press_key(KeyEvent::new(KeyCode::Char('O'), KeyModifiers::SHIFT)).await;
+    let url = h.app.browser.last().unwrap_or_default().to_string();
+    assert!(url.starts_with("https://portal.azure.com/#@"), "{url}");
+    assert!(url.ends_with("/virtualNetworks/vnet-hub"), "{url}");
+    assert_eq!(h.app.success_message.as_deref(), Some("Opened the portal in the browser"));
+}
