@@ -195,6 +195,7 @@ pub static COMMANDS: &[Command] = &[
     cmd(Actions, "X", "export detail").runs(Key('X')),
     cmd(Actions, "^X", "export list").runs(Ctrl('x')),
     cmd(Actions, "M", "message history").runs(Key('M')),
+    cmd(Actions, "|", "split out: this place in a new pane").runs(Key('|')),
     cmd(Actions, ",", "macros (⏎ run · n record)").runs(Key(',')),
     cmd(Actions, "b", "toggle banner").runs(Key('b')),
     cmd(Actions, ":", "command picker (run a key by name)"),

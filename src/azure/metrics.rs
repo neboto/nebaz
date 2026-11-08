@@ -24,7 +24,7 @@ use std::future::Future;
 pub const METRICS_API_VERSION: &str = "2023-10-01";
 
 /// The time window, `[` / `]` or `1`–`5` in the overlay.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum MetricWindow {
     #[default]
     OneHour,

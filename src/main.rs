@@ -22,6 +22,7 @@ mod search;
 mod sections;
 mod cards;
 mod browser;
+mod split;
 mod tui;
 mod ui;
 mod update_check;
@@ -83,6 +84,8 @@ async fn run(cli: cli::Cli) -> Result<()> {
     if app.current_service.is_some() && !app.macro_supersedes_startup_load() {
         app.load_service_resources();
     }
+    // `--at` (a pane split out with `|`): go where the other pane was.
+    app.restore_startup_location(&event_tx);
     app.spawn_subscription_info_fetch(&event_tx);
     App::trigger_locations(&mut app, &event_tx);
     // Once-a-day "newer release" check (ADR 0008): the TUI only, never the

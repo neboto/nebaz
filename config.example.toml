@@ -117,6 +117,15 @@
 # the working directory. The NEBAZ_EXPORT_DIR environment variable wins.
 # export_dir = "~/nebaz-exports"
 
+# ── Split out ────────────────────────────────────────────────────────────────
+
+# How `|` opens the second nebaz, instead of the detected terminal's split
+# (tmux, zellij, WezTerm, kitty, iTerm, Ghostty on macOS; a window or tab in
+# Alacritty, Terminal, GNOME Terminal, Konsole, foot). `{cmd}` is the nebaz
+# command as one shell-quoted word; without it, ` sh -c {cmd}` is appended.
+# Run detached through `sh -c`, so its failures aren't reported.
+# split_command = "wezterm cli split-pane --bottom -- sh -c {cmd}"
+
 # ── Tables (keep these last: a `[table]` header claims every key below it) ──
 
 # Per-color overrides by palette field name — #rrggbb or an ANSI color name.

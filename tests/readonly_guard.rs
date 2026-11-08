@@ -691,9 +691,9 @@ fn the_cli_catalogue_is_only_copied() {
 }
 
 /// The files that may start a process: `az` itself (the login and the
-/// account list), `$EDITOR`, and the browser opener, which takes only an
-/// allowlisted `https://` link.
-const SPAWNING_FILES: &[&str] = &["src/azure/auth.rs", "src/editor.rs", "src/browser.rs"];
+/// account list), `$EDITOR`, the browser opener, which takes only an
+/// allowlisted `https://` link, and `|`'s launchers, which start nebaz.
+const SPAWNING_FILES: &[&str] = &["src/azure/auth.rs", "src/editor.rs", "src/browser.rs", "src/split.rs"];
 
 #[test]
 fn only_the_known_files_start_a_process() {

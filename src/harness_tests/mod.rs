@@ -77,6 +77,7 @@ mod service_strip_test;
 mod subscription_fanout_test;
 mod ownership_test;
 mod small_terminal_test;
+mod split_test;
 mod timeline_test;
 mod update_check_test;
 mod wiring_test;
