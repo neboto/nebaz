@@ -1,0 +1,26 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/scalingPlans/sp-contoso-weekdays",
+  "name": "sp-contoso-weekdays",
+  "type": "Microsoft.DesktopVirtualization/scalingPlans",
+  "location": "westeurope",
+  "tags": {
+    "team": "platform",
+    "env": "prod",
+    "owner": "workplace@contoso.com"
+  },
+  "properties": {
+    "objectId": "7c1e3a5b-2d4f-4e6a-8b9c-0d2e4f6a8b13",
+    "friendlyName": "Weekdays",
+    "description": "Head office hours, Amsterdam",
+    "timeZone": "W. Europe Standard Time",
+    "hostPoolType": "Pooled",
+    "exclusionTag": "avd-exclude",
+    "schedules": [],
+    "hostPoolReferences": [
+      {
+        "hostPoolArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled",
+        "scalingPlanEnabled": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-contoso-pooled",
+  "name": "dag-contoso-pooled",
+  "type": "Microsoft.DesktopVirtualization/applicationGroups",
+  "location": "westeurope",
+  "tags": {
+    "team": "platform",
+    "env": "prod",
+    "owner": "workplace@contoso.com"
+  },
+  "kind": "Desktop",
+  "properties": {
+    "objectId": "1f7c3a9e-5d2b-4e8f-a1c6-9b3d5f7a2e48",
+    "friendlyName": "Contoso desktop",
+    "description": "The full Windows 11 desktop",
+    "hostPoolArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled",
+    "workspaceArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/workspaces/ws-contoso",
+    "applicationGroupType": "Desktop",
+    "cloudPcResource": false,
+    "showInFeed": true
+  }
+}

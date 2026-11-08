@@ -84,6 +84,10 @@ pub enum ServiceType {
     /// Kubernetes clusters and Arc private link scopes. Never an
     /// extension's settings, never a run command or a patch install.
     Arc,
+    /// Azure Virtual Desktop (#198): host pools (session hosts lazy),
+    /// application groups, workspaces and scaling plans. Never a
+    /// registration token, never a user session's message or disconnect.
+    VirtualDesktop,
     /// Container apps, their environments and jobs (`Microsoft.App`);
     /// revisions and auth settings lazy. Never a secret or env var value.
     ContainerApps,
@@ -281,6 +285,11 @@ pub enum JumpView {
     ArcMachines,
     ArcClusters,
     ArcPrivateLinkScopes,
+    // Azure Virtual Desktop (#198)
+    HostPools,
+    AvdApplicationGroups,
+    AvdWorkspaces,
+    ScalingPlans,
     // Container Apps
     ContainerApps,
     ContainerAppEnvironments,
@@ -373,6 +382,7 @@ impl JumpView {
             EnterprisePolicies => ServiceType::PowerPlatform,
             AutomationAccounts => ServiceType::Automation,
             ArcMachines | ArcClusters | ArcPrivateLinkScopes => ServiceType::Arc,
+            HostPools | AvdApplicationGroups | AvdWorkspaces | ScalingPlans => ServiceType::VirtualDesktop,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
@@ -467,6 +477,10 @@ impl JumpView {
             ArcMachines => "arc-machines",
             ArcClusters => "arc-kubernetes",
             ArcPrivateLinkScopes => "arc-private-link-scopes",
+            HostPools => "host-pools",
+            AvdApplicationGroups => "avd-application-groups",
+            AvdWorkspaces => "avd-workspaces",
+            ScalingPlans => "scaling-plans",
             ContainerApps => "container-apps",
             ContainerAppEnvironments => "container-app-environments",
             ContainerAppJobs => "container-app-jobs",
@@ -579,6 +593,10 @@ impl JumpView {
             ArcMachines => "Servers",
             ArcClusters => "Kubernetes",
             ArcPrivateLinkScopes => "Private link scopes",
+            HostPools => "Host pools",
+            AvdApplicationGroups => "App groups",
+            AvdWorkspaces => "Workspaces",
+            ScalingPlans => "Scaling plans",
             ContainerApps => "Apps",
             ContainerAppEnvironments => "Environments",
             ContainerAppJobs => "Jobs",
@@ -699,6 +717,10 @@ impl JumpView {
             ("microsoft.hybridcompute", ["machines"]) => JumpView::ArcMachines,
             ("microsoft.kubernetes", ["connectedclusters"]) => JumpView::ArcClusters,
             ("microsoft.hybridcompute", ["privatelinkscopes"]) => JumpView::ArcPrivateLinkScopes,
+            ("microsoft.desktopvirtualization", ["hostpools"]) => JumpView::HostPools,
+            ("microsoft.desktopvirtualization", ["applicationgroups"]) => JumpView::AvdApplicationGroups,
+            ("microsoft.desktopvirtualization", ["workspaces"]) => JumpView::AvdWorkspaces,
+            ("microsoft.desktopvirtualization", ["scalingplans"]) => JumpView::ScalingPlans,
             ("microsoft.app", ["containerapps"]) => JumpView::ContainerApps,
             ("microsoft.app", ["managedenvironments"]) => JumpView::ContainerAppEnvironments,
             ("microsoft.app", ["jobs"]) => JumpView::ContainerAppJobs,
@@ -808,6 +830,7 @@ impl ServiceType {
             ServiceType::Subscriptions,
             ServiceType::VirtualMachines,
             ServiceType::Arc,
+            ServiceType::VirtualDesktop,
             ServiceType::Storage,
             ServiceType::Backup,
             ServiceType::Network,
@@ -875,6 +898,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Management",
             ServiceType::Automation => "Management",
             ServiceType::Arc => "Compute",
+            ServiceType::VirtualDesktop => "Compute",
             ServiceType::ContainerApps => "Containers",
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
@@ -911,6 +935,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Power Platform",
             ServiceType::Automation => "Automation",
             ServiceType::Arc => "Azure Arc",
+            ServiceType::VirtualDesktop => "Virtual Desktop",
             ServiceType::ContainerApps => "Container Apps",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
@@ -948,6 +973,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Power Plat",
             ServiceType::Automation => "Automation",
             ServiceType::Arc => "Arc",
+            ServiceType::VirtualDesktop => "AVD",
             ServiceType::ContainerApps => "ACA",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
@@ -984,6 +1010,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::Automation => "Runbooks, schedules, jobs & hybrid workers",
             ServiceType::Arc => "Servers, Kubernetes & private link scopes",
+            ServiceType::VirtualDesktop => "Host pools, session hosts, app groups, workspaces & scaling plans",
             ServiceType::ContainerApps => "Container apps, environments, jobs & instances",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
@@ -1050,6 +1077,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::Automation => &[AutomationAccounts],
             ServiceType::Arc => &[ArcMachines, ArcClusters, ArcPrivateLinkScopes],
+            ServiceType::VirtualDesktop => &[HostPools, AvdApplicationGroups, AvdWorkspaces, ScalingPlans],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
@@ -1266,6 +1294,14 @@ impl ServiceType {
             "arcpls" | "arcprivatelinkscope" | "arcprivatelinkscopes" => {
                 (ServiceType::Arc, Some(JumpView::ArcPrivateLinkScopes))
             }
+            "avd" | "virtualdesktop" | "wvd" | "hostpool" | "hostpools" | "sessionhost" | "sessionhosts" => {
+                (ServiceType::VirtualDesktop, None)
+            }
+            "avdag" | "appgroup" | "appgroups" | "applicationgroup" | "applicationgroups" => {
+                (ServiceType::VirtualDesktop, Some(JumpView::AvdApplicationGroups))
+            }
+            "avdws" | "avdworkspace" | "avdworkspaces" => (ServiceType::VirtualDesktop, Some(JumpView::AvdWorkspaces)),
+            "avdsp" | "scalingplan" | "scalingplans" => (ServiceType::VirtualDesktop, Some(JumpView::ScalingPlans)),
             "aca" | "containerapp" | "containerapps" => (ServiceType::ContainerApps, None),
             "acaenv" | "acaenvs" | "cae" | "managedenvironment" | "managedenvironments" => {
                 (ServiceType::ContainerApps, Some(JumpView::ContainerAppEnvironments))
@@ -1333,6 +1369,7 @@ impl ServiceType {
             ServiceType::PowerPlatform => "@pp",
             ServiceType::Automation => "@automation",
             ServiceType::Arc => "@arc",
+            ServiceType::VirtualDesktop => "@avd",
             ServiceType::ContainerApps => "@aca",
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
@@ -1347,12 +1384,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@arc", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@arc", "@avd", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1574,8 +1611,23 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@arc"), Some((ServiceType::Arc, None)));
         assert_eq!(ServiceType::from_prefix("@arck8s"), Some((ServiceType::Arc, Some(JumpView::ArcClusters))));
         assert_eq!(ServiceType::from_prefix("@arcpls"), Some((ServiceType::Arc, Some(JumpView::ArcPrivateLinkScopes))));
-        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp")), None);
-        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp")), Some(JumpView::AllResources));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp")), Some(JumpView::HostPools));
+        assert_eq!(
+            JumpView::for_arm_id(&p("Microsoft.DesktopVirtualization/applicationGroups/dag")),
+            Some(JumpView::AvdApplicationGroups)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DesktopVirtualization/workspaces/ws")), Some(JumpView::AvdWorkspaces));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.DesktopVirtualization/scalingPlans/sp")), Some(JumpView::ScalingPlans));
+        assert_eq!(ServiceType::from_prefix("@avd"), Some((ServiceType::VirtualDesktop, None)));
+        assert_eq!(
+            ServiceType::from_prefix("@avdag"),
+            Some((ServiceType::VirtualDesktop, Some(JumpView::AvdApplicationGroups)))
+        );
+        assert_eq!(ServiceType::from_prefix("@avdsp"), Some((ServiceType::VirtualDesktop, Some(JumpView::ScalingPlans))));
+        // A session host is a child: in no list of its own.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp/sessionHosts/h")), None);
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Logic/workflows/la")), None);
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Logic/workflows/la")), Some(JumpView::AllResources));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.KeyVault/vaults/kv/secrets/db")), None);
         assert_eq!(

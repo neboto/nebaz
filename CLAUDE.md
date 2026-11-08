@@ -32,7 +32,7 @@ Prefer a grep the reader can run over a count they have to trust.
 
 ```bash
 cargo build                         # debug
-cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / vmss / asg / gallery / arc / arck8s / arcpls / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / swa / sql / sqlmi / cosmos / foundry / search / law / appi / malert / ag / alert / aca / aci / redis / amr / pg / mysql / sb / eh / agw / afd / waf / pls / tm / er / vgw / cn / lgw / vwan / hub / fw / fwp / ipg / ngfw / rulestack / backup / bvault / gov / mg / budget / automation / defender / advisor / changes
+cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / vmss / asg / gallery / arc / arck8s / arcpls / avd / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / swa / sql / sqlmi / cosmos / foundry / search / law / appi / malert / ag / alert / aca / aci / redis / amr / pg / mysql / sb / eh / agw / afd / waf / pls / tm / er / vgw / cn / lgw / vwan / hub / fw / fwp / ipg / ngfw / rulestack / backup / bvault / gov / mg / budget / automation / defender / advisor / changes
 cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to stdout, exit codes in src/headless/contract.json
 cargo run -- doctor -o md           # proxy, certificates, az login, ARM, Graph, the release check: each failure in full
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
@@ -312,7 +312,7 @@ verbatim where the concept is unchanged.
 | `src/azure/service.rs` | `ServiceType`, `JumpView`, routing prefixes, `for_arm_id` |
 | `src/azure/resource.rs` | `Resource` trait, state ladder, ARM-id helpers, `scope_related` |
 | `src/azure/services/mod.rs` | `ArmBase`, `arm_row!`, `Scope`, shared section builders, `json` |
-| `src/azure/services/{subscriptions,compute,scale_sets,storage,network,network_edge,network_hub,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid,firewall,private_link,traffic_manager,flow_logs,network_asg,gallery,backup,governance,budgets,defender,advisor,virtual_wan,alerts,sql_managed,ai_search,container_instances,static_web_apps,automation,arc}.rs` | one file per service |
+| `src/azure/services/{subscriptions,compute,scale_sets,storage,network,network_edge,network_hub,network_private,network_dns,keyvault,identity,aks,container_registry,app_service,sql,cosmos,foundry,monitor,container_apps,redis,messaging,postgres_mysql,edge,hybrid,firewall,private_link,traffic_manager,flow_logs,network_asg,gallery,backup,governance,budgets,defender,advisor,virtual_wan,alerts,sql_managed,ai_search,container_instances,static_web_apps,automation,arc,virtual_desktop}.rs` | one file per service |
 | `src/headless.rs`, `src/app/headless.rs` | `nebaz services / ls / get`: a terminal-less `App`, the output contract, `skills/nebaz/SKILL.md` |
 | `src/lazy.rs` | `Lazy`, `LazyMap`, `LazyStore`, epoch |
 | `src/azure/cli_actions.rs` | the `C` catalogue: every copyable `az` command per type, tiers; the one file the guard lets spell a Connect / Change verb |

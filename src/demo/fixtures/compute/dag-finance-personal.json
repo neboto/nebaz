@@ -1,0 +1,22 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-finance-personal",
+  "name": "dag-finance-personal",
+  "type": "Microsoft.DesktopVirtualization/applicationGroups",
+  "location": "westeurope",
+  "tags": {
+    "team": "finance",
+    "env": "prod",
+    "owner": "workplace@contoso.com"
+  },
+  "kind": "Desktop",
+  "properties": {
+    "objectId": "2d9a5c7e-3f1b-4c8d-9e64-1b7f3a5c9d02",
+    "friendlyName": "Finance desktop",
+    "description": "Pilot: one desktop per analyst",
+    "hostPoolArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-finance-personal",
+    "workspaceArmPath": null,
+    "applicationGroupType": "Desktop",
+    "cloudPcResource": false,
+    "showInFeed": true
+  }
+}

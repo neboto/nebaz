@@ -7,7 +7,7 @@ use crate::audit::{run, RowKind};
 use crate::azure::services::{
     aks, app_service, arc, backup, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
     governance, keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
-    sql, storage,
+    sql, storage, virtual_desktop,
 };
 use crate::lazy::LazyStore;
 use serde_json::json;
@@ -1550,4 +1550,73 @@ fn an_offline_arc_cluster_is_low_and_an_expired_one_medium() {
     let rows = vec![cluster("k-ok", "Connected"), cluster("k-off", "Offline"), cluster("k-exp", "Expired")];
     let f = audit("arc-cluster-offline", &[(JumpView::ArcClusters, rows)], None);
     assert_eq!(findings(&f), [("k-exp".to_string(), Severity::Medium), ("k-off".to_string(), Severity::Low)]);
+}
+
+// ── Azure Virtual Desktop ──
+
+fn host_pool(name: &str, kind: &str, assignment: Option<&str>) -> Box<dyn Resource> {
+    let props = json!({"hostPoolType": kind, "personalDesktopAssignmentType": assignment});
+    boxed(virtual_desktop::HostPoolRow::from_json(&body(&format!("Microsoft.DesktopVirtualization/hostPools/{}", name), props), None))
+}
+
+fn session_host(name: &str, status: &str, agent: &str, update: &str) -> Value {
+    json!({"name": name, "properties": {"status": status, "agentVersion": agent, "updateState": update}})
+}
+
+fn pool_id(name: &str) -> String {
+    id(&format!("Microsoft.DesktopVirtualization/hostPools/{}", name))
+}
+
+#[test]
+fn a_pool_with_no_available_host_is_medium_and_one_with_no_hosts_low() {
+    let lists = vec![(
+        V::HostPools,
+        vec![
+            host_pool("hp-ok", "Pooled", None),
+            host_pool("hp-down", "Pooled", None),
+            host_pool("hp-empty", "Personal", Some("Automatic")),
+            host_pool("hp-cold", "Pooled", None),
+        ],
+    )];
+    let mut lazy = LazyStore::new(0);
+    lazy.avd_session_hosts.apply(
+        pool_id("hp-ok"),
+        Ok(vec![session_host("a", "Available", "1.0.2.0", "Succeeded"), session_host("b", "Shutdown", "1.0.2.0", "Succeeded")]),
+    );
+    lazy.avd_session_hosts.apply(pool_id("hp-down"), Ok(vec![session_host("c", "Unavailable", "1.0.2.0", "Succeeded")]));
+    lazy.avd_session_hosts.apply(pool_id("hp-empty"), Ok(vec![]));
+    let rows = audit("avd-pool-no-available-hosts", &lists, Some(&lazy));
+    assert_eq!(findings(&rows), [("hp-down".to_string(), Severity::Medium), ("hp-empty".to_string(), Severity::Low)]);
+    assert_eq!(notes(&rows), ["1 of 4 not checked — r fetches session hosts".to_string()]);
+}
+
+#[test]
+fn a_failed_agent_update_is_low_and_an_older_agent_info() {
+    let lists = vec![(V::HostPools, vec![host_pool("hp-a", "Pooled", None), host_pool("hp-b", "Pooled", None), host_pool("hp-c", "Pooled", None)])];
+    let mut lazy = LazyStore::new(0);
+    lazy.avd_session_hosts.apply(pool_id("hp-a"), Ok(vec![session_host("a", "Available", "1.0.11388.1700", "Succeeded")]));
+    lazy.avd_session_hosts.apply(pool_id("hp-b"), Ok(vec![session_host("b", "Available", "1.0.9742.1100", "Succeeded")]));
+    lazy.avd_session_hosts.apply(pool_id("hp-c"), Ok(vec![session_host("c", "UpgradeFailed", "1.0.11388.1700", "Failed")]));
+    let rows = audit("avd-agent-behind", &lists, Some(&lazy));
+    assert_eq!(findings(&rows), [("hp-c".to_string(), Severity::Low), ("hp-b".to_string(), Severity::Info)]);
+}
+
+#[test]
+fn a_personal_pool_with_no_assignment_type_is_low() {
+    let lists = vec![(
+        V::HostPools,
+        vec![host_pool("hp-direct", "Personal", Some("Direct")), host_pool("hp-none", "Personal", None), host_pool("hp-pooled", "Pooled", None)],
+    )];
+    assert_eq!(findings(&audit("avd-personal-no-assignment", &lists, None)), [("hp-none".to_string(), Severity::Low)]);
+}
+
+#[test]
+fn an_app_group_in_no_workspace_is_info() {
+    let group = |name: &str, ws: Option<String>| {
+        let props = json!({"applicationGroupType": "Desktop", "hostPoolArmPath": pool_id("hp-1"), "workspaceArmPath": ws});
+        boxed(virtual_desktop::AppGroupRow::from_json(&body(&format!("Microsoft.DesktopVirtualization/applicationGroups/{}", name), props), None))
+    };
+    let ws = id("Microsoft.DesktopVirtualization/workspaces/ws-1");
+    let lists = vec![(V::AvdApplicationGroups, vec![group("dag-live", Some(ws)), group("dag-lone", None)])];
+    assert_eq!(findings(&audit("avd-app-group-unpublished", &lists, None)), [("dag-lone".to_string(), Severity::Info)]);
 }

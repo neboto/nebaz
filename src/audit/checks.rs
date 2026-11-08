@@ -24,6 +24,7 @@ use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::app_service::SiteRow;
 use crate::azure::services::arc::{self, ArcClusterRow, ArcMachineRow};
+use crate::azure::services::virtual_desktop::{self as avd, AppGroupRow, HostPoolRow, SessionHost};
 use crate::azure::services::automation::AutomationAccountRow;
 use crate::azure::services::backup::{self, BackupVaultRow, RecoveryVaultRow};
 use crate::azure::services::compute::{DiskRow, NicRow};
@@ -97,9 +98,11 @@ const EXEMPTIONS: &[V] = &[V::PolicyExemptions];
 const AUTOMATION: &[V] = &[V::AutomationAccounts];
 const ARC_MACHINES: &[V] = &[V::ArcMachines];
 const ARC_CLUSTERS: &[V] = &[V::ArcClusters];
+const HOST_POOLS: &[V] = &[V::HostPools];
+const AVD_APP_GROUPS: &[V] = &[V::AvdApplicationGroups];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 80] = [
+pub static CHECKS: [Check; 84] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -762,6 +765,39 @@ pub static CHECKS: [Check; 80] = [
         fix: "Enable automatic agent upgrade on the machine, or upgrade through the package manager, WSUS or Update Manager.",
         sources: &[ARC_MACHINES],
         run: arc_agent_behind,
+    },
+    // ── Azure Virtual Desktop ──
+    Check {
+        id: "avd-pool-no-available-hosts",
+        title: "Host pool has no session host taking new sessions",
+        why: "With every session host unavailable, shut down or in drain mode, new connections to the pool's app groups fail. A pool whose hosts are all shut down is only fine when Start VM on connect or a scaling plan brings one up.",
+        fix: "Open the pool's Session hosts: an unavailable host names its failed health check; one with no heartbeat needs its VM started or its agent repaired; a drained one needs new sessions allowed again. A pool with no hosts needs a VM registered with a new registration token.",
+        sources: &[HOST_POOLS],
+        run: avd_pool_no_available_hosts,
+    },
+    Check {
+        id: "avd-agent-behind",
+        title: "Session host agent update failed or behind",
+        why: "The AVD agent updates itself; a host whose update failed, or that runs an older agent than its peers, misses fixes and is the usual first suspect when connections fail on some hosts only.",
+        fix: "Check the host's update error, then reinstall the agent and boot loader or redeploy the host from the pool's image. A scheduled agent update with no maintenance window that fits leaves hosts behind too.",
+        sources: &[HOST_POOLS],
+        run: avd_agent_behind,
+    },
+    Check {
+        id: "avd-personal-no-assignment",
+        title: "Personal host pool with no assignment type",
+        why: "A personal pool without an assignment type gives a user no desktop until an admin assigns one by hand: new users see the desktop and fail to connect.",
+        fix: "Set personalDesktopAssignmentType to Automatic (the first free host is assigned on first connection) or Direct (assign each user), and assign the existing users.",
+        sources: &[HOST_POOLS],
+        run: avd_personal_no_assignment,
+    },
+    Check {
+        id: "avd-app-group-unpublished",
+        title: "Application group in no workspace",
+        why: "An application group reaches users only through a workspace: one in none shows nothing in their feed, whatever its assignments say.",
+        fix: "Add the group to the workspace its users subscribe to, or delete it if it is left over.",
+        sources: &[AVD_APP_GROUPS],
+        run: avd_app_group_unpublished,
     },
 ];
 
@@ -1904,6 +1940,102 @@ fn arc_agent_behind(check: &'static Check, input: &AuditInput, out: &mut Vec<Aud
                 newest.0,
                 newest.1
             )]));
+        }
+    }
+}
+
+// ── Azure Virtual Desktop ─────────────────────────────────────────────
+
+fn session_hosts(items: &[Value]) -> Vec<SessionHost> {
+    items.iter().map(SessionHost::from_json).collect()
+}
+
+fn avd_pool_no_available_hosts(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    for p in input.of::<HostPoolRow>(V::HostPools) {
+        let Some(items) = gaps.see(&p.base.name, input.lazy().and_then(|l| l.avd_session_hosts.get(&p.base.id))) else {
+            continue;
+        };
+        let hosts = session_hosts(items);
+        if hosts.iter().any(SessionHost::takes_new_sessions) {
+            continue;
+        }
+        let finding = if hosts.is_empty() {
+            AuditFinding::about(check, Severity::Low, p, "no session hosts registered").with_evidence(vec![format!(
+                "registrationInfo.expirationTime: {}",
+                json::time(p.registration_expiry.clone())
+            )])
+        } else {
+            let mut evidence = vec![format!("{} session hosts, none taking new sessions", hosts.len())];
+            evidence.extend(hosts.iter().map(|h| {
+                let drain = if h.allow_new_sessions == Some(false) { " (drain mode)" } else { "" };
+                format!("{}: {}{}", h.name, json::opt(h.status.clone()), drain)
+            }));
+            AuditFinding::about(check, Severity::Medium, p, format!("none of {} session hosts takes new sessions", hosts.len()))
+                .with_evidence(evidence)
+        };
+        out.push(finding);
+    }
+    gaps.note(check, "session hosts", "Session hosts", out);
+}
+
+/// Low for a failed update, info for a host behind the newest agent any
+/// read host runs.
+fn avd_agent_behind(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    let mut pools: Vec<(&HostPoolRow, Vec<SessionHost>)> = Vec::new();
+    for p in input.of::<HostPoolRow>(V::HostPools) {
+        if let Some(items) = gaps.see(&p.base.name, input.lazy().and_then(|l| l.avd_session_hosts.get(&p.base.id))) {
+            pools.push((p, session_hosts(items)));
+        }
+    }
+    let key = |h: &SessionHost| h.agent_version.as_deref().and_then(avd::agent_version_key);
+    let newest = pools.iter().flat_map(|(_, hosts)| hosts.iter().filter_map(key)).max();
+    for (p, hosts) in pools {
+        let failed: Vec<&SessionHost> = hosts.iter().filter(|h| h.update_failed()).collect();
+        let behind: Vec<&SessionHost> =
+            hosts.iter().filter(|h| !h.update_failed() && key(h).is_some_and(|k| Some(&k) < newest.as_ref())).collect();
+        if failed.is_empty() && behind.is_empty() {
+            continue;
+        }
+        let (severity, reason) = if failed.is_empty() {
+            (Severity::Info, format!("{} of {} hosts on an older agent", behind.len(), hosts.len()))
+        } else {
+            (Severity::Low, format!("agent update failed on {} of {} hosts", failed.len(), hosts.len()))
+        };
+        let newest_text = newest.as_ref().map(|k| k.iter().map(u64::to_string).collect::<Vec<_>>().join("."));
+        let mut evidence = vec![format!("newest agent read: {}", json::opt(newest_text))];
+        evidence.extend(failed.iter().map(|h| {
+            format!("{}: agent {} update failed{}", h.name, json::opt(h.agent_version.clone()), h.update_error.as_ref().map(|e| format!(" ({})", e)).unwrap_or_default())
+        }));
+        evidence.extend(behind.iter().map(|h| format!("{}: agent {}", h.name, json::opt(h.agent_version.clone()))));
+        out.push(AuditFinding::about(check, severity, p, reason).with_evidence(evidence));
+    }
+    gaps.note(check, "session hosts", "Session hosts", out);
+}
+
+fn avd_personal_no_assignment(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for p in input.of::<HostPoolRow>(V::HostPools) {
+        if p.is_personal() && p.assignment_type.is_none() {
+            out.push(
+                AuditFinding::about(check, Severity::Low, p, "personal pool, no assignment type")
+                    .with_evidence(vec!["hostPoolType: Personal · personalDesktopAssignmentType: -".into()]),
+            );
+        }
+    }
+}
+
+fn avd_app_group_unpublished(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for g in input.of::<AppGroupRow>(V::AvdApplicationGroups) {
+        if g.is_unpublished() {
+            let pool = g.host_pool.as_deref().map(name_of_id).unwrap_or("-");
+            out.push(
+                AuditFinding::about(check, Severity::Info, g, "in no workspace").with_evidence(vec![format!(
+                    "workspaceArmPath: - · {} on {}",
+                    json::opt(g.group_type.clone()),
+                    pool
+                )]),
+            );
         }
     }
 }

@@ -244,6 +244,12 @@
     "automation": [
       "automation-accounts (automation)"
     ],
+    "avd": [
+      "host-pools (avd)",
+      "avd-application-groups (avdag)",
+      "avd-workspaces (avdws)",
+      "scaling-plans (avdsp)"
+    ],
     "backup": [
       "recovery-vaults (backup)",
       "backup-vaults (bvault)"
@@ -383,6 +389,14 @@
       "Related",
       "Tags"
     ],
+    "AVD workspace": [
+      "Overview",
+      "Network",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
     "Action group": [
       "Overview",
       "Receivers",
@@ -487,6 +501,13 @@
       "Rules",
       "Backends",
       "WAF",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Application group": [
+      "Overview",
       "Access",
       "Activity",
       "Related",
@@ -808,6 +829,16 @@
       "Overview",
       "Configuration",
       "IPsec",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Host pool": [
+      "Overview",
+      "Session hosts",
+      "Configuration",
+      "Network",
       "Access",
       "Activity",
       "Related",
@@ -1142,6 +1173,14 @@
       "Networking",
       "Databases",
       "Failover group",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Scaling plan": [
+      "Overview",
+      "Schedules",
       "Access",
       "Activity",
       "Related",

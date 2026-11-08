@@ -188,7 +188,7 @@ impl App {
     /// users' directory objects, each cached SQL server's and Redis cache's firewall rules, each
     /// PostgreSQL and MySQL server's firewall rules, parameters and Entra admins, each
     /// messaging namespace's network rule set,
-    /// each cached site's config, the subscription's flow logs, each backup vault's protected items. Capped at `AUDIT_LAZY_MAX` per kind.
+    /// each cached site's config, the subscription's flow logs, each backup vault's protected items, each host pool's session hosts. Capped at `AUDIT_LAZY_MAX` per kind.
     fn trigger_audit_lazies(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         let sub = self.subscription_key();
         if sub.is_empty() {
@@ -272,6 +272,10 @@ impl App {
             let fut = self.azure_clients.list_fetch_query(&path, VMSS_API_VERSION, query);
             self.trigger_lazy(|s| &mut s.vmss_instances, id, event_tx, move || fut);
         }
+        // A host pool's session hosts (#198).
+        for id in self.cached_ids(JumpView::HostPools, &sub) {
+            self.trigger_session_hosts_of(id, event_tx);
+        }
     }
 
     /// Whether anything `r` started is still in flight: a source list, or
@@ -291,6 +295,7 @@ impl App {
                 + l.site_configs.loading_count()
                 + l.flow_logs.loading_count()
                 + l.vmss_instances.loading_count()
+                + l.avd_session_hosts.loading_count()
                 + l.backup_protected_items.loading_count()
                 + l.backup_policies.loading_count()
                 + l.backup_instances.loading_count()

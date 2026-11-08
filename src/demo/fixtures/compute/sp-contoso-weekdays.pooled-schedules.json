@@ -1,0 +1,85 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/scalingPlans/sp-contoso-weekdays/pooledSchedules/weekdays",
+      "name": "sp-contoso-weekdays/weekdays",
+      "type": "Microsoft.DesktopVirtualization/scalingPlans/pooledSchedules",
+      "properties": {
+        "daysOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "rampUpStartTime": {
+          "hour": 7,
+          "minute": 0
+        },
+        "rampUpLoadBalancingAlgorithm": "BreadthFirst",
+        "rampUpMinimumHostsPct": 34,
+        "rampUpCapacityThresholdPct": 60,
+        "peakStartTime": {
+          "hour": 9,
+          "minute": 0
+        },
+        "peakLoadBalancingAlgorithm": "BreadthFirst",
+        "rampDownStartTime": {
+          "hour": 18,
+          "minute": 0
+        },
+        "rampDownLoadBalancingAlgorithm": "DepthFirst",
+        "rampDownMinimumHostsPct": 34,
+        "rampDownCapacityThresholdPct": 90,
+        "rampDownForceLogoffUsers": false,
+        "rampDownStopHostsWhen": "ZeroActiveSessions",
+        "rampDownWaitTimeMinutes": 30,
+        "rampDownNotificationMessage": "",
+        "offPeakStartTime": {
+          "hour": 20,
+          "minute": 0
+        },
+        "offPeakLoadBalancingAlgorithm": "DepthFirst"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/scalingPlans/sp-contoso-weekdays/pooledSchedules/weekend",
+      "name": "sp-contoso-weekdays/weekend",
+      "type": "Microsoft.DesktopVirtualization/scalingPlans/pooledSchedules",
+      "properties": {
+        "daysOfWeek": [
+          "Saturday",
+          "Sunday"
+        ],
+        "rampUpStartTime": {
+          "hour": 9,
+          "minute": 0
+        },
+        "rampUpLoadBalancingAlgorithm": "DepthFirst",
+        "rampUpMinimumHostsPct": 0,
+        "rampUpCapacityThresholdPct": 90,
+        "peakStartTime": {
+          "hour": 10,
+          "minute": 0
+        },
+        "peakLoadBalancingAlgorithm": "DepthFirst",
+        "rampDownStartTime": {
+          "hour": 16,
+          "minute": 0
+        },
+        "rampDownLoadBalancingAlgorithm": "DepthFirst",
+        "rampDownMinimumHostsPct": 0,
+        "rampDownCapacityThresholdPct": 90,
+        "rampDownForceLogoffUsers": true,
+        "rampDownStopHostsWhen": "ZeroSessions",
+        "rampDownWaitTimeMinutes": 15,
+        "rampDownNotificationMessage": "This desktop shuts down in 15 minutes. Save your work.",
+        "offPeakStartTime": {
+          "hour": 17,
+          "minute": 0
+        },
+        "offPeakLoadBalancingAlgorithm": "DepthFirst"
+      }
+    }
+  ]
+}

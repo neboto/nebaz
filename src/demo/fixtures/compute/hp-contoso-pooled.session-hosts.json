@@ -1,0 +1,204 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled/sessionHosts/vm-avd-0.corp.contoso.com",
+      "name": "hp-contoso-pooled/vm-avd-0.corp.contoso.com",
+      "type": "Microsoft.DesktopVirtualization/hostPools/sessionhosts",
+      "properties": {
+        "objectId": "5e1a0c3d-2b7f-4d9a-a6e8-0f3c5b7d9e10",
+        "lastHeartBeat": "{{iso:now-1m}}",
+        "sessions": 7,
+        "agentVersion": "1.0.11388.1700",
+        "allowNewSession": true,
+        "virtualMachineId": "9b2d4f6a-8c1e-4a3b-b5d7-e9f1a3c5b7d0",
+        "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/virtualMachines/vm-avd-0",
+        "assignedUser": "",
+        "friendlyName": "",
+        "status": "Available",
+        "statusTimestamp": "{{iso:now-1m}}",
+        "osVersion": "10.0.26100.4652",
+        "sxSStackVersion": "rdp-sxs250926001",
+        "updateState": "Succeeded",
+        "lastUpdateTime": "{{iso:now-6d}}",
+        "updateErrorMessage": "",
+        "sessionHostHealthCheckResults": [
+          {
+            "healthCheckName": "DomainJoinedCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "DomainTrustCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "FSLogixHealthCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "SxSStackListenerCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "MonitoringAgentCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "MetaDataServiceCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "UrlsAccessibleCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled/sessionHosts/vm-avd-1.corp.contoso.com",
+      "name": "hp-contoso-pooled/vm-avd-1.corp.contoso.com",
+      "type": "Microsoft.DesktopVirtualization/hostPools/sessionhosts",
+      "properties": {
+        "objectId": "5e1a1c3d-2b7f-4d9a-a6e8-0f3c5b7d9e11",
+        "lastHeartBeat": "{{iso:now-2m}}",
+        "sessions": 3,
+        "agentVersion": "1.0.9742.2500",
+        "allowNewSession": true,
+        "virtualMachineId": "9b2d4f6a-8c1e-4a3b-b5d7-e9f1a3c5b7d1",
+        "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/virtualMachines/vm-avd-1",
+        "assignedUser": "",
+        "friendlyName": "",
+        "status": "NeedsAssistance",
+        "statusTimestamp": "{{iso:now-2m}}",
+        "osVersion": "10.0.26100.4652",
+        "sxSStackVersion": "rdp-sxs250926001",
+        "updateState": "Succeeded",
+        "lastUpdateTime": "{{iso:now-6d}}",
+        "updateErrorMessage": "",
+        "sessionHostHealthCheckResults": [
+          {
+            "healthCheckName": "DomainJoinedCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "DomainTrustCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "FSLogixHealthCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "SxSStackListenerCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "MonitoringAgentCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "MetaDataServiceCheck",
+            "healthCheckResult": "HealthCheckSucceeded",
+            "additionalFailureDetails": {
+              "message": "",
+              "errorCode": 0,
+              "lastHealthCheckDateTime": "{{iso:now-2m}}"
+            }
+          },
+          {
+            "healthCheckName": "UrlsAccessibleCheck",
+            "healthCheckResult": "HealthCheckFailed",
+            "additionalFailureDetails": {
+              "message": "2 required URLs are blocked: check the NSG and the proxy",
+              "errorCode": -2147467259,
+              "lastHealthCheckDateTime": "{{iso:now-3m}}"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled/sessionHosts/vm-avd-2.corp.contoso.com",
+      "name": "hp-contoso-pooled/vm-avd-2.corp.contoso.com",
+      "type": "Microsoft.DesktopVirtualization/hostPools/sessionhosts",
+      "properties": {
+        "objectId": "5e1a2c3d-2b7f-4d9a-a6e8-0f3c5b7d9e12",
+        "lastHeartBeat": "{{iso:now-14h}}",
+        "sessions": 0,
+        "agentVersion": "1.0.11388.1700",
+        "allowNewSession": true,
+        "virtualMachineId": "9b2d4f6a-8c1e-4a3b-b5d7-e9f1a3c5b7d2",
+        "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Compute/virtualMachines/vm-avd-2",
+        "assignedUser": "",
+        "friendlyName": "",
+        "status": "Shutdown",
+        "statusTimestamp": "{{iso:now-14h}}",
+        "osVersion": "10.0.26100.4652",
+        "sxSStackVersion": "rdp-sxs250926001",
+        "updateState": "Succeeded",
+        "lastUpdateTime": "{{iso:now-6d}}",
+        "updateErrorMessage": "",
+        "sessionHostHealthCheckResults": []
+      }
+    }
+  ]
+}

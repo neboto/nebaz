@@ -9,7 +9,7 @@ use crate::azure::service::JumpView;
 use crate::azure::services::{
     advisor, ai_search, aks, arc, automation, alerts, sql_managed, all_resources, app_service, backup, budgets, changes, compute, container_apps, container_instances, container_registry, cosmos, defender, directory, edge, firewall, foundry, gallery, governance,
     hybrid, identity, keyvault, messaging, monitor, network, network_asg, network_dns, network_edge, network_hub, network_private, postgres_mysql, power_platform, private_link, redis, scale_sets, sql, static_web_apps, storage, subscriptions,
-    traffic_manager, virtual_wan,
+    traffic_manager, virtual_desktop, virtual_wan,
 };
 use serde_json::{json, Value};
 
@@ -563,6 +563,35 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             JumpView::ArcPrivateLinkScopes,
             "ArcScopeRow",
             parse("ArcScopeRow", arc::ArcScopeRow::from_json(&simple("Microsoft.HybridCompute/privateLinkScopes/pls-1"), t)),
+        ),
+        m(
+            JumpView::HostPools,
+            "HostPoolRow",
+            parse("HostPoolRow", virtual_desktop::HostPoolRow::from_json(&simple("Microsoft.DesktopVirtualization/hostPools/hp-1"), t)),
+        ),
+        m(
+            JumpView::AvdApplicationGroups,
+            "AppGroupRow",
+            parse(
+                "AppGroupRow",
+                virtual_desktop::AppGroupRow::from_json(&simple("Microsoft.DesktopVirtualization/applicationGroups/dag-1"), t),
+            ),
+        ),
+        m(
+            JumpView::AvdWorkspaces,
+            "AvdWorkspaceRow",
+            parse(
+                "AvdWorkspaceRow",
+                virtual_desktop::AvdWorkspaceRow::from_json(&simple("Microsoft.DesktopVirtualization/workspaces/ws-1"), t),
+            ),
+        ),
+        m(
+            JumpView::ScalingPlans,
+            "ScalingPlanRow",
+            parse(
+                "ScalingPlanRow",
+                virtual_desktop::ScalingPlanRow::from_json(&simple("Microsoft.DesktopVirtualization/scalingPlans/sp-1"), t),
+            ),
         ),
         m(
             JumpView::EnterprisePolicies,

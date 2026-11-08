@@ -157,6 +157,7 @@ mod ai_search;
 mod container_instances;
 mod static_web_apps;
 mod automation;
+mod virtual_desktop;
 mod arc;
 mod info_card;
 mod network_asg;
@@ -2914,6 +2915,7 @@ impl App {
         let label = resource.detail_sections().and_then(|d| d.sections.get(idx)).map(|s| s.label);
         if label == Some("Related") {
             let lines = self.with_backup_protection(resource.id(), lines);
+            let lines = self.with_session_host_pool(resource.id(), lines);
             return Some(self.with_alert_rules(resource.id(), lines));
         }
         Some(lines)
@@ -2969,6 +2971,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.automation_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.avd_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(lines) = self.arc_section_lines(resource, idx) {

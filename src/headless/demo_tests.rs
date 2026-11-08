@@ -64,6 +64,14 @@ const PLANTED: &[(&str, &str)] = &[
     ("/machines/srv-ams-file-02", "heartbeat"),
     ("/connectedClusters/arck8s-ams-edge", "⚠ Offline"),
     ("/connectedClusters/arck8s-ams-edge", "i/o timeout"),
+    // compute: an AVD session host fails its URL check (needs
+    // assistance); the finance pilot pool has no assignment type and its
+    // desktop app group is in no workspace.
+    ("/hostPools/hp-contoso-pooled", "NeedsAssistance"),
+    ("/hostPools/hp-contoso-pooled", "UrlsAccessibleCheck"),
+    ("/hostPools/hp-contoso-pooled", "Need attention"),
+    ("/hostPools/hp-finance-personal", "Assignment type"),
+    ("/applicationGroups/dag-finance-personal", "no workspace publishes it"),
     // compute: the legacy app's Windows image definition and its one
     // version are past end of life.
     ("/galleries/gal_contoso_prod", "end of life"),
@@ -105,6 +113,13 @@ const AUDIT_EXPECTED: &[&str] = &[
     "arc-machine-disconnected",
     "arc-agent-behind",
     "arc-cluster-offline",
+    // compute: the finance pilot pool has no session hosts and no
+    // assignment type, its app group is in no workspace, and one head
+    // office host runs an older agent.
+    "avd-pool-no-available-hosts",
+    "avd-personal-no-assignment",
+    "avd-app-group-unpublished",
+    "avd-agent-behind",
     // core: github-actions-deploy holds User Access Administrator and
     // Contributor on the subscription.
     "sub-privileged-guest-or-sp",
