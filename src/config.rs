@@ -85,6 +85,16 @@ pub struct Config {
     /// first export). Default: the working directory. The
     /// `NEBAZ_EXPORT_DIR` environment variable overrides it.
     pub export_dir: Option<String>,
+    /// How `|` (split out) opens the new nebaz, instead of the detected
+    /// terminal's own split: a shell command where `{cmd}` is the nebaz
+    /// command as one shell-quoted word (`sh -c {cmd}` appended when
+    /// absent). For a terminal nebaz doesn't know, or a window-manager rule
+    /// that tiles the new window.
+    ///
+    /// ```toml
+    /// split_command = "wezterm cli split-pane --bottom -- sh -c {cmd}"
+    /// ```
+    pub split_command: Option<String>,
     /// Base resource-cache freshness window in seconds (default 300). A list
     /// reload within this window serves cached data instead of refetching.
     pub cache_ttl: Option<u64>,

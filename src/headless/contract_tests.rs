@@ -30,7 +30,8 @@ fn keys(v: &Value) -> Vec<String> {
     v.as_object().unwrap().keys().cloned().collect()
 }
 
-/// Every flag, by subcommand ("" = the global/TUI ones).
+/// Every flag, by subcommand ("" = the global/TUI ones). Hidden flags are
+/// nebaz talking to itself (`--at`, written by `|`), not a promise.
 fn flags() -> Value {
     let cli = Cli::command();
     let longs = |c: &clap::Command| -> Vec<String> {
@@ -44,7 +45,8 @@ fn flags() -> Value {
         v
     };
     let mut out = Map::new();
-    let mut top: Vec<String> = cli.get_arguments().filter_map(|a| a.get_long()).map(|l| format!("--{l}")).collect();
+    let mut top: Vec<String> =
+        cli.get_arguments().filter(|a| !a.is_hide_set()).filter_map(|a| a.get_long()).map(|l| format!("--{l}")).collect();
     top.sort();
     out.insert(String::new(), json!(top));
     for sub in cli.get_subcommands() {

@@ -158,6 +158,7 @@ mod container_instances;
 mod static_web_apps;
 mod automation;
 mod virtual_desktop;
+mod split;
 mod arc;
 mod info_card;
 mod network_asg;
@@ -586,6 +587,15 @@ pub struct App {
     /// as pages stream in; cleared with a message if the load ends
     /// without it.
     pub pending_jump: Option<(String, bool)>,
+    /// A `--at` place's section and charts, applied once its pending jump
+    /// lands (`land_pending_place`).
+    pub pending_place: Option<split::PendingPlace>,
+    /// `--at`: the place a pane split out with `|` opens at, restored once
+    /// the startup load is under way (`restore_startup_location`).
+    pub startup_place: Option<crate::split::Place>,
+    /// Config `split_command`: how `|` opens the new pane, overriding the
+    /// detected terminal (`{cmd}` = the nebaz command).
+    pub split_command: Option<String>,
     /// `Ctrl-L`: the main loop clears the terminal before the next draw,
     /// so a screen garbled by the terminal (or something printing over
     /// it) is one key from clean.
@@ -691,7 +701,14 @@ impl App {
         let mut config = Config::load();
         cli.apply_to(&mut config);
         let azure_clients = AzureClients::new(&config).await?;
-        Ok(Self::from_parts(config, azure_clients, cli.macro_name.clone()))
+        let mut app = Self::from_parts(config, azure_clients, cli.macro_name.clone());
+        if let Some(at) = &cli.at {
+            match crate::split::decode_place(at) {
+                Ok(place) => app.startup_place = Some(place),
+                Err(e) => app.error_message = Some(e),
+            }
+        }
+        Ok(app)
     }
 
     /// The rest of `new` once the config and the clients exist; the wiring
@@ -816,6 +833,9 @@ impl App {
             jump_list_visible: false,
             jump_list_selected: 0,
             pending_jump: None,
+            pending_place: None,
+            startup_place: None,
+            split_command: config.split_command.clone().filter(|c| !c.trim().is_empty()),
             redraw_requested: false,
             clipboard: crate::clipboard::Clipboard::new(),
             browser: crate::browser::Browser::default(),
@@ -1357,9 +1377,11 @@ impl App {
             if focus {
                 self.details_focused = true;
                 self.reset_detail_section_to_default(event_tx);
+                self.land_pending_place(&id, event_tx);
             }
         } else if !self.loading {
             self.pending_jump = None;
+            self.pending_place = None;
             self.error_message = Some(format!("{} is not in this list", name_of_id(&id)));
         }
     }
@@ -4068,6 +4090,13 @@ impl App {
             return;
         }
 
+        // `|` splits out from every in-pane view (they take every other
+        // key), at the place behind it; the charts reopen at their window.
+        if key.code == KeyCode::Char('|') && self.in_pane_view_open() {
+            self.split_out();
+            return;
+        }
+
         // The network access lens owns the keyboard while open.
         if self.network_lens.is_some() {
             self.handle_network_lens_key(key, event_tx);
@@ -4420,6 +4449,8 @@ impl App {
                 self.message_history_visible = true;
                 self.message_history_selected = 0;
             }
+            // Split out: another nebaz in a pane beside this one, here.
+            KeyCode::Char('|') => self.split_out(),
             KeyCode::Char(',') => {
                 if let Some(rec) = self.macro_recorder.take() {
                     // Stop recording → name prompt.

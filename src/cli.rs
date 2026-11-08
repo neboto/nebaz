@@ -58,6 +58,11 @@ pub struct Cli {
     #[arg(short = 'm', long = "macro", value_name = "NAME")]
     pub macro_name: Option<String>,
 
+    /// Open at a place another nebaz handed over (`|` splits a pane out
+    /// with it). The value is opaque: written by nebaz, not by hand.
+    #[arg(long, value_name = "PLACE", hide = true)]
+    pub at: Option<String>,
+
     /// Color theme preset: dark (default), light, solarized-dark,
     /// solarized-light, gruvbox-dark, gruvbox-light, dracula, nord,
     /// catppuccin-mocha, catppuccin-latte.
@@ -280,6 +285,7 @@ mod tests {
             no_banner: false,
             watch: false,
             macro_name: None,
+            at: None,
             theme: None,
             show_keys: false,
             no_update_check: false,

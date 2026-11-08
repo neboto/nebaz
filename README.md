@@ -231,6 +231,7 @@ strings, app settings and secret values are never fetched.
 | `B` · `'` | bookmark · bookmarks |
 | `,` | macros (record, replay; `--macro NAME` on startup) |
 | `:` | command picker: run any key by name (`:m` metrics; the keys that work on the selection lead; `⏎` presses the key) |
+| `\|` | split out: this place (row, section, subscription; the charts at their window) in a second nebaz beside this one: a new pane in tmux, zellij, WezTerm, kitty, iTerm or Ghostty (macOS); a window or tab in Alacritty, Terminal, GNOME Terminal, Konsole or foot; config `split_command` for anything else. With no terminal to split, the command is copied |
 | `M` · `b` · `?` · `q` | messages · banner · help (type to filter it: `log`, `copy`, `mouse`; leads with **Here**, the keys that work on the selection) · quit |
 
 **List pane**

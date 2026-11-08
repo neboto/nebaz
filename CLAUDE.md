@@ -184,6 +184,18 @@ lines, so a copy pastes unwrapped. Built in with
 `include_str!`; every sub-tab has one (`every_sub_tab_has_a_card`). The
 "In nebaz" part follows `docs/SERVICES.md`, which stays the reference.
 
+**Split out** (`|`, `src/split.rs`, `src/app/split.rs`; neboto #326 / #328):
+a second nebaz process in a new pane of the host multiplexer / terminal
+(else a tab or window; each `Launch` says which, and whether to wait for
+it), started with the session flags and a hidden `--at` (base64url
+`split::Place`: the `NavLocation` plus the charts' window). The new process
+restores it through `restore_nav_location`; its rows are never loaded yet,
+so `pending_place` finishes the section and the charts when the pending
+jump lands. No in-process panes: `App` owns the whole screen. The login is
+az's, on disk, so only `split::FORWARDED_VARS` go along, never a secret.
+`|` is checked ahead of the in-pane views; one that takes typed text must
+keep it a character there. The guard lets `src/split.rs` start a process.
+
 **Copy** (`src/clipboard.rs`): OSC 52 to the terminal (tmux passthrough)
 plus one long-lived arboard handle; `y` copies the id. `C` opens the
 command picker (#47; catalogue `src/azure/cli_actions.rs`, glue
