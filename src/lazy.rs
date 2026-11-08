@@ -278,6 +278,13 @@ pub struct LazyStore {
     /// `GET {machine}/extensions`, keyed by machine id, settings stripped.
     pub arc_extensions: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Azure Virtual Desktop (#198) ─────────────────────────────────────
+    /// `GET {pool}/sessionHosts`, keyed by host pool id, capped.
+    pub avd_session_hosts: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {plan}/pooledSchedules` or `personalSchedules`, keyed by
+    /// scaling plan id.
+    pub avd_schedules: LazyMap<Vec<serde_json::Value>>,
+
     // ── Automation (#202) ────────────────────────────────────────────────
     /// `GET {account}/runbooks`, keyed by account id, scrubbed.
     pub aa_runbooks: LazyMap<Vec<serde_json::Value>>,

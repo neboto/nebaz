@@ -1,0 +1,41 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-finance-personal",
+  "name": "hp-finance-personal",
+  "type": "Microsoft.DesktopVirtualization/hostPools",
+  "location": "westeurope",
+  "tags": {
+    "team": "finance",
+    "env": "prod",
+    "owner": "workplace@contoso.com"
+  },
+  "properties": {
+    "objectId": "8a4d2c6e-1f3b-4a9d-8e72-5b0c9d3f7a26",
+    "friendlyName": "Finance personal desktops",
+    "description": "One desktop per analyst (pilot)",
+    "hostPoolType": "Personal",
+    "personalDesktopAssignmentType": null,
+    "customRdpProperty": null,
+    "maxSessionLimit": 999999,
+    "loadBalancerType": "Persistent",
+    "validationEnvironment": false,
+    "ring": null,
+    "registrationInfo": {
+      "expirationTime": "{{iso:now-45d}}",
+      "registrationTokenOperation": "None"
+    },
+    "vmTemplate": null,
+    "preferredAppGroupType": "Desktop",
+    "startVMOnConnect": false,
+    "cloudPcResource": false,
+    "publicNetworkAccess": "Enabled",
+    "agentUpdate": {
+      "type": "Default",
+      "useSessionHostLocalTime": false,
+      "maintenanceWindows": []
+    },
+    "applicationGroupReferences": [
+      "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-finance-personal"
+    ],
+    "privateEndpointConnections": []
+  }
+}

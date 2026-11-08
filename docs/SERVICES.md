@@ -1028,6 +1028,34 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     the guard names those paths and commands, and the agents' service
     hosts. An Automation hybrid worker and a Defender row on an Arc
     server now open here instead of All resources.
+46. **Azure Virtual Desktop is its own tab** (#198,
+    `src/azure/services/virtual_desktop.rs`, Compute group, after Azure
+    Arc: an operator looks for a desktop among the machines that run it,
+    and the portal gives AVD its own blade). Four subscription-wide lists
+    of `Microsoft.DesktopVirtualization` at `2025-10-10` (2026-04-16 adds
+    only the RDP Shortpath UDP settings and was days old): Host pools
+    (`@avd`), App groups (`@avdag`), Workspaces (`@avdws`) and Scaling
+    plans (`@avdsp`). Session hosts are a lazy section of the pool (one
+    call per pool, at most 500, the first 50 shown with trouble first),
+    not a sub-tab: a host is a child of its pool and is in no list of its
+    own. A host's `status` is on no ladder (the pool's row has only
+    provisioning); the section flags anything but Available, Shutdown and
+    Upgrading, and counts the hosts **taking new sessions**: Learn says
+    the broker still sends new sessions to NeedsAssistance (non-fatal
+    checks failed), UpgradeFailed and Upgrading hosts, unless drained. A
+    scaling plan's Schedules is one lazy call, `pooledSchedules` or
+    `personalSchedules` by the plan's type. A pool's Related reads the
+    scaling plans list (the plan that names the pool) and its session
+    hosts (each host's VM); every type's Related names the pool a VM is a
+    session host of, from the reads already made (no call). The
+    registration token is stripped wherever it sits, with the SSO
+    secret's Key Vault path, before the store keeps a body. **Never**:
+    `retrieveRegistrationToken` and `listRegistrationTokens` (POSTs), a
+    host pool's or a host's user sessions (personal data: a host shows its
+    session count), a session's `sendMessage` and `disconnect` (POSTs) or
+    log-off (a DELETE); the guard names those paths,
+    `az desktopvirtualization hostpool retrieve-registration-token` and
+    the service's `wvd.microsoft.com` hosts.
 
 ## The catalog
 
@@ -1135,11 +1163,15 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Azure Arc · Servers (rule 45) | Machine (computer name, FQDN, domain, OS SKU, version and type, kind, cloud provider, manufacturer, model, logical cores, memory, IP addresses, SQL Server discovered, parent cluster) · Agent (status with ⚠ and how long when disconnected or expired, last status change, agent version, automatic upgrade and the last attempt, config mode, extensions and guest configuration allowed, both services, proxy, incoming ports, private link scope jumpable, each error ⚠) · Extensions ⧗ (type, version, automatic upgrade, state ⚠ when failed or at error level, the status message's first line; never settings) · Licensing & patching (license status, Software Assurance, ESU eligibility and licence with ⚠ when eligible and unassigned, key state, the licence jumpable, patch assessment and patch mode) · (Overview: status, OS, agent version, cloud provider, FQDN, identity) | ladder, then `status` (`Connected` → Available, `Disconnected` / `Error` → Unavailable, Expired after 45 days disconnected, `AwaitingConnection` → Pending) | the private link scope, the parent cluster, the ESU licence | `az connectedmachine show --ids` (the `connectedmachine` extension) |
 | Azure Arc · Kubernetes | Cluster (Kubernetes version, distribution and its version, infrastructure, offering, kind, nodes, cores, Azure RBAC, Entra admin group count, Azure Hybrid Benefit, identity) · Agent (connectivity ⚠ when offline or expired, last connected, identity certificate expiry ⚠ within 14 days or past, agent version, auto-upgrade, desired version, agent state, private link scope or state, each agent error ⚠) · (Overview: connectivity, Kubernetes version, distribution, nodes, agent version) | ladder, then `connectivityStatus` (`Connected` → Available, `Offline` / `Expired` → Unavailable, `Connecting` → Pending) | the private link scope | `az connectedk8s show --ids` (the `connectedk8s` extension) |
 | Azure Arc · Private link scopes | Network (public network access, scope id as text, private endpoints jumpable with ⚠ unless approved) · (Overview: public network access, endpoint count) | ladder only | private endpoints | `az connectedmachine private-link-scope show --ids` |
+| Virtual Desktop · Host pools (rule 46) | Session hosts ⧗ (the count, how many take new sessions with ⚠ when none, how many need attention; each host's VM jumpable, status ⚠ unless Available / Shutdown / Upgrading, new sessions or drain mode, sessions, assigned user, last heartbeat, agent version with ⚠ when its update failed, OS version, each failed health check ⚠ with its message) · Configuration (type, preferred app group type, assignment type ⚠ when a personal pool has none, or load balancing and max sessions, start VM on connect, validation environment, the registration token's expiry (never the token), agent updates with the maintenance windows, the VM template's name prefix, size and image, SSO secret type, each custom RDP property) · Network (public network access, private endpoints ⚠ unless approved) · (Overview: friendly name, type, start VM on connect, validation, app group count, description) | ladder only | app groups, private endpoints; ⧗ the scaling plan that names it, each session host's VM | `az desktopvirtualization hostpool show --ids` (the `desktopvirtualization` extension) |
+| Virtual Desktop · App groups | (Overview: friendly name, type, host pool and workspace jumpable, ⚠ when no workspace publishes it, shown in feed, description) | ladder only | the host pool, the workspace | `az desktopvirtualization applicationgroup show --ids` |
+| Virtual Desktop · Workspaces | Network (public network access, private endpoints ⚠ unless approved) · (Overview: friendly name, each app group jumpable, public network access, description) | ladder only | app groups, private endpoints | `az desktopvirtualization workspace show --ids` |
+| Virtual Desktop · Scaling plans | Schedules ⧗ (each schedule's days, then ramp-up, peak, ramp-down and off-peak: start time with load balancing, minimum hosts and capacity for a pooled plan, or auto-start, start VM on connect and the disconnect and log-off actions for a personal one; a pooled plan's ramp-down log-off and stop rule) · (Overview: friendly name, host pool type, time zone, exclusion tag, each host pool jumpable with scaling off marked, description) | ladder only | host pools | `az resource show --ids` (no `az desktopvirtualization` group for them) |
 | Power Platform · Enterprise policies | Network injection (each VNet and its delegated subnet, in the order the policy lists them: the environment's region pair) · Encryption (key vault, key name and version, state) · Identity (type, principal id, tenant) · (Overview: kind, `systemId` as text, health, lockbox state) | ladder, then `healthStatus` (`Healthy` → Available, `Warning` → Pending, `Unhealthy` → Unavailable, `Undetermined` stateless); `location` is a Power Platform geography, so the row passes every `R` filter like `global` | each VNet and subnet, the key vault when named by ARM id. Linked environments are in the Power Platform admin API, not ARM: never called, and the guard forbids its hosts | `az resource show --ids` (no `az powerplatform` group in core) |
 | Foundry · Search services (rule 38) | Service (status details, replicas, partitions, search units, hosting mode, compute, semantic ranker, upgrade) · Network (public access, bypass, IP rules, data exfiltration blocks, private endpoints with their approval) · Security (key / Entra ID auth and the failure mode, identity, CMK enforcement and compliance) · Shared private links ⧗ (target jumpable, sub-resource, status, ⚠ unless approved) · (Overview: status, SKU, endpoint) | ladder, then `status` | private endpoints, each shared link's target, user-assigned identities | `az search service show --ids` |
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
-Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @arc @arck8s @arcpls @storage @vnet @subnet @nsg @pip
+Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @arc @arck8s @arcpls @avd @avdag @avdws @avdsp @storage @vnet @subnet @nsg @pip
 @lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @automation @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
@@ -1191,6 +1223,10 @@ has a fixture test there.
 | `arc-machine-disconnected` | Arc servers | `status` Disconnected or Error (low); disconnected over 45 days, expired (medium) | low · medium |
 | `arc-cluster-offline` | Arc Kubernetes | `connectivityStatus` Offline (low) or Expired (medium) | low · medium |
 | `arc-agent-behind` | Arc servers | `agentVersion` 12 or more monthly releases behind the newest agent in the list (an older major version counts) | low |
+| `avd-pool-no-available-hosts` | Host pools + Session hosts ⧗ | no session host takes new sessions (medium: each is Unavailable, Shutdown or drained); no session hosts at all (low) | medium · low |
+| `avd-agent-behind` | Host pools + Session hosts ⧗ | a host's agent update failed (`updateState` Failed or `UpgradeFailed`, low); a host on an older agent than the newest any read host runs (info) | low · info |
+| `avd-personal-no-assignment` | Host pools | a Personal pool with no `personalDesktopAssignmentType` | low |
+| `avd-app-group-unpublished` | App groups | no `workspaceArmPath`: no workspace publishes it | info |
 | `acr-anonymous-pull` | Registries | `anonymousPullEnabled` | high |
 | `app-https-only` | Apps | `httpsOnly` false | high |
 | `app-min-tls` | Apps + Configuration ⧗ | `minTlsVersion` below 1.2 | medium |
@@ -1353,6 +1389,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
 | Automation accounts (rule 44) | 1, then per opened account: runbooks, schedules, job schedules, jobs (7 days, ≤ 200), worker groups + 1 per group (≤ 25), the linked workspace | `/providers/Microsoft.Automation/automationAccounts` · `2024-10-23` |
+| Host pools, app groups, workspaces, scaling plans (rule 46) | 1 each, then per opened pool: its session hosts (≤ 500); per opened plan: its pooled or personal schedules | `/providers/Microsoft.DesktopVirtualization/hostPools` · `{pool}/sessionHosts` · `/providers/Microsoft.DesktopVirtualization/applicationGroups` · `/providers/Microsoft.DesktopVirtualization/workspaces` · `/providers/Microsoft.DesktopVirtualization/scalingPlans` · `{plan}/pooledSchedules` or `{plan}/personalSchedules` · `2025-10-10` |
 | Arc servers, Kubernetes, private link scopes (rule 45) | 1 each, then per opened server: its extensions | `/providers/Microsoft.HybridCompute/machines` · `{machine}/extensions` · `/providers/Microsoft.HybridCompute/privateLinkScopes` · `2025-01-13`; `/providers/Microsoft.Kubernetes/connectedClusters` · `2024-01-01` |
 | Enterprise policies | 1 (every kind; `kind` on the row) | `/providers/Microsoft.PowerPlatform/enterprisePolicies` · `2020-10-30-preview` (the only version in the specs; not yet tried live) |
 | Deployments, Projects | 1 each per account, on demand | `{account}/deployments` · `{account}/projects` · `2026-07-01` |
@@ -1436,6 +1473,16 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- Azure Virtual Desktop (#198), built without an Azure login from
+  azure-rest-api-specs (`desktopvirtualization/…/DesktopVirtualization/stable/2025-10-10`)
+  and the CLI `desktopvirtualization` extension (hostpool, applicationgroup
+  and workspace `show` take `--ids`; no group for scaling plans or session
+  hosts). To check: whether a session host's `name` comes back as
+  `{pool}/{host}` (the spec's example says only the host) and whether the
+  list carries `sessionHostHealthCheckResults` or only the single GET does;
+  whether a pooled plan's schedules are in `pooledSchedules` or only in the
+  plan's inline `schedules`; whether the list body leaves
+  `registrationInfo.token` out on this version.
 - Azure Arc (#199), built without an Azure login from azure-rest-api-specs
   (`hybridcompute/…/HybridCompute/stable/2025-01-13`,
   `hybridkubernetes/…/HybridKubernetes/stable/2024-01-01`) and the CLI

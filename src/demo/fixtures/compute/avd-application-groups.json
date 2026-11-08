@@ -1,0 +1,70 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-contoso-pooled",
+      "name": "dag-contoso-pooled",
+      "type": "Microsoft.DesktopVirtualization/applicationGroups",
+      "location": "westeurope",
+      "tags": {
+        "team": "platform",
+        "env": "prod",
+        "owner": "workplace@contoso.com"
+      },
+      "kind": "Desktop",
+      "properties": {
+        "objectId": "1f7c3a9e-5d2b-4e8f-a1c6-9b3d5f7a2e48",
+        "friendlyName": "Contoso desktop",
+        "description": "The full Windows 11 desktop",
+        "hostPoolArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled",
+        "workspaceArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/workspaces/ws-contoso",
+        "applicationGroupType": "Desktop",
+        "cloudPcResource": false,
+        "showInFeed": true
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/rag-contoso-apps",
+      "name": "rag-contoso-apps",
+      "type": "Microsoft.DesktopVirtualization/applicationGroups",
+      "location": "westeurope",
+      "tags": {
+        "team": "platform",
+        "env": "prod",
+        "owner": "workplace@contoso.com"
+      },
+      "kind": "RemoteApp",
+      "properties": {
+        "objectId": "6b8e2d4a-0c9f-4b1e-8d35-7a2c4e6f8b91",
+        "friendlyName": "Contoso apps",
+        "description": "Excel, Word and the orders back office",
+        "hostPoolArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled",
+        "workspaceArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/workspaces/ws-contoso",
+        "applicationGroupType": "RemoteApp",
+        "cloudPcResource": false,
+        "showInFeed": true
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-finance-personal",
+      "name": "dag-finance-personal",
+      "type": "Microsoft.DesktopVirtualization/applicationGroups",
+      "location": "westeurope",
+      "tags": {
+        "team": "finance",
+        "env": "prod",
+        "owner": "workplace@contoso.com"
+      },
+      "kind": "Desktop",
+      "properties": {
+        "objectId": "2d9a5c7e-3f1b-4c8d-9e64-1b7f3a5c9d02",
+        "friendlyName": "Finance desktop",
+        "description": "Pilot: one desktop per analyst",
+        "hostPoolArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-finance-personal",
+        "workspaceArmPath": null,
+        "applicationGroupType": "Desktop",
+        "cloudPcResource": false,
+        "showInFeed": true
+      }
+    }
+  ]
+}

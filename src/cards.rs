@@ -38,6 +38,10 @@ pub static CARDS: &[Card] = &[
     Card { views: &[JumpView::Galleries], source: include_str!("../docs/cards/galleries.md") },
     Card { views: &[JumpView::ArcClusters], source: include_str!("../docs/cards/arc-kubernetes.md") },
     Card { views: &[JumpView::ArcPrivateLinkScopes], source: include_str!("../docs/cards/arc-private-link-scopes.md") },
+    Card {
+        views: &[JumpView::HostPools, JumpView::AvdApplicationGroups, JumpView::AvdWorkspaces, JumpView::ScalingPlans],
+        source: include_str!("../docs/cards/virtual-desktop.md"),
+    },
     Card { views: &[JumpView::Clusters, JumpView::NodePools], source: include_str!("../docs/cards/aks.md") },
     Card { views: &[JumpView::Registries], source: include_str!("../docs/cards/registries.md") },
     Card {

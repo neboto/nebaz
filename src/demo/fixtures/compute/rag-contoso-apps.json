@@ -1,0 +1,22 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/rag-contoso-apps",
+  "name": "rag-contoso-apps",
+  "type": "Microsoft.DesktopVirtualization/applicationGroups",
+  "location": "westeurope",
+  "tags": {
+    "team": "platform",
+    "env": "prod",
+    "owner": "workplace@contoso.com"
+  },
+  "kind": "RemoteApp",
+  "properties": {
+    "objectId": "6b8e2d4a-0c9f-4b1e-8d35-7a2c4e6f8b91",
+    "friendlyName": "Contoso apps",
+    "description": "Excel, Word and the orders back office",
+    "hostPoolArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled",
+    "workspaceArmPath": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/workspaces/ws-contoso",
+    "applicationGroupType": "RemoteApp",
+    "cloudPcResource": false,
+    "showInFeed": true
+  }
+}

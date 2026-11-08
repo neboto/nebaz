@@ -1,0 +1,27 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/workspaces/ws-contoso",
+      "name": "ws-contoso",
+      "type": "Microsoft.DesktopVirtualization/workspaces",
+      "location": "westeurope",
+      "tags": {
+        "team": "platform",
+        "env": "prod",
+        "owner": "workplace@contoso.com"
+      },
+      "properties": {
+        "objectId": "4e6a8c2d-9b1f-4d3e-a7c5-3f9b1d5e7a60",
+        "friendlyName": "Contoso",
+        "description": "Head office desktops and apps",
+        "applicationGroupReferences": [
+          "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-contoso-pooled",
+          "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/rag-contoso-apps"
+        ],
+        "cloudPcResource": false,
+        "publicNetworkAccess": "Enabled",
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

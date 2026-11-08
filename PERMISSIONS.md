@@ -326,6 +326,18 @@ each one backs are in the catalog table
   Extensions), `Microsoft.HybridCompute/privateLinkScopes/read`,
   `Microsoft.Kubernetes/connectedClusters/read`. Never: run commands,
   patch assessment or installation, a cluster's user credential.
+- **Azure Virtual Desktop** (#198):
+  `Microsoft.DesktopVirtualization/hostpools/read`,
+  `Microsoft.DesktopVirtualization/hostpools/sessionhosts/read` (the
+  lazy Session hosts), `Microsoft.DesktopVirtualization/applicationgroups/read`,
+  `Microsoft.DesktopVirtualization/workspaces/read`,
+  `Microsoft.DesktopVirtualization/scalingplans/read`, and for the lazy
+  Schedules `Microsoft.DesktopVirtualization/scalingplans/pooledSchedules/read`
+  or `Microsoft.DesktopVirtualization/scalingplans/personalSchedules/read`.
+  Never: the registration token (`retrieveRegistrationToken`,
+  `listRegistrationTokens`, POSTs), user sessions (listed with `Reader`,
+  but nebaz shows only a host's count), a session's message, disconnect
+  or log-off.
 - **Power Platform**: `Microsoft.PowerPlatform/enterprisePolicies/read`.
   Environments and their policy links are in the Power Platform admin
   API, not ARM: nebaz never calls it, and its hosts are on the guard's
@@ -467,7 +479,7 @@ each one backs are in the catalog table
   and `config/web`), Container Apps, Redis (caches, Managed Redis and cache
   firewall rules), PostgreSQL and MySQL (servers, and each one's firewall
   rules, parameters and Entra admins), Service Bus and Event Hubs (namespaces and their
-  network rule sets), Power Platform, Automation accounts, Arc servers and Kubernetes clusters, the subscription's
+  network rule sets), Power Platform, Automation accounts, Arc servers and Kubernetes clusters, AVD host pools (and each one's session hosts) and app groups, the subscription's
   Access list, and the Graph directory reads (app registrations, service
   principals, principal names). A denied one leaves its checks "not
   checked". `nebaz audit` makes the same calls.

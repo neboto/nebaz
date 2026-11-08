@@ -1,0 +1,48 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled",
+  "name": "hp-contoso-pooled",
+  "type": "Microsoft.DesktopVirtualization/hostPools",
+  "location": "westeurope",
+  "tags": {
+    "team": "platform",
+    "env": "prod",
+    "owner": "workplace@contoso.com"
+  },
+  "properties": {
+    "objectId": "3c9e1f5a-7b2d-4e8a-9c41-6d2f0a8b5e17",
+    "friendlyName": "Contoso desktops",
+    "description": "Shared Windows 11 desktops for head office",
+    "hostPoolType": "Pooled",
+    "personalDesktopAssignmentType": null,
+    "customRdpProperty": "drivestoredirect:s:;redirectclipboard:i:1;audiomode:i:0;",
+    "maxSessionLimit": 12,
+    "loadBalancerType": "BreadthFirst",
+    "validationEnvironment": false,
+    "ring": null,
+    "registrationInfo": {
+      "expirationTime": "{{iso:now-20d}}",
+      "registrationTokenOperation": "None"
+    },
+    "vmTemplate": "{\"domain\": \"\", \"galleryImageOffer\": \"windows-11\", \"galleryImageSKU\": \"win11-24h2-avd-m365\", \"imageType\": \"Gallery\", \"namePrefix\": \"vm-avd\", \"osDiskType\": \"Premium_LRS\", \"vmSize\": {\"id\": \"Standard_D4s_v5\", \"cores\": 4, \"ram\": 16}}",
+    "preferredAppGroupType": "Desktop",
+    "startVMOnConnect": true,
+    "cloudPcResource": false,
+    "publicNetworkAccess": "Enabled",
+    "agentUpdate": {
+      "type": "Scheduled",
+      "useSessionHostLocalTime": false,
+      "maintenanceWindowTimeZone": "W. Europe Standard Time",
+      "maintenanceWindows": [
+        {
+          "dayOfWeek": "Saturday",
+          "hour": 2
+        }
+      ]
+    },
+    "applicationGroupReferences": [
+      "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-contoso-pooled",
+      "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/rag-contoso-apps"
+    ],
+    "privateEndpointConnections": []
+  }
+}

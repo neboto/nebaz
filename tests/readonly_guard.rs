@@ -78,6 +78,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // Azure Arc (#199): the agents' identity and notification services.
     "his.arc.azure.com",
     "guestnotificationservice.azure.com",
+    // Azure Virtual Desktop (#198): the broker, gateway and feed the
+    // clients and session hosts talk to.
+    "wvd.microsoft.com",
     // Azure SQL: the servers' own endpoints (a TDS connection, not ARM).
     "database.windows.net",
     // Container Registry: repositories, tags and manifests (the registry's
@@ -282,6 +285,9 @@ const AZ_FORBIDDEN: &[&str] = &[
     // POST) and a command run on an Arc server (#199).
     "connectedk8s proxy",
     "connectedmachine run-command",
+    // A host pool's registration token (`retrieveRegistrationToken`, a
+    // POST): with it any machine joins the pool as a session host (#198).
+    "desktopvirtualization hostpool retrieve-registration-token",
     // Cosmos DB account keys, read-only keys and connection strings.
     "cosmosdb keys",
     // Container Apps secrets: `secret list --show-values` and `secret
@@ -809,6 +815,12 @@ const POST_ONLY_READS: &[&str] = &[
     "refreshcontainers",
     "backupsecuritypin",
     "findrestorabletimeranges",
+    // Azure Virtual Desktop (#198): a host pool's registration token, and
+    // a user session's message and disconnect.
+    "retrieveregistrationtoken",
+    "listregistrationtokens",
+    "/sendmessage",
+    "/disconnect",
 ];
 
 /// GET reads that return a secret: a connection's pre-shared key
@@ -838,6 +850,9 @@ const SECRET_READS: &[&str] = &[
     // run commands (the commands' script and output).
     "listclusterusercredential",
     "/runcommands",
+    // Azure Virtual Desktop (#198): user sessions name who is signed in
+    // where; nebaz shows a host's session count, never the sessions.
+    "/usersessions",
 ];
 
 #[test]

@@ -63,6 +63,22 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Kubernetes/connectedClusters/arck8s-ams-edge", "arck8s-ams-edge.json"),
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.HybridCompute/privateLinkScopes", "arc-private-link-scopes.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.HybridCompute/privateLinkScopes/pls-arc-legacy", "pls-arc-legacy.json"),
+    // ── Azure Virtual Desktop (#198): a pooled pool for head office (one host
+    //    needs assistance, one scaled down), a personal pilot pool with no
+    //    hosts and no assignment type, its app group in no workspace ──
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.DesktopVirtualization/hostPools", "host-pools.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled/sessionHosts", "hp-contoso-pooled.session-hosts.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-contoso-pooled", "hp-contoso-pooled.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/hostPools/hp-finance-personal", "hp-finance-personal.json"),
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.DesktopVirtualization/applicationGroups", "avd-application-groups.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-contoso-pooled", "dag-contoso-pooled.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/rag-contoso-apps", "rag-contoso-apps.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/applicationGroups/dag-finance-personal", "dag-finance-personal.json"),
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.DesktopVirtualization/workspaces", "avd-workspaces.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/workspaces/ws-contoso", "ws-contoso.json"),
+    fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.DesktopVirtualization/scalingPlans", "scaling-plans.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/scalingPlans/sp-contoso-weekdays/pooledSchedules", "sp-contoso-weekdays.pooled-schedules.json"),
+    fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.DesktopVirtualization/scalingPlans/sp-contoso-weekdays", "sp-contoso-weekdays.json"),
     fx!("compute", "/subscriptions/{{prod}}/providers/Microsoft.Web/staticSites", "static-sites.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront", "swa-orders-storefront.json"),
     fx!("compute", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/staticSites/swa-orders-storefront/builds", "swa-orders-storefront.builds.json"),
