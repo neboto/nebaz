@@ -56,10 +56,16 @@ jobs:
         run: |
           prerelease=""
           case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+          # The notes start at the last published release, not the previous
+          # tag: a tag the version check refused (v0.9.0) has no release,
+          # and starting there left v0.9.1's notes empty.
+          since=()
+          last="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)"
+          if [ -n "$last" ]; then since=(--notes-start-tag "$last"); fi
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
-            --draft --verify-tag --generate-notes $prerelease
+            --draft --verify-tag --generate-notes "${since[@]}" $prerelease
 
   build:
     name: build ${{ matrix.target }}
