@@ -100,8 +100,12 @@ git push -u origin release-v0.2.0
 gh pr create --fill --label skip-changelog
 gh pr merge --squash --auto    # merges once CI passes on top of main
 
-# 2. tag the merged commit + push the tag — the tag push is the trigger
+# 2. tag the merged commit + push the tag — the tag push is the trigger.
+#    Check first: release tags can't be deleted or moved
+#    (protect-release-tags), so a tag on the wrong commit is spent.
+gh pr view release-v0.2.0 --json state -q .state   # MERGED
 git switch main && git pull --ff-only
+grep -m1 '^version' Cargo.toml                     # version = "0.2.0"
 git tag v0.2.0
 git push origin v0.2.0
 
@@ -112,7 +116,10 @@ gh release view v0.2.0
 
 The workflow refuses a tag whose version doesn't match `Cargo.toml`, so a
 forgotten bump fails in the first job rather than shipping mislabelled
-binaries. A tag with a pre-release suffix (`v0.2.0-rc.1`) is published as a
+binaries. The refused tag stays, though (the ruleset blocks deleting it), so
+the fix is the next patch version: v0.9.0 was tagged before its bump merged,
+and the release shipped as v0.9.1. The notes start at the last published
+release (`--notes-start-tag`), so a refused tag doesn't empty them. A tag with a pre-release suffix (`v0.2.0-rc.1`) is published as a
 GitHub *pre-release* and never becomes *latest*.
 
 **Release notes come from PR labels.** `--generate-notes` groups merged PRs
