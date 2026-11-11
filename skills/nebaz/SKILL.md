@@ -123,6 +123,24 @@ vault's secret *names*, …). Up to 50 ids per call, all in one subscription.
 - To compare two resources, diff two `get`s:
   `diff <(nebaz get ID1 -o md) <(nebaz get ID2 -o md)`.
 
+## `open` — show the user a resource
+
+`open` is the one subcommand that starts the TUI instead of printing: use
+it to hand a person a pane on a resource you found, never to read data
+yourself (it prints nothing).
+
+```bash
+nebaz open /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-app/providers/Microsoft.Compute/virtualMachines/vm-1 --section networking
+nebaz open vm-1 --in vm --charts 24h --metric cpu --full
+```
+
+- The target is an ARM id or a `graph:/` id, or an exact name with `--in`,
+  as `get` takes.
+- `--section NAME` (any case), or `--charts 1h|6h|24h|7d|30d` with an
+  optional `--metric NAME` (a chart row's label or metric name); `--full`
+  gives the pane the whole width.
+- A wrong id, prefix or window exits 2 before the TUI starts.
+
 ## Output
 
 Pass `-o json` (the default) or `-o md` for text to reason over.

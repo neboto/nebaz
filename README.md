@@ -161,6 +161,8 @@ nebaz                 # the welcome screen; S picks a service
 nebaz -s vm           # straight to virtual machines
 nebaz -s nsg -r westeurope -p "Prod"   # a sub-tab, a location filter, a subscription
 nebaz --demo          # the made-up tenant, no Azure needed
+nebaz open /subscriptions/…/virtualMachines/vm-1 --charts 7d   # straight to one resource's charts
+nebaz --bookmark web  # a saved bookmark, by part of its name
 ```
 
 Then: `j`/`k` to move, `⏎` to open the detail pane, `1`–`9` for its
@@ -321,6 +323,20 @@ keys, flags and exit codes are pinned in
 [`src/headless/contract.json`](src/headless/contract.json); an agent skill
 describing all of it is in [`skills/nebaz/SKILL.md`](skills/nebaz/SKILL.md).
 Every subcommand takes `--demo` too.
+
+`open` is the one subcommand that starts the TUI: at a resource's detail
+pane, a section of it, or its charts. Its flags are pinned in the same
+contract, so a script or a tmux layout can rely on them.
+
+```bash
+nebaz open /subscriptions/…/virtualMachines/vm-1            # the detail pane
+nebaz open vm-1 --in vm --section networking --full         # by name, one section, full width
+nebaz open /subscriptions/…/virtualMachines/vm-1 --charts 24h --metric cpu
+nebaz --bookmark "prod gateway"                             # a bookmark saved with B
+```
+
+A wrong id, service or window exits `2` before the TUI starts; a resource,
+section or metric that isn't there says so in the status bar.
 
 ---
 
