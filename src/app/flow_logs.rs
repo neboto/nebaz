@@ -72,7 +72,7 @@ impl App {
         let arm = self
             .azure_clients
             .arm_for_subscription(subscription_of(&key).unwrap_or_default())
-            .map_err(|e| e.to_string());
+            .map_err(crate::error::Error::message);
         let sub = key.clone();
         self.trigger_lazy(|s| &mut s.flow_logs, key, event_tx, move || async move { fetch_flow_logs(arm?, sub).await });
     }

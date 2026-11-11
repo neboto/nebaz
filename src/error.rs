@@ -57,6 +57,17 @@ impl Error {
             _ => None,
         }
     }
+
+    /// The message for a reader: an Azure error is the service's words
+    /// alone, without the `Azure error:` prefix that only pushes them right
+    /// in a pane (a lazy section's `⚠` line). Other kinds keep their prefix:
+    /// there it says what failed. (neboto-tui#324)
+    pub fn message(self) -> String {
+        match self {
+            Error::Azure(m) => m,
+            e => e.to_string(),
+        }
+    }
 }
 
 /// A credential failure becomes `Error::Auth` (classified from the
@@ -141,6 +152,14 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_azure_error_reads_as_the_service_message_alone() {
+        let e = Error::Azure("403 AuthorizationFailed: not authorized".into());
+        assert_eq!(e.message(), "403 AuthorizationFailed: not authorized");
+        // Other kinds keep their prefix: there it says what failed.
+        assert_eq!(Error::EditorNotFound("vim".into()).message(), Error::EditorNotFound("vim".into()).to_string());
+    }
 
     #[test]
     fn connection_errors_carry_the_whole_cause_chain() {

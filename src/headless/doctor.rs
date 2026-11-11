@@ -291,8 +291,7 @@ async fn update_check(config: &Config, proxied: bool) -> Check {
             };
             Check::new("update check", Status::Ok, format!("{} · latest v{} · {} ms", verdict, latest, took.as_millis()))
         }
-        // The transport's error type is the Azure one; this host is GitHub.
-        Err(e) => Check::new("update check", Status::Fail, format!("{} · {}", uc::LATEST_URL, e.trim_start_matches("Azure error: ")))
+        Err(e) => Check::new("update check", Status::Fail, format!("{} · {}", uc::LATEST_URL, e))
             .hint(network_hint(&e, proxied).or(Some(format!("the TUI's check fails silently the same way · {}", state)))),
     }
 }

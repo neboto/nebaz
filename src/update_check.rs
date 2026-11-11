@@ -145,7 +145,7 @@ pub async fn fetch_latest() -> Result<String, String> {
     let headers = [("accept", "application/vnd.github+json".to_string())];
     let body = crate::azure::arm::anonymous_get(LATEST_URL, &headers, REQUEST_TIMEOUT)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(crate::error::Error::message)?;
     version_of(&body)
 }
 

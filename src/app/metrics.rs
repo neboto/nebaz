@@ -123,7 +123,7 @@ impl App {
                 let (arm, path) = (arm.clone(), path.clone());
                 async move {
                     let pairs: Vec<(&str, &str)> = query.iter().map(|(k, v)| (*k, v.as_str())).collect();
-                    arm.get_query(&path, METRICS_API_VERSION, &pairs).await.map_err(|e| e.to_string())
+                    arm.get_query(&path, METRICS_API_VERSION, &pairs).await.map_err(crate::error::Error::message)
                 }
             };
             let series = fetch_series(&queries, window, end, fetch).await;
@@ -172,7 +172,7 @@ impl App {
                 let (arm, path) = (arm.clone(), path.clone());
                 async move {
                     let pairs: Vec<(&str, &str)> = query.iter().map(|(k, v)| (*k, v.as_str())).collect();
-                    arm.get_query(&path, METRICS_API_VERSION, &pairs).await.map_err(|e| e.to_string())
+                    arm.get_query(&path, METRICS_API_VERSION, &pairs).await.map_err(crate::error::Error::message)
                 }
             };
             let data = fetch_waf(product, policy.as_deref(), window, end, fetch).await;
@@ -253,7 +253,7 @@ impl App {
         let epoch = self.lazy.epoch();
         let tx = event_tx.clone();
         tokio::spawn(async move {
-            let result = arm.get(&definitions_path(&id), METRICS_API_VERSION).await.map_err(|e| e.to_string());
+            let result = arm.get(&definitions_path(&id), METRICS_API_VERSION).await.map_err(crate::error::Error::message);
             let apply: Box<dyn FnOnce(&mut App) + Send> = Box::new(move |app: &mut App| {
                 let Some(st) = app.metrics.as_mut().filter(|st| st.resource_id == id) else {
                     return;

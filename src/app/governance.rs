@@ -48,7 +48,7 @@ impl App {
         let provider = self.azure_clients.service(view.service());
         let key = format!("{}|{}", sub, view.as_str());
         self.trigger_lazy(|s| &mut s.section_lists, key, event_tx, move || async move {
-            provider.list_resources(view).await.map_err(|e| e.to_string())
+            provider.list_resources(view).await.map_err(crate::error::Error::message)
         });
     }
 

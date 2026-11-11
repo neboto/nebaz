@@ -144,14 +144,14 @@ pub async fn fetch_gallery_images(
     let images = arm
         .list(&format!("{}/images", gallery_id.trim_end_matches('/')), GALLERY_API_VERSION)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(crate::error::Error::message)?;
     let mut out = GalleryImages { skipped: images.len().saturating_sub(MAX_IMAGES), ..Default::default() };
     for (i, image) in images.into_iter().enumerate() {
         if i >= MAX_IMAGES {
             break;
         }
         let path = format!("{}/images/{}/versions", gallery_id.trim_end_matches('/'), json::text(&image, "/name"));
-        let versions = arm.list(&path, GALLERY_API_VERSION).await.map_err(|e| e.to_string());
+        let versions = arm.list(&path, GALLERY_API_VERSION).await.map_err(crate::error::Error::message);
         out.images.push((image, versions));
     }
     Ok(out)

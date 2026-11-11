@@ -318,7 +318,7 @@ impl AzureClients {
         let graph = scope
             .tenant()
             .ok_or_else(|| "no tenant".to_string())
-            .and_then(|t| self.graph_for_tenant(t).map_err(|e| e.to_string()));
+            .and_then(|t| self.graph_for_tenant(t).map_err(crate::error::Error::message));
         Some(self.service_over(service, scope, graph))
     }
 
@@ -405,7 +405,7 @@ impl AzureClients {
             }
             None => return Err(format!("not an ARM path: {}", path)),
         };
-        self.arm_for_subscription(sub).map_err(|e| e.to_string())
+        self.arm_for_subscription(sub).map_err(crate::error::Error::message)
     }
 
     /// `GET {path}` as a future the lazy store can own (a VM's instance
@@ -419,7 +419,7 @@ impl AzureClients {
         let path = path.to_string();
         async move {
             let arm = arm?;
-            arm.get(&path, api_version).await.map_err(|e| e.to_string())
+            arm.get(&path, api_version).await.map_err(crate::error::Error::message)
         }
     }
 
@@ -435,7 +435,7 @@ impl AzureClients {
         let path = path.to_string();
         async move {
             let arm = arm?;
-            arm.get_query(&path, api_version, query).await.map_err(|e| e.to_string())
+            arm.get_query(&path, api_version, query).await.map_err(crate::error::Error::message)
         }
     }
 
@@ -450,7 +450,7 @@ impl AzureClients {
         let path = path.to_string();
         async move {
             let arm = arm?;
-            arm.list(&path, api_version).await.map_err(|e| e.to_string())
+            arm.list(&path, api_version).await.map_err(crate::error::Error::message)
         }
     }
 
@@ -470,7 +470,7 @@ impl AzureClients {
             let mut all = Vec::new();
             arm.list_pages(&path, api_version, &query, |page| all.extend(page))
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(crate::error::Error::message)?;
             Ok(all)
         }
     }
@@ -495,7 +495,7 @@ impl AzureClients {
                 all.len() < max_items
             })
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::error::Error::message)?;
             all.truncate(max_items);
             Ok(all)
         }
@@ -520,7 +520,7 @@ impl AzureClients {
     /// The current subscription's tenant's Graph pipeline, or why not.
     pub fn current_graph(&self) -> std::result::Result<Arc<ArmClient>, String> {
         match self.current_entry() {
-            Some(entry) => self.graph_for_tenant(&entry.tenant_id).map_err(|e| e.to_string()),
+            Some(entry) => self.graph_for_tenant(&entry.tenant_id).map_err(crate::error::Error::message),
             None => Err(self.auth_error.clone().unwrap_or(AuthError::NotLoggedIn).status_line()),
         }
     }
@@ -534,7 +534,7 @@ impl AzureClients {
         let graph = self.current_graph();
         async move {
             let path = path.ok_or_else(|| "not a directory path".to_string())?;
-            graph?.graph_get(&path, &[]).await.map_err(|e| e.to_string())
+            graph?.graph_get(&path, &[]).await.map_err(crate::error::Error::message)
         }
     }
 
@@ -554,7 +554,7 @@ impl AzureClients {
                     true
                 })
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(crate::error::Error::message)?;
             Ok(all)
         }
     }
@@ -568,7 +568,7 @@ impl AzureClients {
             .iter()
             .find(|s| s.id.eq_ignore_ascii_case(sub))
             .ok_or_else(|| format!("subscription {} is not in the picker's list", sub))?;
-        self.graph_for_tenant(&entry.tenant_id).map_err(|e| e.to_string())
+        self.graph_for_tenant(&entry.tenant_id).map_err(crate::error::Error::message)
     }
 
     /// `GET /v1.0/directoryObjects/{id}` in the directory of `arm_id`'s
@@ -583,7 +583,7 @@ impl AzureClients {
             .ok_or_else(|| format!("not a directory object id: {}", object_id));
         async move {
             let graph = graph?;
-            graph.graph_get(&path?, &[]).await.map_err(|e| e.to_string())
+            graph.graph_get(&path?, &[]).await.map_err(crate::error::Error::message)
         }
     }
 
@@ -595,10 +595,10 @@ impl AzureClients {
         let arm = self.arm_for_subscription(subscription);
         let path = format!("/subscriptions/{}", subscription);
         async move {
-            let arm = arm.map_err(|e| e.to_string())?;
+            let arm = arm.map_err(crate::error::Error::message)?;
             arm.get(&path, SUBSCRIPTIONS_API_VERSION)
                 .await
-                .map_err(|e| e.to_string())
+                .map_err(crate::error::Error::message)
         }
     }
 
@@ -613,11 +613,11 @@ impl AzureClients {
         let arm = self.arm_for_subscription(subscription);
         let path = format!("/subscriptions/{}/locations", subscription);
         async move {
-            let arm = arm.map_err(|e| e.to_string())?;
+            let arm = arm.map_err(crate::error::Error::message)?;
             let items = arm
                 .list(&path, LOCATIONS_API_VERSION)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(crate::error::Error::message)?;
             let mut infos: Vec<LocationInfo> = items.iter().filter_map(LocationInfo::from_json).collect();
             infos.sort_by(|a, b| a.display_name.cmp(&b.display_name));
             Ok(infos)
