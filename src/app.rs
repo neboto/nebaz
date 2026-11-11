@@ -593,6 +593,8 @@ pub struct App {
     /// `--at`: the place a pane split out with `|` opens at, restored once
     /// the startup load is under way (`restore_startup_location`).
     pub startup_place: Option<crate::split::Place>,
+    /// What `nebaz open` asked for at `startup_place` (`open::OpenRequest`).
+    pub startup_open: Option<crate::open::OpenRequest>,
     /// Config `split_command`: how `|` opens the new pane, overriding the
     /// detected terminal (`{cmd}` = the nebaz command).
     pub split_command: Option<String>,
@@ -705,6 +707,19 @@ impl App {
         if let Some(at) = &cli.at {
             match crate::split::decode_place(at) {
                 Ok(place) => app.startup_place = Some(place),
+                Err(e) => app.error_message = Some(e),
+            }
+        }
+        // `open` and `--bookmark` (`main` already refused a bad one).
+        if let Some(crate::cli::Command::Open(args)) = &cli.command {
+            if let Ok((place, req)) = crate::open::plan(args) {
+                app.startup_place = Some(place);
+                app.startup_open = Some(req);
+            }
+        }
+        if let Some(name) = &cli.bookmark {
+            match crate::open::pick_bookmark(&app.bookmarks, name) {
+                Ok(loc) => app.startup_place = Some(crate::split::Place { loc: loc.clone(), chart_window: None }),
                 Err(e) => app.error_message = Some(e),
             }
         }
@@ -835,6 +850,7 @@ impl App {
             pending_jump: None,
             pending_place: None,
             startup_place: None,
+            startup_open: None,
             split_command: config.split_command.clone().filter(|c| !c.trim().is_empty()),
             redraw_requested: false,
             clipboard: crate::clipboard::Clipboard::new(),
@@ -1364,9 +1380,37 @@ impl App {
     /// only by the location filter lifts the filter; a load that ends
     /// without the row clears the jump with a message.
     fn resolve_pending_jump(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
-        let Some((id, focus)) = self.pending_jump.clone() else {
+        let Some((mut id, focus)) = self.pending_jump.clone() else {
             return;
         };
+        // `open NAME --in …`: the target is a name. Rows stream, so which
+        // row it names (and whether only one does) is known once the list
+        // has loaded.
+        if self.pending_place.as_ref().is_some_and(|p| p.by_name && p.id == id) {
+            if self.loading {
+                return;
+            }
+            let named: Vec<String> =
+                self.resources.iter().filter(|r| r.name() == id).map(|r| r.id().to_string()).collect();
+            match named.as_slice() {
+                [one] => {
+                    id = one.clone();
+                    self.pending_jump = Some((id.clone(), focus));
+                    if let Some(p) = self.pending_place.as_mut() {
+                        p.id = id.clone();
+                        p.by_name = false;
+                    }
+                }
+                [] => {}
+                many => {
+                    self.pending_jump = None;
+                    self.pending_place = None;
+                    self.error_message =
+                        Some(format!("open: {} rows are named {id:?} here: open one by its id", many.len()));
+                    return;
+                }
+            }
+        }
         if !self.restore_selection_by_id(&id) && self.has_resource_id(&id) {
             self.switch_location(Location::All);
             self.toast("Location filter cleared to reach the row");

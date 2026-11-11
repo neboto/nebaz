@@ -87,6 +87,8 @@ pub async fn run(cli: Cli) -> i32 {
         Some(Command::Changes(args)) => ok(changes(&cli, args, format).await),
         Some(Command::Audit(args)) => audit(&cli, args, format).await,
         Some(Command::Doctor) => doctor::doctor(&cli, format).await,
+        // `open` runs the TUI; `main` never routes it here.
+        Some(Command::Open(_)) => Ok((String::new(), 0)),
         None => Ok((String::new(), 0)),
     };
     match result {

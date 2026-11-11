@@ -3,6 +3,7 @@
   "flags": {
     "": [
       "--banner",
+      "--bookmark",
       "--demo",
       "--endpoint-url",
       "--location",
@@ -40,7 +41,14 @@
     "audit": [
       "--fail-on"
     ],
-    "doctor": []
+    "doctor": [],
+    "open": [
+      "--charts",
+      "--full",
+      "--in",
+      "--metric",
+      "--section"
+    ]
   },
   "exit_codes": {
     "ok": 0,

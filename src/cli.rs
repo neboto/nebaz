@@ -16,7 +16,8 @@ use clap::{Parser, Subcommand, ValueEnum};
 #[derive(Debug, Parser)]
 #[command(name = "nebaz", version, about, long_about = None)]
 pub struct Cli {
-    /// Run once and print instead of opening the TUI.
+    /// Run once and print instead of opening the TUI (`open` is the
+    /// exception: it opens the TUI at a resource).
     #[command(subcommand)]
     pub command: Option<Command>,
 
@@ -62,6 +63,12 @@ pub struct Cli {
     /// with it). The value is opaque: written by nebaz, not by hand.
     #[arg(long, value_name = "PLACE", hide = true)]
     pub at: Option<String>,
+
+    /// Open at a saved bookmark (`B` in the TUI saves one): part of its
+    /// name as the `'` list shows it, or the id it holds, any case. Must
+    /// pick just one.
+    #[arg(long, value_name = "NAME", conflicts_with = "at")]
+    pub bookmark: Option<String>,
 
     /// Color theme preset: dark (default), light, solarized-dark,
     /// solarized-light, gruvbox-dark, gruvbox-light, dracula, nord,
@@ -112,6 +119,9 @@ pub enum Command {
     /// one Graph read, and the release check (which the TUI runs silently).
     /// Exits 1 when a check fails.
     Doctor,
+    /// Open the TUI at a resource: its detail pane, a section, or its
+    /// charts, e.g. `nebaz open <ARM id> --charts 1h`.
+    Open(OpenArgs),
 }
 
 #[derive(Debug, clap::Args)]
@@ -185,6 +195,37 @@ pub struct LsArgs {
 }
 
 #[derive(Debug, clap::Args)]
+pub struct OpenArgs {
+    /// An ARM id (`/subscriptions/…`), a directory id (`graph:/…`), or an
+    /// exact name with --in.
+    #[arg(value_name = "ID")]
+    pub target: String,
+
+    /// Where to look a name up: a prefix or service/sub-tab, as `ls`
+    /// takes. An id routes itself and ignores it.
+    #[arg(long = "in", value_name = "PREFIX")]
+    pub within: Option<String>,
+
+    /// Open this detail section (any case), e.g. --section access.
+    #[arg(long, value_name = "NAME", conflicts_with_all = ["charts", "metric"])]
+    pub section: Option<String>,
+
+    /// Open the resource's charts at this window: 1h, 6h, 24h, 7d or 30d.
+    #[arg(long, value_name = "WINDOW")]
+    pub charts: Option<String>,
+
+    /// Open the charts on this metric: its row label or Azure Monitor
+    /// metric name, any case, or the start of one label (e.g. --metric
+    /// cpu). Implies --charts.
+    #[arg(long, value_name = "NAME")]
+    pub metric: Option<String>,
+
+    /// Give the detail pane (or the charts) the whole width, as `Z` does.
+    #[arg(long)]
+    pub full: bool,
+}
+
+#[derive(Debug, clap::Args)]
 pub struct GetArgs {
     /// ARM ids (`/subscriptions/…`), directory ids (`graph:/…`), or exact
     /// names with --in. Up to 50.
@@ -243,6 +284,18 @@ impl Cli {
         if self.subscription.is_some() {
             config.default_subscription = self.subscription.clone();
         }
+        // `open` starts on its resource's service and in the subscription
+        // its id names, so the startup load is the one the place resolves
+        // against. (A bad target never gets here: `main` checks the plan
+        // before the TUI starts.)
+        if let Some(Command::Open(args)) = &self.command {
+            if let Ok((place, _)) = crate::open::plan(args) {
+                config.default_service = Some(place.loc.service.prefix().trim_start_matches('@').to_string());
+                if place.loc.subscription.is_some() {
+                    config.default_subscription = place.loc.subscription;
+                }
+            }
+        }
         if self.endpoint_url.is_some() {
             config.endpoint_url = self.endpoint_url.clone();
         }
@@ -286,6 +339,7 @@ mod tests {
             watch: false,
             macro_name: None,
             at: None,
+            bookmark: None,
             theme: None,
             show_keys: false,
             no_update_check: false,

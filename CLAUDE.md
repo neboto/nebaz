@@ -34,6 +34,7 @@ Prefer a grep the reader can run over a count they have to trust.
 cargo build                         # debug
 cargo run -- -s vm                  # needs `az login`; -s sub / rg / all / vmss / asg / gallery / arc / arck8s / arcpls / avd / storage / vnet / dns / kv / id / sp / appreg / aks / acr / app / swa / sql / sqlmi / cosmos / foundry / search / law / appi / malert / ag / alert / aca / aci / redis / amr / pg / mysql / sb / eh / agw / afd / waf / pls / tm / er / vgw / cn / lgw / vwan / hub / fw / fwp / ipg / ngfw / rulestack / backup / bvault / gov / mg / budget / automation / defender / advisor / changes
 cargo run -- ls vm / get <ARM id>   # headless (src/headless.rs): JSON/md to stdout, exit codes in src/headless/contract.json
+cargo run -- open <ARM id> --charts 7d   # the TUI at a resource, a section or its charts (src/open.rs); --bookmark NAME
 cargo run -- doctor -o md           # proxy, certificates, az login, ARM, Graph, the release check: each failure in full
 cargo test                          # unit tests + the read-only guard (tests/readonly_guard.rs)
 NEBAZ_BLESS=1 cargo test contract   # record an addition to the headless output contract
@@ -193,6 +194,11 @@ restores it through `restore_nav_location`; its rows are never loaded yet,
 so `pending_place` finishes the section and the charts when the pending
 jump lands. No in-process panes: `App` owns the whole screen. The login is
 az's, on disk, so only `split::FORWARDED_VARS` go along, never a secret.
+`nebaz open` and `--bookmark NAME` (`src/open.rs`, neboto #334) are the
+public way in to the same restore: `open::plan` builds the `Place` before
+the TUI starts (a typo exits 2), `PendingPlace` carries the section, the
+chart window and metric, and a name given with `--in` resolves once the
+list has loaded. `open`'s flags are in the headless contract; `--at` is not.
 `|` is checked ahead of the in-pane views; one that takes typed text must
 keep it a character there. The guard lets `src/split.rs` start a process.
 

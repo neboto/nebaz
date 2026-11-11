@@ -70,6 +70,7 @@ mod navigation_test;
 mod metrics_test;
 mod waf_metrics_test;
 mod mouse_test;
+mod open_test;
 mod network_lens_test;
 mod refs_lens_test;
 mod scale_sets_test;

@@ -17,6 +17,7 @@ mod headless;
 mod keycast;
 mod lazy;
 mod macros;
+mod open;
 mod paths;
 mod search;
 mod sections;
@@ -51,13 +52,32 @@ fn main() -> Result<()> {
         .enable_all()
         .build()
         .expect("failed to build tokio runtime");
+    // `open` / `--bookmark` name a place: check it before the TUI takes the
+    // screen, so a typo exits with the reason (code 2, like a bad `get`).
+    if let Err(e) = check_startup_place(&cli) {
+        eprintln!("nebaz: {e}");
+        std::process::exit(2);
+    }
     // A subcommand (`nebaz ls vm …`) runs once and prints: no terminal
-    // setup, no raw mode (#44).
-    if cli.command.is_some() {
+    // setup, no raw mode (#44). `open` is the one that opens the TUI.
+    if cli.command.is_some() && !matches!(cli.command, Some(cli::Command::Open(_))) {
         let code = runtime.block_on(headless::run(cli));
         std::process::exit(code);
     }
     runtime.block_on(run(cli))
+}
+
+fn check_startup_place(cli: &cli::Cli) -> std::result::Result<(), String> {
+    if let Some(cli::Command::Open(args)) = &cli.command {
+        if cli.at.is_some() || cli.bookmark.is_some() {
+            return Err("open: can't be combined with --bookmark".into());
+        }
+        open::plan(args)?;
+    }
+    if let Some(name) = &cli.bookmark {
+        open::pick_bookmark(&bookmarks::load(), name)?;
+    }
+    Ok(())
 }
 
 async fn run(cli: cli::Cli) -> Result<()> {
@@ -84,7 +104,7 @@ async fn run(cli: cli::Cli) -> Result<()> {
     if app.current_service.is_some() && !app.macro_supersedes_startup_load() {
         app.load_service_resources();
     }
-    // `--at` (a pane split out with `|`): go where the other pane was.
+    // `--at` (a pane split out with `|`), `open`, `--bookmark`: go there.
     app.restore_startup_location(&event_tx);
     app.spawn_subscription_info_fetch(&event_tx);
     App::trigger_locations(&mut app, &event_tx);

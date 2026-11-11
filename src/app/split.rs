@@ -8,13 +8,27 @@ use crate::split::{Place, Session};
 use tokio::sync::mpsc;
 
 /// What a restored place still has to do once its row lands: the section
-/// it was on (a pending jump otherwise opens the default one) and the
-/// charts' window when they were open.
-#[derive(Debug, Clone, PartialEq)]
+/// it was on (a pending jump otherwise opens the default one), the charts'
+/// window when they were open, and what `nebaz open` asked for.
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct PendingPlace {
+    /// The row's id; a name while `by_name` (`resolve_pending_jump` swaps
+    /// in the id once the list has loaded).
     pub id: String,
+    /// A section label, matched in any case. A `|` place's is exact and
+    /// skipped quietly when the type has none by that name; `open`'s
+    /// (`strict`) says so.
     pub section: Option<String>,
     pub chart_window: Option<crate::azure::metrics::MetricWindow>,
+    /// Open the charts even without a window (`open --metric`).
+    pub charts: bool,
+    /// The chart row to put the cursor on (`open --metric`).
+    pub metric: Option<String>,
+    /// The pane takes the whole width (`open --full`).
+    pub full: bool,
+    pub by_name: bool,
+    /// From `open`: a section that isn't there is reported.
+    pub strict: bool,
 }
 
 impl App {
@@ -84,46 +98,83 @@ impl App {
         ));
     }
 
-    /// `--at`: go to the place this pane was split out at. Called once the
-    /// startup load is under way, so the restore resolves as the rows land.
+    /// `--at`, `open`, `--bookmark`: go to the place this process was
+    /// started at. Called once the startup load is under way, so the
+    /// restore resolves as the rows land.
     pub fn restore_startup_location(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         let Some(Place { loc, chart_window }) = self.startup_place.take() else {
             return;
         };
-        let (id, section) = (loc.selected_id.clone(), loc.detail_section.clone());
+        let open = self.startup_open.take();
+        let Some(id) = loc.selected_id.clone() else {
+            return self.restore_nav_location(loc, event_tx);
+        };
+        let strict = open.is_some();
+        let open = open.unwrap_or_default();
+        // Set ahead of the restore: its pending jump reads `by_name`, and
+        // lands the place itself when the row is already there.
+        self.pending_place = Some(PendingPlace {
+            id: id.clone(),
+            section: open.section.or_else(|| loc.detail_section.clone()),
+            chart_window,
+            charts: open.charts || chart_window.is_some(),
+            metric: open.metric,
+            full: open.full,
+            by_name: open.by_name,
+            strict,
+        });
         self.restore_nav_location(loc, event_tx);
-        match (self.pending_jump.as_ref(), id) {
-            // Still loading: finish when the row lands (`land_pending_place`).
-            (Some((pending, _)), Some(id)) if *pending == id => {
-                self.pending_place = Some(PendingPlace { id, section, chart_window });
+        // Still loading: `resolve_pending_jump` finishes when the row lands.
+        if self.pending_jump.is_none() {
+            if self.get_selected_resource().is_some_and(|r| r.matches_id(&id)) {
+                self.land_pending_place(&id, event_tx);
+            } else {
+                self.pending_place = None;
             }
-            _ => self.reopen_charts(chart_window, event_tx),
         }
     }
 
-    /// The rest of a restored place, once its pending jump has landed on
-    /// `id` in the detail pane.
+    /// The rest of a restored place, once its row `id` is selected in the
+    /// detail pane.
     pub(super) fn land_pending_place(&mut self, id: &str, event_tx: &mpsc::UnboundedSender<Event>) {
         let Some(p) = self.pending_place.take_if(|p| p.id == id) else {
             return;
         };
-        if let Some(idx) = p.section.as_deref().and_then(|name| {
-            self.selected_descriptor()
-                .and_then(|d| d.sections.iter().position(|s| s.label == name))
-        }) {
-            self.set_detail_section(idx, event_tx);
+        if let Some(name) = p.section.as_deref() {
+            let labels: Vec<&str> =
+                self.selected_descriptor().map(|d| d.sections.iter().map(|s| s.label).collect()).unwrap_or_default();
+            match crate::open::match_section(&labels, name) {
+                Ok(idx) => self.set_detail_section(idx, event_tx),
+                Err(e) if p.strict => self.error_message = Some(e),
+                Err(_) => {}
+            }
         }
-        self.reopen_charts(p.chart_window, event_tx);
-    }
-
-    fn reopen_charts(
-        &mut self,
-        window: Option<crate::azure::metrics::MetricWindow>,
-        event_tx: &mpsc::UnboundedSender<Event>,
-    ) {
-        if let (Some(window), true) = (window, self.selected_index.is_some()) {
+        if p.full {
+            self.layout_mode = super::LayoutMode::DetailsOnly;
+        }
+        if !p.charts || self.selected_index.is_none() {
+            return;
+        }
+        if let Some(window) = p.chart_window {
             self.metrics_window = window;
-            self.open_metrics(event_tx);
+        }
+        self.open_metrics(event_tx);
+        let Some(wanted) = p.metric.as_deref() else {
+            return;
+        };
+        // `open_metrics` said why when it opened nothing.
+        let Some(st) = self.metrics.as_mut() else {
+            return;
+        };
+        if st.queries.is_empty() {
+            self.error_message = Some(format!(
+                "open: no default charts for this type to find {wanted:?} in; pick a metric from the list"
+            ));
+            return;
+        }
+        match crate::open::match_metric(&st.queries, wanted) {
+            Ok(i) => st.selected = i,
+            Err(e) => self.error_message = Some(e),
         }
     }
 
