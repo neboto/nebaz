@@ -293,11 +293,11 @@ pub async fn fetch_worker_groups(
 ) -> std::result::Result<WorkerGroups, String> {
     let arm = arm?;
     let groups_path = format!("{}/hybridRunbookWorkerGroups", account_id.trim_end_matches('/'));
-    let groups = arm.list(&groups_path, AUTOMATION_API_VERSION).await.map_err(|e| e.to_string())?;
+    let groups = arm.list(&groups_path, AUTOMATION_API_VERSION).await.map_err(crate::error::Error::message)?;
     let mut out = WorkerGroups { skipped: groups.len().saturating_sub(MAX_WORKER_GROUPS), ..Default::default() };
     for group in groups.into_iter().take(MAX_WORKER_GROUPS) {
         let path = format!("{}/{}/hybridRunbookWorkers", groups_path, json::text(&group, "/name"));
-        let workers = arm.list(&path, AUTOMATION_API_VERSION).await.map_err(|e| e.to_string());
+        let workers = arm.list(&path, AUTOMATION_API_VERSION).await.map_err(crate::error::Error::message);
         out.groups.push((without_secrets(&group), workers.map(|w| w.iter().map(without_secrets).collect())));
     }
     Ok(out)

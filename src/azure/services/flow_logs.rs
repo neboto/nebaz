@@ -251,7 +251,7 @@ pub async fn fetch_flow_logs(arm: Arc<ArmClient>, sub: String) -> std::result::R
     let watchers = arm
         .list(&format!("{}{}", sub, NETWORK_WATCHERS_PATH), FLOW_LOGS_API_VERSION)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(crate::error::Error::message)?;
     let mut out = FlowLogs { watchers: watchers.len(), ..Default::default() };
     if watchers.len() > FLOW_LOGS_MAX_WATCHERS {
         out.warnings.push(format!(

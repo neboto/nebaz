@@ -141,7 +141,7 @@ impl App {
         tokio::spawn(async move {
             let fetch = move |path: String| {
                 let arm = arm.clone();
-                async move { arm.get(&path, NETWORK_API_VERSION).await.map_err(|e| e.to_string()) }
+                async move { arm.get(&path, NETWORK_API_VERSION).await.map_err(crate::error::Error::message) }
             };
             let resolved = resolve(seed, known, fetch).await;
             let apply: Box<dyn FnOnce(&mut App) + Send> = Box::new(move |app: &mut App| {

@@ -1738,7 +1738,7 @@ pub async fn fetch_afd_topology(arm: Arc<ArmClient>, profile: String) -> std::re
     let endpoints = arm
         .list(&afd_child_path(&profile, "afdEndpoints"), CDN_API_VERSION)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(crate::error::Error::message)?;
     if endpoints.len() > TOPOLOGY_MAX_PARENTS {
         t.truncated.push("endpoints");
     }

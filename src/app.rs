@@ -2033,7 +2033,7 @@ impl App {
         let arm = app
             .azure_clients
             .arm_for_subscription(subscription_of(&key).unwrap_or_default())
-            .map_err(|e| e.to_string());
+            .map_err(crate::error::Error::message);
         let sub = key.clone();
         app.trigger_lazy(|s| &mut s.dns_topology, key, event_tx, move || async move {
             fetch_dns_topology(arm?, sub).await

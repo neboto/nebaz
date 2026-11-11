@@ -348,7 +348,7 @@ pub async fn fetch_dns_topology(arm: Arc<ArmClient>, sub: String) -> std::result
     let resolvers = arm
         .list(&format!("{}{}", sub, DNS_RESOLVERS_PATH), DNS_RESOLVER_API_VERSION)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(crate::error::Error::message)?;
     if resolvers.len() > TOPOLOGY_MAX_PARENTS {
         t.truncated.push("resolvers");
     }
