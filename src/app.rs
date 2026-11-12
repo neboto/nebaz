@@ -157,6 +157,7 @@ mod ai_search;
 mod container_instances;
 mod static_web_apps;
 mod automation;
+mod deployments;
 mod virtual_desktop;
 mod split;
 mod arc;
@@ -1501,6 +1502,11 @@ impl App {
                 ListSort::Default if self.current_service == Some(ServiceType::Changes) => {
                     matches.sort_by_key(|(i, _)| std::cmp::Reverse(changes::time_of(self.resources[*i].as_ref())))
                 }
+                // Deployments stream a batch per group: newest first.
+                ListSort::Default if self.current_service == Some(ServiceType::Deployments) => matches
+                    .sort_by_key(|(i, _)| {
+                        std::cmp::Reverse(crate::azure::services::deployments::time_of(self.resources[*i].as_ref()))
+                    }),
                 ListSort::Default => {}
                 ListSort::NameAsc => matches.sort_by(|a, b| {
                     self.resources[a.0]
@@ -3037,6 +3043,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.automation_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.deployment_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(lines) = self.avd_section_lines(resource, idx) {

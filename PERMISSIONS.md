@@ -321,6 +321,13 @@ each one backs are in the catalog table
   `…/linkedWorkspace/read`. Never read, though `Reader` allows most of
   them: variables, credentials, certificates, connections, runbook
   content, job output and streams; the guard names those paths.
+- **Deployments** (#225): `Microsoft.Resources/subscriptions/resourceGroups/read`
+  (the groups to read), `Microsoft.Resources/deployments/read` (each
+  group's and the subscription's) and
+  `Microsoft.Resources/deployments/operations/read` (the lazy
+  Operations). A parameter's or output's value is dropped before nebaz
+  keeps the body. Never: `exportTemplate`, `whatIf`, `validate`,
+  `cancel` (POSTs).
 - **Azure Arc** (#199): `Microsoft.HybridCompute/machines/read`,
   `Microsoft.HybridCompute/machines/extensions/read` (the lazy
   Extensions), `Microsoft.HybridCompute/privateLinkScopes/read`,

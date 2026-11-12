@@ -1057,6 +1057,43 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `az desktopvirtualization hostpool retrieve-registration-token` and
     the service's `wvd.microsoft.com` hosts.
 
+47. **Deployments are their own tab** (#225,
+    `src/azure/services/deployments.rs`, Management group, after
+    Automation; `@deploy`): ARM template and Bicep deployments, what
+    CloudFormation's stacks tab is in neboto. Two sub-tabs at `2025-04-01`.
+    **Group deployments**: a subscription has no list of its groups'
+    deployments, so the load lists the resource groups (one call), then
+    each group's `Microsoft.Resources/deployments`, 8 at a time, at most
+    200 groups (by name) and 200 deployments each; a group's batch
+    streams as it lands, a group that cannot be read or was cut short is
+    a warning, and only the group list failing (or every group) is the
+    list's error. Not in the `P` fan-out (one call per group per
+    subscription). **Subscription deployments** (`@subdeploy`): one list.
+    Both read newest first (`z` still sorts). State: the ladder, with
+    `Succeeded` as its own word (`succeeded`, available), `Failed` /
+    `Canceled` unavailable, `Running` / `Accepted` in progress. A
+    deployment has no region (a subscription deployment's `location` is
+    where its record is kept): `location()` is `None`, so `R` never hides
+    one. Sections: **Operations** (lazy, `{deployment}/operations`, at
+    most 500): one per resource it touched, the failed first, each with
+    the resource (jumpable), the operation, status code, duration and the
+    provider's error; **Resources**: `outputResources` (jumpable) and the
+    template's `dependencies`; **Parameters**: parameter and output
+    **names and types only**; **Error**: the nested `error.details`
+    chain; then Activity, Related (the scope, the template spec version,
+    what it deployed), Tags. No Access: a deployment is a record on its
+    scope, never a scope for role assignments. **Values are never kept**
+    (rule 23's "never a deployment's parameters or outputs", now enforced
+    at the source): `without_values` drops every parameter's and output's
+    `value` (an output can be a `listKeys()` result, a string parameter a
+    password), a template or parameters link's query string (a SAS
+    token), and an operation's `request` and `response` bodies (present
+    under a debug setting) before `ArmBase` keeps the raw JSON, so `e`
+    cannot show them either. **Never**: `exportTemplate`, `whatIf`,
+    `validate`, `cancel` (POSTs). An `@changes` or `W` deployment row's
+    Related now names the deployment, and `⏎` lands here. Not built yet
+    (still #225): deployment stacks, template specs, the `@audit` checks.
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -1163,6 +1200,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Azure Arc · Servers (rule 45) | Machine (computer name, FQDN, domain, OS SKU, version and type, kind, cloud provider, manufacturer, model, logical cores, memory, IP addresses, SQL Server discovered, parent cluster) · Agent (status with ⚠ and how long when disconnected or expired, last status change, agent version, automatic upgrade and the last attempt, config mode, extensions and guest configuration allowed, both services, proxy, incoming ports, private link scope jumpable, each error ⚠) · Extensions ⧗ (type, version, automatic upgrade, state ⚠ when failed or at error level, the status message's first line; never settings) · Licensing & patching (license status, Software Assurance, ESU eligibility and licence with ⚠ when eligible and unassigned, key state, the licence jumpable, patch assessment and patch mode) · (Overview: status, OS, agent version, cloud provider, FQDN, identity) | ladder, then `status` (`Connected` → Available, `Disconnected` / `Error` → Unavailable, Expired after 45 days disconnected, `AwaitingConnection` → Pending) | the private link scope, the parent cluster, the ESU licence | `az connectedmachine show --ids` (the `connectedmachine` extension) |
 | Azure Arc · Kubernetes | Cluster (Kubernetes version, distribution and its version, infrastructure, offering, kind, nodes, cores, Azure RBAC, Entra admin group count, Azure Hybrid Benefit, identity) · Agent (connectivity ⚠ when offline or expired, last connected, identity certificate expiry ⚠ within 14 days or past, agent version, auto-upgrade, desired version, agent state, private link scope or state, each agent error ⚠) · (Overview: connectivity, Kubernetes version, distribution, nodes, agent version) | ladder, then `connectivityStatus` (`Connected` → Available, `Offline` / `Expired` → Unavailable, `Connecting` → Pending) | the private link scope | `az connectedk8s show --ids` (the `connectedk8s` extension) |
 | Azure Arc · Private link scopes | Network (public network access, scope id as text, private endpoints jumpable with ⚠ unless approved) · (Overview: public network access, endpoint count) | ladder only | private endpoints | `az connectedmachine private-link-scope show --ids` |
+| Deployments · Group deployments / Subscription deployments (rule 47; tail Activity, Related, Tags) | Operations ⧗ (count and failures; each operation, failed first: the resource jumpable, its type, the operation, status code, duration, time, the provider's error) · Resources (each deployed resource jumpable; the template's dependencies and what each waits for) · Parameters (parameter and output names and types, never a value) · Error (the nested error chain) · (Overview: scope, state, timestamp, duration, mode, template, template hash, correlation id, how many resources, the error's first line) | ladder, with `Succeeded` → available (`succeeded`); `Failed` / `Canceled` → unavailable; no location | the subscription and group, the template spec version, what it deployed (the first 30) | `az deployment group show -g {rg} -n {name} --subscription {sub}` · `az deployment sub show -n {name} --subscription {sub}` |
 | Virtual Desktop · Host pools (rule 46) | Session hosts ⧗ (the count, how many take new sessions with ⚠ when none, how many need attention; each host's VM jumpable, status ⚠ unless Available / Shutdown / Upgrading, new sessions or drain mode, sessions, assigned user, last heartbeat, agent version with ⚠ when its update failed, OS version, each failed health check ⚠ with its message) · Configuration (type, preferred app group type, assignment type ⚠ when a personal pool has none, or load balancing and max sessions, start VM on connect, validation environment, the registration token's expiry (never the token), agent updates with the maintenance windows, the VM template's name prefix, size and image, SSO secret type, each custom RDP property) · Network (public network access, private endpoints ⚠ unless approved) · (Overview: friendly name, type, start VM on connect, validation, app group count, description) | ladder only | app groups, private endpoints; ⧗ the scaling plan that names it, each session host's VM | `az desktopvirtualization hostpool show --ids` (the `desktopvirtualization` extension) |
 | Virtual Desktop · App groups | (Overview: friendly name, type, host pool and workspace jumpable, ⚠ when no workspace publishes it, shown in feed, description) | ladder only | the host pool, the workspace | `az desktopvirtualization applicationgroup show --ids` |
 | Virtual Desktop · Workspaces | Network (public network access, private endpoints ⚠ unless approved) · (Overview: friendly name, each app group jumpable, public network access, description) | ladder only | app groups, private endpoints | `az desktopvirtualization workspace show --ids` |
@@ -1388,6 +1426,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Network (firewall), Access policies | 1 each per namespace, on demand (Related fires the rule set too; a policy's keys are the `listKeys` POST, never sent) | `{ns}/networkRuleSets/default` · `{ns}/authorizationRules` · `2026-01-01` |
 | Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
+| Deployments (rule 47) | Group deployments: 1 (the resource groups) + 1 per group (≤ 200 groups, ≤ 200 deployments each, 8 at a time); Subscription deployments: 1; per opened deployment: its operations (≤ 500) | `/resourcegroups` · `2021-04-01`; `/resourcegroups/{rg}/providers/Microsoft.Resources/deployments` · `/providers/Microsoft.Resources/deployments` · `{deployment}/operations` · `2025-04-01` |
 | Automation accounts (rule 44) | 1, then per opened account: runbooks, schedules, job schedules, jobs (7 days, ≤ 200), worker groups + 1 per group (≤ 25), the linked workspace | `/providers/Microsoft.Automation/automationAccounts` · `2024-10-23` |
 | Host pools, app groups, workspaces, scaling plans (rule 46) | 1 each, then per opened pool: its session hosts (≤ 500); per opened plan: its pooled or personal schedules | `/providers/Microsoft.DesktopVirtualization/hostPools` · `{pool}/sessionHosts` · `/providers/Microsoft.DesktopVirtualization/applicationGroups` · `/providers/Microsoft.DesktopVirtualization/workspaces` · `/providers/Microsoft.DesktopVirtualization/scalingPlans` · `{plan}/pooledSchedules` or `{plan}/personalSchedules` · `2025-10-10` |
 | Arc servers, Kubernetes, private link scopes (rule 45) | 1 each, then per opened server: its extensions | `/providers/Microsoft.HybridCompute/machines` · `{machine}/extensions` · `/providers/Microsoft.HybridCompute/privateLinkScopes` · `2025-01-13`; `/providers/Microsoft.Kubernetes/connectedClusters` · `2024-01-01` |

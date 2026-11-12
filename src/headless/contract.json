@@ -277,6 +277,10 @@
       "secure-score (score)",
       "defender-plans (pricing)"
     ],
+    "deploy": [
+      "group-deployments (deploy)",
+      "subscription-deployments (subdeploy)"
+    ],
     "dns": [
       "private-dns-zones (dns)",
       "dns-zones (dnsz)",
@@ -764,7 +768,13 @@
     ],
     "Deployment": [
       "Overview",
-      "Related"
+      "Operations",
+      "Resources",
+      "Parameters",
+      "Error",
+      "Activity",
+      "Related",
+      "Tags"
     ],
     "Disk": [
       "Overview",

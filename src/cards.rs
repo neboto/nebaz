@@ -30,6 +30,10 @@ pub static CARDS: &[Card] = &[
     Card { views: &[JumpView::ManagedRedis], source: include_str!("../docs/cards/managed-redis.md") },
     Card { views: &[JumpView::ArcMachines], source: include_str!("../docs/cards/arc-servers.md") },
     Card { views: &[JumpView::AutomationAccounts], source: include_str!("../docs/cards/automation-accounts.md") },
+    Card {
+        views: &[JumpView::GroupDeployments, JumpView::SubscriptionDeployments],
+        source: include_str!("../docs/cards/deployments.md"),
+    },
     Card { views: &[JumpView::VirtualMachines], source: include_str!("../docs/cards/vms.md") },
     Card { views: &[JumpView::Disks], source: include_str!("../docs/cards/disks.md") },
     Card { views: &[JumpView::Nics], source: include_str!("../docs/cards/nics.md") },

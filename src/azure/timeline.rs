@@ -350,6 +350,10 @@ impl TimelineRow {
             subscription_of(&id).map(|s| (rg.to_string(), format!("/subscriptions/{}/resourceGroups/{}", s, rg)))
         });
         let mut links: Vec<(String, String)> = Vec::new();
+        // The deployment itself, in the Deployments tab (#225).
+        if !id.is_empty() {
+            links.push((format!("Deployment · {}", name), id.clone()));
+        }
         if let Some((rg, rg_id)) = &rg {
             links.push((format!("Resource group · {}", rg), rg_id.clone()));
         }
@@ -638,7 +642,7 @@ fn fmt_ts(secs: i64) -> String {
 }
 
 /// `PT1M23.45S` → `1m 23s`.
-fn pretty_duration(iso: &str) -> String {
+pub fn pretty_duration(iso: &str) -> String {
     let Some(rest) = iso.strip_prefix("PT") else {
         return iso.to_string();
     };

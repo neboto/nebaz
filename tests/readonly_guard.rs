@@ -789,7 +789,8 @@ fn permissions_doc_grants_only_read_actions() {
 /// `configureFlowLog`, #143, where only the `flowLogs` GET is read; Backup's `backupStatus` (is this resource
 /// protected, per location), a vault's `refreshContainers`, a resource
 /// guard's `backupSecurityPIN` and a Backup vault instance's
-/// `findRestorableTimeRanges`):
+/// `findRestorableTimeRanges`; a deployment's `exportTemplate` and
+/// `whatIf`, #225):
 /// `ReadOnlyPolicy` would refuse them at runtime anyway; the guard keeps
 /// them out of `src/`. The network lens (#50) computes NSG access
 /// client-side from GETs instead.
@@ -821,6 +822,10 @@ const POST_ONLY_READS: &[&str] = &[
     "listregistrationtokens",
     "/sendmessage",
     "/disconnect",
+    // Deployments (#225): a deployment's template (its parameters'
+    // values with it) and a what-if run.
+    "exporttemplate",
+    "/whatif",
 ];
 
 /// GET reads that return a secret: a connection's pre-shared key
