@@ -31,6 +31,7 @@ pub mod flow_logs;
 pub mod foundry;
 pub mod gallery;
 pub mod defender;
+pub mod deployments;
 pub mod governance;
 pub mod hybrid;
 pub mod virtual_wan;

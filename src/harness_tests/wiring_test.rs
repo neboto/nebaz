@@ -88,6 +88,11 @@ async fn split_pane_sections_follow_the_descriptor() {
         if directory {
             assert_eq!(&labels[n - 2..], ["Related", "Tags"], "{label}: shared tail");
             assert!(!labels.contains(&"Access") && !labels.contains(&"Activity"), "{label}: no ARM scope");
+        } else if h.app.get_selected_resource().is_some_and(|r| r.resource_type() == "Deployment") {
+            // A deployment (#225) is a record on its scope, never a scope
+            // for role assignments: no Access.
+            assert_eq!(&labels[n - 3..], ["Activity", "Related", "Tags"], "{label}: shared tail");
+            assert!(!labels.contains(&"Access"), "{label}: no RBAC of its own");
         } else if governance {
             assert_eq!(&labels[n - 2..], ["Activity", "Related"], "{label}: shared tail");
             assert!(!labels.contains(&"Access") && !labels.contains(&"Tags"), "{label}: no RBAC or tags");

@@ -50,6 +50,15 @@ const PLANTED: &[(&str, &str)] = &[
     // compute: the storefront's beta domain never validated (no CNAME).
     ("/staticSites/swa-orders-storefront", "⚠ failed"),
     ("/staticSites/swa-orders-storefront", "⚠ CNAME"),
+    // core: two deployments failed, each on one operation (#225): the
+    // worker's image tag is not in the registry, the batch pool's scale
+    // conflicted.
+    ("/deployments/orders-worker-v119", "⚠ DeploymentFailed"),
+    ("/deployments/orders-worker-v119", "⚠ 1 failed"),
+    ("/deployments/orders-worker-v119", "⚠ failed"),
+    ("/deployments/aks-batch-nodepool-scale", "⚠ DeploymentFailed"),
+    ("/deployments/aks-batch-nodepool-scale", "⚠ 1 failed"),
+    ("/deployments/aks-batch-nodepool-scale", "⚠ failed"),
     // core: the legacy patching runbook failed on its hybrid worker,
     // vm-legacy-app-01, deallocated for 40 days.
     ("/automationAccounts/aa-platform-ops", "⚠ failed"),

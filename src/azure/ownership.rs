@@ -184,6 +184,32 @@ fn norm(id: &str) -> String {
     id.trim().trim_end_matches('/').to_lowercase()
 }
 
+/// Where a deployment's template came from: `spec {name} {version}` for a
+/// template spec, a linked template's file name (never its query string,
+/// which can be a SAS token), `None` for an inline template (Bicep, or
+/// `az deployment group create -f`).
+pub fn template_of(v: &Value) -> Option<String> {
+    json::str_at(v, "/properties/templateLink/id")
+        .filter(|id| id.to_lowercase().contains("/microsoft.resources/templatespecs/"))
+        .map(|id| {
+            // `…/templateSpecs/{name}/versions/{v}` → `spec {name} {v}`.
+            let parts: Vec<&str> = id.trim_end_matches('/').split('/').collect();
+            match parts.iter().position(|p| p.eq_ignore_ascii_case("templateSpecs")) {
+                Some(i) => match (parts.get(i + 1), parts.get(i + 3)) {
+                    (Some(n), Some(ver)) => format!("spec {} {}", n, ver),
+                    (Some(n), None) => format!("spec {}", n),
+                    _ => format!("spec {}", name_of_id(&id)),
+                },
+                None => format!("spec {}", name_of_id(&id)),
+            }
+        })
+        .or_else(|| {
+            json::str_at(v, "/properties/templateLink/uri")
+                .map(|u| u.split('?').next().unwrap_or("").rsplit('/').next().unwrap_or("").to_string())
+                .filter(|f| !f.is_empty())
+        })
+}
+
 impl Deployment {
     pub fn from_json(v: &Value) -> Option<Deployment> {
         let name = json::str_at(v, "/name")?;
@@ -194,25 +220,7 @@ impl Deployment {
         for d in json::arr(v, "/properties/dependencies") {
             targets.extend(json::str_at(&d, "/id").map(|s| norm(&s)));
         }
-        let template = json::str_at(v, "/properties/templateLink/id")
-            .filter(|id| id.to_lowercase().contains("/microsoft.resources/templatespecs/"))
-            .map(|id| {
-                // `…/templateSpecs/{name}/versions/{v}` → `spec {name} {v}`.
-                let parts: Vec<&str> = id.trim_end_matches('/').split('/').collect();
-                match parts.iter().position(|p| p.eq_ignore_ascii_case("templateSpecs")) {
-                    Some(i) => match (parts.get(i + 1), parts.get(i + 3)) {
-                        (Some(n), Some(ver)) => format!("spec {} {}", n, ver),
-                        (Some(n), None) => format!("spec {}", n),
-                        _ => format!("spec {}", name_of_id(&id)),
-                    },
-                    None => format!("spec {}", name_of_id(&id)),
-                }
-            })
-            .or_else(|| {
-                json::str_at(v, "/properties/templateLink/uri")
-                    .map(|u| u.split('?').next().unwrap_or("").rsplit('/').next().unwrap_or("").to_string())
-                    .filter(|f| !f.is_empty())
-            });
+        let template = template_of(v);
         Some(Deployment {
             name,
             timestamp: json::str_at(v, "/properties/timestamp"),

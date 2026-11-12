@@ -299,6 +299,11 @@ pub struct LazyStore {
     /// `GET {account}/linkedWorkspace`, keyed by account id.
     pub aa_linked_workspace: LazyMap<serde_json::Value>,
 
+    // ── Deployments (#225) ───────────────────────────────────────────────
+    /// `GET {deployment}/operations`, keyed by deployment id, without the
+    /// request and response bodies.
+    pub deployment_operations: LazyMap<Vec<serde_json::Value>>,
+
     // ── Static Web Apps (#200) ───────────────────────────────────────────
     /// `GET {site}/builds` (the environments), keyed by site id.
     pub swa_builds: LazyMap<Vec<serde_json::Value>>,
