@@ -69,10 +69,10 @@ run flat-and-select ok sub '[{"wait": "Partner Dev"}, "\r", "\\", "V", "J", "J",
 # Ctrl-N moves down in a picker (it used to type `n` into the filter).
 # The picker lists services by category (`ServiceType::CATEGORIES`), then
 # in `ServiceType::all()` order: Subscriptions → Power Platform →
-# Automation → Governance → Advisor (all Management) → Virtual Machines →
+# Automation → Deployments → Governance → Advisor (all Management) → Virtual Machines →
 # Azure Arc → Virtual Desktop → Storage, then Enter. A new service in
 # Management or Compute needs one more press here.
-run picker-ctrl-n ok sub '[{"wait": "Partner Dev"}, "S", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\r"]' \
+run picker-ctrl-n ok sub '[{"wait": "Partner Dev"}, "S", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\u000e", "\r"]' \
   "Loading Storage…"
 
 # A seventh tab still fits, and the Foundry list goes to ARM like the rest.
@@ -240,6 +240,15 @@ run advisor-suppressions ok snooze '[]' \
 # Automation is its own tab, one sub-tab, in the Management group.
 run automation ok automation '[]' \
   "Runbooks, schedules, jobs & hybrid workers" \
+  "cannot reach 127.0.0.1"
+
+# Deployments is its own tab; @subdeploy opens its second sub-tab. The
+# group fan-out starts with the resource-group list, which cannot be read.
+run deployments ok deploy '[]' \
+  "ARM & Bicep deployments, their operations & errors" \
+  "cannot reach 127.0.0.1"
+run deployments-sub ok subdeploy '[]' \
+  "Subscription deployments" \
   "cannot reach 127.0.0.1"
 
 # Azure Arc is its own tab in Compute; @arck8s opens its Kubernetes sub-tab.

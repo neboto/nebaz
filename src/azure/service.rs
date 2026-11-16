@@ -80,6 +80,9 @@ pub enum ServiceType {
     /// hybrid workers lazy. Never variables, credentials, certificates,
     /// connections, runbook content or job output.
     Automation,
+    /// ARM deployments (#225): a group's and the subscription's, with
+    /// their operations lazy. Never a parameter's or an output's value.
+    Deployments,
     /// Azure Arc (#199): Arc-enabled servers (extensions lazy), Arc
     /// Kubernetes clusters and Arc private link scopes. Never an
     /// extension's settings, never a run command or a patch install.
@@ -281,6 +284,11 @@ pub enum JumpView {
     EnterprisePolicies,
     /// `Microsoft.Automation/automationAccounts` (#202).
     AutomationAccounts,
+    /// `{group}/providers/Microsoft.Resources/deployments`, every group's
+    /// (#225).
+    GroupDeployments,
+    /// `/subscriptions/{s}/providers/Microsoft.Resources/deployments`.
+    SubscriptionDeployments,
     // Azure Arc (#199)
     ArcMachines,
     ArcClusters,
@@ -381,6 +389,7 @@ impl JumpView {
             | FiredAlerts => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
             AutomationAccounts => ServiceType::Automation,
+            GroupDeployments | SubscriptionDeployments => ServiceType::Deployments,
             ArcMachines | ArcClusters | ArcPrivateLinkScopes => ServiceType::Arc,
             HostPools | AvdApplicationGroups | AvdWorkspaces | ScalingPlans => ServiceType::VirtualDesktop,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
@@ -474,6 +483,8 @@ impl JumpView {
             AppInsights => "app-insights",
             EnterprisePolicies => "enterprise-policies",
             AutomationAccounts => "automation-accounts",
+            GroupDeployments => "group-deployments",
+            SubscriptionDeployments => "subscription-deployments",
             ArcMachines => "arc-machines",
             ArcClusters => "arc-kubernetes",
             ArcPrivateLinkScopes => "arc-private-link-scopes",
@@ -590,6 +601,8 @@ impl JumpView {
             AppInsights => "App Insights",
             EnterprisePolicies => "Enterprise policies",
             AutomationAccounts => "Accounts",
+            GroupDeployments => "Group deployments",
+            SubscriptionDeployments => "Subscription deployments",
             ArcMachines => "Servers",
             ArcClusters => "Kubernetes",
             ArcPrivateLinkScopes => "Private link scopes",
@@ -714,6 +727,9 @@ impl JumpView {
             ("microsoft.alertsmanagement", ["alerts"]) => JumpView::FiredAlerts,
             ("microsoft.powerplatform", ["enterprisepolicies"]) => JumpView::EnterprisePolicies,
             ("microsoft.automation", ["automationaccounts"]) => JumpView::AutomationAccounts,
+            // A deployment (#225): in a group, or at the subscription.
+            ("microsoft.resources", ["deployments"]) if resource_group_of(id).is_some() => JumpView::GroupDeployments,
+            ("microsoft.resources", ["deployments"]) => JumpView::SubscriptionDeployments,
             ("microsoft.hybridcompute", ["machines"]) => JumpView::ArcMachines,
             ("microsoft.kubernetes", ["connectedclusters"]) => JumpView::ArcClusters,
             ("microsoft.hybridcompute", ["privatelinkscopes"]) => JumpView::ArcPrivateLinkScopes,
@@ -806,6 +822,7 @@ impl JumpView {
     /// subscription of a tenant),
     /// nor `@changes` (one list per time window, its sub-tabs filter it,
     /// and each subscription's Activity Log read is the costliest list),
+    /// nor group deployments (one call per resource group, #225),
     /// nor a virtual service's (`@audit`: computed, never listed).
     pub fn fans_out(&self) -> bool {
         use JumpView::*;
@@ -816,6 +833,7 @@ impl JumpView {
                 ServicePrincipals
                     | AppRegistrations
                     | ManagementGroups
+                    | GroupDeployments
                     | ChangesAll
                     | ChangesActivity
                     | ChangesDeployments
@@ -851,6 +869,7 @@ impl ServiceType {
             ServiceType::Monitor,
             ServiceType::PowerPlatform,
             ServiceType::Automation,
+            ServiceType::Deployments,
             ServiceType::ContainerApps,
             ServiceType::Redis,
             ServiceType::Messaging,
@@ -897,6 +916,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitoring",
             ServiceType::PowerPlatform => "Management",
             ServiceType::Automation => "Management",
+            ServiceType::Deployments => "Management",
             ServiceType::Arc => "Compute",
             ServiceType::VirtualDesktop => "Compute",
             ServiceType::ContainerApps => "Containers",
@@ -934,6 +954,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Platform",
             ServiceType::Automation => "Automation",
+            ServiceType::Deployments => "Deployments",
             ServiceType::Arc => "Azure Arc",
             ServiceType::VirtualDesktop => "Virtual Desktop",
             ServiceType::ContainerApps => "Container Apps",
@@ -972,6 +993,7 @@ impl ServiceType {
             ServiceType::Monitor => "Monitor",
             ServiceType::PowerPlatform => "Power Plat",
             ServiceType::Automation => "Automation",
+            ServiceType::Deployments => "Deploys",
             ServiceType::Arc => "Arc",
             ServiceType::VirtualDesktop => "AVD",
             ServiceType::ContainerApps => "ACA",
@@ -1009,6 +1031,7 @@ impl ServiceType {
             ServiceType::Monitor => "Log Analytics, App Insights & alerts",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::Automation => "Runbooks, schedules, jobs & hybrid workers",
+            ServiceType::Deployments => "ARM & Bicep deployments, their operations & errors",
             ServiceType::Arc => "Servers, Kubernetes & private link scopes",
             ServiceType::VirtualDesktop => "Host pools, session hosts, app groups, workspaces & scaling plans",
             ServiceType::ContainerApps => "Container apps, environments, jobs & instances",
@@ -1076,6 +1099,7 @@ impl ServiceType {
             ],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::Automation => &[AutomationAccounts],
+            ServiceType::Deployments => &[GroupDeployments, SubscriptionDeployments],
             ServiceType::Arc => &[ArcMachines, ArcClusters, ArcPrivateLinkScopes],
             ServiceType::VirtualDesktop => &[HostPools, AvdApplicationGroups, AvdWorkspaces, ScalingPlans],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
@@ -1286,6 +1310,12 @@ impl ServiceType {
             "automation" | "aa" | "automationaccount" | "automationaccounts" | "runbook" | "runbooks" => {
                 (ServiceType::Automation, None)
             }
+            "deploy" | "deployment" | "groupdeploy" | "groupdeployments" | "rgdeploy" | "arm" | "bicep" => {
+                (ServiceType::Deployments, None)
+            }
+            "subdeploy" | "subdeployments" | "subscriptiondeployments" => {
+                (ServiceType::Deployments, Some(JumpView::SubscriptionDeployments))
+            }
             "arc" | "azurearc" | "arcserver" | "arcservers" | "arcmachine" | "arcmachines" | "connectedmachine"
             | "connectedmachines" | "hybridcompute" => (ServiceType::Arc, None),
             "arck8s" | "arckubernetes" | "connectedk8s" | "connectedcluster" | "connectedclusters" => {
@@ -1368,6 +1398,7 @@ impl ServiceType {
             ServiceType::Monitor => "@monitor",
             ServiceType::PowerPlatform => "@pp",
             ServiceType::Automation => "@automation",
+            ServiceType::Deployments => "@deploy",
             ServiceType::Arc => "@arc",
             ServiceType::VirtualDesktop => "@avd",
             ServiceType::ContainerApps => "@aca",
@@ -1384,12 +1415,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health", "@subdeploy"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@arc", "@avd", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@deploy", "@arc", "@avd", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1600,6 +1631,21 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Automation/automationAccounts/aa")), Some(JumpView::AutomationAccounts));
         assert_eq!(ServiceType::from_prefix("@automation"), Some((ServiceType::Automation, None)));
         assert_eq!(ServiceType::from_prefix("@aa"), Some((ServiceType::Automation, None)));
+        // Deployments (#225): the group decides the sub-tab; an operation
+        // is a child, in no list.
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Resources/deployments/main")), Some(JumpView::GroupDeployments));
+        assert_eq!(
+            JumpView::for_arm_id("/subscriptions/0000/providers/Microsoft.Resources/deployments/baseline"),
+            Some(JumpView::SubscriptionDeployments)
+        );
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Resources/deployments/main/operations/op1")), None);
+        assert_eq!(ServiceType::from_prefix("@deploy"), Some((ServiceType::Deployments, None)));
+        assert_eq!(
+            ServiceType::from_prefix("@subdeploy"),
+            Some((ServiceType::Deployments, Some(JumpView::SubscriptionDeployments)))
+        );
+        // `@deploys` stays the @changes source filter.
+        assert_eq!(ServiceType::from_prefix("@deploys"), Some((ServiceType::Changes, Some(JumpView::ChangesDeployments))));
         // A runbook is a child: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Automation/automationAccounts/aa/runbooks/r")), None);
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.HybridCompute/machines/srv")), Some(JumpView::ArcMachines));

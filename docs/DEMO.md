@@ -108,6 +108,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `agw-contoso-prod`'s WAF policy is in Detection mode | Edge, `@audit` |
 | `srch-contoso-prod`'s shared private link to `cosmos-legacy` waits for approval | Foundry › Search services |
 | `ci-agents-prod`'s build agent crash-loops (14 restarts, last exit 1) and pulls from `acrcontosoprod` with the registry's admin user | Container Apps › Container groups |
+| `orders-worker-v119` failed on one operation (`ca-orders-worker`: the image tag is not in the registry); `aks-batch-nodepool-scale` failed on the `batch` pool | Deployments › Group deployments (Operations, Error) |
 | `aa-platform-ops`: `Patch-LegacyVms` failed on its hybrid worker `vm-legacy-app-01`, unseen since the VM was deallocated; local auth on | Automation, `@audit` (low) |
 | Arc in the Amsterdam datacentre: `srv-ams-file-02` disconnected 52 days ago (**expired**, agent 17 releases behind); `srv-ams-sql-01` (Windows Server 2012 R2) eligible for ESU with **no licence assigned** and its Defender extension **failed**; the k3s cluster `arck8s-ams-edge` **offline** for 3 days | Azure Arc, `@audit` (medium · low · low) |
 | Virtual Desktop: `hp-contoso-pooled`'s session host `vm-avd-1` **needs assistance** (its URL check fails) and runs an older agent; the finance pilot pool `hp-finance-personal` has **no session hosts** and no assignment type, and its app group `dag-finance-personal` is in **no workspace**. The session hosts' VMs are not in the dataset, so ⏎ on one says so | Virtual Desktop, `@audit` (low · low · info · info) |

@@ -371,6 +371,7 @@ impl AzureClients {
             ServiceType::Defender => Arc::new(DefenderService::new(scope)),
             ServiceType::Advisor => Arc::new(AdvisorService::new(scope)),
             ServiceType::Automation => Arc::new(crate::azure::services::automation::AutomationService::new(scope)),
+            ServiceType::Deployments => Arc::new(crate::azure::services::deployments::DeploymentsService::new(scope)),
             ServiceType::VirtualDesktop => {
                 Arc::new(crate::azure::services::virtual_desktop::VirtualDesktopService::new(scope))
             }
