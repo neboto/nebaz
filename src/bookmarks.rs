@@ -49,7 +49,7 @@ fn parse(data: &str) -> (Vec<NavLocation>, Vec<serde_json::Value>) {
 /// Persist bookmarks (best-effort; creates the parent dir if needed). The
 /// entries already on disk that this build can't read are written back
 /// after them, so going back a version doesn't erase the newer one's
-/// bookmarks.
+/// bookmarks. The file is the owner's alone on Unix (`write_private`).
 pub fn save(bookmarks: &[NavLocation]) {
     let Some(path) = bookmarks_path() else {
         return;
@@ -59,7 +59,28 @@ pub fn save(bookmarks: &[NavLocation]) {
     }
     let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
     if let Some(json) = merged(bookmarks, &on_disk) {
-        let _ = std::fs::write(&path, json);
+        let _ = write_private(&path, &json);
+    }
+}
+
+/// Write `contents` to `path`, readable and writable by the owner only
+/// (`0600`) on Unix: bookmarks hold ARM ids and subscription ids, a map of
+/// the estate on a shared host. A file an older nebaz left at the umask
+/// default is tightened too, since `mode` only applies to a file this call
+/// creates. Windows keeps the plain write (the profile directory's ACL is
+/// already the user's). (neboto-tui#319)
+fn write_private(path: &std::path::Path, contents: &str) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        let mut file = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(path)?;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+        file.write_all(contents.as_bytes())
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(path, contents)
     }
 }
 
@@ -179,5 +200,26 @@ mod tests {
         let (read, unread) = super::parse(&saved);
         assert_eq!(labels(&read), ["api"]);
         assert_eq!(unread.len(), 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_file_is_written_owner_only_and_an_older_one_is_tightened() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("nebaz-bookmarks-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mode = |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        // A new file.
+        let new = dir.join("new.json");
+        super::write_private(&new, "[]").unwrap();
+        assert_eq!(mode(&new), 0o600);
+        // One an older version left world-readable, longer than what replaces it.
+        let old = dir.join("old.json");
+        std::fs::write(&old, "[1, 2, 3, 4, 5]").unwrap();
+        std::fs::set_permissions(&old, std::fs::Permissions::from_mode(0o644)).unwrap();
+        super::write_private(&old, "[]").unwrap();
+        assert_eq!(mode(&old), 0o600);
+        assert_eq!(std::fs::read_to_string(&old).unwrap(), "[]");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
