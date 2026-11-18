@@ -165,7 +165,10 @@ a toast). The landing is `JumpView::landing_for_arm_id`: the typed
 sub-tab, else **All resources** for a top-level resource nebaz does not
 browse yet; a child of an unbrowsed type is in no list, so its id is
 copied instead. In All resources, Enter on a browsed row opens it in its
-typed tab.
+typed tab. A jump records the place it leaves with the open lens (`N`,
+`U`, `W`: `NavLocation::lens`, `NavLens`) before closing it, so back
+reopens the lens on that row; the lens is history only (`#[serde(skip)]`),
+never in a bookmark or a `|` place (#229).
 
 **Keys, help and hints** (`src/commands.rs`, #149): one table of rows
 (section, key, label, optional gate) is the `?` help, help's **Here**
@@ -189,7 +192,7 @@ lines, so a copy pastes unwrapped. Built in with
 a second nebaz process in a new pane of the host multiplexer / terminal
 (else a tab or window; each `Launch` says which, and whether to wait for
 it), started with the session flags and a hidden `--at` (base64url
-`split::Place`: the `NavLocation` plus the charts' window). The new process
+`split::Place`: the `NavLocation` plus the charts' window and metric). The new process
 restores it through `restore_nav_location`; its rows are never loaded yet,
 so `pending_place` finishes the section and the charts when the pending
 jump lands. No in-process panes: `App` owns the whole screen. The login is

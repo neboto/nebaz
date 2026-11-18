@@ -92,6 +92,7 @@ pub fn plan(args: &OpenArgs) -> Result<(Place, OpenRequest), String> {
         // Matched (any case) once the resource is selected; the restore
         // path wants the exact label.
         detail_section: None,
+        lens: None,
     };
     let req = OpenRequest {
         section: args.section.clone(),
@@ -100,7 +101,7 @@ pub fn plan(args: &OpenArgs) -> Result<(Place, OpenRequest), String> {
         full: args.full,
         by_name,
     };
-    Ok((Place { loc, chart_window }, req))
+    Ok((Place { loc, chart_window, chart_metric: None }, req))
 }
 
 /// `--bookmark NAME`: the saved bookmark NAME picks. Matched against each

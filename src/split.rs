@@ -183,6 +183,10 @@ pub struct Place {
     pub loc: NavLocation,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chart_window: Option<MetricWindow>,
+    /// The chart row the cursor was on (its label, as `open --metric`
+    /// matches it). Absent from older `--at` values, which still decode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chart_metric: Option<String>,
 }
 
 pub fn encode_place(place: &Place) -> String {
@@ -566,8 +570,11 @@ mod tests {
                 label: "AKS · aks-1".into(),
                 details_focused: true,
                 detail_section: Some("Node pools".into()),
+                // History only: a `|` place gives the pane, not the lens.
+                lens: Some(crate::app::NavLens::Refs { filter: None, row: Some("x".into()) }),
             },
             chart_window: Some(MetricWindow::OneDay),
+            chart_metric: Some("CPU".into()),
         };
         let encoded = encode_place(&place);
         assert!(encoded.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
@@ -576,6 +583,14 @@ mod tests {
         assert_eq!(back.loc.detail_section.as_deref(), Some("Node pools"));
         assert!(back.loc.details_focused);
         assert_eq!(back.chart_window, Some(MetricWindow::OneDay));
+        assert_eq!(back.chart_metric.as_deref(), Some("CPU"));
+        assert!(back.loc.lens.is_none());
         assert!(decode_place("not a place!").is_err());
+        // An `--at` from before the metric was carried still decodes.
+        let older = Place { chart_metric: None, ..place };
+        let json = serde_json::to_value(&older).unwrap();
+        assert!(json.get("chart_metric").is_none() && json.get("lens").is_none());
+        let older = encode_place(&older);
+        assert_eq!(decode_place(&older).unwrap().chart_metric, None);
     }
 }

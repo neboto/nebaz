@@ -59,6 +59,10 @@ pub struct TimelineLensState {
     pub notes: Vec<String>,
     /// Set by `⏎` / `v`: the editor opens the selected row, not the view.
     pub editor_row: bool,
+    /// The row (`TimelineRow::key`) to put the cursor on once its source
+    /// lands (going back to the lens: `NavLens::Timeline`); a key moved
+    /// first drops it.
+    pub want: Option<String>,
 }
 
 impl TimelineLensState {
@@ -114,6 +118,12 @@ impl TimelineLensState {
 
     pub fn rebuild(&mut self) {
         self.rows = merge(&self.lists, self.source_filter);
+        if let Some(i) = self.want.as_deref().and_then(|w| self.rows.iter().position(|r| r.key() == w)) {
+            self.selected = i;
+        }
+        if !self.is_loading() {
+            self.want = None;
+        }
         self.selected = self.selected.min(self.rows.len().saturating_sub(1));
     }
 
@@ -143,15 +153,18 @@ impl TimelineLensState {
     }
 
     pub fn move_by(&mut self, delta: isize) {
+        self.want = None;
         let max = self.rows.len().saturating_sub(1) as isize;
         self.selected = (self.selected as isize + delta).clamp(0, max.max(0)) as usize;
     }
 
     pub fn goto_top(&mut self) {
+        self.want = None;
         self.selected = 0;
     }
 
     pub fn goto_bottom(&mut self) {
+        self.want = None;
         self.selected = self.rows.len().saturating_sub(1);
     }
 

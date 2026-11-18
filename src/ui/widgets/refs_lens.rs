@@ -48,6 +48,9 @@ pub struct RefsLensState {
     pub warnings: Vec<String>,
     pub selected: usize,
     pub message: Option<String>,
+    /// The referrer (its id) to put the cursor on once the scan finds it
+    /// (going back to the lens: `NavLens::Refs`); a key moved first drops it.
+    pub want: Option<String>,
 }
 
 /// A view's place in the tab strip, for sorting groups.
@@ -72,6 +75,7 @@ impl RefsLensState {
             warnings: Vec::new(),
             selected: 0,
             message: None,
+            want: None,
         }
     }
 
@@ -107,6 +111,12 @@ impl RefsLensState {
             .filter(|r| self.service_filter.is_none_or(|f| f == r.view.service()))
             .cloned()
             .collect();
+        if let Some(i) = self.want.as_deref().and_then(|w| self.rows.iter().position(|r| r.id == w)) {
+            self.selected = i;
+        }
+        if self.warming.is_empty() {
+            self.want = None;
+        }
         self.selected = self.selected.min(self.rows.len().saturating_sub(1));
     }
 
@@ -119,20 +129,30 @@ impl RefsLensState {
         self.rebuild();
     }
 
+    /// A filter a reopened lens had (`NavLens::Refs`); one whose service
+    /// has no referrer any more shows them all.
+    pub fn set_service_filter(&mut self, filter: Option<ServiceType>) {
+        self.service_filter = filter.filter(|f| self.all_rows.iter().any(|r| r.view.service() == *f));
+        self.rebuild();
+    }
+
     pub fn selected_row(&self) -> Option<&RefRow> {
         self.rows.get(self.selected)
     }
 
     pub fn move_by(&mut self, delta: isize) {
+        self.want = None;
         let max = self.rows.len().saturating_sub(1) as isize;
         self.selected = (self.selected as isize + delta).clamp(0, max.max(0)) as usize;
     }
 
     pub fn goto_top(&mut self) {
+        self.want = None;
         self.selected = 0;
     }
 
     pub fn goto_bottom(&mut self) {
+        self.want = None;
         self.selected = self.rows.len().saturating_sub(1);
     }
 

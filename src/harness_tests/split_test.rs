@@ -101,6 +101,39 @@ async fn bar_from_the_charts_reopens_them_at_their_window() {
     assert_eq!(st.window, MetricWindow::SixHours);
 }
 
+/// #232: the new pane's charts open on the metric the cursor was on.
+#[tokio::test]
+async fn bar_from_the_charts_keeps_the_metric_under_the_cursor() {
+    let mut h = vms().await;
+    h.press(KeyCode::Char('m')).await;
+    // The harness lands no series, so `j` has no row to move to: put the
+    // cursor on the third chart row directly.
+    let st = h.app.metrics.as_mut().unwrap();
+    assert!(st.queries.len() > 2);
+    st.selected = 2;
+    let label = st.queries[2].label.clone();
+
+    let place = place_in(&split_in_tmux(&mut h).await);
+    assert_eq!(place.chart_metric.as_deref(), Some(label.as_str()));
+    let other = new_pane_at(place).await;
+    let st = other.app.metrics.as_ref().expect("the charts reopen");
+    assert_eq!(st.selected, 2, "on {label}");
+    assert!(other.app.error_message.is_none(), "{:?}", other.app.error_message);
+}
+
+/// A `|` place's metric the new pane does not chart (one picked with `a`)
+/// leaves the cursor on the first row, quietly.
+#[tokio::test]
+async fn a_split_metric_the_new_pane_does_not_chart_is_skipped_quietly() {
+    let mut h = vms().await;
+    h.press(KeyCode::Char('m')).await;
+    let mut place = place_in(&split_in_tmux(&mut h).await);
+    place.chart_metric = Some("Not a VM metric".into());
+    let other = new_pane_at(place).await;
+    assert_eq!(other.app.metrics.as_ref().expect("the charts reopen").selected, 0);
+    assert!(other.app.error_message.is_none(), "{:?}", other.app.error_message);
+}
+
 #[tokio::test]
 async fn bar_while_searching_is_a_character() {
     let mut h = vms().await;

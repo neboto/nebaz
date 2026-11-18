@@ -193,3 +193,39 @@ async fn u_on_an_environment_finds_the_app_gateway_whose_backend_matches_it() {
     let likely = h.app.refs_lens.as_ref().unwrap().coverage.likely_cold.clone();
     assert!(likely.contains(&JumpView::FrontDoorProfiles) && !likely.contains(&JumpView::AppGateways), "{likely:?}");
 }
+
+/// #229: back from a referrer reopens the lens on the row it was left
+/// from, and forward then back again does it again.
+#[tokio::test]
+async fn back_from_a_referrer_reopens_the_lens_on_that_row() {
+    let mut h = Harness::new().await;
+    let subnet = vnet().subnets.remove(0);
+    h.install(mocks::Mock { view: JumpView::Subnets, label: "SubnetRow", resource: Box::new(subnet) }).await;
+    warm(&mut h, JumpView::Nics, vec![nic()]);
+    warm(&mut h, JumpView::ContainerAppEnvironments, vec![mock_of(JumpView::ContainerAppEnvironments).resource]);
+    warm(&mut h, JumpView::EnterprisePolicies, vec![policy()]);
+
+    h.press(KeyCode::Char('U')).await;
+    assert_eq!(ref_names(&h).len(), 3);
+    // The last row (the environment), not the first a fresh lens starts on.
+    h.press(KeyCode::Char('G')).await;
+    let left = h.app.refs_lens.as_ref().unwrap().selected_row().unwrap().id.clone();
+    h.press(KeyCode::Enter).await;
+    assert!(h.app.refs_lens.is_none(), "the jump closes the lens");
+    assert!(h.selected_id().is_some_and(|id| id.eq_ignore_ascii_case(&left)));
+
+    h.press_key(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL)).await;
+    assert_eq!(h.app.current_view, JumpView::Subnets);
+    let st = h.app.refs_lens.as_ref().expect("back reopens the lens");
+    assert_eq!(st.selected_row().map(|r| r.id.clone()), Some(left.clone()), "on the row it was left from");
+    assert!(h.app.details_focused);
+
+    // Forward (the lens has `f`, so Esc first) and back again: the same.
+    h.press(KeyCode::Esc).await;
+    h.press_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL)).await;
+    assert!(h.app.refs_lens.is_none());
+    assert!(h.selected_id().is_some_and(|id| id.eq_ignore_ascii_case(&left)));
+    h.press_key(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL)).await;
+    assert_eq!(h.app.refs_lens.as_ref().and_then(|st| st.selected_row()).map(|r| r.id.clone()), Some(left));
+
+}
