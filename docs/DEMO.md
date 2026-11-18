@@ -92,7 +92,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `nsg-jump-prod` allows SSH from the Internet ("temp vendor access", added 3 days ago by the Fabrikam guest `j.ortiz_fabrikam.com#EXT#`) | `@audit`, `N`, `W` |
 | `vm-jump-01` has a public IP | Related, `@pip` (no audit check: the lists `@audit` reads carry no NIC's public IP) |
 | `disk-legacy-data-01`: 1 TiB Premium SSD, unattached | Disks state, `@audit` (info) |
-| `vm-legacy-app-01` deallocated for 40 days | VMs state |
+| `vm-legacy-app-01` deallocated for 40 days, so `m` there reads "no data in the window" at every window (a deallocated VM emits no metrics; `vm-jump-01` is the VM to chart) | VMs state, `m` |
 | `vmss-legacy-web` (Uniform, Manual upgrades, three instances in `snet-compute` 10.10.14.0/24): instance 2 still runs the July image | Scale sets (Instances), `@audit` (info) |
 | `vmss-batch-flex` (Flexible, Spot with one regular VM first): its two VMs `vmss-batch-flex_3f2a9c1e` (running) and `vmss-batch-flex_8b41d7a0` (Spot, deallocated) are in the VMs list, each linking back to the set | VMs, Scale sets (Instances) |
 | `stcontosoordersprod` allows blob public access, minimum TLS 1.0 | `@audit` |
