@@ -1,0 +1,63 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-landing-zone/versions/2026-06",
+      "name": "2026-06",
+      "type": "Microsoft.Resources/templateSpecs/versions",
+      "location": "westeurope",
+      "systemData": {
+        "createdBy": "github-actions-deploy",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-160d}}",
+        "lastModifiedBy": "github-actions-deploy",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-160d}}"
+      },
+      "properties": {
+        "description": "Adds rg-ai-prod.",
+        "linkedTemplates": [],
+        "mainTemplate": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "owner": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Authorization/policyAssignments",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

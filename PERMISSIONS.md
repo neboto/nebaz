@@ -327,7 +327,12 @@ each one backs are in the catalog table
   `Microsoft.Resources/deployments/operations/read` (the lazy
   Operations). A parameter's or output's value is dropped before nebaz
   keeps the body. Never: `exportTemplate`, `whatIf`, `validate`,
-  `cancel` (POSTs).
+  `cancel` (POSTs). Stacks: `Microsoft.Resources/deploymentStacks/read`
+  (the subscription's and each group's; values and the template dropped
+  the same way). Template specs: `Microsoft.Resources/templateSpecs/read`
+  and `Microsoft.Resources/templateSpecs/versions/read` (the lazy
+  Versions; a version's template is read out for parameter names and
+  resource types and never kept).
 - **Azure Arc** (#199): `Microsoft.HybridCompute/machines/read`,
   `Microsoft.HybridCompute/machines/extensions/read` (the lazy
   Extensions), `Microsoft.HybridCompute/privateLinkScopes/read`,

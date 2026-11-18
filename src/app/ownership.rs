@@ -9,7 +9,9 @@
 
 use super::App;
 use crate::azure::ownership::{fetch_rg_deployments, managed_by_of, resource_ownership};
-use crate::azure::resource::{arm_type_chain, resource_group_id_of};
+use crate::azure::resource::{arm_type_chain, resource_group_id_of, subscription_of};
+use crate::azure::service::{JumpView, ServiceType};
+use crate::azure::services::deployment_stacks::managing_stack;
 use crate::event::Event;
 use crate::lazy::Lazy;
 use tokio::sync::mpsc;
@@ -52,6 +54,14 @@ impl App {
         m
     }
 
+    /// The deployment stack that manages `id`, from its subscription's
+    /// cached Stacks list; `None` when the list was never opened.
+    fn managing_stack_name(&self, id: &str) -> Option<String> {
+        let sub = subscription_of(id)?;
+        let stacks = self.cache.get_ref(&ServiceType::Deployments, sub, Some(JumpView::DeploymentStacks.as_str()))?;
+        managing_stack(stacks, id).map(|s| s.base.name.clone())
+    }
+
     /// The ribbon for the selected row, or `None` when it is off or has
     /// nothing to say. Tags and `managedBy` always; the deployment once the
     /// group's list has landed (`⧗` while it loads, `⚠` if it failed).
@@ -62,6 +72,11 @@ impl App {
         let r = self.get_selected_resource()?;
         let managed_by = self.selected_managed_by();
         let mut parts = resource_ownership(r.tags(), managed_by, &self.ownership_tags).parts();
+        // The stack that manages it, once the Stacks list is warm (#225):
+        // no call of its own.
+        if let Some(stack) = self.managing_stack_name(r.id()) {
+            parts.insert(0, format!("in stack {}", stack));
+        }
         let mut warning = false;
         if let Some(key) = deployments_key(r.id()) {
             match self.lazy.rg_deployments.get(&key) {

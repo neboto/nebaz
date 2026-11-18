@@ -1,0 +1,80 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Resources/deploymentStacks/stack-landing-zone",
+      "name": "stack-landing-zone",
+      "type": "Microsoft.Resources/deploymentStacks",
+      "location": "westeurope",
+      "tags": {
+        "source": "github-actions",
+        "owner": "platform@contoso.com"
+      },
+      "systemData": {
+        "createdBy": "github-actions-deploy",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-160d}}",
+        "lastModifiedAt": "{{iso:now-136d}}"
+      },
+      "properties": {
+        "description": "The landing zone: the resource groups every workload deploys into.",
+        "provisioningState": "succeeded",
+        "actionOnUnmanage": {
+          "resources": "detach",
+          "resourceGroups": "detach",
+          "managementGroups": "detach"
+        },
+        "denySettings": {
+          "mode": "denyWriteAndDelete",
+          "applyToChildScopes": false,
+          "excludedPrincipals": [
+            "5f0c2f4e-8b1a-4d7c-9e3f-2a6b8c0d1e42"
+          ],
+          "excludedActions": [
+            "Microsoft.Resources/tags/write"
+          ]
+        },
+        "bypassStackOutOfSyncError": false,
+        "deploymentId": "/subscriptions/{{prod}}/providers/Microsoft.Resources/deployments/sub-baseline-20260610",
+        "duration": "PT52.1S",
+        "correlationId": "40e4e626-51d1-59ac-b360-da218743be06",
+        "parameters": {
+          "owner": {
+            "type": "string",
+            "value": "platform@contoso.com"
+          }
+        },
+        "outputs": {},
+        "resources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-network-prod",
+            "status": "managed",
+            "denyStatus": "denyWriteAndDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod",
+            "status": "managed",
+            "denyStatus": "denyWriteAndDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod",
+            "status": "managed",
+            "denyStatus": "denyWriteAndDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod",
+            "status": "managed",
+            "denyStatus": "denyWriteAndDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-ai-prod",
+            "status": "managed",
+            "denyStatus": "denyWriteAndDelete"
+          }
+        ],
+        "detachedResources": [],
+        "deletedResources": [],
+        "failedResources": []
+      }
+    }
+  ]
+}

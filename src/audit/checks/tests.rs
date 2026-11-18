@@ -5,7 +5,7 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, arc, backup, compute, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
+    aks, app_service, arc, backup, compute, deployment_stacks, deployments, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
     governance, keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
     sql, storage, virtual_desktop,
 };
@@ -1619,4 +1619,69 @@ fn an_app_group_in_no_workspace_is_info() {
     let ws = id("Microsoft.DesktopVirtualization/workspaces/ws-1");
     let lists = vec![(V::AvdApplicationGroups, vec![group("dag-live", Some(ws)), group("dag-lone", None)])];
     assert_eq!(findings(&audit("avd-app-group-unpublished", &lists, None)), [("dag-lone".to_string(), Severity::Info)]);
+}
+
+fn deployment(rg: &str, name: &str, state: &str, timestamp: &str) -> Box<dyn Resource> {
+    let v = json!({"id": format!("/subscriptions/{SUB}/resourceGroups/{rg}/providers/Microsoft.Resources/deployments/{name}"),
+        "name": name, "properties": {"provisioningState": state, "timestamp": timestamp,
+            "error": {"code": "DeploymentFailed", "message": "At least one operation failed."}}});
+    boxed(deployments::DeploymentRow::from_json(&v, None))
+}
+
+#[test]
+fn only_a_group_whose_newest_deployment_failed_is_flagged() {
+    let rows = audit(
+        "deployment-last-failed",
+        &[(
+            V::GroupDeployments,
+            vec![
+                // rg-a: failed last.
+                deployment("rg-a", "a-old", "Succeeded", "2026-10-01T08:00:00Z"),
+                deployment("rg-a", "a-new", "Failed", "2026-11-01T08:00:00Z"),
+                // RG-B (any case): failed once, deployed again since.
+                deployment("rg-b", "b-failed", "Failed", "2026-10-01T08:00:00Z"),
+                deployment("RG-B", "b-fixed", "Succeeded", "2026-11-01T08:00:00Z"),
+                // rg-c: still running.
+                deployment("rg-c", "c-run", "Running", "2026-11-01T08:00:00Z"),
+            ],
+        )],
+        None,
+    );
+    assert_eq!(findings(&rows), vec![("a-new".to_string(), Severity::Low)]);
+    assert_eq!(rows[0].reason, "the last deployment in rg-a failed");
+    assert!(rows[0].evidence.iter().any(|e| e.starts_with("error: DeploymentFailed")));
+    assert!(!notes(&audit("deployment-last-failed", &[], None)).is_empty(), "not checked until the list is loaded");
+}
+
+fn stack(name: &str, props: Value) -> Box<dyn Resource> {
+    boxed(deployment_stacks::StackRow::from_json(&body(&format!("Microsoft.Resources/deploymentStacks/{name}"), props), None))
+}
+
+#[test]
+fn stack_checks_read_the_unmanage_action_deny_mode_and_resource_lists() {
+    let managed = json!([{"id": id("Microsoft.App/containerApps/ca"), "status": "managed", "denyStatus": "denyDelete"}]);
+    let lists = [(
+        V::DeploymentStacks,
+        vec![
+            stack("good", json!({"actionOnUnmanage": {"resources": "detach", "resourceGroups": "detach"},
+                "denySettings": {"mode": "denyDelete"}, "resources": managed.clone()})),
+            stack("deletes", json!({"actionOnUnmanage": {"resources": "detach", "resourceGroups": "delete"},
+                "denySettings": {"mode": "denyWriteAndDelete"}, "resources": managed.clone()})),
+            stack("open", json!({"actionOnUnmanage": {"resources": "detach"}, "denySettings": {"mode": "none"},
+                "resources": managed.clone(), "detachedResources": [{"id": id("Microsoft.Network/publicIPAddresses/pip-old")}]})),
+            // Manages nothing: no deny settings is not worth a row.
+            stack("empty", json!({"actionOnUnmanage": {"resources": "detach"}})),
+            stack("broken", json!({"provisioningState": "succeededWithFailures", "actionOnUnmanage": {"resources": "detach"},
+                "denySettings": {"mode": "denyDelete"}, "resources": managed,
+                "failedResources": [{"id": id("Microsoft.Cache/redis/r"), "error": {"code": "SkuNotAvailable", "message": "no capacity"}}]})),
+        ],
+    )];
+    let one = |check: &str| audit(check, &lists, None);
+    assert_eq!(findings(&one("stack-deletes-on-unmanage")), vec![("deletes".to_string(), Severity::Info)]);
+    assert_eq!(one("stack-deletes-on-unmanage")[0].reason, "on unmanage: detach resources, delete resource groups");
+    assert_eq!(findings(&one("stack-no-deny-settings")), vec![("open".to_string(), Severity::Info)]);
+    assert_eq!(findings(&one("stack-detached-resources")), vec![("open".to_string(), Severity::Info)]);
+    let failed = one("stack-failed-resources");
+    assert_eq!(findings(&failed), vec![("broken".to_string(), Severity::Low)]);
+    assert_eq!(failed[0].evidence, vec!["r: SkuNotAvailable: no capacity".to_string()]);
 }

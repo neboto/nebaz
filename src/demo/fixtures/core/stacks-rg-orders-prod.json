@@ -1,0 +1,105 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deploymentStacks/stack-orders-platform",
+      "name": "stack-orders-platform",
+      "type": "Microsoft.Resources/deploymentStacks",
+      "tags": {
+        "source": "github-actions",
+        "team": "orders"
+      },
+      "systemData": {
+        "createdBy": "github-actions-deploy",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-65d}}",
+        "lastModifiedAt": "{{iso:now-42d}}"
+      },
+      "properties": {
+        "description": "The orders platform: the Container Apps environment, its apps and what they talk to.",
+        "provisioningState": "succeeded",
+        "actionOnUnmanage": {
+          "resources": "delete",
+          "resourceGroups": "detach",
+          "managementGroups": "detach"
+        },
+        "denySettings": {
+          "mode": "denyDelete",
+          "applyToChildScopes": false,
+          "excludedPrincipals": [],
+          "excludedActions": []
+        },
+        "bypassStackOutOfSyncError": false,
+        "deploymentId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Resources/deployments/orders-platform-20260912",
+        "duration": "PT6M12.4S",
+        "correlationId": "8c1d7e52-3a94-4f0b-b6de-91c2a7f4e035",
+        "templateLink": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-orders-platform/versions/1.4.0"
+        },
+        "parameters": {
+          "environmentName": {
+            "type": "string",
+            "value": "prod"
+          },
+          "redisSku": {
+            "type": "string",
+            "value": "Standard"
+          },
+          "sqlAdminPassword": {
+            "type": "securestring"
+          }
+        },
+        "outputs": {
+          "apiFqdn": {
+            "type": "String",
+            "value": "ca-orders-api.internal.cae-orders-prod.westeurope.azurecontainerapps.io"
+          }
+        },
+        "resources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/managedEnvironments/cae-orders-prod",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Cache/Redis/redis-orders-cache",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventHub/namespaces/evh-orders-prod",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Insights/components/appi-orders",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-orders-api",
+            "status": "managed",
+            "denyStatus": "denyDelete"
+          }
+        ],
+        "detachedResources": [],
+        "deletedResources": [],
+        "failedResources": []
+      }
+    }
+  ]
+}

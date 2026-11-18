@@ -26,6 +26,8 @@ use crate::azure::services::app_service::SiteRow;
 use crate::azure::services::arc::{self, ArcClusterRow, ArcMachineRow};
 use crate::azure::services::virtual_desktop::{self as avd, AppGroupRow, HostPoolRow, SessionHost};
 use crate::azure::services::automation::AutomationAccountRow;
+use crate::azure::services::deployment_stacks::StackRow;
+use crate::azure::services::deployments::DeploymentRow;
 use crate::azure::services::backup::{self, BackupVaultRow, RecoveryVaultRow};
 use crate::azure::services::compute::{DiskRow, NicRow};
 use crate::azure::services::container_apps::{ContainerAppRow, EnvironmentRow, JobRow, Workload};
@@ -96,13 +98,15 @@ const BVS: &[V] = &[V::BackupVaults];
 const ASSIGNMENTS: &[V] = &[V::PolicyAssignments];
 const EXEMPTIONS: &[V] = &[V::PolicyExemptions];
 const AUTOMATION: &[V] = &[V::AutomationAccounts];
+const GROUP_DEPLOYMENTS: &[V] = &[V::GroupDeployments];
+const STACKS: &[V] = &[V::DeploymentStacks];
 const ARC_MACHINES: &[V] = &[V::ArcMachines];
 const ARC_CLUSTERS: &[V] = &[V::ArcClusters];
 const HOST_POOLS: &[V] = &[V::HostPools];
 const AVD_APP_GROUPS: &[V] = &[V::AvdApplicationGroups];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 84] = [
+pub static CHECKS: [Check; 89] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -740,6 +744,47 @@ pub static CHECKS: [Check; 84] = [
         fix: "Move callers to Entra ID (a managed identity calling the runbook start API, or an Azure Monitor action group), then set disableLocalAuth to true. Hybrid workers must be extension-based (V2) first.",
         sources: &[AUTOMATION],
         run: automation_local_auth,
+    },
+    // ── Deployments ──
+    Check {
+        id: "deployment-last-failed",
+        title: "Resource group's last deployment failed",
+        why: "A failed deployment stops part-way: the resources before the failure are changed, the ones after it are not, so the group matches neither the old template nor the new one. A pipeline that failed and was not run again leaves it that way.",
+        fix: "Open the deployment's Operations for the failed resource and its error, fix the cause and deploy again. If the failure is expected and old, a later successful deployment clears this.",
+        sources: &[GROUP_DEPLOYMENTS],
+        run: deployment_last_failed,
+    },
+    Check {
+        id: "stack-deletes-on-unmanage",
+        title: "Deployment stack deletes what leaves its template",
+        why: "With actionOnUnmanage set to delete, removing a resource from the template (or renaming it, or a condition turning false) deletes the resource and its data on the next stack update. With delete on resource groups, a whole group goes.",
+        fix: "Keep delete only where the stack owns disposable resources. For anything holding data, set actionOnUnmanage to detach for resources and resource groups, and delete detached resources deliberately.",
+        sources: &[STACKS],
+        run: stack_deletes_on_unmanage,
+    },
+    Check {
+        id: "stack-no-deny-settings",
+        title: "Deployment stack protects nothing it manages",
+        why: "With deny settings none, anyone with write access can change or delete a managed resource in the portal. The stack then no longer describes what is deployed, and the next update reverts the change or fails as out of sync.",
+        fix: "Set the deny settings mode to denyDelete, or denyWriteAndDelete where nothing should change outside the stack, and exclude the principals and actions that must still work (the pipeline's identity, a scale action).",
+        sources: &[STACKS],
+        run: stack_no_deny_settings,
+    },
+    Check {
+        id: "stack-detached-resources",
+        title: "Deployment stack has detached resources",
+        why: "A detached resource left the stack's template but is still in Azure: it keeps running and costing, no deny assignment protects it, and no template describes it any more.",
+        fix: "Delete each detached resource if it is no longer needed, or bring it back under a template (this stack or another).",
+        sources: &[STACKS],
+        run: stack_detached_resources,
+    },
+    Check {
+        id: "stack-failed-resources",
+        title: "Deployment stack has failed resources",
+        why: "A stack that finished with failures did not deploy, or could not remove, some of what its template says: those resources are missing, half-configured or still present, and their deny assignment may be missing too.",
+        fix: "Read each failed resource's error on the stack's Resources section, fix the cause and update the stack again.",
+        sources: &[STACKS],
+        run: stack_failed_resources,
     },
     // ── Azure Arc ──
     Check {
@@ -1879,6 +1924,85 @@ fn automation_local_auth(check: &'static Check, input: &AuditInput, out: &mut Ve
             out.push(
                 AuditFinding::about(check, Severity::Low, r, "local auth on (webhooks and agent keys)")
                     .with_evidence(vec![format!("disableLocalAuth: {}", json::yes_no(r.disable_local_auth))]),
+            );
+        }
+    }
+}
+
+// ── Deployments ───────────────────────────────────────────────────────
+
+fn deployment_last_failed(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    // The newest deployment of each group, among those the list read.
+    let mut newest: HashMap<String, &DeploymentRow> = HashMap::new();
+    for d in input.of::<DeploymentRow>(V::GroupDeployments) {
+        let Some(rg) = d.resource_group() else { continue };
+        let slot = newest.entry(rg.to_lowercase()).or_insert(d);
+        if d.ts_secs > slot.ts_secs {
+            *slot = d;
+        }
+    }
+    let mut last: Vec<&DeploymentRow> = newest.into_values().collect();
+    last.sort_by(|a, b| a.base.id.cmp(&b.base.id));
+    for d in last {
+        if !d.base.provisioning_state.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("failed")) {
+            continue;
+        }
+        let rg = d.resource_group().unwrap_or("-");
+        let mut evidence = vec![format!("timestamp: {}", json::time(d.timestamp.clone()))];
+        if let Some(e) = &d.error {
+            evidence.push(format!("error: {}: {}", json::text(e, "/code"), json::text(e, "/message")));
+        }
+        out.push(
+            AuditFinding::about(check, Severity::Low, d, format!("the last deployment in {} failed", rg))
+                .with_evidence(evidence),
+        );
+    }
+}
+
+fn stack_deletes_on_unmanage(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in input.of::<StackRow>(V::DeploymentStacks) {
+        if s.deletes_on_unmanage() {
+            out.push(
+                AuditFinding::about(check, Severity::Info, s, format!("on unmanage: {}", s.unmanage_summary()))
+                    .with_evidence(vec![format!("{} managed resources", s.resources.len())]),
+            );
+        }
+    }
+}
+
+fn stack_no_deny_settings(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in input.of::<StackRow>(V::DeploymentStacks) {
+        if s.denies_nothing() && !s.resources.is_empty() {
+            out.push(
+                AuditFinding::about(check, Severity::Info, s, "deny settings: none")
+                    .with_evidence(vec![format!("{} managed resources", s.resources.len())]),
+            );
+        }
+    }
+}
+
+fn stack_detached_resources(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in input.of::<StackRow>(V::DeploymentStacks) {
+        if !s.detached.is_empty() {
+            out.push(
+                AuditFinding::about(check, Severity::Info, s, format!("{} detached", s.detached.len()))
+                    .with_evidence(s.detached.iter().take(10).cloned().collect()),
+            );
+        }
+    }
+}
+
+fn stack_failed_resources(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in input.of::<StackRow>(V::DeploymentStacks) {
+        if !s.failed.is_empty() {
+            let evidence = s
+                .failed
+                .iter()
+                .take(10)
+                .map(|(id, error)| format!("{}: {}", name_of_id(id), error.clone().unwrap_or_else(|| "failed".into())))
+                .collect();
+            out.push(
+                AuditFinding::about(check, Severity::Low, s, format!("{} failed", s.failed.len())).with_evidence(evidence),
             );
         }
     }

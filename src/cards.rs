@@ -34,6 +34,8 @@ pub static CARDS: &[Card] = &[
         views: &[JumpView::GroupDeployments, JumpView::SubscriptionDeployments],
         source: include_str!("../docs/cards/deployments.md"),
     },
+    Card { views: &[JumpView::DeploymentStacks], source: include_str!("../docs/cards/deployment-stacks.md") },
+    Card { views: &[JumpView::TemplateSpecs], source: include_str!("../docs/cards/template-specs.md") },
     Card { views: &[JumpView::VirtualMachines], source: include_str!("../docs/cards/vms.md") },
     Card { views: &[JumpView::Disks], source: include_str!("../docs/cards/disks.md") },
     Card { views: &[JumpView::Nics], source: include_str!("../docs/cards/nics.md") },

@@ -165,7 +165,8 @@ fn is_demo_sub(sub: &str) -> bool {
 const LISTED_CHILD_TYPES: &[&str] = &["microsoft.sql/servers/databases", "microsoft.web/sites/slots"];
 
 /// Types in a body that are not resources the generic list returns.
-const NOT_LISTED: &[&str] = &["microsoft.resources/deployments", "microsoft.resources/templatespecs/versions"];
+const NOT_LISTED: &[&str] =
+    &["microsoft.resources/deployments", "microsoft.resources/deploymentstacks", "microsoft.resources/templatespecs/versions"];
 
 /// Namespaces whose objects are not resources (role assignments at a
 /// group, health statuses, fired alerts).

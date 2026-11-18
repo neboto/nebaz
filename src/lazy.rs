@@ -303,6 +303,9 @@ pub struct LazyStore {
     /// `GET {deployment}/operations`, keyed by deployment id, without the
     /// request and response bodies.
     pub deployment_operations: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {template spec}/versions`, keyed by spec id, each version
+    /// reduced to its summary (never its template).
+    pub template_spec_versions: LazyMap<Vec<serde_json::Value>>,
 
     // ── Static Web Apps (#200) ───────────────────────────────────────────
     /// `GET {site}/builds` (the environments), keyed by site id.
