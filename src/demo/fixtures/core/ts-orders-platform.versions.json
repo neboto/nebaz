@@ -1,0 +1,172 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-orders-platform/versions/1.3.0",
+      "name": "1.3.0",
+      "type": "Microsoft.Resources/templateSpecs/versions",
+      "location": "westeurope",
+      "systemData": {
+        "createdBy": "github-actions-deploy",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-120d}}",
+        "lastModifiedBy": "github-actions-deploy",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-120d}}"
+      },
+      "properties": {
+        "description": "Service Bus for the worker.",
+        "linkedTemplates": [],
+        "mainTemplate": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "defaultValue": "prod"
+            },
+            "redisSku": {
+              "type": "string",
+              "defaultValue": "Standard"
+            },
+            "sqlAdminPassword": {
+              "type": "securestring"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Cache/Redis",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-orders-platform/versions/1.4.0",
+      "name": "1.4.0",
+      "type": "Microsoft.Resources/templateSpecs/versions",
+      "location": "westeurope",
+      "systemData": {
+        "createdBy": "github-actions-deploy",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-65d}}",
+        "lastModifiedBy": "github-actions-deploy",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-65d}}"
+      },
+      "properties": {
+        "description": "Adds the Event Hubs namespace and the requests alert.",
+        "linkedTemplates": [
+          {
+            "path": "modules/alerts.json",
+            "template": {
+              "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+              "contentVersion": "1.0.0.0",
+              "resources": []
+            }
+          }
+        ],
+        "mainTemplate": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "environmentName": {
+              "type": "string",
+              "defaultValue": "prod"
+            },
+            "redisSku": {
+              "type": "string",
+              "defaultValue": "Standard"
+            },
+            "sqlAdminPassword": {
+              "type": "securestring"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Cache/Redis",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.EventHub/namespaces",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            },
+            {
+              "type": "Microsoft.Insights/actionGroups",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

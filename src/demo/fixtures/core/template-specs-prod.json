@@ -1,0 +1,46 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-orders-platform",
+      "name": "ts-orders-platform",
+      "type": "Microsoft.Resources/templateSpecs",
+      "location": "westeurope",
+      "tags": {
+        "owner": "platform@contoso.com"
+      },
+      "systemData": {
+        "createdBy": "github-actions-deploy",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-240d}}",
+        "lastModifiedBy": "github-actions-deploy",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-65d}}"
+      },
+      "properties": {
+        "displayName": "Orders platform",
+        "description": "The Container Apps environment, the orders apps and their dependencies."
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-landing-zone",
+      "name": "ts-landing-zone",
+      "type": "Microsoft.Resources/templateSpecs",
+      "location": "westeurope",
+      "tags": {
+        "owner": "platform@contoso.com"
+      },
+      "systemData": {
+        "createdBy": "github-actions-deploy",
+        "createdByType": "Application",
+        "createdAt": "{{iso:now-400d}}",
+        "lastModifiedBy": "github-actions-deploy",
+        "lastModifiedByType": "Application",
+        "lastModifiedAt": "{{iso:now-160d}}"
+      },
+      "properties": {
+        "displayName": "Landing zone",
+        "description": "Resource groups, tags and the baseline policy assignments for a subscription."
+      }
+    }
+  ]
+}

@@ -57,3 +57,63 @@ async fn a_change_row_s_deployment_link_lands_in_the_deployments_tab() {
     );
     assert_eq!(row.links[0], ("Deployment · main".to_string(), id));
 }
+
+#[tokio::test]
+async fn a_stack_s_resource_is_a_jump_and_the_ribbon_names_the_stack_once_the_list_is_warm() {
+    use crate::azure::services::deployment_stacks::StackRow;
+    let vm_id = arm_id("Microsoft.Compute/virtualMachines/vm-web");
+    let vm = || -> Box<dyn Resource> {
+        let v = json!({"id": vm_id, "name": "vm-web", "location": "westeurope", "properties": {}});
+        Box::new(crate::azure::services::compute::VmRow::from_json(&v, None).unwrap())
+    };
+    let mut h = Harness::new().await;
+    h.app.ownership_ribbon = true;
+
+    // Before the Stacks list was ever opened the ribbon has nothing to say.
+    h.open(JumpView::VirtualMachines).await;
+    h.land_page(vec![vm()]).await;
+    h.finish().await;
+    assert!(!h.app.ownership_ribbon().is_some_and(|r| r.text().contains("in stack")));
+
+    h.open(JumpView::DeploymentStacks).await;
+    let stack = json!({"id": arm_id("Microsoft.Resources/deploymentStacks/orders"), "name": "orders",
+        "properties": {"provisioningState": "succeeded", "denySettings": {"mode": "denyDelete"},
+            "resources": [{"id": vm_id, "status": "managed", "denyStatus": "denyDelete"}]}});
+    h.land_page(vec![Box::new(StackRow::from_json(&stack, None).unwrap())]).await;
+    h.finish().await;
+    h.press(KeyCode::Enter).await;
+    let resources = h.section_labels().iter().position(|l| *l == "Resources").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(resources).unwrap())).await;
+    h.cursor_to_value(&vm_id).await;
+    h.press(KeyCode::Enter).await;
+    assert_eq!(h.app.current_view, JumpView::VirtualMachines);
+    h.land_page(vec![vm()]).await;
+    h.finish().await;
+    assert_eq!(h.selected_id().as_deref(), Some(vm_id.as_str()));
+    let ribbon = h.app.ownership_ribbon().expect("the ribbon has the stack");
+    assert_eq!(ribbon.parts[0], "in stack orders");
+}
+
+#[tokio::test]
+async fn a_template_spec_s_versions_read_fires_and_keeps_only_the_summary() {
+    use crate::azure::services::deployment_stacks::{version_summary, TemplateSpecRow};
+    let id = arm_id("Microsoft.Resources/templateSpecs/ts-orders");
+    let mut h = Harness::new().await;
+    h.open(JumpView::TemplateSpecs).await;
+    let spec = json!({"id": id, "name": "ts-orders", "location": "westeurope", "properties": {}});
+    h.land_page(vec![Box::new(TemplateSpecRow::from_json(&spec, None).unwrap())]).await;
+    h.finish().await;
+    h.press(KeyCode::Enter).await;
+    let versions = h.section_labels().iter().position(|l| *l == "Versions").unwrap();
+    h.press(KeyCode::Char(crate::sections::key_for(versions).unwrap())).await;
+    assert!(matches!(h.app.lazy.template_spec_versions.get(&id), Some(Lazy::Loading)), "the versions read fired");
+
+    let version = json!({"id": format!("{id}/versions/1.0.0"), "name": "1.0.0", "properties": {"mainTemplate": {
+        "parameters": {"adminPassword": {"type": "securestring", "defaultValue": "PLANTED"}},
+        "resources": [{"type": "Microsoft.Storage/storageAccounts"}]}}});
+    h.app.lazy.template_spec_versions.apply(id.clone(), Ok(vec![version_summary(&version)]));
+    let lines = h.app.get_detail_lines();
+    assert!(lines.iter().any(|(l, v)| l == "    adminPassword" && v == "securestring"));
+    assert!(lines.iter().any(|(_, v)| v == "    Microsoft.Storage/storageAccounts"));
+    assert!(!format!("{:?}", lines).contains("PLANTED"));
+}

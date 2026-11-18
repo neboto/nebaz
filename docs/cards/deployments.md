@@ -18,6 +18,7 @@ A deployment is one run of an ARM template or a Bicep file: Azure Resource Manag
 - Parameters shows names and types only. Values, a template link's SAS token and an operation's request and response bodies are dropped before anything is kept, so the e view cannot show them either.
 - Never sent, because they are POSTs: export template, what-if, validate, cancel.
 - A deployment has no region here: the location filter never hides one.
+- @audit: deployment-last-failed (a resource group whose newest deployment failed).
 
 ## Learn more
 

@@ -43,6 +43,22 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("core", "/subscriptions/{{prod}}/resourcegroups/rg-platform-prod/providers/Microsoft.Resources/deployments", "deployments-rg-platform-prod.json"),
     fx!("core", "/subscriptions/{{prod}}/resourcegroups/rg-ai-prod/providers/Microsoft.Resources/deployments", "deployments-rg-ai-prod.json"),
     fx!("core", "/subscriptions/{{dev}}/resourcegroups/rg-dev/providers/Microsoft.Resources/deployments", "deployments-rg-dev.json"),
+    // Deployment stacks and template specs (#225): the subscription's
+    // stack, one per group that has one, the specs and their versions.
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Resources/deploymentStacks", "stacks-subscription-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/resourcegroups/rg-orders-prod/providers/Microsoft.Resources/deploymentStacks", "stacks-rg-orders-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/resourcegroups/rg-legacy-prod/providers/Microsoft.Resources/deploymentStacks", "stacks-rg-legacy-prod.json"),
+    fx!("core", "/subscriptions/{{prod}}/providers/Microsoft.Resources/templateSpecs", "template-specs-prod.json"),
+    fx!(
+        "core",
+        "/subscriptions/{{prod}}/resourcegroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-orders-platform/versions",
+        "ts-orders-platform.versions.json"
+    ),
+    fx!(
+        "core",
+        "/subscriptions/{{prod}}/resourcegroups/rg-platform-prod/providers/Microsoft.Resources/templateSpecs/ts-landing-zone/versions",
+        "ts-landing-zone.versions.json"
+    ),
     // Governance (#155): the subscription's view, management groups'
     // assignments and definitions included; the built-ins an assignment
     // applies, read by id.

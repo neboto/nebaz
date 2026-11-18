@@ -245,10 +245,18 @@ run automation ok automation '[]' \
 # Deployments is its own tab; @subdeploy opens its second sub-tab. The
 # group fan-out starts with the resource-group list, which cannot be read.
 run deployments ok deploy '[]' \
-  "ARM & Bicep deployments, their operations & errors" \
+  "ARM & Bicep deployments, stacks & template specs" \
   "cannot reach 127.0.0.1"
 run deployments-sub ok subdeploy '[]' \
   "Subscription deployments" \
+  "cannot reach 127.0.0.1"
+
+# Stacks start with the subscription's own list; template specs are one list.
+run deployments-stacks ok stack '[]' \
+  "Stacks" \
+  "cannot reach 127.0.0.1"
+run deployments-specs ok ts '[]' \
+  "Template specs" \
   "cannot reach 127.0.0.1"
 
 # Azure Arc is its own tab in Compute; @arck8s opens its Kubernetes sub-tab.

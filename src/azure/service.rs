@@ -81,7 +81,9 @@ pub enum ServiceType {
     /// connections, runbook content or job output.
     Automation,
     /// ARM deployments (#225): a group's and the subscription's, with
-    /// their operations lazy. Never a parameter's or an output's value.
+    /// their operations lazy; deployment stacks; template specs, with
+    /// their versions lazy. Never a parameter's or an output's value,
+    /// never a template.
     Deployments,
     /// Azure Arc (#199): Arc-enabled servers (extensions lazy), Arc
     /// Kubernetes clusters and Arc private link scopes. Never an
@@ -289,6 +291,11 @@ pub enum JumpView {
     GroupDeployments,
     /// `/subscriptions/{s}/providers/Microsoft.Resources/deployments`.
     SubscriptionDeployments,
+    /// `Microsoft.Resources/deploymentStacks`: the subscription's and
+    /// every group's (#225).
+    DeploymentStacks,
+    /// `Microsoft.Resources/templateSpecs` (#225).
+    TemplateSpecs,
     // Azure Arc (#199)
     ArcMachines,
     ArcClusters,
@@ -389,7 +396,7 @@ impl JumpView {
             | FiredAlerts => ServiceType::Monitor,
             EnterprisePolicies => ServiceType::PowerPlatform,
             AutomationAccounts => ServiceType::Automation,
-            GroupDeployments | SubscriptionDeployments => ServiceType::Deployments,
+            GroupDeployments | SubscriptionDeployments | DeploymentStacks | TemplateSpecs => ServiceType::Deployments,
             ArcMachines | ArcClusters | ArcPrivateLinkScopes => ServiceType::Arc,
             HostPools | AvdApplicationGroups | AvdWorkspaces | ScalingPlans => ServiceType::VirtualDesktop,
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
@@ -485,6 +492,8 @@ impl JumpView {
             AutomationAccounts => "automation-accounts",
             GroupDeployments => "group-deployments",
             SubscriptionDeployments => "subscription-deployments",
+            DeploymentStacks => "deployment-stacks",
+            TemplateSpecs => "template-specs",
             ArcMachines => "arc-machines",
             ArcClusters => "arc-kubernetes",
             ArcPrivateLinkScopes => "arc-private-link-scopes",
@@ -603,6 +612,8 @@ impl JumpView {
             AutomationAccounts => "Accounts",
             GroupDeployments => "Group deployments",
             SubscriptionDeployments => "Subscription deployments",
+            DeploymentStacks => "Stacks",
+            TemplateSpecs => "Template specs",
             ArcMachines => "Servers",
             ArcClusters => "Kubernetes",
             ArcPrivateLinkScopes => "Private link scopes",
@@ -730,6 +741,8 @@ impl JumpView {
             // A deployment (#225): in a group, or at the subscription.
             ("microsoft.resources", ["deployments"]) if resource_group_of(id).is_some() => JumpView::GroupDeployments,
             ("microsoft.resources", ["deployments"]) => JumpView::SubscriptionDeployments,
+            ("microsoft.resources", ["deploymentstacks"]) => JumpView::DeploymentStacks,
+            ("microsoft.resources", ["templatespecs"]) => JumpView::TemplateSpecs,
             ("microsoft.hybridcompute", ["machines"]) => JumpView::ArcMachines,
             ("microsoft.kubernetes", ["connectedclusters"]) => JumpView::ArcClusters,
             ("microsoft.hybridcompute", ["privatelinkscopes"]) => JumpView::ArcPrivateLinkScopes,
@@ -822,7 +835,7 @@ impl JumpView {
     /// subscription of a tenant),
     /// nor `@changes` (one list per time window, its sub-tabs filter it,
     /// and each subscription's Activity Log read is the costliest list),
-    /// nor group deployments (one call per resource group, #225),
+    /// nor group deployments or stacks (one call per resource group, #225),
     /// nor a virtual service's (`@audit`: computed, never listed).
     pub fn fans_out(&self) -> bool {
         use JumpView::*;
@@ -834,6 +847,7 @@ impl JumpView {
                     | AppRegistrations
                     | ManagementGroups
                     | GroupDeployments
+                    | DeploymentStacks
                     | ChangesAll
                     | ChangesActivity
                     | ChangesDeployments
@@ -1031,7 +1045,7 @@ impl ServiceType {
             ServiceType::Monitor => "Log Analytics, App Insights & alerts",
             ServiceType::PowerPlatform => "Power Platform enterprise policies",
             ServiceType::Automation => "Runbooks, schedules, jobs & hybrid workers",
-            ServiceType::Deployments => "ARM & Bicep deployments, their operations & errors",
+            ServiceType::Deployments => "ARM & Bicep deployments, stacks & template specs",
             ServiceType::Arc => "Servers, Kubernetes & private link scopes",
             ServiceType::VirtualDesktop => "Host pools, session hosts, app groups, workspaces & scaling plans",
             ServiceType::ContainerApps => "Container apps, environments, jobs & instances",
@@ -1099,7 +1113,7 @@ impl ServiceType {
             ],
             ServiceType::PowerPlatform => &[EnterprisePolicies],
             ServiceType::Automation => &[AutomationAccounts],
-            ServiceType::Deployments => &[GroupDeployments, SubscriptionDeployments],
+            ServiceType::Deployments => &[GroupDeployments, SubscriptionDeployments, DeploymentStacks, TemplateSpecs],
             ServiceType::Arc => &[ArcMachines, ArcClusters, ArcPrivateLinkScopes],
             ServiceType::VirtualDesktop => &[HostPools, AvdApplicationGroups, AvdWorkspaces, ScalingPlans],
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
@@ -1316,6 +1330,10 @@ impl ServiceType {
             "subdeploy" | "subdeployments" | "subscriptiondeployments" => {
                 (ServiceType::Deployments, Some(JumpView::SubscriptionDeployments))
             }
+            "stack" | "stacks" | "deploymentstack" | "deploymentstacks" => {
+                (ServiceType::Deployments, Some(JumpView::DeploymentStacks))
+            }
+            "ts" | "tspec" | "templatespec" | "templatespecs" => (ServiceType::Deployments, Some(JumpView::TemplateSpecs)),
             "arc" | "azurearc" | "arcserver" | "arcservers" | "arcmachine" | "arcmachines" | "connectedmachine"
             | "connectedmachines" | "hybridcompute" => (ServiceType::Arc, None),
             "arck8s" | "arckubernetes" | "connectedk8s" | "connectedcluster" | "connectedclusters" => {
@@ -1415,7 +1433,7 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health", "@subdeploy"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health", "@subdeploy", "@stack", "@ts"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
@@ -1644,6 +1662,17 @@ mod tests {
             ServiceType::from_prefix("@subdeploy"),
             Some((ServiceType::Deployments, Some(JumpView::SubscriptionDeployments)))
         );
+        // Stacks and template specs (#225); a spec's version is a child.
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Resources/deploymentStacks/orders")), Some(JumpView::DeploymentStacks));
+        assert_eq!(
+            JumpView::for_arm_id("/subscriptions/0000/providers/Microsoft.Resources/deploymentStacks/landing-zone"),
+            Some(JumpView::DeploymentStacks)
+        );
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Resources/templateSpecs/ts")), Some(JumpView::TemplateSpecs));
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Resources/templateSpecs/ts/versions/1.0")), None);
+        assert_eq!(ServiceType::from_prefix("@stack"), Some((ServiceType::Deployments, Some(JumpView::DeploymentStacks))));
+        assert_eq!(ServiceType::from_prefix("@ts"), Some((ServiceType::Deployments, Some(JumpView::TemplateSpecs))));
+        assert!(!JumpView::DeploymentStacks.fans_out() && JumpView::TemplateSpecs.fans_out());
         // `@deploys` stays the @changes source filter.
         assert_eq!(ServiceType::from_prefix("@deploys"), Some((ServiceType::Changes, Some(JumpView::ChangesDeployments))));
         // A runbook is a child: in no list of its own.

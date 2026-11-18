@@ -59,6 +59,12 @@ const PLANTED: &[(&str, &str)] = &[
     ("/deployments/aks-batch-nodepool-scale", "⚠ DeploymentFailed"),
     ("/deployments/aks-batch-nodepool-scale", "⚠ 1 failed"),
     ("/deployments/aks-batch-nodepool-scale", "⚠ failed"),
+    // core: the legacy stack finished with one failed resource (#225):
+    // the reports function's runtime is no longer supported.
+    ("/deploymentStacks/stack-legacy-app", "⚠ 1 (see Resources)"),
+    ("/deploymentStacks/stack-legacy-app", "⚠ DeploymentStackSucceededWithFailures"),
+    ("/deploymentStacks/stack-legacy-app", "⚠ 1 failed"),
+    ("/deploymentStacks/stack-legacy-app", "⚠ func-legacy-reports"),
     // core: the legacy patching runbook failed on its hybrid worker,
     // vm-legacy-app-01, deallocated for 40 days.
     ("/automationAccounts/aa-platform-ops", "⚠ failed"),
@@ -115,6 +121,15 @@ fn planted(id: &str, line: &str) -> bool {
 /// Audit checks the demo's data must trip (`nebaz --demo audit`), each a
 /// planted finding. Each area appends its own.
 const AUDIT_EXPECTED: &[&str] = &[
+    // core: orders-worker-v119 and aks-batch-nodepool-scale are the last
+    // deployment of their groups and failed; stack-orders-platform deletes
+    // what leaves its template; stack-legacy-app denies nothing, detached
+    // disk-legacy-data-01 and failed on func-legacy-reports.
+    "deployment-last-failed",
+    "stack-deletes-on-unmanage",
+    "stack-no-deny-settings",
+    "stack-detached-resources",
+    "stack-failed-resources",
     // core: aa-platform-ops keeps local auth on.
     "automation-local-auth",
     // compute: srv-ams-file-02 is expired and 17 agent releases behind;

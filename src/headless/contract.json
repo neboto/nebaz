@@ -279,7 +279,9 @@
     ],
     "deploy": [
       "group-deployments (deploy)",
-      "subscription-deployments (subdeploy)"
+      "subscription-deployments (subdeploy)",
+      "deployment-stacks (stack)",
+      "template-specs (ts)"
     ],
     "dns": [
       "private-dns-zones (dns)",
@@ -772,6 +774,17 @@
       "Resources",
       "Parameters",
       "Error",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Deployment stack": [
+      "Overview",
+      "Resources",
+      "Settings",
+      "Parameters",
+      "Error",
+      "Access",
       "Activity",
       "Related",
       "Tags"
@@ -1278,6 +1291,14 @@
       "Overview",
       "Details",
       "Locations",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Template spec": [
+      "Overview",
+      "Versions",
       "Access",
       "Activity",
       "Related",

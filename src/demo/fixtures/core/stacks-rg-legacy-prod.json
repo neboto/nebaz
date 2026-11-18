@@ -1,0 +1,82 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Resources/deploymentStacks/stack-legacy-app",
+      "name": "stack-legacy-app",
+      "type": "Microsoft.Resources/deploymentStacks",
+      "tags": {
+        "team": "legacy"
+      },
+      "systemData": {
+        "createdBy": "alex.kim@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-300d}}",
+        "lastModifiedAt": "{{iso:now-40d}}"
+      },
+      "properties": {
+        "description": "The legacy portal and its reports function.",
+        "provisioningState": "succeededWithFailures",
+        "actionOnUnmanage": {
+          "resources": "detach",
+          "resourceGroups": "detach",
+          "managementGroups": "detach"
+        },
+        "denySettings": {
+          "mode": "none",
+          "applyToChildScopes": false,
+          "excludedPrincipals": [],
+          "excludedActions": []
+        },
+        "bypassStackOutOfSyncError": true,
+        "deploymentId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Resources/deployments/stack-legacy-app-26100708",
+        "duration": "PT3M40.9S",
+        "correlationId": "e2b6f1a0-7c35-4d18-a9e4-06d3c5b7f821",
+        "parameters": {
+          "portalSku": {
+            "type": "string",
+            "value": "S1"
+          }
+        },
+        "outputs": {},
+        "resources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/serverfarms/asp-legacy",
+            "status": "managed",
+            "denyStatus": "none"
+          },
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/sites/app-legacy-portal",
+            "status": "managed",
+            "denyStatus": "none"
+          }
+        ],
+        "detachedResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Compute/disks/disk-legacy-data-01"
+          }
+        ],
+        "deletedResources": [],
+        "failedResources": [
+          {
+            "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/sites/func-legacy-reports",
+            "error": {
+              "code": "BadRequest",
+              "message": "The runtime stack 'dotnet|3.1' is no longer supported for new deployments."
+            }
+          }
+        ],
+        "error": {
+          "code": "DeploymentStackSucceededWithFailures",
+          "message": "The deployment stack finished with one failed resource.",
+          "details": [
+            {
+              "code": "BadRequest",
+              "target": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/sites/func-legacy-reports",
+              "message": "The runtime stack 'dotnet|3.1' is no longer supported for new deployments."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

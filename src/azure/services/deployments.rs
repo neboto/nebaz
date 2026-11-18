@@ -1,5 +1,7 @@
 //! Deployments (#225, SERVICES.md rule 47): ARM template and Bicep
-//! deployments, the CloudFormation equivalent. Two sub-tabs:
+//! deployments, the CloudFormation equivalent. Two of the tab's sub-tabs
+//! (stacks and template specs are `deployment_stacks.rs`; this file's
+//! `DeploymentsService` is the provider for all four):
 //!
 //! - **Group deployments**: a subscription has no list of its groups'
 //!   deployments, so the provider lists the resource groups (one call),
@@ -21,6 +23,7 @@ use crate::azure::resource::{
     name_of_id, resource_group_of, scope_related, shell_quote, state_ladder, subscription_of, Resource, ResourceState,
 };
 use crate::azure::service::{AzureService, JumpView, ServiceType};
+use crate::azure::services::deployment_stacks as stacks;
 use crate::azure::services::subscriptions::RESOURCE_GROUPS_API_VERSION;
 use crate::azure::services::{error_rows, finish_stream, json, overview_rows, related_rows, tag_rows, ArmBase, Scope};
 use crate::azure::timeline::{parse_ts, pretty_duration, rg_deployments_path, DEPLOYMENTS_API_VERSION};
@@ -100,7 +103,7 @@ pub fn without_values(v: &Value) -> Value {
 // ── The row ───────────────────────────────────────────────────────────
 
 /// `name: type` for a parameter or an output.
-type Named = (String, String);
+pub(crate) type Named = (String, String);
 
 #[derive(Debug, Clone)]
 pub struct DeploymentRow {
@@ -126,7 +129,7 @@ pub struct DeploymentRow {
     pub error: Option<Value>,
 }
 
-fn named(v: &Value, ptr: &str) -> Vec<Named> {
+pub(crate) fn named(v: &Value, ptr: &str) -> Vec<Named> {
     let mut out: Vec<Named> = v
         .pointer(ptr)
         .and_then(Value::as_object)
@@ -211,24 +214,7 @@ impl DeploymentRow {
     }
 
     fn parameters_rows(&self) -> Vec<(String, String)> {
-        let mut lines = Vec::new();
-        let mut list = |title: &str, none: &str, items: &[Named]| {
-            if !lines.is_empty() {
-                lines.push((String::new(), String::new()));
-            }
-            lines.push((title.to_string(), if items.is_empty() { none.to_string() } else { String::new() }));
-            for (name, kind) in items {
-                lines.push((format!("  {}", name), kind.clone()));
-            }
-        };
-        list("Parameters", "none", &self.parameters);
-        list("Outputs", "none", &self.outputs);
-        lines.push((String::new(), String::new()));
-        lines.push((
-            String::new(),
-            "Names and types only: values are never kept (an output can be a key, a parameter a password)".into(),
-        ));
-        lines
+        parameters_rows(&self.parameters, &self.outputs)
     }
 
     fn error_section_rows(&self) -> Vec<(String, String)> {
@@ -257,8 +243,30 @@ impl DeploymentRow {
     }
 }
 
+/// The Parameters section: parameter and output names and types.
+pub(crate) fn parameters_rows(parameters: &[Named], outputs: &[Named]) -> Vec<(String, String)> {
+    let mut lines = Vec::new();
+    let mut list = |title: &str, none: &str, items: &[Named]| {
+        if !lines.is_empty() {
+            lines.push((String::new(), String::new()));
+        }
+        lines.push((title.to_string(), if items.is_empty() { none.to_string() } else { String::new() }));
+        for (name, kind) in items {
+            lines.push((format!("  {}", name), kind.clone()));
+        }
+    };
+    list("Parameters", "none", parameters);
+    list("Outputs", "none", outputs);
+    lines.push((String::new(), String::new()));
+    lines.push((
+        String::new(),
+        "Names and types only: values are never kept (an output can be a key, a parameter a password)".into(),
+    ));
+    lines
+}
+
 /// One ARM error and its nested `details`, indented by depth.
-fn error_chain(e: &Value, depth: usize, lines: &mut Vec<(String, String)>) {
+pub(crate) fn error_chain(e: &Value, depth: usize, lines: &mut Vec<(String, String)>) {
     // A cyclic or absurdly deep body is not worth the screen.
     if depth > 8 {
         return;
@@ -350,8 +358,8 @@ impl Resource for DeploymentRow {
     }
     fn related(&self) -> Vec<(String, String)> {
         let mut lines = scope_related(&self.base.id);
-        if let Some(spec) = &self.template_spec_id {
-            lines.push(("Template spec version".into(), spec.clone()));
+        if let Some(version) = &self.template_spec_id {
+            lines.push(stacks::spec_link(version));
         }
         for id in self.output_resources.iter().take(MAX_RELATED) {
             lines.push((format!("Deployed {}", name_of_id(id)), id.clone()));
@@ -506,108 +514,145 @@ impl DeploymentsService {
         Self { scope }
     }
 
-    /// Every group's deployments, a batch per group as it lands. Returns
-    /// how many rows streamed; `Err` only when nothing could (the group
-    /// list failed, or every group did).
+    /// Every group's deployments ([`stream_per_group`]).
     async fn stream_groups(&self, tx: &mpsc::UnboundedSender<Event>, service: ServiceType) -> Result<usize> {
-        let arm = self.scope.arm()?.clone();
-        let sub = self.scope.current()?.id.clone();
-        let tenant = self.scope.tenant().map(str::to_string);
-        let mut groups: Vec<String> = self
-            .scope
-            .list("/resourcegroups", RESOURCE_GROUPS_API_VERSION)
-            .await?
-            .iter()
-            .filter_map(|g| json::str_at(g, "/name"))
-            .collect();
-        groups.sort_by_key(|g| g.to_lowercase());
-        let mut warnings = Vec::new();
-        if groups.len() > MAX_GROUPS {
-            warnings.push(format!(
-                "Deployments: {} resource groups, the first {} by name read",
-                groups.len(),
-                MAX_GROUPS
-            ));
-            groups.truncate(MAX_GROUPS);
-        }
-        let total_groups = groups.len();
-        let gate = Arc::new(tokio::sync::Semaphore::new(GROUP_CONCURRENCY));
-        let mut tasks = tokio::task::JoinSet::new();
-        for rg in groups {
-            let arm = arm.clone();
-            let gate = gate.clone();
-            let path = rg_deployments_path(&sub, &rg);
-            tasks.spawn(async move {
-                let _permit = gate.acquire_owned().await;
-                let mut items = Vec::new();
-                let r = arm
-                    .list_pages_while(&path, DEPLOYMENTS_API_VERSION, &[], |page| {
-                        items.extend(page);
-                        items.len() < MAX_PER_GROUP
-                    })
-                    .await;
-                (rg, r.map(|_| items))
-            });
-        }
-        let (mut loaded, mut done) = (0usize, 0usize);
-        let mut failed: Vec<(String, Error)> = Vec::new();
-        let mut capped: Vec<String> = Vec::new();
-        while let Some(joined) = tasks.join_next().await {
-            let Ok((rg, result)) = joined else { continue };
-            done += 1;
-            match result {
-                Ok(mut items) => {
-                    if items.len() >= MAX_PER_GROUP {
-                        items.truncate(MAX_PER_GROUP);
-                        capped.push(rg);
-                    }
-                    let resources = rows(&items, tenant.as_deref());
-                    loaded += resources.len();
-                    let _ = tx.send(Event::ResourcesPartiallyLoaded {
-                        service,
-                        resources,
-                        progress: LoadProgress {
-                            loaded_count: loaded,
-                            total_count: None,
-                            status_message: Some(format!("Listing deployments… {}/{} groups", done, total_groups)),
-                        },
-                    });
-                }
-                Err(e) => failed.push((rg, e)),
-            }
-        }
-        if total_groups > 0 && failed.len() == total_groups {
-            failed.sort_by(|a, b| a.0.cmp(&b.0));
-            return Err(failed.remove(0).1);
-        }
-        if !failed.is_empty() {
-            failed.sort_by(|a, b| a.0.cmp(&b.0));
-            let (rg, e) = &failed[0];
-            warnings.push(format!(
-                "Deployments unread in {} of {} groups (first: {}: {})",
-                failed.len(),
-                total_groups,
-                rg,
-                first_line(&e.to_string())
-            ));
-        }
-        if !capped.is_empty() {
-            capped.sort();
-            warnings.push(format!(
-                "Deployments: the first {} read in {} ({})",
-                MAX_PER_GROUP,
-                if capped.len() == 1 { "one group".to_string() } else { format!("{} groups", capped.len()) },
-                capped.join(", ")
-            ));
-        }
-        for warning in warnings {
-            let _ = tx.send(Event::ResourceLoadWarning { service, warning });
-        }
-        Ok(loaded)
+        stream_per_group(&self.scope, tx, service, &GROUP_DEPLOYMENTS, 0).await
     }
 }
 
-fn first_line(e: &str) -> String {
+/// A page of ARM bodies (and the tenant) as rows.
+pub type PageRows = fn(&[Value], Option<&str>) -> Vec<Box<dyn Resource>>;
+
+/// One collection read once per resource group: what it is called, where
+/// it lives in a group, and how a page becomes rows.
+pub struct GroupFanOut {
+    /// `Deployments`, `Stacks`: the head of a warning.
+    pub noun: &'static str,
+    /// `deployments`, `stacks`: the progress line.
+    pub listing: &'static str,
+    /// `(subscription, group)` → the collection's path.
+    pub path: fn(&str, &str) -> String,
+    pub api_version: &'static str,
+    pub rows: PageRows,
+}
+
+const GROUP_DEPLOYMENTS: GroupFanOut = GroupFanOut {
+    noun: "Deployments",
+    listing: "deployments",
+    path: rg_deployments_path,
+    api_version: DEPLOYMENTS_API_VERSION,
+    rows,
+};
+
+/// A per-group collection across the subscription, a batch per group as it
+/// lands: the resource groups (one call), then each group's list,
+/// [`GROUP_CONCURRENCY`] at a time, at most [`MAX_GROUPS`] groups and
+/// [`MAX_PER_GROUP`] rows each. `already` is how many rows the caller has
+/// streamed (the progress count). Returns how many rows streamed here;
+/// `Err` only when nothing could (the group list failed, or every group
+/// did).
+pub async fn stream_per_group(
+    scope: &Scope,
+    tx: &mpsc::UnboundedSender<Event>,
+    service: ServiceType,
+    fan: &GroupFanOut,
+    already: usize,
+) -> Result<usize> {
+    let arm = scope.arm()?.clone();
+    let sub = scope.current()?.id.clone();
+    let tenant = scope.tenant().map(str::to_string);
+    let mut groups: Vec<String> = scope
+        .list("/resourcegroups", RESOURCE_GROUPS_API_VERSION)
+        .await?
+        .iter()
+        .filter_map(|g| json::str_at(g, "/name"))
+        .collect();
+    groups.sort_by_key(|g| g.to_lowercase());
+    let mut warnings = Vec::new();
+    if groups.len() > MAX_GROUPS {
+        warnings.push(format!("{}: {} resource groups, the first {} by name read", fan.noun, groups.len(), MAX_GROUPS));
+        groups.truncate(MAX_GROUPS);
+    }
+    let total_groups = groups.len();
+    let gate = Arc::new(tokio::sync::Semaphore::new(GROUP_CONCURRENCY));
+    let mut tasks = tokio::task::JoinSet::new();
+    for rg in groups {
+        let arm = arm.clone();
+        let gate = gate.clone();
+        let path = (fan.path)(&sub, &rg);
+        let api_version = fan.api_version;
+        tasks.spawn(async move {
+            let _permit = gate.acquire_owned().await;
+            let mut items = Vec::new();
+            let r = arm
+                .list_pages_while(&path, api_version, &[], |page| {
+                    items.extend(page);
+                    items.len() < MAX_PER_GROUP
+                })
+                .await;
+            (rg, r.map(|_| items))
+        });
+    }
+    let (mut loaded, mut done) = (0usize, 0usize);
+    let mut failed: Vec<(String, Error)> = Vec::new();
+    let mut capped: Vec<String> = Vec::new();
+    while let Some(joined) = tasks.join_next().await {
+        let Ok((rg, result)) = joined else { continue };
+        done += 1;
+        match result {
+            Ok(mut items) => {
+                if items.len() >= MAX_PER_GROUP {
+                    items.truncate(MAX_PER_GROUP);
+                    capped.push(rg);
+                }
+                let resources = (fan.rows)(&items, tenant.as_deref());
+                loaded += resources.len();
+                let _ = tx.send(Event::ResourcesPartiallyLoaded {
+                    service,
+                    resources,
+                    progress: LoadProgress {
+                        loaded_count: already + loaded,
+                        total_count: None,
+                        status_message: Some(format!("Listing {}… {}/{} groups", fan.listing, done, total_groups)),
+                    },
+                });
+            }
+            Err(e) => failed.push((rg, e)),
+        }
+    }
+    if total_groups > 0 && failed.len() == total_groups {
+        failed.sort_by(|a, b| a.0.cmp(&b.0));
+        return Err(failed.remove(0).1);
+    }
+    if !failed.is_empty() {
+        failed.sort_by(|a, b| a.0.cmp(&b.0));
+        let (rg, e) = &failed[0];
+        warnings.push(format!(
+            "{} unread in {} of {} groups (first: {}: {})",
+            fan.noun,
+            failed.len(),
+            total_groups,
+            rg,
+            first_line(&e.to_string())
+        ));
+    }
+    if !capped.is_empty() {
+        capped.sort();
+        warnings.push(format!(
+            "{}: the first {} read in {} ({})",
+            fan.noun,
+            MAX_PER_GROUP,
+            if capped.len() == 1 { "one group".to_string() } else { format!("{} groups", capped.len()) },
+            capped.join(", ")
+        ));
+    }
+    for warning in warnings {
+        let _ = tx.send(Event::ResourceLoadWarning { service, warning });
+    }
+    Ok(loaded)
+}
+
+pub(crate) fn first_line(e: &str) -> String {
     let first = e.lines().next().unwrap_or(e);
     if first.chars().count() > 160 {
         format!("{}…", first.chars().take(160).collect::<String>())
@@ -660,15 +705,39 @@ impl AzureService for DeploymentsService {
                     )
                     .await
             }
+            JumpView::DeploymentStacks => stacks::stream_stacks(&self.scope, &event_tx, service_type).await,
+            JumpView::TemplateSpecs => {
+                let tenant = self.scope.tenant().map(str::to_string);
+                self.scope
+                    .stream(
+                        stacks::TEMPLATE_SPECS_PATH,
+                        stacks::TEMPLATE_SPECS_API_VERSION,
+                        &[],
+                        service_type,
+                        "Listing template specs…",
+                        &event_tx,
+                        |page| stacks::spec_rows(&page, tenant.as_deref()),
+                    )
+                    .await
+            }
             _ => self.stream_groups(&event_tx, service_type).await,
         };
         finish_stream(service_type, r, &event_tx)
     }
 
     async fn get_resource_details(&self, id: &str) -> Result<Box<dyn Resource>> {
-        let v = self.scope.get(id, DEPLOYMENTS_API_VERSION).await?;
-        rows(std::slice::from_ref(&v), self.scope.tenant())
-            .pop()
+        let tenant = self.scope.tenant();
+        let one = match JumpView::for_arm_id(id) {
+            Some(JumpView::DeploymentStacks) => {
+                stacks::stack_rows(&[self.scope.get(id, stacks::STACKS_API_VERSION).await?], tenant)
+            }
+            Some(JumpView::TemplateSpecs) => {
+                stacks::spec_rows(&[self.scope.get(id, stacks::TEMPLATE_SPECS_API_VERSION).await?], tenant)
+            }
+            _ => rows(&[self.scope.get(id, DEPLOYMENTS_API_VERSION).await?], tenant),
+        };
+        one.into_iter()
+            .next()
             .ok_or_else(|| Error::ResourceNotFound(id.to_string()))
     }
 }
@@ -763,7 +832,8 @@ mod tests {
         assert_eq!(r.cli_command().as_deref(), Some("az deployment sub show -n baseline --subscription 0000"));
         assert_eq!(r.template.as_deref(), Some("spec baseline 1.2"));
         let related = r.related();
-        assert!(related.contains(&("Template spec version".to_string(), spec.to_string())));
+        // The spec is a row in Template specs; its version is a child, in no list.
+        assert!(related.contains(&("Template spec baseline 1.2".to_string(), spec.trim_end_matches("/versions/1.2").to_string())));
         assert!(related.contains(&("Deployed rg-net".to_string(), rg.to_string())));
         assert!(r.details().iter().any(|(k, v)| k == "Record kept in" && v == "westeurope"));
         assert_eq!(r.error_section_rows(), vec![(String::new(), "No error".to_string())]);
