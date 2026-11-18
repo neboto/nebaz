@@ -974,6 +974,38 @@ mod tests {
         assert_eq!(defs.len(), curated_metrics(&api).len());
     }
 
+    /// #233: the deallocated VM's empty charts are the story, not a hole in
+    /// the demo. Every curated VM metric has data on a running VM, over the
+    /// week `open --charts 7d` asks for.
+    #[test]
+    fn a_running_vm_charts_every_curated_metric_and_the_deallocated_one_none() {
+        let vm = |rg: &str, name: &str| format!("/subscriptions/{PROD}/resourceGroups/{rg}/providers/Microsoft.Compute/virtualMachines/{name}");
+        let running = vm("rg-legacy-prod", "vm-jump-01");
+        let names: Vec<&str> = curated_metrics(&running).iter().map(|m| m.name).collect();
+        assert!(!names.is_empty());
+        let q = format!(
+            "metricnames={}&timespan={}/{}&interval=PT1H&aggregation=Average,Total",
+            names.join(","),
+            iso_utc(NOW - 7 * 86_400),
+            iso_utc(NOW)
+        );
+        let has_data = |id: &str| -> Vec<bool> {
+            let body = ask(&format!("{id}/providers/Microsoft.Insights/metrics"), &q);
+            let series = body["value"].as_array().unwrap().clone();
+            assert_eq!(series.len(), names.len());
+            series
+                .iter()
+                .map(|s| {
+                    let data = s["timeseries"][0]["data"].as_array().unwrap();
+                    assert_eq!(data.len(), 7 * 24);
+                    data.iter().any(|p| p.get("average").is_some() || p.get("total").is_some())
+                })
+                .collect()
+        };
+        assert!(has_data(&running).iter().all(|d| *d), "{names:?}");
+        assert!(has_data(&vm("rg-legacy-prod", "vm-legacy-app-01")).iter().all(|d| !*d));
+    }
+
     #[test]
     fn health_is_planted_or_available_and_alerts_follow_their_target() {
         let worker = format!("/subscriptions/{PROD}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-worker");
