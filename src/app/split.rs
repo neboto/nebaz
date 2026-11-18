@@ -29,6 +29,8 @@ pub struct PendingPlace {
     pub by_name: bool,
     /// From `open`: a section that isn't there is reported.
     pub strict: bool,
+    /// Going back to a place left from a lens: the lens to reopen.
+    pub lens: Option<super::NavLens>,
 }
 
 impl App {
@@ -36,12 +38,13 @@ impl App {
     /// With no host that can split, the command is copied instead, so it
     /// can be pasted into a pane opened by hand.
     pub(super) fn split_out(&mut self) {
-        // Charts reopen at their window; the other in-pane views give the
-        // pane behind them.
+        // Charts reopen at their window, on the row the cursor was on (#232);
+        // the other in-pane views give the pane behind them.
         let chart_window = self.metrics.as_ref().map(|st| st.window);
+        let chart_metric = self.metrics.as_ref().and_then(|st| st.queries.get(st.selected)).map(|q| q.label.clone());
         let place = self
             .current_nav_location()
-            .map(|loc| crate::split::encode_place(&Place { loc, chart_window }));
+            .map(|loc| crate::split::encode_place(&Place { loc, chart_window, chart_metric }));
         let exe = std::env::current_exe()
             .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or_else(|_| "nebaz".to_string());
@@ -102,7 +105,7 @@ impl App {
     /// started at. Called once the startup load is under way, so the
     /// restore resolves as the rows land.
     pub fn restore_startup_location(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
-        let Some(Place { loc, chart_window }) = self.startup_place.take() else {
+        let Some(Place { loc, chart_window, chart_metric }) = self.startup_place.take() else {
             return;
         };
         let open = self.startup_open.take();
@@ -118,10 +121,11 @@ impl App {
             section: open.section.or_else(|| loc.detail_section.clone()),
             chart_window,
             charts: open.charts || chart_window.is_some(),
-            metric: open.metric,
+            metric: open.metric.or(chart_metric),
             full: open.full,
             by_name: open.by_name,
             strict,
+            lens: None,
         });
         self.restore_nav_location(loc, event_tx);
         // Still loading: `resolve_pending_jump` finishes when the row lands.
@@ -149,6 +153,9 @@ impl App {
                 Err(_) => {}
             }
         }
+        if let Some(lens) = p.lens {
+            return self.reopen_nav_lens(lens, event_tx);
+        }
         if p.full {
             self.layout_mode = super::LayoutMode::DetailsOnly;
         }
@@ -166,7 +173,13 @@ impl App {
         let Some(st) = self.metrics.as_mut() else {
             return;
         };
+        // A `|` place's metric may be one picked with `a`, not in the
+        // default set the new process opens: it stays on the first row
+        // quietly. `open --metric` says so.
         if st.queries.is_empty() {
+            if !p.strict {
+                return;
+            }
             self.error_message = Some(format!(
                 "open: no default charts for this type to find {wanted:?} in; pick a metric from the list"
             ));
@@ -174,7 +187,8 @@ impl App {
         }
         match crate::open::match_metric(&st.queries, wanted) {
             Ok(i) => st.selected = i,
-            Err(e) => self.error_message = Some(e),
+            Err(e) if p.strict => self.error_message = Some(e),
+            Err(_) => {}
         }
     }
 

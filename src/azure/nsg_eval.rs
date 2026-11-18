@@ -830,6 +830,12 @@ impl LensLine {
         LensLine { kind, text: text.into(), jump, rule: None }
     }
 
+    /// What finds this line again after a refetch: where it goes and what
+    /// it says (`NavLens::Network`).
+    pub fn key(&self) -> String {
+        format!("{}\u{1f}{}", self.jump.as_deref().unwrap_or(""), self.copy_text())
+    }
+
     /// The text `y` copies.
     pub fn copy_text(&self) -> String {
         match &self.rule {

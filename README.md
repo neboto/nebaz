@@ -230,7 +230,7 @@ strings, app settings and secret values are never fetched.
 | `S` · `R` · `P` | service · location · subscription pickers |
 | `/` · `@svc text` | fuzzy search · switch service and search |
 | `↑`/`↓` in the bar · `←` `→` `Home` `End` | earlier searches (this session); move through the query, so `/` `↑` `←←←` fixes a typo in the last one (`^A` `^E` `Alt-←` `^W` `^U` `^K` `Del` work too) |
-| `⌫` / `Ctrl-O` · `Ctrl-F` · `` ` `` | history back · forward · jump list (the `←` `→` left of the service tabs click the same) |
+| `⌫` / `Ctrl-O` · `Ctrl-F` · `` ` `` | history back · forward · jump list (the `←` `→` left of the service tabs click the same); back from a row followed out of `N`, `U` or `W` reopens the lens on that row |
 | `B` · `'` | bookmark · bookmarks |
 | `,` | macros (record, replay; `--macro NAME` on startup) |
 | `:` | command picker: run any key by name (`:m` metrics; the keys that work on the selection lead; `⏎` presses the key) |

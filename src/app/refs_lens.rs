@@ -178,7 +178,7 @@ impl App {
         self.scan_refs_lens();
     }
 
-    fn close_refs_lens(&mut self) {
+    pub(super) fn close_refs_lens(&mut self) {
         self.refs_lens = None;
         if self.layout_mode == LayoutMode::DetailsOnly {
             self.layout_mode = LayoutMode::Split;
@@ -261,9 +261,11 @@ impl App {
         let Some(row) = self.refs_lens.as_ref().and_then(|st| st.selected_row()).cloned() else {
             return;
         };
-        self.close_refs_lens();
+        // Recorded with the lens still open, so back reopens it (#229);
+        // `jump_to_arm_id` records and closes it the same way.
         if self.all_search_mode {
             self.push_nav_location();
+            self.close_refs_lens();
             self.leave_all_search();
             self.search_query.clear();
             self.load_service_resources();
@@ -280,6 +282,7 @@ impl App {
                 label: format!("{} · {}", view.label(), row.name),
                 details_focused: true,
                 detail_section: None,
+                lens: None,
             };
             self.restore_nav_location(loc, event_tx);
             return;

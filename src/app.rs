@@ -285,6 +285,29 @@ pub struct NavLocation {
     /// name so stale bookmarks survive a pane reshuffle.
     #[serde(default)]
     pub detail_section: Option<String>,
+    /// The lens open over the detail pane when the place was left (`⏎` on
+    /// a lens row records it before following the row), so going back
+    /// reopens the lens on that row. History only: never written, so a
+    /// bookmark or a `|` place gives the pane, not the view (#229).
+    #[serde(skip)]
+    pub lens: Option<NavLens>,
+}
+
+/// Which lens a `NavLocation` reopens, and where its cursor was (the
+/// row's key, found again once the lens has refetched).
+#[derive(Debug, Clone, PartialEq)]
+pub enum NavLens {
+    /// `N`: its direction and the line (`LensLine::key`).
+    Network { direction: crate::ui::widgets::network_lens::LensDirection, row: Option<String> },
+    /// `U`: its service filter and the referrer's id.
+    Refs { filter: Option<ServiceType>, row: Option<String> },
+    /// `W`: its window, filters and the row (`TimelineRow::key`).
+    Timeline {
+        window: crate::azure::timeline::LensWindow,
+        source: Option<crate::azure::timeline::TimelineSource>,
+        include_all: bool,
+        row: Option<String>,
+    },
 }
 
 /// Cap on the navigation timeline length (oldest entries drop off the front).
@@ -720,7 +743,7 @@ impl App {
         }
         if let Some(name) = &cli.bookmark {
             match crate::open::pick_bookmark(&app.bookmarks, name) {
-                Ok(loc) => app.startup_place = Some(crate::split::Place { loc: loc.clone(), chart_window: None }),
+                Ok(loc) => app.startup_place = Some(crate::split::Place { loc: loc.clone(), chart_window: None, chart_metric: None }),
                 Err(e) => app.error_message = Some(e),
             }
         }
@@ -1338,7 +1361,9 @@ impl App {
             }
             return;
         };
+        // Recorded with any lens still open, so back reopens it (#229).
         self.push_nav_location();
+        self.close_lenses();
         // The filter belonged to the pane being left.
         self.clear_detail_filter();
         let loc = NavLocation {
@@ -1350,6 +1375,7 @@ impl App {
             label: format!("{} · {}", view.label(), name_of_id(id)),
             details_focused: true,
             detail_section: None,
+            lens: None,
         };
         self.restore_nav_location(loc, event_tx);
         if view == JumpView::AllResources {
@@ -3455,7 +3481,72 @@ impl App {
             label,
             details_focused: self.details_focused,
             detail_section,
+            lens: self.current_nav_lens(),
         })
+    }
+
+    /// The lens open over the detail pane, for `current_nav_location`.
+    fn current_nav_lens(&self) -> Option<NavLens> {
+        if let Some(st) = &self.network_lens {
+            return Some(NavLens::Network { direction: st.direction, row: st.selected_line().map(|l| l.key()) });
+        }
+        if let Some(st) = &self.refs_lens {
+            return Some(NavLens::Refs { filter: st.service_filter, row: st.selected_row().map(|r| r.id.clone()) });
+        }
+        self.timeline.as_ref().map(|st| NavLens::Timeline {
+            window: st.window,
+            source: st.source_filter,
+            include_all: st.include_all,
+            row: st.selected_row().map(|r| r.key()),
+        })
+    }
+
+    /// Reopen the lens a restored place was left from, on its row, once
+    /// the place's row is selected and the detail pane focused.
+    pub(super) fn reopen_nav_lens(&mut self, lens: NavLens, event_tx: &mpsc::UnboundedSender<Event>) {
+        match lens {
+            NavLens::Network { direction, row } => {
+                self.open_network_lens(event_tx);
+                if let Some(st) = self.network_lens.as_mut() {
+                    st.direction = direction;
+                    st.want = row;
+                    st.rebuild();
+                }
+            }
+            NavLens::Refs { filter, row } => {
+                self.open_refs_lens(event_tx);
+                if let Some(st) = self.refs_lens.as_mut() {
+                    st.want = row;
+                    st.set_service_filter(filter);
+                }
+            }
+            NavLens::Timeline { window, source, include_all, row } => {
+                // The lens opens with the sticky window and `a`; the place's
+                // are what it had.
+                self.timeline_window = window;
+                self.timeline_include_all = include_all;
+                self.open_timeline(event_tx);
+                if let Some(st) = self.timeline.as_mut() {
+                    st.source_filter = source;
+                    st.want = row;
+                    st.rebuild();
+                }
+            }
+        }
+    }
+
+    /// Close whichever of `N`, `U` and `W` is open (a jump leaves it; the
+    /// place it left recorded it first).
+    fn close_lenses(&mut self) {
+        if self.network_lens.is_some() {
+            self.close_network_lens();
+        }
+        if self.refs_lens.is_some() {
+            self.close_refs_lens();
+        }
+        if self.timeline.is_some() {
+            self.close_timeline();
+        }
     }
 
     /// The query a location on `service` records. A `@service …` (or
@@ -3505,6 +3596,14 @@ impl App {
         let Some(loc) = self.current_nav_location() else {
             return;
         };
+        // The same row with a lens open is another place to come back to:
+        // it replaces the plain entry instead of being dropped as a repeat.
+        if loc.lens.is_some() && self.nav_cursor.is_none() && self.is_history_top(&loc) {
+            if let Some(top) = self.nav_history.last_mut() {
+                *top = loc;
+            }
+            return;
+        }
         match self.nav_cursor.take() {
             Some(cursor) => {
                 self.nav_history.truncate(cursor);
@@ -3560,10 +3659,21 @@ impl App {
         self.search_cursor_back = 0;
         self.update_search();
         self.pending_jump = None;
+        // A lens left open over the pane being restored over goes.
+        self.close_lenses();
         if let Some(id) = &loc.selected_id {
             if !self.restore_selection_by_id(id) {
                 // Not visible yet (still loading, or filtered out): land it
-                // when it appears. The section name is not carried over.
+                // when it appears. The section name is not carried over,
+                // unless a lens is to reopen over it.
+                if let Some(lens) = loc.lens.clone() {
+                    self.pending_place = Some(split::PendingPlace {
+                        id: id.clone(),
+                        section: loc.detail_section.clone(),
+                        lens: Some(lens),
+                        ..Default::default()
+                    });
+                }
                 self.pending_jump = Some((id.clone(), loc.details_focused));
                 self.resolve_pending_jump(event_tx);
                 return;
@@ -3580,6 +3690,11 @@ impl App {
                 })
                 .unwrap_or(0);
             self.set_detail_section(idx, event_tx);
+        }
+        if let Some(lens) = loc.lens {
+            if self.selected_index.is_some() {
+                self.reopen_nav_lens(lens, event_tx);
+            }
         }
     }
 
@@ -4415,7 +4530,8 @@ impl App {
                 self.step_changes_window(c == ']')
             }
             KeyCode::Char('B') => {
-                if let Some(loc) = self.current_nav_location() {
+                // A bookmark is the place, not a view over it (#229).
+                if let Some(loc) = self.current_nav_location().map(|loc| NavLocation { lens: None, ..loc }) {
                     self.bookmarks.push(loc);
                     crate::bookmarks::save(&self.bookmarks);
                     self.toast("Bookmarked");

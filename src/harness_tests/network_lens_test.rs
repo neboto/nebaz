@@ -124,3 +124,62 @@ async fn n_on_a_container_apps_environment_reaches_its_infrastructure_subnet() {
     assert_eq!(h.app.current_view, JumpView::ContainerAppEnvironments);
     assert!(!h.render().contains("NETWORK ACCESS"));
 }
+
+/// #229: back from a rule's NSG reopens the lens on the rule line, in its
+/// direction.
+#[tokio::test]
+async fn back_from_a_rules_nsg_reopens_the_lens_on_that_line() {
+    let mut h = Harness::new().await;
+    let subnet = vnet().subnets.remove(0);
+    let subnet_row = subnet.id().to_string();
+    h.install(mocks::Mock { view: JumpView::Subnets, label: "SubnetRow", resource: Box::new(subnet) }).await;
+    warm(&mut h, false);
+
+    h.press(KeyCode::Char('N')).await;
+    h.press(KeyCode::Char('t')).await; // inbound only
+    let st = h.app.network_lens.as_ref().unwrap();
+    // The last rule line, so the cursor is not where a fresh lens starts.
+    let at = st.lines.iter().rposition(|l| l.rule.is_some() && l.jump.is_some()).unwrap();
+    assert!(at > 0);
+    h.press(KeyCode::Char('g')).await;
+    for _ in 0..at {
+        h.press(KeyCode::Char('j')).await;
+    }
+    let key = h.app.network_lens.as_ref().unwrap().selected_line().unwrap().key();
+    h.press(KeyCode::Enter).await;
+    assert!(h.app.network_lens.is_none());
+    assert_eq!(h.app.current_view, JumpView::NetworkSecurityGroups);
+
+    h.press_key(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL)).await;
+    assert_eq!(h.selected_id().as_deref(), Some(subnet_row.as_str()));
+    let st = h.app.network_lens.as_ref().expect("back reopens the lens");
+    assert_eq!(st.direction, crate::ui::widgets::network_lens::LensDirection::Inbound);
+    assert_eq!(st.selected, at);
+    assert_eq!(st.selected_line().unwrap().key(), key);
+}
+
+/// #229: a place whose list is not loaded yet reopens its lens once the
+/// row lands (the pending jump would otherwise drop it).
+#[tokio::test]
+async fn a_place_still_loading_reopens_its_lens_when_the_row_lands() {
+    let mut h = Harness::new().await;
+    warm(&mut h, false);
+    let subnet = vnet().subnets.remove(0);
+    let loc = NavLocation {
+        service: ServiceType::Network,
+        view: Some(JumpView::Subnets),
+        subscription: h.app.subscription_id.clone(),
+        query: String::new(),
+        selected_id: Some(subnet.id().to_string()),
+        label: "Subnets · snet-aca".into(),
+        details_focused: true,
+        detail_section: None,
+        lens: Some(NavLens::Network { direction: Default::default(), row: None }),
+    };
+    h.app.restore_nav_location(loc, &h.tx);
+    assert!(h.app.pending_jump.is_some(), "the Subnets list is not loaded");
+    assert!(h.app.network_lens.is_none());
+    h.land(vec![Box::new(subnet)]).await;
+    assert!(h.app.network_lens.is_some(), "the lens reopens over the landed row");
+    assert!(h.app.details_focused);
+}
