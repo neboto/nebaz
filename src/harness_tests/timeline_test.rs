@@ -194,3 +194,56 @@ async fn the_counts_row_carries_the_ownership_line() {
     let counts = screen.lines().find(|l| l.contains("ACT ")).unwrap_or_default();
     assert!(counts.contains('⛓') && counts.contains("alice"), "{screen}");
 }
+
+/// #229: back from what a row is about reopens the timeline at its window,
+/// and the cursor finds the row again once the refetch lands.
+#[tokio::test]
+async fn back_from_a_rows_target_reopens_the_timeline_on_that_row() {
+    let mut h = Harness::new().await;
+    h.open(JumpView::VirtualMachines).await;
+    h.land(vec![mocks::vm("vm-1", "westeurope")]).await;
+    let nic = arm_id("Microsoft.Network/networkInterfaces/nic-vm-1");
+    let events = {
+        let nic = nic.clone();
+        move || {
+            let mut on_nic = event("2026-10-23T09:00:00Z", "c0", "Microsoft.Network/networkInterfaces/write", "Succeeded");
+            on_nic["resourceId"] = json!(nic);
+            vec![
+                on_nic,
+                event("2026-10-23T12:00:00Z", "c2", "Microsoft.Compute/virtualMachines/deallocate/action", "Failed"),
+            ]
+        }
+    };
+
+    h.press(KeyCode::Char('W')).await;
+    h.press(KeyCode::Char(']')).await; // a month
+    let g = h.app.timeline_generation;
+    let first = events.clone();
+    land(&mut h, g, move |st| {
+        st.since = 0;
+        st.set_activity(first(), false)
+    })
+    .await;
+    let st = h.app.timeline.as_ref().unwrap();
+    let at = st.rows.iter().position(|r| r.target.as_deref() == Some(nic.as_str())).expect("the NIC's row");
+    assert!(at > 0, "newest first: the NIC's write is not the top row");
+    h.press(KeyCode::Char('G')).await;
+    let key = h.app.timeline.as_ref().unwrap().selected_row().unwrap().key();
+    h.press(KeyCode::Char('l')).await;
+    assert!(h.app.timeline.is_none(), "the jump closes the lens");
+    assert_eq!(h.app.current_view, JumpView::Nics);
+
+    h.press_key(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL)).await;
+    assert_eq!(h.app.current_view, JumpView::VirtualMachines);
+    let st = h.app.timeline.as_ref().expect("back reopens the timeline");
+    assert_eq!(st.window, LensWindow::Month);
+    assert_eq!(st.want.as_deref(), Some(key.as_str()), "waiting for its rows");
+    let g = h.app.timeline_generation;
+    land(&mut h, g, move |st| {
+        st.since = 0;
+        st.set_activity(events(), false)
+    })
+    .await;
+    let st = h.app.timeline.as_ref().unwrap();
+    assert_eq!(st.selected_row().map(|r| r.key()), Some(key));
+}

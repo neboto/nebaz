@@ -132,7 +132,7 @@ async fn a_bookmark_opens_as_it_was_saved() {
     let mut loc = place.loc;
     loc.detail_section = Some("Tags".into());
     let mut h = Harness::new().await;
-    h.app.startup_place = Some(crate::split::Place { loc, chart_window: None });
+    h.app.startup_place = Some(crate::split::Place { loc, chart_window: None, chart_metric: None });
     h.app.restore_startup_location(&h.tx);
     h.settle().await;
     h.land(rows()).await;

@@ -156,7 +156,7 @@ impl App {
         });
     }
 
-    fn close_network_lens(&mut self) {
+    pub(super) fn close_network_lens(&mut self) {
         self.network_lens = None;
         if self.layout_mode == LayoutMode::DetailsOnly {
             self.layout_mode = LayoutMode::Split;
@@ -192,7 +192,7 @@ impl App {
             // Go to the line's NSG (or subnet / NIC); Ctrl-O comes back.
             KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
                 if let Some(id) = st.selected_line().and_then(|l| l.jump.clone()) {
-                    self.close_network_lens();
+                    // The jump records the place with the lens open, then closes it.
                     self.jump_to_arm_id(&id, event_tx);
                 }
             }

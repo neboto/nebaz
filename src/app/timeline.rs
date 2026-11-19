@@ -261,7 +261,7 @@ impl App {
         });
     }
 
-    fn close_timeline(&mut self) {
+    pub(super) fn close_timeline(&mut self) {
         self.timeline = None;
         self.metrics_parked = None;
         if self.layout_mode == LayoutMode::DetailsOnly {
@@ -327,7 +327,7 @@ impl App {
             KeyCode::Char('l') | KeyCode::Right => {
                 let target = st.selected_row().and_then(|r| r.target.clone());
                 if let Some(id) = target.filter(|t| !t.eq_ignore_ascii_case(&st.resource_id)) {
-                    self.close_timeline();
+                    // The jump records the place with the lens open, then closes it.
                     self.jump_to_arm_id(&id, event_tx);
                 }
             }

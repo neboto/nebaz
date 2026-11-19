@@ -52,9 +52,11 @@
 # ── View defaults ────────────────────────────────────────────────────────────
 
 # Start in watch mode: auto-refresh the current view. `w` toggles it at
-# runtime, `+`/`-` step through the interval presets (5–300 seconds).
+# runtime, `+`/`-` step through the interval presets (15, 30, 60, 120, 300
+# seconds; a value between them is clamped to 15–300). With the charts (`m`)
+# open, watch refetches them instead, never more than once a minute.
 # watch = true
-# watch_interval = 10
+# watch_interval = 30
 
 # Start with the flat detail view — every section concatenated into one scroll
 # instead of one section at a time. `\` toggles it at runtime.

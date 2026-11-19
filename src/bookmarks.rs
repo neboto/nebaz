@@ -107,6 +107,7 @@ mod tests {
             label: "AKS · c".to_string(),
             details_focused: true,
             detail_section: Some("Node Pools".to_string()),
+            lens: None,
         };
         let json = serde_json::to_string(std::slice::from_ref(&loc)).unwrap();
         let back: Vec<NavLocation> = serde_json::from_str(&json).unwrap();
@@ -131,6 +132,7 @@ mod tests {
             label: "AKS".to_string(),
             details_focused: true,
             detail_section: Some("Tags".to_string()),
+            lens: None,
         };
         let mut value = serde_json::to_value(&loc).unwrap();
         let obj = value.as_object_mut().unwrap();
@@ -161,6 +163,7 @@ mod tests {
             label: label.to_string(),
             details_focused: false,
             detail_section: None,
+            lens: None,
         }
     }
 

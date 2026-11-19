@@ -160,6 +160,7 @@ mod automation;
 mod deployments;
 mod virtual_desktop;
 mod split;
+mod watch;
 mod arc;
 mod info_card;
 mod network_asg;
@@ -285,6 +286,29 @@ pub struct NavLocation {
     /// name so stale bookmarks survive a pane reshuffle.
     #[serde(default)]
     pub detail_section: Option<String>,
+    /// The lens open over the detail pane when the place was left (`⏎` on
+    /// a lens row records it before following the row), so going back
+    /// reopens the lens on that row. History only: never written, so a
+    /// bookmark or a `|` place gives the pane, not the view (#229).
+    #[serde(skip)]
+    pub lens: Option<NavLens>,
+}
+
+/// Which lens a `NavLocation` reopens, and where its cursor was (the
+/// row's key, found again once the lens has refetched).
+#[derive(Debug, Clone, PartialEq)]
+pub enum NavLens {
+    /// `N`: its direction and the line (`LensLine::key`).
+    Network { direction: crate::ui::widgets::network_lens::LensDirection, row: Option<String> },
+    /// `U`: its service filter and the referrer's id.
+    Refs { filter: Option<ServiceType>, row: Option<String> },
+    /// `W`: its window, filters and the row (`TimelineRow::key`).
+    Timeline {
+        window: crate::azure::timeline::LensWindow,
+        source: Option<crate::azure::timeline::TimelineSource>,
+        include_all: bool,
+        row: Option<String>,
+    },
 }
 
 /// Cap on the navigation timeline length (oldest entries drop off the front).
@@ -344,14 +368,15 @@ impl ListLoad {
     }
 }
 
-/// Watch-mode (auto-refresh) state. Kept even though watch mode is fog for
-/// the first release: the status bar and the `w` toggle key on it, and the
+/// Watch-mode (auto-refresh) state; the loop is `src/app/watch.rs`. The
 /// ARM-throttling question is about the *interval floor*, not the shape.
 #[derive(Debug, Clone)]
 pub struct WatchState {
     pub enabled: bool,
     pub interval: Duration,
     pub last_refresh: Option<Instant>,
+    /// The failure last reported: the same one again is not repeated.
+    pub failed: Option<String>,
 }
 
 /// `+`/`-` step through these interval presets (seconds). The floor is
@@ -370,7 +395,17 @@ impl WatchState {
             enabled,
             interval: Duration::from_secs(secs),
             last_refresh: None,
+            failed: None,
         }
+    }
+
+    /// Whether `error` is news: not the failure already reported.
+    pub fn report(&mut self, error: &str) -> bool {
+        if self.failed.as_deref() == Some(error) {
+            return false;
+        }
+        self.failed = Some(error.to_string());
+        true
     }
 
     pub fn due(&self, blocked: bool) -> bool {
@@ -720,7 +755,7 @@ impl App {
         }
         if let Some(name) = &cli.bookmark {
             match crate::open::pick_bookmark(&app.bookmarks, name) {
-                Ok(loc) => app.startup_place = Some(crate::split::Place { loc: loc.clone(), chart_window: None }),
+                Ok(loc) => app.startup_place = Some(crate::split::Place { loc: loc.clone(), chart_window: None, chart_metric: None }),
                 Err(e) => app.error_message = Some(e),
             }
         }
@@ -996,8 +1031,10 @@ impl App {
             return;
         };
         // Before the cache check: a cache hit must retire the old stream
-        // too, or its late `ResourcesLoaded` lands on the cached view.
+        // too, or its late `ResourcesLoaded` lands on the cached view. A
+        // watch pass in flight goes with it: its rows were the old list's.
         self.supersede_loads();
+        self.watch_staging = None;
         // `@*` owns `resources`: re-search the (new subscription's) caches.
         if self.all_search_mode {
             self.update_search();
@@ -1338,7 +1375,9 @@ impl App {
             }
             return;
         };
+        // Recorded with any lens still open, so back reopens it (#229).
         self.push_nav_location();
+        self.close_lenses();
         // The filter belonged to the pane being left.
         self.clear_detail_filter();
         let loc = NavLocation {
@@ -1350,6 +1389,7 @@ impl App {
             label: format!("{} · {}", view.label(), name_of_id(id)),
             details_focused: true,
             detail_section: None,
+            lens: None,
         };
         self.restore_nav_location(loc, event_tx);
         if view == JumpView::AllResources {
@@ -3455,7 +3495,72 @@ impl App {
             label,
             details_focused: self.details_focused,
             detail_section,
+            lens: self.current_nav_lens(),
         })
+    }
+
+    /// The lens open over the detail pane, for `current_nav_location`.
+    fn current_nav_lens(&self) -> Option<NavLens> {
+        if let Some(st) = &self.network_lens {
+            return Some(NavLens::Network { direction: st.direction, row: st.selected_line().map(|l| l.key()) });
+        }
+        if let Some(st) = &self.refs_lens {
+            return Some(NavLens::Refs { filter: st.service_filter, row: st.selected_row().map(|r| r.id.clone()) });
+        }
+        self.timeline.as_ref().map(|st| NavLens::Timeline {
+            window: st.window,
+            source: st.source_filter,
+            include_all: st.include_all,
+            row: st.selected_row().map(|r| r.key()),
+        })
+    }
+
+    /// Reopen the lens a restored place was left from, on its row, once
+    /// the place's row is selected and the detail pane focused.
+    pub(super) fn reopen_nav_lens(&mut self, lens: NavLens, event_tx: &mpsc::UnboundedSender<Event>) {
+        match lens {
+            NavLens::Network { direction, row } => {
+                self.open_network_lens(event_tx);
+                if let Some(st) = self.network_lens.as_mut() {
+                    st.direction = direction;
+                    st.want = row;
+                    st.rebuild();
+                }
+            }
+            NavLens::Refs { filter, row } => {
+                self.open_refs_lens(event_tx);
+                if let Some(st) = self.refs_lens.as_mut() {
+                    st.want = row;
+                    st.set_service_filter(filter);
+                }
+            }
+            NavLens::Timeline { window, source, include_all, row } => {
+                // The lens opens with the sticky window and `a`; the place's
+                // are what it had.
+                self.timeline_window = window;
+                self.timeline_include_all = include_all;
+                self.open_timeline(event_tx);
+                if let Some(st) = self.timeline.as_mut() {
+                    st.source_filter = source;
+                    st.want = row;
+                    st.rebuild();
+                }
+            }
+        }
+    }
+
+    /// Close whichever of `N`, `U` and `W` is open (a jump leaves it; the
+    /// place it left recorded it first).
+    fn close_lenses(&mut self) {
+        if self.network_lens.is_some() {
+            self.close_network_lens();
+        }
+        if self.refs_lens.is_some() {
+            self.close_refs_lens();
+        }
+        if self.timeline.is_some() {
+            self.close_timeline();
+        }
     }
 
     /// The query a location on `service` records. A `@service …` (or
@@ -3505,6 +3610,14 @@ impl App {
         let Some(loc) = self.current_nav_location() else {
             return;
         };
+        // The same row with a lens open is another place to come back to:
+        // it replaces the plain entry instead of being dropped as a repeat.
+        if loc.lens.is_some() && self.nav_cursor.is_none() && self.is_history_top(&loc) {
+            if let Some(top) = self.nav_history.last_mut() {
+                *top = loc;
+            }
+            return;
+        }
         match self.nav_cursor.take() {
             Some(cursor) => {
                 self.nav_history.truncate(cursor);
@@ -3560,10 +3673,21 @@ impl App {
         self.search_cursor_back = 0;
         self.update_search();
         self.pending_jump = None;
+        // A lens left open over the pane being restored over goes.
+        self.close_lenses();
         if let Some(id) = &loc.selected_id {
             if !self.restore_selection_by_id(id) {
                 // Not visible yet (still loading, or filtered out): land it
-                // when it appears. The section name is not carried over.
+                // when it appears. The section name is not carried over,
+                // unless a lens is to reopen over it.
+                if let Some(lens) = loc.lens.clone() {
+                    self.pending_place = Some(split::PendingPlace {
+                        id: id.clone(),
+                        section: loc.detail_section.clone(),
+                        lens: Some(lens),
+                        ..Default::default()
+                    });
+                }
                 self.pending_jump = Some((id.clone(), loc.details_focused));
                 self.resolve_pending_jump(event_tx);
                 return;
@@ -3580,6 +3704,11 @@ impl App {
                 })
                 .unwrap_or(0);
             self.set_detail_section(idx, event_tx);
+        }
+        if let Some(lens) = loc.lens {
+            if self.selected_index.is_some() {
+                self.reopen_nav_lens(lens, event_tx);
+            }
         }
     }
 
@@ -3791,7 +3920,10 @@ impl App {
             Event::Key(key) => self.handle_key(key, event_tx),
             Event::Mouse(mouse) => self.handle_mouse(mouse, event_tx),
             Event::Resize => {}
-            Event::Tick => self.tick_count = self.tick_count.wrapping_add(1),
+            Event::Tick => {
+                self.tick_count = self.tick_count.wrapping_add(1);
+                self.watch_tick(event_tx);
+            }
             Event::UpdateAvailable(latest) => self.update_available = Some(latest),
 
             Event::LoadStream { generation, event } => {
@@ -3879,8 +4011,13 @@ impl App {
                     return;
                 }
                 self.auth_error = None;
+                let watched = self.watch_staging.take().is_some();
+                let keep = self.get_selected_resource_id().filter(|_| watched);
                 self.resources = resources;
-                self.finish_load(service, event_tx);
+                self.finish_load(service, watched, event_tx);
+                if let Some(id) = keep {
+                    self.restore_selection_by_id(&id);
+                }
             }
             Event::ResourcesPartiallyLoaded {
                 service,
@@ -3891,6 +4028,13 @@ impl App {
                     return;
                 }
                 self.auth_error = None;
+                // A watch pass: the rows on screen stay until the whole set
+                // has landed (`ResourcesFullyLoaded` swaps it in).
+                if let Some(staging) = self.watch_staging.as_mut() {
+                    staging.extend(resources);
+                    self.loading_progress = Some(progress);
+                    return;
+                }
                 self.resources.extend(resources);
                 self.loading_progress = Some(progress);
                 self.update_search();
@@ -3899,10 +4043,31 @@ impl App {
             }
             Event::ResourcesFullyLoaded { service, .. } => {
                 if Some(service) == self.current_service {
-                    self.finish_load(service, event_tx);
+                    // A watch pass swaps its set in at once, the row kept.
+                    let staged = self.watch_staging.take();
+                    let watched = staged.is_some();
+                    let keep = self.get_selected_resource_id().filter(|_| watched);
+                    if let Some(rows) = staged {
+                        self.resources = rows;
+                    }
+                    self.finish_load(service, watched, event_tx);
+                    if let Some(id) = keep {
+                        self.restore_selection_by_id(&id);
+                    }
                 }
             }
             Event::ResourceLoadError { service, error, auth } => {
+                // A failed watch pass keeps the rows it was refreshing.
+                if Some(service) == self.current_service && self.watch_staging.take().is_some() {
+                    self.loading = false;
+                    self.loading_complete = true;
+                    self.loading_progress = None;
+                    match auth {
+                        Some(a) => self.auth_error = Some(a),
+                        None => self.watch_failed(error),
+                    }
+                    return;
+                }
                 if Some(service) == self.current_service {
                     self.loading = false;
                     self.loading_complete = true;
@@ -3926,14 +4091,26 @@ impl App {
         }
     }
 
-    fn finish_load(&mut self, service: ServiceType, event_tx: &mpsc::UnboundedSender<Event>) {
+    /// `watched`: a watch pass, whose phase failures are said once
+    /// (`watch_failed`) instead of on every pass.
+    fn finish_load(&mut self, service: ServiceType, watched: bool, event_tx: &mpsc::UnboundedSender<Event>) {
         self.loading = false;
         self.loading_complete = true;
         self.loading_progress = None;
         let sub = self.subscription_key();
         self.cache
             .insert(service, &sub, Some(self.cache_variant().to_string()), self.resources.clone());
-        if !self.load_warnings.is_empty() {
+        // Any read of the list restarts watch's interval: `-w` at startup
+        // does not read it twice back to back.
+        self.watch.mark_refreshed();
+        if watched {
+            if self.load_warnings.is_empty() {
+                self.watch.failed = None;
+            } else {
+                let failed = format!("{} phase(s) failed: {}", self.load_warnings.len(), self.load_warnings.join(" · "));
+                self.watch_failed(failed);
+            }
+        } else if !self.load_warnings.is_empty() {
             self.error_message = Some(format!(
                 "{} phase(s) failed: {}",
                 self.load_warnings.len(),
@@ -4395,16 +4572,9 @@ impl App {
             // `Ctrl-W` reshapes the detail preview, like `\` (before the
             // plain `w` arm, which matches any modifier).
             KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => self.toggle_detail_wrap(),
-            KeyCode::Char('w') => {
-                self.watch.enabled = !self.watch.enabled;
-                self.toast(if self.watch.enabled {
-                    "Watch mode on (not yet wired to a refresh loop)"
-                } else {
-                    "Watch mode off"
-                });
-            }
-            KeyCode::Char('+') => self.watch.lengthen(),
-            KeyCode::Char('-') => self.watch.shorten(),
+            KeyCode::Char('w') => self.toggle_watch(),
+            KeyCode::Char('+') => self.step_watch_interval(true),
+            KeyCode::Char('-') => self.step_watch_interval(false),
             KeyCode::Char('Z') => {
                 self.layout_mode = match self.layout_mode {
                     LayoutMode::ListOnly => LayoutMode::Split,
@@ -4415,7 +4585,8 @@ impl App {
                 self.step_changes_window(c == ']')
             }
             KeyCode::Char('B') => {
-                if let Some(loc) = self.current_nav_location() {
+                // A bookmark is the place, not a view over it (#229).
+                if let Some(loc) = self.current_nav_location().map(|loc| NavLocation { lens: None, ..loc }) {
                     self.bookmarks.push(loc);
                     crate::bookmarks::save(&self.bookmarks);
                     self.toast("Bookmarked");

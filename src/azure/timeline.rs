@@ -141,6 +141,12 @@ pub struct TimelineRow {
 }
 
 impl TimelineRow {
+    /// What finds this row again after a refetch: when, what and to what
+    /// (`NavLens::Timeline`).
+    pub fn key(&self) -> String {
+        format!("{}\u{1f}{:?}\u{1f}{}\u{1f}{}", self.ts_secs, self.source, self.what, self.subject)
+    }
+
     pub fn source(&self) -> TimelineSource {
         self.source.unwrap_or(TimelineSource::Activity)
     }

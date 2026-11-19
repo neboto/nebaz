@@ -39,6 +39,7 @@ use ratatui::Terminal;
 use std::sync::Arc;
 
 mod all_search_test;
+mod watch_test;
 mod command_picker_test;
 mod changes_test;
 mod chart_markers_test;

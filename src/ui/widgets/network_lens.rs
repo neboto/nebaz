@@ -77,6 +77,9 @@ pub struct NetworkLensState {
     /// The fetch could not start (no pipeline for the tenant).
     pub error: Option<String>,
     pub selected: usize,
+    /// The line to put the cursor on once the rules land (going back to
+    /// the lens: `NavLens::Network`); a key moved first drops it.
+    pub want: Option<String>,
 }
 
 impl NetworkLensState {
@@ -102,6 +105,12 @@ impl NetworkLensState {
             .as_ref()
             .map(|r| build_lines(r, self.direction.dirs()))
             .unwrap_or_default();
+        if let Some(i) = self.want.as_deref().and_then(|w| self.lines.iter().position(|l| l.key() == w)) {
+            self.selected = i;
+        }
+        if !self.loading {
+            self.want = None;
+        }
         self.selected = self.selected.min(self.lines.len().saturating_sub(1));
     }
 
@@ -128,15 +137,18 @@ impl NetworkLensState {
     }
 
     pub fn move_by(&mut self, delta: isize) {
+        self.want = None;
         let max = self.lines.len().saturating_sub(1) as isize;
         self.selected = (self.selected as isize + delta).clamp(0, max.max(0)) as usize;
     }
 
     pub fn goto_top(&mut self) {
+        self.want = None;
         self.selected = 0;
     }
 
     pub fn goto_bottom(&mut self) {
+        self.want = None;
         self.selected = self.lines.len().saturating_sub(1);
     }
 }

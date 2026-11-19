@@ -160,6 +160,7 @@ impl App {
             label: format!("{} · {}", view.label(), row.name()),
             details_focused: true,
             detail_section: None,
+            lens: None,
         };
         // The results (query included) are what back returns to; the
         // restore's own switches record nothing.
