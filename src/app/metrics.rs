@@ -91,8 +91,21 @@ impl App {
     /// switch drops it) and the metrics generation (a reopen, a window
     /// change or `r` supersedes it).
     fn fetch_metrics(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        self.fetch_metrics_as(event_tx, false);
+    }
+
+    /// Watch's pass over the charts (`src/app/watch.rs`): the same fetch,
+    /// but a series that fails keeps the points it had, and the failure is
+    /// said once.
+    pub(super) fn refetch_metrics_watched(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        self.fetch_metrics_as(event_tx, true);
+    }
+
+    fn fetch_metrics_as(&mut self, event_tx: &mpsc::UnboundedSender<Event>, watched: bool) {
+        // Every chart fetch restarts watch's minute.
+        self.watch.mark_refreshed();
         if self.metrics.as_ref().is_some_and(|st| st.waf_on && st.waf.is_some()) {
-            return self.fetch_waf_view(event_tx);
+            return self.fetch_waf_view(event_tx, watched);
         }
         self.metrics_generation += 1;
         let generation = self.metrics_generation;
@@ -131,8 +144,15 @@ impl App {
                 if app.metrics_generation != generation {
                     return;
                 }
-                if let Some(st) = app.metrics.as_mut() {
-                    st.set_series(end, series);
+                let Some(st) = app.metrics.as_mut() else {
+                    return;
+                };
+                if !watched {
+                    return st.set_series(end, series);
+                }
+                match st.set_series_watched(end, series) {
+                    Some(e) => app.watch_failed(e),
+                    None => app.watch.failed = None,
                 }
             });
             let _ = tx.send(Event::Lazy(LazyApply { epoch, apply }));
@@ -142,7 +162,7 @@ impl App {
     /// The WAF view's one task: the action split and the rule tables of
     /// the view's resource, delivered like the series (same epoch and
     /// generation guards).
-    fn fetch_waf_view(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+    fn fetch_waf_view(&mut self, event_tx: &mpsc::UnboundedSender<Event>, watched: bool) {
         self.metrics_generation += 1;
         let generation = self.metrics_generation;
         let Some(st) = self.metrics.as_mut() else {
@@ -180,8 +200,15 @@ impl App {
                 if app.metrics_generation != generation {
                     return;
                 }
-                if let Some(st) = app.metrics.as_mut().filter(|st| st.resource_id == id) {
-                    st.set_waf(data);
+                let Some(st) = app.metrics.as_mut().filter(|st| st.resource_id == id) else {
+                    return;
+                };
+                if !watched {
+                    return st.set_waf(data);
+                }
+                match st.set_waf_watched(data) {
+                    Some(e) => app.watch_failed(e),
+                    None => app.watch.failed = None,
                 }
             });
             let _ = tx.send(Event::Lazy(LazyApply { epoch, apply }));
@@ -393,6 +420,12 @@ impl App {
                 }
             }
             KeyCode::Char('W') if st.picker.is_none() => self.metrics_to_timeline(event_tx),
+            // Watch over the charts (#228). On a gateway or Front Door shown
+            // on its default set, `w` is the way back to the WAF view
+            // (above); watch is then turned on from the list.
+            KeyCode::Char('w') if !ctrl => self.toggle_watch(),
+            KeyCode::Char('+') => self.step_watch_interval(true),
+            KeyCode::Char('-') => self.step_watch_interval(false),
             KeyCode::Char('a') => self.open_metric_picker(event_tx),
             KeyCode::Char('d') => {
                 let queries = curated_queries(&st.resource_id);

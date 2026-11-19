@@ -81,6 +81,44 @@ impl MetricsState {
         self.selected = self.selected.min(self.series.len().saturating_sub(1));
     }
 
+    /// A watch pass (#228): a series that failed keeps the points it had;
+    /// the first failure is returned, to be said once.
+    pub fn set_series_watched(&mut self, end: i64, series: Vec<MetricSeries>) -> Option<String> {
+        let mut failed = None;
+        let series = series
+            .into_iter()
+            .map(|s| match &s.error {
+                Some(e) => {
+                    failed.get_or_insert_with(|| format!("{}: {}", s.label, e));
+                    self.series
+                        .iter()
+                        .find(|o| o.name == s.name && o.aggregation == s.aggregation && o.error.is_none())
+                        .cloned()
+                        .unwrap_or(s)
+                }
+                None => s,
+            })
+            .collect();
+        self.set_series(end, series);
+        failed
+    }
+
+    /// A watch pass of the WAF view: one whose action split failed keeps
+    /// the data it had.
+    pub fn set_waf_watched(&mut self, data: crate::azure::waf_metrics::WafData) -> Option<String> {
+        let had = self.waf.as_ref().is_some_and(|w| w.data.is_some());
+        match data.actions_error.clone() {
+            Some(e) if had => {
+                self.loading = false;
+                Some(e)
+            }
+            failed => {
+                self.set_waf(data);
+                failed
+            }
+        }
+    }
+
     pub fn set_waf(&mut self, data: crate::azure::waf_metrics::WafData) {
         self.loading = false;
         self.end = data.end;
@@ -616,6 +654,39 @@ pub fn render_lines_chart(
 mod tests {
     use super::*;
     use crate::azure::metrics::Aggregation;
+
+    fn series(name: &str, points: Vec<(i64, f64)>, error: Option<&str>) -> MetricSeries {
+        MetricSeries {
+            name: name.into(),
+            label: name.into(),
+            unit: "Percent".into(),
+            aggregation: Aggregation::Average,
+            points,
+            error: error.map(str::to_string),
+        }
+    }
+
+    /// #228: a watch pass whose series fails keeps the points it had; one
+    /// that worked replaces them; the first failure is returned.
+    #[test]
+    fn a_watched_pass_keeps_a_failed_series_points() {
+        let mut st = MetricsState::default();
+        st.set_series(60, vec![series("cpu", vec![(0, 1.0)], None), series("net", vec![(0, 2.0)], None)]);
+        let failed = st.set_series_watched(
+            120,
+            vec![series("cpu", vec![(60, 5.0)], None), series("net", vec![], Some("429 TooManyRequests"))],
+        );
+        assert_eq!(failed.as_deref(), Some("net: 429 TooManyRequests"));
+        assert_eq!(st.series[0].points, [(60, 5.0)]);
+        assert_eq!(st.series[1].points, [(0, 2.0)], "the last points read stay");
+        assert!(st.series[1].error.is_none());
+        assert!(!st.loading);
+        // A series that never read keeps its error: nothing to keep.
+        let mut fresh = MetricsState::default();
+        assert!(fresh.set_series_watched(60, vec![series("cpu", vec![], Some("boom"))]).is_some());
+        assert_eq!(fresh.series[0].error.as_deref(), Some("boom"));
+        assert!(st.set_series_watched(180, vec![series("cpu", vec![], None), series("net", vec![], None)]).is_none());
+    }
 
     #[test]
     fn spark_line_buckets_and_scales() {

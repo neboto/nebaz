@@ -104,8 +104,8 @@ Still to do, in order:
          (LazyStore replaced)
    - [ ] `O` opens the tenant-qualified portal link; `C` on every type
          runs unmodified in a shell
-   - [ ] watch mode on Accounts for five minutes at the 5 s preset:
-         no 429
+   - [ ] watch mode on Storage Accounts for five minutes at the 15 s
+         preset (the lowest): no 429 (#63 if there is one)
    - [ ] not logged in (`az logout`): the one status line, `R` retries
          after `az login`
    Fix what the tour finds, on `main`, as ordinary commits.
