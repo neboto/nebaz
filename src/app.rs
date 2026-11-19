@@ -160,6 +160,7 @@ mod automation;
 mod deployments;
 mod virtual_desktop;
 mod split;
+mod watch;
 mod arc;
 mod info_card;
 mod network_asg;
@@ -367,14 +368,15 @@ impl ListLoad {
     }
 }
 
-/// Watch-mode (auto-refresh) state. Kept even though watch mode is fog for
-/// the first release: the status bar and the `w` toggle key on it, and the
+/// Watch-mode (auto-refresh) state; the loop is `src/app/watch.rs`. The
 /// ARM-throttling question is about the *interval floor*, not the shape.
 #[derive(Debug, Clone)]
 pub struct WatchState {
     pub enabled: bool,
     pub interval: Duration,
     pub last_refresh: Option<Instant>,
+    /// The failure last reported: the same one again is not repeated.
+    pub failed: Option<String>,
 }
 
 /// `+`/`-` step through these interval presets (seconds). The floor is
@@ -393,7 +395,17 @@ impl WatchState {
             enabled,
             interval: Duration::from_secs(secs),
             last_refresh: None,
+            failed: None,
         }
+    }
+
+    /// Whether `error` is news: not the failure already reported.
+    pub fn report(&mut self, error: &str) -> bool {
+        if self.failed.as_deref() == Some(error) {
+            return false;
+        }
+        self.failed = Some(error.to_string());
+        true
     }
 
     pub fn due(&self, blocked: bool) -> bool {
@@ -1019,8 +1031,10 @@ impl App {
             return;
         };
         // Before the cache check: a cache hit must retire the old stream
-        // too, or its late `ResourcesLoaded` lands on the cached view.
+        // too, or its late `ResourcesLoaded` lands on the cached view. A
+        // watch pass in flight goes with it: its rows were the old list's.
         self.supersede_loads();
+        self.watch_staging = None;
         // `@*` owns `resources`: re-search the (new subscription's) caches.
         if self.all_search_mode {
             self.update_search();
@@ -3906,7 +3920,10 @@ impl App {
             Event::Key(key) => self.handle_key(key, event_tx),
             Event::Mouse(mouse) => self.handle_mouse(mouse, event_tx),
             Event::Resize => {}
-            Event::Tick => self.tick_count = self.tick_count.wrapping_add(1),
+            Event::Tick => {
+                self.tick_count = self.tick_count.wrapping_add(1);
+                self.watch_tick(event_tx);
+            }
             Event::UpdateAvailable(latest) => self.update_available = Some(latest),
 
             Event::LoadStream { generation, event } => {
@@ -3994,8 +4011,13 @@ impl App {
                     return;
                 }
                 self.auth_error = None;
+                let watched = self.watch_staging.take().is_some();
+                let keep = self.get_selected_resource_id().filter(|_| watched);
                 self.resources = resources;
-                self.finish_load(service, event_tx);
+                self.finish_load(service, watched, event_tx);
+                if let Some(id) = keep {
+                    self.restore_selection_by_id(&id);
+                }
             }
             Event::ResourcesPartiallyLoaded {
                 service,
@@ -4006,6 +4028,13 @@ impl App {
                     return;
                 }
                 self.auth_error = None;
+                // A watch pass: the rows on screen stay until the whole set
+                // has landed (`ResourcesFullyLoaded` swaps it in).
+                if let Some(staging) = self.watch_staging.as_mut() {
+                    staging.extend(resources);
+                    self.loading_progress = Some(progress);
+                    return;
+                }
                 self.resources.extend(resources);
                 self.loading_progress = Some(progress);
                 self.update_search();
@@ -4014,10 +4043,31 @@ impl App {
             }
             Event::ResourcesFullyLoaded { service, .. } => {
                 if Some(service) == self.current_service {
-                    self.finish_load(service, event_tx);
+                    // A watch pass swaps its set in at once, the row kept.
+                    let staged = self.watch_staging.take();
+                    let watched = staged.is_some();
+                    let keep = self.get_selected_resource_id().filter(|_| watched);
+                    if let Some(rows) = staged {
+                        self.resources = rows;
+                    }
+                    self.finish_load(service, watched, event_tx);
+                    if let Some(id) = keep {
+                        self.restore_selection_by_id(&id);
+                    }
                 }
             }
             Event::ResourceLoadError { service, error, auth } => {
+                // A failed watch pass keeps the rows it was refreshing.
+                if Some(service) == self.current_service && self.watch_staging.take().is_some() {
+                    self.loading = false;
+                    self.loading_complete = true;
+                    self.loading_progress = None;
+                    match auth {
+                        Some(a) => self.auth_error = Some(a),
+                        None => self.watch_failed(error),
+                    }
+                    return;
+                }
                 if Some(service) == self.current_service {
                     self.loading = false;
                     self.loading_complete = true;
@@ -4041,14 +4091,26 @@ impl App {
         }
     }
 
-    fn finish_load(&mut self, service: ServiceType, event_tx: &mpsc::UnboundedSender<Event>) {
+    /// `watched`: a watch pass, whose phase failures are said once
+    /// (`watch_failed`) instead of on every pass.
+    fn finish_load(&mut self, service: ServiceType, watched: bool, event_tx: &mpsc::UnboundedSender<Event>) {
         self.loading = false;
         self.loading_complete = true;
         self.loading_progress = None;
         let sub = self.subscription_key();
         self.cache
             .insert(service, &sub, Some(self.cache_variant().to_string()), self.resources.clone());
-        if !self.load_warnings.is_empty() {
+        // Any read of the list restarts watch's interval: `-w` at startup
+        // does not read it twice back to back.
+        self.watch.mark_refreshed();
+        if watched {
+            if self.load_warnings.is_empty() {
+                self.watch.failed = None;
+            } else {
+                let failed = format!("{} phase(s) failed: {}", self.load_warnings.len(), self.load_warnings.join(" · "));
+                self.watch_failed(failed);
+            }
+        } else if !self.load_warnings.is_empty() {
             self.error_message = Some(format!(
                 "{} phase(s) failed: {}",
                 self.load_warnings.len(),
@@ -4510,16 +4572,9 @@ impl App {
             // `Ctrl-W` reshapes the detail preview, like `\` (before the
             // plain `w` arm, which matches any modifier).
             KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => self.toggle_detail_wrap(),
-            KeyCode::Char('w') => {
-                self.watch.enabled = !self.watch.enabled;
-                self.toast(if self.watch.enabled {
-                    "Watch mode on (not yet wired to a refresh loop)"
-                } else {
-                    "Watch mode off"
-                });
-            }
-            KeyCode::Char('+') => self.watch.lengthen(),
-            KeyCode::Char('-') => self.watch.shorten(),
+            KeyCode::Char('w') => self.toggle_watch(),
+            KeyCode::Char('+') => self.step_watch_interval(true),
+            KeyCode::Char('-') => self.step_watch_interval(false),
             KeyCode::Char('Z') => {
                 self.layout_mode = match self.layout_mode {
                     LayoutMode::ListOnly => LayoutMode::Split,

@@ -139,6 +139,16 @@ not); `ls --subscriptions` drives the same fan-out headlessly.
 rules computed client-side from GETs (never the POST effective calls),
 `SERVICES.md` rule 14.
 
+**Watch mode** (`w`, `-w`, config `watch`; `src/app/watch.rs`, #228): each
+`Tick` asks `watch_tick` whether a pass is due. A list pass re-runs the
+sub-tab's streaming load into `watch_staging` (the rows on screen stay until
+`ResourcesFullyLoaded` swaps the set in, the row kept by id); a failed pass
+keeps the rows and is said once (`WatchState::report`); search, modals, a
+visual selection, an export and the `N`/`U`/`W` lenses hold it over. With
+the charts open watch refetches them instead, never under a minute
+(`CHART_FLOOR`), a failed series keeping its points. Every list read and
+chart fetch restarts the interval.
+
 **Metrics** (`m`; `src/azure/metrics.rs`, `src/app/metrics.rs`,
 `src/ui/widgets/metrics_overlay.rs`): Azure Monitor platform metrics,
 owning the detail pane the same way; the default set is keyed by ARM

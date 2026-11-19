@@ -246,7 +246,7 @@ strings, app settings and secret values are never fetched.
 | `Tab` · `1`–`9` · `H`/`L` | sub-tabs |
 | `z` · `F` · `a` | sort · state filter · hide noisy rows |
 | `V` · `J`/`K` · `^A` | select rows; then `y` copies a Markdown table, `X` deep-exports |
-| `r` / `F5` · `w` | refresh · watch mode |
+| `r` / `F5` · `w` · `+` / `-` | refresh · watch mode (re-reads the list every 30 s, keeping the rows on screen until the new set lands; over the charts it refetches them, at most once a minute) · its interval |
 
 **Detail pane**
 

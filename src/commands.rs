@@ -162,6 +162,7 @@ pub static COMMANDS: &[Command] = &[
     cmd(ListPane, "z", "cycle sort").runs(Key('z')),
     cmd(ListPane, "F", "cycle state filter").runs(Key('F')),
     cmd(ListPane, "r / F5", "refresh service").runs(Key('r')),
+    cmd(ListPane, "w · + / -", "watch: auto-refresh (charts too) · interval").runs(Key('w')),
     cmd(DetailPane, "Tab · 1–9", "sections (flat: headers)"),
     cmd(DetailPane, "j / k · g / G", "line · top / bottom"),
     cmd(DetailPane, "V · J / K · ^A", "select · extend · all"),

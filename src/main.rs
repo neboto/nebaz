@@ -551,13 +551,13 @@ fn render_status_bar(app: &App, area: ratatui::layout::Rect, frame: &mut ratatui
         ));
     }
     if app.watch.enabled {
-        let icon = if app.watch_refresh_active() {
+        let icon = if app.watch_spinning() {
             theme::spinner(app.tick_count).to_string()
         } else {
             "⟳".to_string()
         };
         right_spans.push(Span::styled(
-            format!("{} watch {}s  ", icon, app.watch.interval.as_secs()),
+            format!("{} watch {}s  ", icon, app.watch_cadence().as_secs()),
             Style::default().fg(theme::success()),
         ));
     }
