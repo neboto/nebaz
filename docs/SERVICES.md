@@ -1145,6 +1145,56 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     `stack-failed-resources`. Not checked: a group near the 800-deployment
     limit (the list reads at most 200 per group, so it cannot count).
 
+48. **API Management is its own tab** (#159,
+    `src/azure/services/api_management.rs`, Integration group, after
+    Messaging; `@apim`): one subscription-wide list of
+    `Microsoft.ApiManagement/service` at `2024-05-01` (the newest stable;
+    `2025-09-01-preview` follows). APIs, products, backends and named
+    values are lazy sections, one call per instance each, at most 500
+    (a footer says when the cap was reached), not sub-tabs: each is a
+    child of its instance and in no list of its own. State: the ladder,
+    with `Stopped` as stopped (the ladder alone would read it as a
+    transition). **Platform**: `stv1` is flagged everywhere it shows (the
+    row, Overview, `@audit`): the platform was retired on 31 August 2024.
+    **Network**: the VNet mode (None / External / Internal) with its
+    subnet jumpable, the public IP resource, the public, private and
+    outbound addresses, each extra region (its SKU, subnet, addresses,
+    a disabled gateway). **Hostnames**: the endpoint URLs as text (the
+    `azure-api.net` hosts are on the guard, never called), then each
+    hostname configuration's certificate source, subject and expiry (`⚠`
+    within 30 days or past), the Key Vault secret URL as text, a failed
+    certificate status. **Security**: `customProperties` read as switches
+    (client and backend TLS 1.0 / 1.1 / SSL 3.0 and 3DES on are `⚠`;
+    HTTP/2; each cipher), the minimum control-plane API version (`⚠` when
+    unset), the legacy configuration API and portals, identity, the CA
+    certificates with expiry. **APIs** (by path: type, protocols with
+    plain http `⚠`, backend URL, version, revision, subscription
+    required), **Products** (published or not; one that needs no
+    subscription is `⚠`, its APIs need no key), **Backends** (URL,
+    protocol, the Azure resource in `resourceId` jumpable, credential
+    **kinds** by name, TLS chain and name checks with off `⚠`, a pool's
+    members, circuit-breaker rules), **Named values** (name; plain,
+    secret or Key Vault, with the reference's last refresh `⚠` unless
+    `Success`). Related: subnets, the public IP, private endpoints,
+    identities, and once Backends loads (Related fires it) each backend's
+    resource. **Never kept** (`without_secrets`, before a row or the
+    store holds a body): a certificate's `certificatePassword` and
+    `encodedCertificate`; a named value's `value`, **secret or not** (a
+    plain one comes back in its GET, and people put secrets in plain
+    ones); a backend's header and query **values**, its authorization
+    `parameter`, a proxy's `password`; the user-info and query string of
+    every `url` and `serviceUrl` (a function backend's `?code=`).
+    **Never read**: subscriptions (they own the keys; `listSecrets` is a
+    POST), users, policies (a policy document can carry an inline
+    secret), loggers (their credentials hold an instrumentation key),
+    `listValue` (POST), the gateway itself. `az apim` takes no `--ids`
+    (`id_part=None`): `az apim show -n -g --subscription`, the sections'
+    `az apim api list` / `product list` / `nv list --service-name`; the
+    guard refuses `az apim nv show-secret`. Metrics (rule 19): Requests,
+    Capacity, Duration, Backend duration. `@audit`:
+    `apim-retired-platform` (high), `apim-old-tls` (medium),
+    `apim-certificate-expiring` (high when expired, else medium).
+
 ## The catalog
 
 Every type: Overview first, then Access ⧗ (rule 11), Activity ⧗
@@ -1246,6 +1296,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Redis · Caches | Security (non-SSL port flagged, min TLS (1.0 / 1.1 flagged), Entra auth, access-key auth, `authnotrequired` flagged, public access, identity) · Network ⧗ (public access, VNet injection subnet with static IP (classic Premium), ports, host name as text, private endpoints with their connection status (not Approved flagged), VNet injection together with private endpoints flagged; then the firewall rules ⧗, an empty list flagged when public access is on and nothing else fences it) · Geo-replication ⧗ (linked servers: each linked cache, role, location, state; no call when the list body names none) · (Overview: SKU and family/capacity, shards, replicas per primary, Redis version, zones, host name and ports as text, update channel, max memory policy, persistence) | ladder only (caches report no runtime state); a `Disabled` provisioning state is Unavailable | subnet, private endpoints, user-assigned identities; ⧗ (Related fires Geo-replication's fetch) the linked caches | `az redis show` |
 | Redis · Managed Redis | Security (min TLS, encryption service- or customer-managed with the key identity, public access, identity) · Network (public access, host name as text, private endpoints with status; no firewall or VNet injection exists) · Databases ⧗ (port, client protocol (`Plaintext` flagged), access-key auth, clustering and eviction policy, persistence, modules, Redis version, state, geo-replication group with each linked cluster jumpable) · (Overview: kind, SKU, capacity, high availability, redundancy, zones, Redis version, resource state, host name) | ladder, then `resourceState` (`Running` → Available, `Disabled` / `…Failed` → Unavailable, else Pending) | private endpoints, user-assigned identities, the CMK identity | `az redisenterprise show` (the `redisenterprise` CLI extension) |
 | Messaging · Service Bus | Network ⧗ (effective access in one line; public network access; from the rule set: default action, trusted services, IP rules, VNet rules with each subnet jumpable and whether the service endpoint is required; private endpoints jumpable with connection state; the endpoint host as text, the `privatelink.` zone a private caller must resolve through; IP address type, min TLS, local auth; the tier's limits: VNet rules and private endpoints are Premium only. Deny with no IP or VNet rule is flagged: the service does not enforce it) · Security (local auth, min TLS, Microsoft- or customer-managed keys with the reading identity, infrastructure encryption, identity system / user-assigned) · Queues ⧗ (active, dead-lettered, scheduled and transfer counts from `countDetails`, size, lock duration, max deliveries, sessions, duplicate detection, TTL, partitioning, forwarding) · Topics ⧗ (subscription count, size, TTL, ordering, partitioning) · Access policies ⧗ (names and rights; never keys) · (Overview: status, SKU and messaging units, partitions, zone redundancy, endpoint, geo-replication) | ladder, then `status` (`Active` → available, `Disabled` → stopped) | private endpoints, user-assigned identities, a CMK identity, VNet rule subnets (once the rule set loads) | `az servicebus namespace show` |
+| API Management · Instances (rule 48) | Network (VNet mode, subnet, public IP, addresses, extra regions) · Hostnames (endpoint URLs, each hostname's certificate source, subject, expiry ⚠ within 30 days, Key Vault secret URL, status) · Security (protocol and cipher switches ⚠ on old TLS, minimum API version ⚠ unset, portals, identity, CA certificates) · APIs ⧗ · Products ⧗ · Backends ⧗ · Named values ⧗ · (Overview: SKU and units, platform ⚠ stv1, VNet mode, gateway and developer portal, other regions, publisher, created) | ladder, `Stopped` → stopped | subnets, public IP, private endpoints, identities; ⧗ each backend's resource | `az apim show -n -g --subscription` (no `--ids`) |
 | Messaging · Event Hubs | Network ⧗ · Security · Access policies ⧗ (as Service Bus; Basic has no firewall, VNet rules or private endpoints) · Event hubs ⧗ (partitions, retention and cleanup policy, status, capture on / off with format, window, destination storage account jumpable or Data Lake, container, identity) · (Overview: SKU, throughput / processing / capacity units, auto-inflate maximum, Kafka, dedicated cluster, zone redundancy) | ladder, then `status` | as Service Bus, plus the dedicated cluster and each capture storage account (once Event hubs loads) | `az eventhubs namespace show` |
 | Automation · Accounts (rule 44) | Runbooks ⧗ (type, state with drafts and never-published marked, runtime environment, modified, logging, the schedules that start it, its newest job in the window with ⚠ when failed) · Schedules ⧗ (recurrence, enabled, next run, expiry with ⚠ when an enabled schedule has expired, time zone, the runbooks it starts and the worker group they run on) · Jobs ⧗ (the last 7 days: count and failures, then the newest 25 with runbook, status, ⚠ failed / suspended / blocked / stopped, ended, started by, ran on) · Hybrid workers ⧗ (each group's type and Run As credential name; each worker's type, machine jumpable, IP, last seen with ⚠ after a day) · Configuration (SKU, local auth, public network access, encryption key and identity, identity, hybrid service URL as text, private endpoints) · (Overview: state, SKU, created, modified, description) | ladder, then `state` (`Ok` → Available, `Suspended` / `Unavailable` → Unavailable) | private endpoints, user-assigned and encryption identities; ⧗ the linked Log Analytics workspace, each hybrid worker's VM or Arc machine | `az automation account show --ids` (the `automation` extension) |
 | Azure Arc · Servers (rule 45) | Machine (computer name, FQDN, domain, OS SKU, version and type, kind, cloud provider, manufacturer, model, logical cores, memory, IP addresses, SQL Server discovered, parent cluster) · Agent (status with ⚠ and how long when disconnected or expired, last status change, agent version, automatic upgrade and the last attempt, config mode, extensions and guest configuration allowed, both services, proxy, incoming ports, private link scope jumpable, each error ⚠) · Extensions ⧗ (type, version, automatic upgrade, state ⚠ when failed or at error level, the status message's first line; never settings) · Licensing & patching (license status, Software Assurance, ESU eligibility and licence with ⚠ when eligible and unassigned, key state, the licence jumpable, patch assessment and patch mode) · (Overview: status, OS, agent version, cloud provider, FQDN, identity) | ladder, then `status` (`Connected` → Available, `Disconnected` / `Error` → Unavailable, Expired after 45 days disconnected, `AwaitingConnection` → Pending) | the private link scope, the parent cluster, the ESU licence | `az connectedmachine show --ids` (the `connectedmachine` extension) |
@@ -1323,6 +1374,9 @@ has a fixture test there.
 | `avd-agent-behind` | Host pools + Session hosts ⧗ | a host's agent update failed (`updateState` Failed or `UpgradeFailed`, low); a host on an older agent than the newest any read host runs (info) | low · info |
 | `avd-personal-no-assignment` | Host pools | a Personal pool with no `personalDesktopAssignmentType` | low |
 | `avd-app-group-unpublished` | App groups | no `workspaceArmPath`: no workspace publishes it | info |
+| `apim-retired-platform` | API Management | `platformVersion` stv1 (retired 31 August 2024) | high |
+| `apim-old-tls` | API Management | a client or backend TLS 1.0 / 1.1 / SSL 3.0 or the 3DES switch `true` | medium |
+| `apim-certificate-expiring` | API Management | a hostname certificate expired (high) or expiring within 30 days (medium) | high / medium |
 | `acr-anonymous-pull` | Registries | `anonymousPullEnabled` | high |
 | `app-https-only` | Apps | `httpsOnly` false | high |
 | `app-min-tls` | Apps + Configuration ⧗ | `minTlsVersion` below 1.2 | medium |
@@ -1481,6 +1535,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Managed Redis Databases | 1 per cluster, on demand | `{cluster}/databases` · `2026-09-01` |
 | Service Bus namespaces | 1 | `/providers/Microsoft.ServiceBus/namespaces` · `2026-01-01` |
 | Event Hubs namespaces | 1 | `/providers/Microsoft.EventHub/namespaces` · `2026-01-01` |
+| API Management instances (rule 48) | 1, then per opened instance: its APIs, products, backends and named values (≤ 500 each, on demand; Related fires Backends) | `/providers/Microsoft.ApiManagement/service` · `{service}/apis` · `{service}/products` · `{service}/backends` · `{service}/namedValues` · `2024-05-01` |
 | Network (firewall), Access policies | 1 each per namespace, on demand (Related fires the rule set too; a policy's keys are the `listKeys` POST, never sent) | `{ns}/networkRuleSets/default` · `{ns}/authorizationRules` · `2026-01-01` |
 | Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
@@ -1570,6 +1625,15 @@ it; that floor is #63.
   regardless); `az sql instance-pool show` and `az sql
   instance-failover-group show` argument forms; the instance metrics
   (`avg_cpu_percent`, `storage_space_used_mb`, `reserved_storage_mb`).
+- API Management (#159), built without an Azure login from the Microsoft
+  Learn REST reference (`2024-05-01`) and the CLI `apim` module's
+  `_params.py` (`id_part=None` throughout: the name form). To check:
+  whether the list's `location` is the display name (`East US`, as the
+  Learn example) on every instance; whether a v2 tier reports a
+  `platformVersion` and `Capacity`; the `apis` list's revisions (current
+  only, or every `;rev=`); whether a named value list ever carries a
+  secret one's `value` (stripped regardless); a backend `resourceId`'s
+  form (a management URL or a bare id); the metric names.
 - Azure Virtual Desktop (#198), built without an Azure login from
   azure-rest-api-specs (`desktopvirtualization/…/DesktopVirtualization/stable/2025-10-10`)
   and the CLI `desktopvirtualization` extension (hostpool, applicationgroup

@@ -269,6 +269,11 @@ run avd-scaling-plans ok avdsp '[]' \
   "Scaling plans" \
   "cannot reach 127.0.0.1"
 
+# API Management is its own tab in Integration (#159).
+run apim-instances ok apim '[]' \
+  "APIs, products, backends & named values" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

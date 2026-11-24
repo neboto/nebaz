@@ -1,0 +1,163 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod",
+      "name": "apim-contoso-prod",
+      "type": "Microsoft.ApiManagement/service",
+      "location": "West Europe",
+      "etag": "AAAAAAAZm2c=",
+      "tags": {
+        "env": "prod",
+        "team": "orders",
+        "owner": "alex.kim@contoso.com",
+        "costCenter": "CC-4410"
+      },
+      "sku": {
+        "name": "Premium",
+        "capacity": 1
+      },
+      "zones": [
+        "1"
+      ],
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "5b0f6c2e-8d41-4f7a-a3c9-1e2d7b6f0a94",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "publisherEmail": "api-team@contoso.com",
+        "publisherName": "Contoso Orders",
+        "notificationSenderEmail": "apimgmt-noreply@mail.windowsazure.com",
+        "provisioningState": "Succeeded",
+        "targetProvisioningState": "",
+        "createdAtUtc": "2024-02-12T09:14:03.3310000Z",
+        "gatewayUrl": "https://apim-contoso-prod.azure-api.net",
+        "gatewayRegionalUrl": "https://apim-contoso-prod-westeurope-01.regional.azure-api.net",
+        "developerPortalUrl": "https://apim-contoso-prod.developer.azure-api.net",
+        "managementApiUrl": "https://apim-contoso-prod.management.azure-api.net",
+        "hostnameConfigurations": [
+          {
+            "type": "Proxy",
+            "hostName": "apim-contoso-prod.azure-api.net",
+            "negotiateClientCertificate": false,
+            "defaultSslBinding": false,
+            "certificateSource": "BuiltIn"
+          },
+          {
+            "type": "Proxy",
+            "hostName": "api.contoso.com",
+            "keyVaultId": "https://kv-orders-prod.vault.azure.net/secrets/api-contoso-com",
+            "negotiateClientCertificate": false,
+            "defaultSslBinding": true,
+            "certificateSource": "KeyVault",
+            "certificateStatus": "Completed",
+            "certificate": {
+              "expiry": "{{iso:now+12d}}",
+              "thumbprint": "8C3E7A1F52D9B04E6A2C1D9F7B3E5A0C4D2F6B81",
+              "subject": "CN=api.contoso.com"
+            }
+          },
+          {
+            "type": "DeveloperPortal",
+            "hostName": "developer.contoso.com",
+            "keyVaultId": "https://kv-orders-prod.vault.azure.net/secrets/developer-contoso-com",
+            "negotiateClientCertificate": false,
+            "defaultSslBinding": false,
+            "certificateSource": "KeyVault",
+            "certificateStatus": "Completed",
+            "certificate": {
+              "expiry": "{{iso:now+200d}}",
+              "thumbprint": "2F6B81D9C4E7A0B35D1C8E2A7F4B9036E1D5C2A7",
+              "subject": "CN=developer.contoso.com"
+            }
+          }
+        ],
+        "publicIPAddresses": [
+          "20.86.112.47"
+        ],
+        "customProperties": {
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Ssl30": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls10": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls11": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Ssl30": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Ciphers.TripleDes168": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2": "True"
+        },
+        "virtualNetworkType": "None",
+        "certificates": [],
+        "disableGateway": false,
+        "natGatewayState": "Disabled",
+        "apiVersionConstraint": {
+          "minApiVersion": "2021-08-01"
+        },
+        "configurationApi": {
+          "legacyApi": "Disabled"
+        },
+        "publicNetworkAccess": "Enabled",
+        "platformVersion": "stv2.1",
+        "developerPortalStatus": "Enabled",
+        "legacyPortalStatus": "Disabled"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.ApiManagement/service/apim-legacy-dev",
+      "name": "apim-legacy-dev",
+      "type": "Microsoft.ApiManagement/service",
+      "location": "West Europe",
+      "etag": "AAAAAAAQ1xk=",
+      "tags": {
+        "env": "dev",
+        "team": "platform",
+        "owner": "sam.okafor@contoso.com"
+      },
+      "sku": {
+        "name": "Developer",
+        "capacity": 1
+      },
+      "properties": {
+        "publisherEmail": "platform@contoso.com",
+        "publisherName": "Contoso Platform",
+        "notificationSenderEmail": "apimgmt-noreply@mail.windowsazure.com",
+        "provisioningState": "Succeeded",
+        "targetProvisioningState": "",
+        "createdAtUtc": "2019-05-27T13:40:51.1170000Z",
+        "gatewayUrl": "https://apim-legacy-dev.azure-api.net",
+        "gatewayRegionalUrl": "https://apim-legacy-dev-westeurope-01.regional.azure-api.net",
+        "developerPortalUrl": "https://apim-legacy-dev.developer.azure-api.net",
+        "managementApiUrl": "https://apim-legacy-dev.management.azure-api.net",
+        "portalUrl": "https://apim-legacy-dev.portal.azure-api.net",
+        "hostnameConfigurations": [
+          {
+            "type": "Proxy",
+            "hostName": "apim-legacy-dev.azure-api.net",
+            "negotiateClientCertificate": false,
+            "defaultSslBinding": true,
+            "certificateSource": "BuiltIn"
+          }
+        ],
+        "publicIPAddresses": [
+          "51.137.9.214"
+        ],
+        "customProperties": {
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Ssl30": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls10": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls11": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Ssl30": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Ciphers.TripleDes168": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2": "False"
+        },
+        "virtualNetworkType": "None",
+        "certificates": [],
+        "disableGateway": false,
+        "publicNetworkAccess": "Enabled",
+        "platformVersion": "stv1",
+        "developerPortalStatus": "Enabled",
+        "legacyPortalStatus": "Enabled"
+      }
+    }
+  ]
+}

@@ -125,6 +125,7 @@ Planted findings, one per thing a screen or `@audit` shows off:
 | `mysql-reporting-legacy`: public access, `require_secure_transport` OFF | `@audit` |
 | `vm-nva-01`'s backups in `rsv-contoso-prod` fail (`ExtensionSnapshotFailedNoNetwork`, twice in the last day and a half): its last good recovery point is 57h old; neither vault has multi-user authorization, `bvault-contoso-prod` no immutability | Backup (Protected items, Failed jobs), `@audit` |
 | `sb-orders-prod` queue `orders` has 1,284 dead-lettered messages; local auth on | Messaging |
+| `apim-contoso-prod`'s `api.contoso.com` certificate expires in 12 days; its Status page product needs no subscription; the `partner-feed-key` named value's Key Vault reference fails (Forbidden on `kv-legacy-prod`). `apim-legacy-dev` runs on the retired stv1 platform with TLS 1.0 and 1.1 on, no minimum API version, and a SOAP API over plain http | API Management, `@audit` (high · medium) |
 | `ai-contoso-prod` (Foundry): public network and key auth on | `@audit` |
 | `github-actions-deploy` has Contributor and User Access Administrator on the **subscription** (both granted yesterday by alex; UAA so its Bicep can assign AcrPull) | Access, `@changes`, `@audit` |
 | App registration `orders-api-client`: one client secret expires in 6 days, one expired last month, no owners | `@appreg` |
@@ -272,6 +273,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `amr-orders-sessions` (Azure Managed Redis, Balanced_B5, zone-redundant, identity `id-orders-api`): database `default`, TLS only, access keys off — the `amr` row, nothing planted
 - `sb-orders-prod` (Service Bus Standard): queue `orders` (1,284 dead-lettered), `orders-retry` (forwards to `orders`), topic `order-events` with subscription `billing`; network rule set default action Allow
 - `evh-orders-prod` (Event Hubs namespace, Standard, local auth off): hub `order-telemetry` (8 partitions, 3 days); network rule set Deny with a VNet rule for `snet-aca`, trusted services on
+- `apim-contoso-prod` (API Management Premium ×1, stv2.1, no VNet, zone 1): custom domains `api.contoso.com` and `developer.contoso.com` from `kv-orders-prod`; APIs Orders v1 and v2 (both to `ca-orders-api`) and Partner feed (a function, its `?code=` key stripped); products Starter, Partners (approval) and Status page (open); backends `orders-api` (resource `ca-orders-api`, a header credential, shown by name) and `partner-feed` (a query credential); named values `environment` (plain, its value never kept), `orders-signing-key` (Key Vault, refreshed) and `partner-feed-key` (Key Vault, Forbidden)
 - `appi-orders` (App Insights, workspace-based on `law-contoso-prod`), the alert `orders-api-requests-dropped`
 
 **`rg-platform-prod`** (team platform)
@@ -297,6 +299,7 @@ Redis, `stcontosoordersdev`, `kv-orders-dev`).
 - `disk-legacy-data-01` (1024 GiB Premium_LRS P30, Unattached; last owner change 40 days ago)
 - `nic-vm-legacy-batch-01` (in `snet-jump`, 10.10.8.6) and `pip-vm-legacy-batch-01` (in `rg-network-prod`): what was left of `vm-legacy-batch-01` when it was deleted, a NIC with no VM and a static public IP attached to nothing
 - `kv-legacy-prod` (access policies, public network on, purge protection off)
+- `apim-legacy-dev` (API Management Developer, **stv1**, TLS 1.0 / 1.1 on for clients and backends, no minimum API version): API Inventory (SOAP) on `http://10.10.8.5:8080`, `vm-legacy-app-01`'s address
 - App Service plan `asp-legacy` (S1, Windows) with `app-legacy-portal` (.NET Framework 4, `config/web`: TLS 1.0, FTP `AllAllowed`) and Function app `func-legacy-reports` (HTTPS only, TLS 1.2, FTPS only)
 - `cosmos-legacy` (SQL API, public, key auth on)
 - `mysql-reporting-legacy` (MySQL flexible 8.0, public access, `require_secure_transport` OFF)
@@ -330,5 +333,5 @@ Graph (`directoryObjects`) is `identity`'s.
 | `core` | Subscriptions (subscription details, locations, resource groups, All resources), budgets, Automation, the Activity Log, deployments, Resource Health, alerts, role assignments and definitions, `@changes`, `W`, metrics (`generate.rs`) |
 | `network` | Virtual Network (VNets, subnets, NSGs, public IPs, LBs, route tables, NAT, PEs, flow logs), NICs, ASGs, DNS (Traffic Manager too), Edge (Private Link services too), Hybrid, Virtual WAN, Firewall |
 | `compute` | VMs, disks, Compute Gallery, Azure Arc, Virtual Desktop, AKS, Container Registry, App Service, Static Web Apps, Container Apps, Container Instances |
-| `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, Backup |
+| `data` | Storage, Key Vault, SQL, Cosmos DB, PostgreSQL & MySQL, Redis, Messaging, API Management, Backup |
 | `identity` | Managed identities, service principals, app registrations, directory objects, Power Platform, Monitor (workspaces, App Insights), Foundry, AI Search |

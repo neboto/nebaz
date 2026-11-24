@@ -1,0 +1,22 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.ApiManagement/service/apim-legacy-dev/apis/inventory-soap",
+      "type": "Microsoft.ApiManagement/service/apis",
+      "name": "inventory-soap",
+      "properties": {
+        "displayName": "Inventory (SOAP)",
+        "apiRevision": "1",
+        "subscriptionRequired": true,
+        "serviceUrl": "http://10.10.8.5:8080/InventoryService.svc",
+        "path": "inventory",
+        "protocols": [
+          "http",
+          "https"
+        ],
+        "isCurrent": true,
+        "type": "soap"
+      }
+    }
+  ]
+}

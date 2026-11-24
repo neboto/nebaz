@@ -35,6 +35,18 @@ const PLANTED: &[(&str, &str)] = &[
     ("/providers/Microsoft.Sql/servers/sql-orders-prod/databases/", "not a type nebaz lists"),
     ("/Redis/redis-orders-cache", "6379"),
     ("/namespaces/sb-orders-prod", "dead"),
+    // data (#159): the orders gateway's api.contoso.com certificate is
+    // 12 days from expiry, its Status page product needs no key, and the
+    // partner key's Key Vault reference cannot be read; the legacy dev
+    // instance runs on stv1 with TLS 1.0 and 1.1 on, no minimum API
+    // version, and a SOAP API over plain http.
+    ("/service/apim-contoso-prod", "in 12 days"),
+    ("/service/apim-contoso-prod", "its APIs need no key"),
+    ("/service/apim-contoso-prod", "Forbidden"),
+    ("/service/apim-legacy-dev", "stv1"),
+    ("/service/apim-legacy-dev", "TLS 1."),
+    ("/service/apim-legacy-dev", "Minimum API version"),
+    ("/service/apim-legacy-dev", "plain http"),
     // data: vm-nva-01's backups fail (no network to the backup service).
     ("/vaults/rsv-contoso-prod", "vm-nva-01"),
     // network: the branch office's backup VPN tunnel is down.
@@ -144,6 +156,12 @@ const AUDIT_EXPECTED: &[&str] = &[
     "avd-personal-no-assignment",
     "avd-app-group-unpublished",
     "avd-agent-behind",
+    // data (#159): the legacy dev gateway runs on stv1 with TLS 1.0 and
+    // 1.1 on; the orders gateway's api.contoso.com certificate expires in
+    // 12 days.
+    "apim-retired-platform",
+    "apim-old-tls",
+    "apim-certificate-expiring",
     // core: github-actions-deploy holds User Access Administrator and
     // Contributor on the subscription.
     "sub-privileged-guest-or-sp",

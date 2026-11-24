@@ -376,6 +376,9 @@ impl AzureClients {
                 Arc::new(crate::azure::services::virtual_desktop::VirtualDesktopService::new(scope))
             }
             ServiceType::Arc => Arc::new(crate::azure::services::arc::ArcService::new(scope)),
+            ServiceType::ApiManagement => {
+                Arc::new(crate::azure::services::api_management::ApiManagementService::new(scope))
+            }
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Hybrid => Arc::new(HybridService::new(scope)),

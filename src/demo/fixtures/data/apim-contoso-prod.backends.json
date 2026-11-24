@@ -1,0 +1,48 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/backends/orders-api",
+      "type": "Microsoft.ApiManagement/service/backends",
+      "name": "orders-api",
+      "properties": {
+        "title": "Orders API (Container Apps)",
+        "url": "https://ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+        "protocol": "http",
+        "resourceId": "https://management.azure.com/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.App/containerApps/ca-orders-api",
+        "credentials": {
+          "header": {
+            "x-orders-gateway": [
+              "demo-planted-header-secret"
+            ]
+          }
+        },
+        "tls": {
+          "validateCertificateChain": true,
+          "validateCertificateName": true
+        },
+        "type": "Single"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/backends/partner-feed",
+      "type": "Microsoft.ApiManagement/service/backends",
+      "name": "partner-feed",
+      "properties": {
+        "url": "https://func-partner-feed.azurewebsites.net/api",
+        "protocol": "http",
+        "credentials": {
+          "query": {
+            "code": [
+              "demo-planted-query-key"
+            ]
+          }
+        },
+        "tls": {
+          "validateCertificateChain": true,
+          "validateCertificateName": true
+        },
+        "type": "Single"
+      }
+    }
+  ]
+}

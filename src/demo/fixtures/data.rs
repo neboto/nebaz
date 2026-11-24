@@ -123,6 +123,17 @@ pub static FIXTURES: &[Fixture] = &[
     ),
     // ── Messaging ──
     fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.ServiceBus/namespaces", "sb-namespaces-prod.json"),
+    // ── API Management (#159): the orders gateway (a certificate near
+    //    expiry, an open product, a Key Vault reference it cannot read)
+    //    and a legacy dev instance on the retired stv1 platform ──
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.ApiManagement/service", "apim-services.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/apis", "apim-contoso-prod.apis.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/products", "apim-contoso-prod.products.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/backends", "apim-contoso-prod.backends.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/namedValues", "apim-contoso-prod.named-values.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod", "apim-contoso-prod.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.ApiManagement/service/apim-legacy-dev/apis", "apim-legacy-dev.apis.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.ApiManagement/service/apim-legacy-dev", "apim-legacy-dev.json"),
     fx!(
         "data",
         "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/networkRuleSets/default",

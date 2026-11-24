@@ -111,6 +111,7 @@ pub static CARDS: &[Card] = &[
     Card { views: &[JumpView::AiAccounts], source: include_str!("../docs/cards/foundry.md") },
     Card { views: &[JumpView::SearchServices], source: include_str!("../docs/cards/ai-search.md") },
     Card { views: &[JumpView::ServiceBusNamespaces], source: include_str!("../docs/cards/service-bus.md") },
+    Card { views: &[JumpView::ApimServices], source: include_str!("../docs/cards/api-management.md") },
     Card { views: &[JumpView::EventHubNamespaces], source: include_str!("../docs/cards/event-hubs.md") },
     Card {
         views: &[JumpView::Subscriptions, JumpView::ResourceGroups],

@@ -22,6 +22,7 @@ use crate::azure::graph;
 use crate::azure::resource::{name_of_id, Resource};
 use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
+use crate::azure::services::api_management::ApimServiceRow;
 use crate::azure::services::app_service::SiteRow;
 use crate::azure::services::arc::{self, ArcClusterRow, ArcMachineRow};
 use crate::azure::services::virtual_desktop::{self as avd, AppGroupRow, HostPoolRow, SessionHost};
@@ -104,9 +105,10 @@ const ARC_MACHINES: &[V] = &[V::ArcMachines];
 const ARC_CLUSTERS: &[V] = &[V::ArcClusters];
 const HOST_POOLS: &[V] = &[V::HostPools];
 const AVD_APP_GROUPS: &[V] = &[V::AvdApplicationGroups];
+const APIM: &[V] = &[V::ApimServices];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 89] = [
+pub static CHECKS: [Check; 92] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -843,6 +845,31 @@ pub static CHECKS: [Check; 89] = [
         fix: "Add the group to the workspace its users subscribe to, or delete it if it is left over.",
         sources: &[AVD_APP_GROUPS],
         run: avd_app_group_unpublished,
+    },
+    // ── API Management (#159) ──
+    Check {
+        id: "apim-retired-platform",
+        title: "API Management on the retired stv1 platform",
+        why: "The stv1 compute platform was retired on 31 August 2024: an instance still on it runs without an SLA and can be shut down.",
+        fix: "Migrate the instance to stv2 (in place, or with a new subnet for one in a VNet).",
+        sources: &[APIM],
+        run: apim_retired_platform,
+    },
+    Check {
+        id: "apim-old-tls",
+        title: "API Management accepts TLS 1.0 / 1.1",
+        why: "TLS 1.0 and 1.1 (and SSL 3.0, 3DES) have known weaknesses; a gateway that accepts them, or uses them to backends, lets a downgraded connection through.",
+        fix: "Switch the old protocols and the 3DES cipher off under Protocols + ciphers, after checking no client still needs them.",
+        sources: &[APIM],
+        run: apim_old_tls,
+    },
+    Check {
+        id: "apim-certificate-expiring",
+        title: "API Management custom domain certificate expiring",
+        why: "When a custom hostname's certificate expires, clients calling that hostname fail the TLS handshake. A Key Vault certificate renews only if the reference has no version and the identity can read it.",
+        fix: "Renew the certificate (or fix the Key Vault reference so the instance picks up the renewed one).",
+        sources: &[APIM],
+        run: apim_certificate_expiring,
     },
 ];
 
@@ -2160,6 +2187,48 @@ fn avd_app_group_unpublished(check: &'static Check, input: &AuditInput, out: &mu
                     pool
                 )]),
             );
+        }
+    }
+}
+
+fn apim_retired_platform(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in input.of::<ApimServiceRow>(V::ApimServices) {
+        if s.on_retired_platform() {
+            out.push(
+                AuditFinding::about(check, Severity::High, s, "on stv1")
+                    .with_evidence(vec![format!("platformVersion: stv1 · sku: {}", s.sku_text())]),
+            );
+        }
+    }
+}
+
+fn apim_old_tls(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in input.of::<ApimServiceRow>(V::ApimServices) {
+        let on = s.old_protocols_on();
+        if !on.is_empty() {
+            let what = if on.iter().any(|k| !k.contains("Backend")) { "clients" } else { "backends" };
+            out.push(
+                AuditFinding::about(check, Severity::Medium, s, format!("old protocols on ({what})"))
+                    .with_evidence(on.iter().map(|k| format!("{k}: true")).collect()),
+            );
+        }
+    }
+}
+
+fn apim_certificate_expiring(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for s in input.of::<ApimServiceRow>(V::ApimServices) {
+        for (h, t) in s.certificates_expiring(input.now()) {
+            let (severity, note) = if t <= input.now() {
+                (Severity::High, format!("{} expired", h.host))
+            } else {
+                (Severity::Medium, format!("{} in {} days", h.host, (t - input.now() + 86_399) / 86_400))
+            };
+            out.push(AuditFinding::about(check, severity, s, note).with_evidence(vec![format!(
+                "{} · {} · expiry {}",
+                h.kind,
+                json::opt(h.source.clone()),
+                json::time(h.expiry.clone())
+            )]));
         }
     }
 }

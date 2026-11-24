@@ -457,6 +457,17 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             parse("StaticSiteRow", static_web_apps::StaticSiteRow::from_json(&simple("Microsoft.Web/staticSites/swa-1"), t)),
         ),
         m(
+            JumpView::ApimServices,
+            "ApimServiceRow",
+            parse(
+                "ApimServiceRow",
+                crate::azure::services::api_management::ApimServiceRow::from_json(
+                    &simple("Microsoft.ApiManagement/service/apim-1"),
+                    t,
+                ),
+            ),
+        ),
+        m(
             JumpView::AppServicePlans,
             "PlanRow",
             parse("PlanRow", app_service::PlanRow::from_json(&simple("Microsoft.Web/serverfarms/plan-1"), t)),

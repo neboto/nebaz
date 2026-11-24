@@ -504,10 +504,14 @@ fn profile(name: &str) -> (&'static str, Shape) {
         "availability" => ("Percent", Steady(100.0)),
         "usedcapacity" => ("Bytes", Steady(5.6e11)),
         "storageused" => ("Bytes", Steady(1.9e10)),
-        "serviceapilatency" | "latency" | "totallatency" | "applicationgatewaytotaltime" | "requests/duration" => {
+        "serviceapilatency" | "latency" | "totallatency" | "applicationgatewaytotaltime" | "requests/duration" | "duration" => {
             ("MilliSeconds", Busy(38.0, 30.0))
         }
         "saturationshoebox" => ("Percent", Busy(0.4, 1.2)),
+        // API Management: the backend's share of a call's duration.
+        "backendduration" => ("MilliSeconds", Busy(24.0, 18.0)),
+        // API Management's units.
+        "capacity" => ("Percent", Busy(14.0, 22.0)),
         "totalrequestunits" => ("Count", Traffic(5200.0)),
         "normalizedruconsumption" => ("Percent", Busy(6.0, 22.0)),
         "vipavailability" | "dipavailability" | "datapathavailability" | "originhealthpercentage" => ("Count", Steady(100.0)),
