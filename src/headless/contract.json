@@ -235,6 +235,9 @@
       "clusters (aks)",
       "node-pools (pool)"
     ],
+    "apim": [
+      "apim-services (apim)"
+    ],
     "app": [
       "apps (app)",
       "function-apps (func)",
@@ -398,6 +401,20 @@
       "Projects",
       "Network",
       "Security",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "API Management": [
+      "Overview",
+      "Network",
+      "Hostnames",
+      "Security",
+      "APIs",
+      "Products",
+      "Backends",
+      "Named values",
       "Access",
       "Activity",
       "Related",

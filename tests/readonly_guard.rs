@@ -49,6 +49,9 @@ const ARM_FILE: &str = "src/azure/arm.rs";
 const DATA_PLANE_HOSTS: &[&str] = &[
     "vault.azure.net",
     "vault.usgovcloudapi.net",
+    // API Management (#159): the gateway, portals, management and SCM
+    // endpoints of an instance (`*.azure-api.net`), shown, never called.
+    "azure-api.net",
     "vault.azure.cn",
     "blob.core.windows.net",
     "dfs.core.windows.net",
@@ -262,6 +265,8 @@ const AZ_FORBIDDEN_FLAGS: &[&str] = &["--admin", "--expose-token", "--show-value
 /// carries a read verb, so it has to be named here.
 const AZ_FORBIDDEN: &[&str] = &[
     "keyvault secret show",
+    // API Management (#159): a named value's secret value.
+    "apim nv show-secret",
     "keyvault key show",
     "keyvault certificate",
     "cognitiveservices account keys",
@@ -826,6 +831,11 @@ const POST_ONLY_READS: &[&str] = &[
     // values with it) and a what-if run.
     "exporttemplate",
     "/whatif",
+    // API Management (#159): a named value's value, and the keys of a
+    // subscription, the tenant access, an authorization server or an
+    // identity provider (`listSecrets`).
+    "/listvalue",
+    "/listsecrets",
 ];
 
 /// GET reads that return a secret: a connection's pre-shared key
@@ -858,6 +868,11 @@ const SECRET_READS: &[&str] = &[
     // Azure Virtual Desktop (#198): user sessions name who is signed in
     // where; nebaz shows a host's session count, never the sessions.
     "/usersessions",
+    // API Management (#159): a logger's credentials hold an
+    // instrumentation key or an Event Hubs connection string. (Its policy
+    // documents, which can carry inline secrets, are never read either;
+    // `}/policies` is also a registry's GET, so it is not listed here.)
+    "}/loggers",
 ];
 
 #[test]

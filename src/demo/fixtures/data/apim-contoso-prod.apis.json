@@ -1,0 +1,60 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/apis/orders-v1",
+      "type": "Microsoft.ApiManagement/service/apis",
+      "name": "orders-v1",
+      "properties": {
+        "displayName": "Orders",
+        "apiRevision": "4",
+        "description": "Orders: create, look up and cancel.",
+        "subscriptionRequired": true,
+        "serviceUrl": "https://ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io",
+        "path": "orders",
+        "protocols": [
+          "https"
+        ],
+        "isCurrent": true,
+        "apiVersion": "v1",
+        "apiVersionSetId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/apiVersionSets/orders",
+        "type": "http"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/apis/orders-v2",
+      "type": "Microsoft.ApiManagement/service/apis",
+      "name": "orders-v2",
+      "properties": {
+        "displayName": "Orders",
+        "apiRevision": "1",
+        "subscriptionRequired": true,
+        "serviceUrl": "https://ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/v2",
+        "path": "orders/v2",
+        "protocols": [
+          "https"
+        ],
+        "isCurrent": true,
+        "apiVersion": "v2",
+        "apiVersionSetId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/apiVersionSets/orders",
+        "type": "http"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/apis/partner-feed",
+      "type": "Microsoft.ApiManagement/service/apis",
+      "name": "partner-feed",
+      "properties": {
+        "displayName": "Partner feed",
+        "apiRevision": "2",
+        "subscriptionRequired": true,
+        "serviceUrl": "https://func-partner-feed.azurewebsites.net/api?code=demo-planted-function-key",
+        "path": "partners",
+        "protocols": [
+          "https"
+        ],
+        "isCurrent": true,
+        "type": "http"
+      }
+    }
+  ]
+}

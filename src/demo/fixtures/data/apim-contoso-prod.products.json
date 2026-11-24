@@ -1,0 +1,39 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/products/starter",
+      "type": "Microsoft.ApiManagement/service/products",
+      "name": "starter",
+      "properties": {
+        "displayName": "Starter",
+        "description": "Five calls a minute, for trying the API.",
+        "subscriptionRequired": true,
+        "approvalRequired": false,
+        "subscriptionsLimit": 1,
+        "state": "published"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/products/partners",
+      "type": "Microsoft.ApiManagement/service/products",
+      "name": "partners",
+      "properties": {
+        "displayName": "Partners",
+        "subscriptionRequired": true,
+        "approvalRequired": true,
+        "state": "published"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/products/status-page",
+      "type": "Microsoft.ApiManagement/service/products",
+      "name": "status-page",
+      "properties": {
+        "displayName": "Status page",
+        "description": "Public order status lookups.",
+        "subscriptionRequired": false,
+        "state": "published"
+      }
+    }
+  ]
+}

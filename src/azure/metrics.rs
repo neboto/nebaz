@@ -215,6 +215,15 @@ const STATIC_SITE: &[MetricSpec] = &[
     m("BytesSent", "Bytes sent", Total),
     m("FunctionErrors", "Function errors", Total),
 ];
+/// An API Management instance (#159): gateway requests, how busy its
+/// units are (`Capacity`, not reported on Consumption), and the time a
+/// call spends end to end and at the backend.
+const APIM: &[MetricSpec] = &[
+    m("Requests", "Requests", Total),
+    m("Capacity", "Capacity", Avg),
+    m("Duration", "Duration", Avg),
+    m("BackendDuration", "Backend duration", Avg),
+];
 const APP_SERVICE_PLAN: &[MetricSpec] = &[
     m("CpuPercentage", "CPU", Avg),
     m("MemoryPercentage", "Memory", Avg),
@@ -474,6 +483,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.app", ["containerapps"]) => CONTAINER_APP,
         ("microsoft.web", ["sites"]) | ("microsoft.web", ["sites", "slots"]) => WEB_SITE,
         ("microsoft.web", ["staticsites"]) => STATIC_SITE,
+        ("microsoft.apimanagement", ["service"]) => APIM,
         ("microsoft.automation", ["automationaccounts"]) => AUTOMATION_ACCOUNT,
         ("microsoft.web", ["serverfarms"]) => APP_SERVICE_PLAN,
         ("microsoft.sql", ["servers", "databases"]) => SQL_DATABASE,

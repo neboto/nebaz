@@ -5,7 +5,7 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, app_service, arc, backup, compute, deployment_stacks, deployments, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
+    aks, api_management, app_service, arc, backup, compute, deployment_stacks, deployments, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
     governance, keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
     sql, storage, virtual_desktop,
 };
@@ -1684,4 +1684,36 @@ fn stack_checks_read_the_unmanage_action_deny_mode_and_resource_lists() {
     let failed = one("stack-failed-resources");
     assert_eq!(findings(&failed), vec![("broken".to_string(), Severity::Low)]);
     assert_eq!(failed[0].evidence, vec!["r: SkuNotAvailable: no capacity".to_string()]);
+}
+
+fn apim(name: &str, platform: &str, tls10: &str, expiry_secs: Option<i64>) -> Box<dyn Resource> {
+    let mut hostnames = vec![json!({"type": "Proxy", "hostName": format!("{name}.gateway.example"), "certificateSource": "BuiltIn"})];
+    if let Some(t) = expiry_secs {
+        hostnames.push(json!({"type": "Proxy", "hostName": format!("api.{name}.example"), "certificateSource": "KeyVault",
+                              "certificate": {"expiry": crate::azure::metrics::iso_utc(t), "subject": "CN=api"}}));
+    }
+    let props = json!({"platformVersion": platform, "hostnameConfigurations": hostnames,
+        "customProperties": {"Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": tls10,
+                             "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "false"}});
+    let mut v = body(&format!("Microsoft.ApiManagement/service/{name}"), props);
+    v["sku"] = json!({"name": "Developer", "capacity": 1});
+    boxed(api_management::ApimServiceRow::from_json(&v, None))
+}
+
+#[test]
+fn api_management_flags_stv1_old_tls_and_a_certificate_near_or_past_expiry() {
+    let day = 86_400;
+    let lists = vec![(
+        V::ApimServices,
+        vec![
+            apim("apim-old", "stv1", "True", Some(NOW + 5 * day)),
+            apim("apim-ok", "stv2", "False", Some(NOW + 200 * day)),
+            apim("apim-lapsed", "stv2.1", "false", Some(NOW - day)),
+        ],
+    )];
+    assert_eq!(findings(&audit("apim-retired-platform", &lists, None)), [("apim-old".to_string(), Severity::High)]);
+    assert_eq!(findings(&audit("apim-old-tls", &lists, None)), [("apim-old".to_string(), Severity::Medium)]);
+    let mut certs = findings(&audit("apim-certificate-expiring", &lists, None));
+    certs.sort();
+    assert_eq!(certs, [("apim-lapsed".to_string(), Severity::High), ("apim-old".to_string(), Severity::Medium)]);
 }

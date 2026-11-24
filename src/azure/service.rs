@@ -103,6 +103,10 @@ pub enum ServiceType {
     /// Service Bus and Event Hubs namespaces; queues, topics, event hubs,
     /// the network rule set and access policy names lazy. Never a key.
     Messaging,
+    /// API Management (#159): instances; APIs, products, backends and
+    /// named values lazy. Never a subscription key, a named value's value
+    /// or a backend's credentials.
+    ApiManagement,
     /// Policy assignments, exemptions, custom definitions and initiatives,
     /// resource locks (#155, ADR 0009): the subscription's view with what it
     /// inherits from the management groups above. Never compliance (POST).
@@ -319,6 +323,9 @@ pub enum JumpView {
     // Messaging
     ServiceBusNamespaces,
     EventHubNamespaces,
+    // API Management (#159)
+    /// `Microsoft.ApiManagement/service`.
+    ApimServices,
     // Governance
     /// Every policy assignment that applies to the subscription or to
     /// anything in it, management groups' included (unfiltered list).
@@ -402,6 +409,7 @@ impl JumpView {
             ContainerApps | ContainerAppEnvironments | ContainerAppJobs | ContainerGroups => ServiceType::ContainerApps,
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
+            ApimServices => ServiceType::ApiManagement,
             PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups | Budgets => ServiceType::Governance,
             DefenderRecommendations | DefenderAlerts | SecureScore | DefenderPlans => ServiceType::Defender,
             AdvisorRecommendations | AdvisorScore | AdvisorSuppressions => ServiceType::Advisor,
@@ -508,6 +516,7 @@ impl JumpView {
             RedisCaches => "redis-caches",
             ManagedRedis => "managed-redis",
             ServiceBusNamespaces => "servicebus-namespaces",
+            ApimServices => "apim-services",
             EventHubNamespaces => "eventhub-namespaces",
             PolicyAssignments => "policy-assignments",
             PolicyExemptions => "policy-exemptions",
@@ -628,6 +637,7 @@ impl JumpView {
             RedisCaches => "Caches",
             ManagedRedis => "Managed Redis",
             ServiceBusNamespaces => "Service Bus",
+            ApimServices => "Instances",
             EventHubNamespaces => "Event Hubs",
             PolicyAssignments => "Assignments",
             PolicyExemptions => "Exemptions",
@@ -757,6 +767,7 @@ impl JumpView {
             ("microsoft.cache", ["redis"]) => JumpView::RedisCaches,
             ("microsoft.cache", ["redisenterprise"]) => JumpView::ManagedRedis,
             ("microsoft.servicebus", ["namespaces"]) => JumpView::ServiceBusNamespaces,
+            ("microsoft.apimanagement", ["service"]) => JumpView::ApimServices,
             ("microsoft.eventhub", ["namespaces"]) => JumpView::EventHubNamespaces,
             // Governance (ADR 0009): wherever made, management groups
             // included. A built-in definition is in no list (custom only).
@@ -887,6 +898,7 @@ impl ServiceType {
             ServiceType::ContainerApps,
             ServiceType::Redis,
             ServiceType::Messaging,
+            ServiceType::ApiManagement,
             ServiceType::Governance,
             ServiceType::Defender,
             ServiceType::Advisor,
@@ -936,6 +948,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "Containers",
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
+            ServiceType::ApiManagement => "Integration",
             ServiceType::Governance => "Management",
             ServiceType::Defender => "Security",
             ServiceType::Advisor => "Management",
@@ -974,6 +987,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "Container Apps",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
+            ServiceType::ApiManagement => "API Management",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
             ServiceType::Advisor => "Advisor",
@@ -1013,6 +1027,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "ACA",
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
+            ServiceType::ApiManagement => "APIM",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
             ServiceType::Advisor => "Advisor",
@@ -1051,6 +1066,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "Container apps, environments, jobs & instances",
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
+            ServiceType::ApiManagement => "APIs, products, backends & named values",
             ServiceType::Governance => "Policy, locks & management groups",
             ServiceType::Defender => "Recommendations, alerts, score & plans",
             ServiceType::Advisor => "Recommendations, score & suppressions",
@@ -1119,6 +1135,7 @@ impl ServiceType {
             ServiceType::ContainerApps => &[ContainerApps, ContainerAppEnvironments, ContainerAppJobs, ContainerGroups],
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
+            ServiceType::ApiManagement => &[ApimServices],
             ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups, Budgets],
             ServiceType::Defender => &[DefenderRecommendations, DefenderAlerts, SecureScore, DefenderPlans],
             ServiceType::Advisor => &[AdvisorRecommendations, AdvisorScore, AdvisorSuppressions],
@@ -1364,6 +1381,7 @@ impl ServiceType {
             "amr" | "managedredis" | "redisenterprise" => (ServiceType::Redis, Some(JumpView::ManagedRedis)),
             "sb" | "servicebus" | "messaging" | "msg" => (ServiceType::Messaging, None),
             "eh" | "eventhub" | "eventhubs" | "kafka" => (ServiceType::Messaging, Some(JumpView::EventHubNamespaces)),
+            "apim" | "apimanagement" | "apigateway" => (ServiceType::ApiManagement, None),
             "gov" | "governance" | "policy" | "policies" | "pa" | "assignment" | "assignments" => (ServiceType::Governance, None),
             "exempt" | "exemption" | "exemptions" => (ServiceType::Governance, Some(JumpView::PolicyExemptions)),
             "pdef" | "definition" | "definitions" | "initiative" | "initiatives" | "policyset" | "policysets" => {
@@ -1422,6 +1440,7 @@ impl ServiceType {
             ServiceType::ContainerApps => "@aca",
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
+            ServiceType::ApiManagement => "@apim",
             ServiceType::Governance => "@gov",
             ServiceType::Defender => "@defender",
             ServiceType::Advisor => "@advisor",
@@ -1438,7 +1457,7 @@ impl ServiceType {
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@deploy", "@arc", "@avd", "@aca", "@redis", "@sb", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@deploy", "@arc", "@avd", "@aca", "@redis", "@sb", "@apim", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1649,6 +1668,10 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Automation/automationAccounts/aa")), Some(JumpView::AutomationAccounts));
         assert_eq!(ServiceType::from_prefix("@automation"), Some((ServiceType::Automation, None)));
         assert_eq!(ServiceType::from_prefix("@aa"), Some((ServiceType::Automation, None)));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.ApiManagement/service/apim")), Some(JumpView::ApimServices));
+        assert_eq!(ServiceType::from_prefix("@apim"), Some((ServiceType::ApiManagement, None)));
+        // An API is a child of its instance: in no list of its own.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.ApiManagement/service/apim/apis/orders")), None);
         // Deployments (#225): the group decides the sub-tab; an operation
         // is a child, in no list.
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Resources/deployments/main")), Some(JumpView::GroupDeployments));

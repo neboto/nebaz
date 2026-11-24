@@ -1,0 +1,58 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.ApiManagement/service/apim-legacy-dev",
+  "name": "apim-legacy-dev",
+  "type": "Microsoft.ApiManagement/service",
+  "location": "West Europe",
+  "etag": "AAAAAAAQ1xk=",
+  "tags": {
+    "env": "dev",
+    "team": "platform",
+    "owner": "sam.okafor@contoso.com"
+  },
+  "sku": {
+    "name": "Developer",
+    "capacity": 1
+  },
+  "properties": {
+    "publisherEmail": "platform@contoso.com",
+    "publisherName": "Contoso Platform",
+    "notificationSenderEmail": "apimgmt-noreply@mail.windowsazure.com",
+    "provisioningState": "Succeeded",
+    "targetProvisioningState": "",
+    "createdAtUtc": "2019-05-27T13:40:51.1170000Z",
+    "gatewayUrl": "https://apim-legacy-dev.azure-api.net",
+    "gatewayRegionalUrl": "https://apim-legacy-dev-westeurope-01.regional.azure-api.net",
+    "developerPortalUrl": "https://apim-legacy-dev.developer.azure-api.net",
+    "managementApiUrl": "https://apim-legacy-dev.management.azure-api.net",
+    "portalUrl": "https://apim-legacy-dev.portal.azure-api.net",
+    "hostnameConfigurations": [
+      {
+        "type": "Proxy",
+        "hostName": "apim-legacy-dev.azure-api.net",
+        "negotiateClientCertificate": false,
+        "defaultSslBinding": true,
+        "certificateSource": "BuiltIn"
+      }
+    ],
+    "publicIPAddresses": [
+      "51.137.9.214"
+    ],
+    "customProperties": {
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": "True",
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "True",
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Ssl30": "False",
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls10": "True",
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls11": "True",
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Ssl30": "False",
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Ciphers.TripleDes168": "False",
+      "Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2": "False"
+    },
+    "virtualNetworkType": "None",
+    "certificates": [],
+    "disableGateway": false,
+    "publicNetworkAccess": "Enabled",
+    "platformVersion": "stv1",
+    "developerPortalStatus": "Enabled",
+    "legacyPortalStatus": "Enabled"
+  }
+}

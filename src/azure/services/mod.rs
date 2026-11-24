@@ -15,6 +15,7 @@ pub mod backup;
 pub mod budgets;
 pub mod automation;
 pub mod virtual_desktop;
+pub mod api_management;
 pub mod arc;
 pub mod all_resources;
 pub mod app_service;

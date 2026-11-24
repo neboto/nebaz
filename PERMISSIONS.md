@@ -472,6 +472,16 @@ each one backs are in the catalog table
   providers share one suffix) are on the guard's list, and every
   `az servicebus … authorization-rule keys` and
   `az eventhubs … authorization-rule keys` chain is named forbidden.
+- **API Management** (#159): `Microsoft.ApiManagement/service/read`, and
+  for the lazy sections `Microsoft.ApiManagement/service/apis/read`,
+  `Microsoft.ApiManagement/service/products/read`,
+  `Microsoft.ApiManagement/service/backends/read`,
+  `Microsoft.ApiManagement/service/namedValues/read`. Never: a named
+  value's value (a plain one comes back in its GET and is dropped before
+  the store keeps the body; `listValue` is a POST and
+  `az apim nv show-secret` is named forbidden), subscriptions and their
+  keys (`listSecrets`, a POST), policies, loggers, a backend's credential
+  values. The instances' `azure-api.net` hosts are on the guard's list.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

@@ -1,0 +1,50 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/namedValues/environment",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "name": "environment",
+      "properties": {
+        "displayName": "environment",
+        "secret": false,
+        "value": "production",
+        "tags": []
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/namedValues/orders-signing-key",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "name": "orders-signing-key",
+      "properties": {
+        "displayName": "orders-signing-key",
+        "secret": true,
+        "tags": [],
+        "keyVault": {
+          "secretIdentifier": "https://kv-orders-prod.vault.azure.net/secrets/orders-signing-key",
+          "lastStatus": {
+            "code": "Success",
+            "timeStampUtc": "{{iso:now-3h}}"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod/namedValues/partner-feed-key",
+      "type": "Microsoft.ApiManagement/service/namedValues",
+      "name": "partner-feed-key",
+      "properties": {
+        "displayName": "partner-feed-key",
+        "secret": true,
+        "tags": [],
+        "keyVault": {
+          "secretIdentifier": "https://kv-legacy-prod.vault.azure.net/secrets/partner-feed-key",
+          "lastStatus": {
+            "code": "Forbidden",
+            "message": "The managed identity has no access to secrets in kv-legacy-prod.",
+            "timeStampUtc": "{{iso:now-3h}}"
+          }
+        }
+      }
+    }
+  ]
+}

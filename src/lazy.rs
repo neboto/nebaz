@@ -285,6 +285,18 @@ pub struct LazyStore {
     /// scaling plan id.
     pub avd_schedules: LazyMap<Vec<serde_json::Value>>,
 
+    // ── API Management (#159) ────────────────────────────────────────────
+    /// `GET {service}/apis`, keyed by instance id, capped, scrubbed.
+    pub apim_apis: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {service}/products`, keyed by instance id, capped.
+    pub apim_products: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {service}/backends`, keyed by instance id, credential values
+    /// and URL query strings removed.
+    pub apim_backends: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {service}/namedValues`, keyed by instance id, every `value`
+    /// removed.
+    pub apim_named_values: LazyMap<Vec<serde_json::Value>>,
+
     // ── Automation (#202) ────────────────────────────────────────────────
     /// `GET {account}/runbooks`, keyed by account id, scrubbed.
     pub aa_runbooks: LazyMap<Vec<serde_json::Value>>,

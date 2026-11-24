@@ -159,6 +159,7 @@ mod static_web_apps;
 mod automation;
 mod deployments;
 mod virtual_desktop;
+mod api_management;
 mod split;
 mod watch;
 mod arc;
@@ -3089,6 +3090,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.avd_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.apim_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(lines) = self.arc_section_lines(resource, idx) {
