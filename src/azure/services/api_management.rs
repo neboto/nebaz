@@ -1102,7 +1102,8 @@ mod tests {
         let kept = without_secrets(&raw);
         let text = kept.to_string();
         for planted in ["planted-query", "planted-header", "planted-q2", "planted-auth", "planted-proxy"] {
-            assert!(!text.contains(planted), "{planted} in {text}");
+            // Never print the body: on a failure it would hold the value.
+            assert!(!text.contains(planted), "{planted} survived the scrub");
         }
         let lines = backend_rows(&[kept]);
         assert_eq!(get(&lines, "  URL"), Some("https://func-orders.example/api?…"));
