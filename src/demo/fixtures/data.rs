@@ -134,6 +134,23 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ApiManagement/service/apim-contoso-prod", "apim-contoso-prod.json"),
     fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.ApiManagement/service/apim-legacy-dev/apis", "apim-legacy-dev.apis.json"),
     fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.ApiManagement/service/apim-legacy-dev", "apim-legacy-dev.json"),
+    // ── Logic Apps (#159): the late-orders mailer whose Office 365
+    //    connection lost its token (every run since fails), the invoice
+    //    intake callable from any IP with its URL, and a disabled legacy
+    //    sync. API connections list per resource group ──
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.Logic/workflows", "logic-workflows.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-orders-notify/triggers", "la-orders-notify.triggers.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-orders-notify/runs", "la-orders-notify.runs.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-orders-notify", "la-orders-notify.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/triggers", "la-invoice-intake.triggers.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/runs", "la-invoice-intake.runs.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake", "la-invoice-intake.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Logic/workflows/la-legacy-ftp-sync/triggers", "la-legacy-ftp-sync.triggers.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Logic/workflows/la-legacy-ftp-sync/runs", "la-legacy-ftp-sync.runs.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Logic/workflows/la-legacy-ftp-sync", "la-legacy-ftp-sync.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections", "api-connections-rg-orders-prod.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/office365-orders", "office365-orders.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/servicebus-orders", "servicebus-orders.json"),
     fx!(
         "data",
         "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/networkRuleSets/default",

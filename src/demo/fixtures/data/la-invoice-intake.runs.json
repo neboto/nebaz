@@ -1,0 +1,121 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/runs/08584700420019284CU12",
+      "name": "08584700420019284CU12",
+      "type": "Microsoft.Logic/workflows/runs",
+      "properties": {
+        "waitEndTime": "{{iso:now-47m}}",
+        "startTime": "{{iso:now-47m}}",
+        "endTime": "{{iso:now-2818s}}",
+        "status": "Succeeded",
+        "correlation": {
+          "clientTrackingId": "08584700420019284CU12"
+        },
+        "workflow": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/versions/08584690112874455102",
+          "name": "08584690112874455102",
+          "type": "Microsoft.Logic/workflows/versions"
+        },
+        "trigger": {
+          "name": "manual",
+          "startTime": "{{iso:now-47m}}",
+          "endTime": "{{iso:now-47m}}",
+          "correlation": {
+            "clientTrackingId": "08584700420019284CU12"
+          },
+          "code": "OK",
+          "status": "Succeeded",
+          "outputsLink": {
+            "uri": "https://prod-27.westeurope.logic.azure.com:443/workflows/x/runs/08584700420019284CU12/contents/TriggerOutputs?api-version=2016-10-01&se=2026-11-24T12%3A00%3A00Z&sp=%2Fruns%2F08584700420019284CU12%2Fcontents%2FTriggerOutputs%2Fread&sv=1.0&sig=demo-planted-run-sig",
+            "contentSize": 734
+          }
+        },
+        "outputs": {
+          "result": {
+            "type": "String",
+            "value": "demo-planted-run-output"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/runs/08584700518872001CU03",
+      "name": "08584700518872001CU03",
+      "type": "Microsoft.Logic/workflows/runs",
+      "properties": {
+        "waitEndTime": "{{iso:now-130m}}",
+        "startTime": "{{iso:now-130m}}",
+        "endTime": "{{iso:now-7799s}}",
+        "status": "Succeeded",
+        "correlation": {
+          "clientTrackingId": "08584700518872001CU03"
+        },
+        "workflow": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/versions/08584690112874455102",
+          "name": "08584690112874455102",
+          "type": "Microsoft.Logic/workflows/versions"
+        },
+        "trigger": {
+          "name": "manual",
+          "startTime": "{{iso:now-130m}}",
+          "endTime": "{{iso:now-130m}}",
+          "correlation": {
+            "clientTrackingId": "08584700518872001CU03"
+          },
+          "code": "OK",
+          "status": "Succeeded",
+          "outputsLink": {
+            "uri": "https://prod-27.westeurope.logic.azure.com:443/workflows/x/runs/08584700518872001CU03/contents/TriggerOutputs?api-version=2016-10-01&se=2026-11-24T12%3A00%3A00Z&sp=%2Fruns%2F08584700518872001CU03%2Fcontents%2FTriggerOutputs%2Fread&sv=1.0&sig=demo-planted-run-sig",
+            "contentSize": 734
+          }
+        },
+        "outputs": {
+          "result": {
+            "type": "String",
+            "value": "demo-planted-run-output"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/runs/08584700611190334CU27",
+      "name": "08584700611190334CU27",
+      "type": "Microsoft.Logic/workflows/runs",
+      "properties": {
+        "waitEndTime": "{{iso:now-260m}}",
+        "startTime": "{{iso:now-260m}}",
+        "endTime": "{{iso:now-15598s}}",
+        "status": "Succeeded",
+        "correlation": {
+          "clientTrackingId": "08584700611190334CU27"
+        },
+        "workflow": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/versions/08584690112874455102",
+          "name": "08584690112874455102",
+          "type": "Microsoft.Logic/workflows/versions"
+        },
+        "trigger": {
+          "name": "manual",
+          "startTime": "{{iso:now-260m}}",
+          "endTime": "{{iso:now-260m}}",
+          "correlation": {
+            "clientTrackingId": "08584700611190334CU27"
+          },
+          "code": "OK",
+          "status": "Succeeded",
+          "outputsLink": {
+            "uri": "https://prod-27.westeurope.logic.azure.com:443/workflows/x/runs/08584700611190334CU27/contents/TriggerOutputs?api-version=2016-10-01&se=2026-11-24T12%3A00%3A00Z&sp=%2Fruns%2F08584700611190334CU27%2Fcontents%2FTriggerOutputs%2Fread&sv=1.0&sig=demo-planted-run-sig",
+            "contentSize": 734
+          }
+        },
+        "outputs": {
+          "result": {
+            "type": "String",
+            "value": "demo-planted-run-output"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -224,6 +224,14 @@ const APIM: &[MetricSpec] = &[
     m("Duration", "Duration", Avg),
     m("BackendDuration", "Backend duration", Avg),
 ];
+/// A Consumption Logic Apps workflow (#159): runs started and failed,
+/// how long a run takes, and failed triggers.
+const LOGIC_WORKFLOW: &[MetricSpec] = &[
+    m("RunsStarted", "Runs started", Total),
+    m("RunsFailed", "Runs failed", Total),
+    m("RunLatency", "Run latency", Avg),
+    m("TriggersFailed", "Triggers failed", Total),
+];
 const APP_SERVICE_PLAN: &[MetricSpec] = &[
     m("CpuPercentage", "CPU", Avg),
     m("MemoryPercentage", "Memory", Avg),
@@ -484,6 +492,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.web", ["sites"]) | ("microsoft.web", ["sites", "slots"]) => WEB_SITE,
         ("microsoft.web", ["staticsites"]) => STATIC_SITE,
         ("microsoft.apimanagement", ["service"]) => APIM,
+        ("microsoft.logic", ["workflows"]) => LOGIC_WORKFLOW,
         ("microsoft.automation", ["automationaccounts"]) => AUTOMATION_ACCOUNT,
         ("microsoft.web", ["serverfarms"]) => APP_SERVICE_PLAN,
         ("microsoft.sql", ["servers", "databases"]) => SQL_DATABASE,

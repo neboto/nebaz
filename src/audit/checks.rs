@@ -23,6 +23,7 @@ use crate::azure::resource::{name_of_id, Resource};
 use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::api_management::ApimServiceRow;
+use crate::azure::services::logic_apps::{ApiConnectionRow, WorkflowRow};
 use crate::azure::services::app_service::SiteRow;
 use crate::azure::services::arc::{self, ArcClusterRow, ArcMachineRow};
 use crate::azure::services::virtual_desktop::{self as avd, AppGroupRow, HostPoolRow, SessionHost};
@@ -106,9 +107,11 @@ const ARC_CLUSTERS: &[V] = &[V::ArcClusters];
 const HOST_POOLS: &[V] = &[V::HostPools];
 const AVD_APP_GROUPS: &[V] = &[V::AvdApplicationGroups];
 const APIM: &[V] = &[V::ApimServices];
+const LOGIC_WORKFLOWS: &[V] = &[V::LogicWorkflows];
+const API_CONNECTIONS: &[V] = &[V::ApiConnections];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 92] = [
+pub static CHECKS: [Check; 94] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -870,6 +873,23 @@ pub static CHECKS: [Check; 92] = [
         fix: "Renew the certificate (or fix the Key Vault reference so the instance picks up the renewed one).",
         sources: &[APIM],
         run: apim_certificate_expiring,
+    },
+    // ── Logic Apps (#159) ──
+    Check {
+        id: "logic-connection-error",
+        title: "Logic Apps API connection not connected",
+        why: "A workflow step that signs in through a broken API connection fails on every run until someone signs in again (an expired OAuth token, a changed password, a removed account).",
+        fix: "Open the connection's Edit API connection blade and authorize it again (or point it at a service account), then resubmit the failed runs.",
+        sources: &[API_CONNECTIONS],
+        run: logic_connection_error,
+    },
+    Check {
+        id: "logic-trigger-sas-only",
+        title: "Logic Apps request trigger callable from any IP",
+        why: "A Request trigger's callback URL carries its key (`sig`): anyone who has the URL, from anywhere, can start a run. Access control can limit callers to IP ranges or require an Entra ID token.",
+        fix: "Set the workflow's trigger access control to the callers' IP ranges (or only other logic apps), or add an Entra ID authorization policy; front a public endpoint with API Management.",
+        sources: &[LOGIC_WORKFLOWS],
+        run: logic_trigger_sas_only,
     },
 ];
 
@@ -2229,6 +2249,41 @@ fn apim_certificate_expiring(check: &'static Check, input: &AuditInput, out: &mu
                 json::opt(h.source.clone()),
                 json::time(h.expiry.clone())
             )]));
+        }
+    }
+}
+
+fn logic_connection_error(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for c in input.of::<ApiConnectionRow>(V::ApiConnections) {
+        let broken = c.broken();
+        if let Some(first) = broken.first() {
+            out.push(
+                AuditFinding::about(check, Severity::Medium, c, format!("{} · {}", c.api_label(), first.status)).with_evidence(
+                    broken
+                        .iter()
+                        .map(|b| {
+                            format!(
+                                "{}: {}{}",
+                                b.target.as_deref().unwrap_or("status"),
+                                b.status,
+                                b.code.as_deref().map(|c| format!(" ({c})")).unwrap_or_default()
+                            )
+                        })
+                        .collect(),
+                ),
+            );
+        }
+    }
+}
+
+fn logic_trigger_sas_only(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for w in input.of::<WorkflowRow>(V::LogicWorkflows) {
+        if w.is_enabled() && w.trigger_open() {
+            let names: Vec<String> = w.request_triggers().iter().map(|t| t.name.clone()).collect();
+            out.push(
+                AuditFinding::about(check, Severity::Low, w, format!("{} (Request)", names.join(", ")))
+                    .with_evidence(vec!["accessControl.triggers: no allowedCallerIpAddresses, no openAuthenticationPolicies".into()]),
+            );
         }
     }
 }

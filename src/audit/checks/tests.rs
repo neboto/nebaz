@@ -5,7 +5,7 @@
 use super::*;
 use crate::audit::{run, RowKind};
 use crate::azure::services::{
-    aks, api_management, app_service, arc, backup, compute, deployment_stacks, deployments, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
+    aks, api_management, logic_apps, app_service, arc, backup, compute, deployment_stacks, deployments, container_apps, container_registry, cosmos, directory, edge, firewall, foundry, hybrid,
     governance, keyvault, messaging, network, network_edge, network_hub, network_private, postgres_mysql, power_platform, redis, scale_sets,
     sql, storage, virtual_desktop,
 };
@@ -1716,4 +1716,35 @@ fn api_management_flags_stv1_old_tls_and_a_certificate_near_or_past_expiry() {
     let mut certs = findings(&audit("apim-certificate-expiring", &lists, None));
     certs.sort();
     assert_eq!(certs, [("apim-lapsed".to_string(), Severity::High), ("apim-old".to_string(), Severity::Medium)]);
+}
+
+fn workflow(name: &str, state: &str, access: serde_json::Value) -> Box<dyn Resource> {
+    let props = json!({"state": state, "accessControl": access,
+        "definition": {"triggers": {"manual": {"type": "Request", "kind": "Http"}}, "actions": {}}});
+    boxed(logic_apps::WorkflowRow::from_json(&body(&format!("Microsoft.Logic/workflows/{name}"), props), None))
+}
+
+fn api_connection(name: &str, status: &str) -> Box<dyn Resource> {
+    let props = json!({"api": {"name": "office365", "displayName": "Office 365 Outlook"},
+        "statuses": [{"status": status, "target": "token", "error": {"code": "Unauthenticated"}}]});
+    boxed(logic_apps::ApiConnectionRow::from_json(&body(&format!("Microsoft.Web/connections/{name}"), props), None))
+}
+
+#[test]
+fn logic_apps_flag_a_broken_connection_and_an_open_request_trigger() {
+    let lists = vec![
+        (V::ApiConnections, vec![api_connection("office365-ok", "Connected"), api_connection("office365-bad", "Error")]),
+        (
+            V::LogicWorkflows,
+            vec![
+                workflow("la-open", "Enabled", json!({})),
+                workflow("la-off", "Disabled", json!({})),
+                workflow("la-ranged", "Enabled", json!({"triggers": {"allowedCallerIpAddresses": [{"addressRange": "10.0.0.0/8"}]}})),
+            ],
+        ),
+    ];
+    let broken = audit("logic-connection-error", &lists, None);
+    assert_eq!(findings(&broken), [("office365-bad".to_string(), Severity::Medium)]);
+    assert_eq!(broken[0].evidence, vec!["token: Error (Unauthenticated)".to_string()]);
+    assert_eq!(findings(&audit("logic-trigger-sas-only", &lists, None)), [("la-open".to_string(), Severity::Low)]);
 }

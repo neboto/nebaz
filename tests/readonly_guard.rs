@@ -52,6 +52,10 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // API Management (#159): the gateway, portals, management and SCM
     // endpoints of an instance (`*.azure-api.net`), shown, never called.
     "azure-api.net",
+    // Logic Apps (#159): a workflow's access endpoint, its triggers'
+    // callback URLs and its runs' content links (`*.logic.azure.com`),
+    // shown, never called.
+    "logic.azure.com",
     "vault.azure.cn",
     "blob.core.windows.net",
     "dfs.core.windows.net",
@@ -836,6 +840,13 @@ const POST_ONLY_READS: &[&str] = &[
     // identity provider (`listSecrets`).
     "/listvalue",
     "/listsecrets",
+    // Logic Apps (#159): a trigger's or a run action's signed callback
+    // URL, a workflow's swagger, an API connection's keys and consent
+    // links.
+    "listcallbackurl",
+    "/listswagger",
+    "listconnectionkeys",
+    "listconsentlinks",
 ];
 
 /// GET reads that return a secret: a connection's pre-shared key
@@ -873,6 +884,11 @@ const SECRET_READS: &[&str] = &[
     // documents, which can carry inline secrets, are never read either;
     // `}/policies` is also a registry's GET, so it is not listed here.)
     "}/loggers",
+    // Logic Apps (#159): a trigger's histories and a run action's
+    // repetitions carry their inputs and outputs links (SAS URLs to the
+    // run's data); nebaz reads a run's outcome, never its steps.
+    "/histories",
+    "/repetitions",
 ];
 
 #[test]

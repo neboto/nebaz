@@ -482,6 +482,16 @@ each one backs are in the catalog table
   `az apim nv show-secret` is named forbidden), subscriptions and their
   keys (`listSecrets`, a POST), policies, loggers, a backend's credential
   values. The instances' `azure-api.net` hosts are on the guard's list.
+- **Logic Apps** (#159): `Microsoft.Logic/workflows/read`, and for the
+  lazy sections `Microsoft.Logic/workflows/triggers/read` and
+  `Microsoft.Logic/workflows/runs/read`; API connections
+  `Microsoft.Web/connections/read` (with `Microsoft.Resources/subscriptions/resources/read`
+  to find the groups that hold one). Never: a trigger's callback URL
+  (`listCallbackUrl`, a POST), trigger histories, run actions and their
+  repetitions (their inputs and outputs links are SAS URLs), connection
+  keys and consent links (POSTs). A definition's inputs, a run's
+  outputs and a connection's parameter values are dropped before the
+  store keeps a body; the workflows' own host is on the guard's list.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

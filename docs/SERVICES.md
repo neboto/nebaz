@@ -1194,6 +1194,53 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     Capacity, Duration, Backend duration. `@audit`:
     `apim-retired-platform` (high), `apim-old-tls` (medium),
     `apim-certificate-expiring` (high when expired, else medium).
+49. **Logic Apps is its own tab** (#159, `src/azure/services/logic_apps.rs`,
+    Integration group, after API Management; `@logic`, `@apiconn`). Two
+    sub-tabs. **Workflows**: one subscription-wide list of
+    `Microsoft.Logic/workflows` (Consumption) at `2019-05-01`, the only
+    stable version. Logic Apps Standard are `Microsoft.Web/sites` and list
+    with the function apps (`@func`), never twice. **API connections**
+    (`Microsoft.Web/connections`, `2016-06-01`) have no subscription-wide
+    list: as the Hybrid tab does (rule 27), one generic resources call
+    finds the groups that hold one, then each group is listed; a group
+    that fails beside others is a warning. State: a workflow's `state`
+    (Enabled running, Disabled stopped, Suspended unavailable); a
+    connection's first status (Connected available, anything else
+    unavailable), each through the ladder. A workflow's sections:
+    **Definition** (the triggers and actions in run order, nested
+    branches indented: type, method, the URI stripped of user-info and
+    query string, the connector a managed step signs in through, the
+    authentication *type*, secured inputs/outputs; the definition's
+    parameters by name and type), **Network** (who may call the triggers,
+    `⚠` when a Request trigger takes any IP with the signed URL; run
+    history, action and management caller ranges; the access endpoint as
+    text; inbound, outbound and connector addresses; the integration
+    account), **Triggers** ⧗ (state, `⚠` disabled, schedule, last status,
+    last and next fire; ≤ 100), **Runs** ⧗ (the latest 25, `$top`: a
+    tally, each run's status with failures `⚠`, duration, trigger, error,
+    tracking id), **Connections** (each `$connections` entry with its
+    status from the warm API connections list, which the section loads;
+    `⚠` when not connected; `⏎` opens it). A connection's sections:
+    **Status** (each status with its target and error, who it is
+    authenticated as, its non-secret parameters by name) and **Used by**
+    (the workflows whose `$connections` name it, from the warm Workflows
+    list, which the section loads; also in Related). **Never kept**
+    (`without_secrets`, `run_outline`, `trigger_outline`, before a row or
+    the store holds a body): a definition beyond its outline (an action's
+    body, headers, query, password and expressions; a parameter's
+    default), every workflow parameter's value (`$connections` keeps its
+    ids), a run's inputs, outputs, their content links (SAS URLs), its
+    response and tracked properties, a connection's parameter values (the
+    non-secret ones keep their names) and test links. **Never read**:
+    callback URLs (`listCallbackUrl`, a POST that signs one), trigger
+    histories and action repetitions (their content links are SAS URLs),
+    workflow versions, connection keys and consent links (POSTs). The
+    workflow's own host is on the guard, never called. `az logic workflow
+    show --ids` (the `logic` extension; `name` has `id_part="name"`); a
+    connection has no `az` group: `az resource show --ids`. Metrics (rule
+    19): Runs started, Runs failed, Run latency, Triggers failed.
+    `@audit`: `logic-connection-error` (medium), `logic-trigger-sas-only`
+    (low).
 
 ## The catalog
 
@@ -1297,6 +1344,8 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Redis · Managed Redis | Security (min TLS, encryption service- or customer-managed with the key identity, public access, identity) · Network (public access, host name as text, private endpoints with status; no firewall or VNet injection exists) · Databases ⧗ (port, client protocol (`Plaintext` flagged), access-key auth, clustering and eviction policy, persistence, modules, Redis version, state, geo-replication group with each linked cluster jumpable) · (Overview: kind, SKU, capacity, high availability, redundancy, zones, Redis version, resource state, host name) | ladder, then `resourceState` (`Running` → Available, `Disabled` / `…Failed` → Unavailable, else Pending) | private endpoints, user-assigned identities, the CMK identity | `az redisenterprise show` (the `redisenterprise` CLI extension) |
 | Messaging · Service Bus | Network ⧗ (effective access in one line; public network access; from the rule set: default action, trusted services, IP rules, VNet rules with each subnet jumpable and whether the service endpoint is required; private endpoints jumpable with connection state; the endpoint host as text, the `privatelink.` zone a private caller must resolve through; IP address type, min TLS, local auth; the tier's limits: VNet rules and private endpoints are Premium only. Deny with no IP or VNet rule is flagged: the service does not enforce it) · Security (local auth, min TLS, Microsoft- or customer-managed keys with the reading identity, infrastructure encryption, identity system / user-assigned) · Queues ⧗ (active, dead-lettered, scheduled and transfer counts from `countDetails`, size, lock duration, max deliveries, sessions, duplicate detection, TTL, partitioning, forwarding) · Topics ⧗ (subscription count, size, TTL, ordering, partitioning) · Access policies ⧗ (names and rights; never keys) · (Overview: status, SKU and messaging units, partitions, zone redundancy, endpoint, geo-replication) | ladder, then `status` (`Active` → available, `Disabled` → stopped) | private endpoints, user-assigned identities, a CMK identity, VNet rule subnets (once the rule set loads) | `az servicebus namespace show` |
 | API Management · Instances (rule 48) | Network (VNet mode, subnet, public IP, addresses, extra regions) · Hostnames (endpoint URLs, each hostname's certificate source, subject, expiry ⚠ within 30 days, Key Vault secret URL, status) · Security (protocol and cipher switches ⚠ on old TLS, minimum API version ⚠ unset, portals, identity, CA certificates) · APIs ⧗ · Products ⧗ · Backends ⧗ · Named values ⧗ · (Overview: SKU and units, platform ⚠ stv1, VNet mode, gateway and developer portal, other regions, publisher, created) | ladder, `Stopped` → stopped | subnets, public IP, private endpoints, identities; ⧗ each backend's resource | `az apim show -n -g --subscription` (no `--ids`) |
+| Logic Apps · Workflows (rule 49) | Definition (triggers and actions in run order: type, method, stripped URI, connector, auth type, secured data; parameters by type) · Network (trigger callers ⚠ any IP with the signed URL, run history and action callers, access endpoint as text, inbound / outbound / connector IPs, integration account) · Triggers ⧗ (state ⚠ disabled, schedule, last status, last / next fire) · Runs ⧗ (latest 25: tally, status ⚠ failed, duration, trigger, error) · Connections (each connection's status from the warm list, ⚠ not connected) · (Overview: state, plan, triggers, action count, connections, identity, version, created, changed) | `state` (Enabled / Disabled / Suspended) through the ladder | connections, integration account, user-assigned identities | `az logic workflow show --ids` |
+| Logic Apps · API connections (rule 49) | Status (each status with target and error ⚠ unless Connected, authenticated as, non-secret parameter names) · Used by (workflows from the warm list) · (Overview: display name, API, status, managed API id, kind, created, changed) | first status: Connected available, else unavailable | the workflows that use it | `az resource show --ids` |
 | Messaging · Event Hubs | Network ⧗ · Security · Access policies ⧗ (as Service Bus; Basic has no firewall, VNet rules or private endpoints) · Event hubs ⧗ (partitions, retention and cleanup policy, status, capture on / off with format, window, destination storage account jumpable or Data Lake, container, identity) · (Overview: SKU, throughput / processing / capacity units, auto-inflate maximum, Kafka, dedicated cluster, zone redundancy) | ladder, then `status` | as Service Bus, plus the dedicated cluster and each capture storage account (once Event hubs loads) | `az eventhubs namespace show` |
 | Automation · Accounts (rule 44) | Runbooks ⧗ (type, state with drafts and never-published marked, runtime environment, modified, logging, the schedules that start it, its newest job in the window with ⚠ when failed) · Schedules ⧗ (recurrence, enabled, next run, expiry with ⚠ when an enabled schedule has expired, time zone, the runbooks it starts and the worker group they run on) · Jobs ⧗ (the last 7 days: count and failures, then the newest 25 with runbook, status, ⚠ failed / suspended / blocked / stopped, ended, started by, ran on) · Hybrid workers ⧗ (each group's type and Run As credential name; each worker's type, machine jumpable, IP, last seen with ⚠ after a day) · Configuration (SKU, local auth, public network access, encryption key and identity, identity, hybrid service URL as text, private endpoints) · (Overview: state, SKU, created, modified, description) | ladder, then `state` (`Ok` → Available, `Suspended` / `Unavailable` → Unavailable) | private endpoints, user-assigned and encryption identities; ⧗ the linked Log Analytics workspace, each hybrid worker's VM or Arc machine | `az automation account show --ids` (the `automation` extension) |
 | Azure Arc · Servers (rule 45) | Machine (computer name, FQDN, domain, OS SKU, version and type, kind, cloud provider, manufacturer, model, logical cores, memory, IP addresses, SQL Server discovered, parent cluster) · Agent (status with ⚠ and how long when disconnected or expired, last status change, agent version, automatic upgrade and the last attempt, config mode, extensions and guest configuration allowed, both services, proxy, incoming ports, private link scope jumpable, each error ⚠) · Extensions ⧗ (type, version, automatic upgrade, state ⚠ when failed or at error level, the status message's first line; never settings) · Licensing & patching (license status, Software Assurance, ESU eligibility and licence with ⚠ when eligible and unassigned, key state, the licence jumpable, patch assessment and patch mode) · (Overview: status, OS, agent version, cloud provider, FQDN, identity) | ladder, then `status` (`Connected` → Available, `Disconnected` / `Error` → Unavailable, Expired after 45 days disconnected, `AwaitingConnection` → Pending) | the private link scope, the parent cluster, the ESU licence | `az connectedmachine show --ids` (the `connectedmachine` extension) |
@@ -1314,7 +1363,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @arc @arck8s @arcpls @avd @avdag @avdws @avdsp @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @automation @aca @acaenv @acajob @aci @redis @amr @sb @eh @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @automation @aca @acaenv @acajob @aci @redis @amr @sb @eh @apim @logic @apiconn @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1377,6 +1426,8 @@ has a fixture test there.
 | `apim-retired-platform` | API Management | `platformVersion` stv1 (retired 31 August 2024) | high |
 | `apim-old-tls` | API Management | a client or backend TLS 1.0 / 1.1 / SSL 3.0 or the 3DES switch `true` | medium |
 | `apim-certificate-expiring` | API Management | a hostname certificate expired (high) or expiring within 30 days (medium) | high / medium |
+| `logic-connection-error` | API connections | a status other than Connected (an expired token, a changed password) | medium |
+| `logic-trigger-sas-only` | Workflows | an enabled workflow with a Request trigger and no trigger caller IP range or Entra ID policy | low |
 | `acr-anonymous-pull` | Registries | `anonymousPullEnabled` | high |
 | `app-https-only` | Apps | `httpsOnly` false | high |
 | `app-min-tls` | Apps + Configuration ⧗ | `minTlsVersion` below 1.2 | medium |
@@ -1536,6 +1587,8 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | Service Bus namespaces | 1 | `/providers/Microsoft.ServiceBus/namespaces` · `2026-01-01` |
 | Event Hubs namespaces | 1 | `/providers/Microsoft.EventHub/namespaces` · `2026-01-01` |
 | API Management instances (rule 48) | 1, then per opened instance: its APIs, products, backends and named values (≤ 500 each, on demand; Related fires Backends) | `/providers/Microsoft.ApiManagement/service` · `{service}/apis` · `{service}/products` · `{service}/backends` · `{service}/namedValues` · `2024-05-01` |
+| Logic Apps workflows (rule 49) | 1, then per opened workflow: its triggers (≤ 100) and latest runs (`$top=25`), on demand | `/providers/Microsoft.Logic/workflows` · `{workflow}/triggers` · `{workflow}/runs` · `2019-05-01` |
+| API connections (rule 49) | 1 generic resources call (which groups hold one), then 1 per group | `/resources?$filter=resourceType eq 'Microsoft.Web/connections'` · `/resourceGroups/{rg}/providers/Microsoft.Web/connections` · `2016-06-01` |
 | Network (firewall), Access policies | 1 each per namespace, on demand (Related fires the rule set too; a policy's keys are the `listKeys` POST, never sent) | `{ns}/networkRuleSets/default` · `{ns}/authorizationRules` · `2026-01-01` |
 | Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
@@ -1634,6 +1687,16 @@ it; that floor is #63.
   only, or every `;rev=`); whether a named value list ever carries a
   secret one's `value` (stripped regardless); a backend `resourceId`'s
   form (a management URL or a bare id); the metric names.
+- Logic Apps (#159), built without an Azure login from the Microsoft
+  Learn REST reference (`2019-05-01`), azure-rest-api-specs
+  (`web/…/AppService/stable/2016-06-01/logicAppsManagementClient.json`:
+  connections list per group only) and the CLI `logic` extension's
+  `workflow show` (`name` with `id_part="name"`). To check: whether a
+  run list's `trigger` ever carries `inputs` or `outputs` inline (dropped
+  regardless); a connection's `statuses` values beyond Connected / Error
+  (and `overallStatus`); whether `authenticatedUser` is on the list body;
+  the `$connections` entry shape on a workflow deployed by Bicep; the
+  metric names.
 - Azure Virtual Desktop (#198), built without an Azure login from
   azure-rest-api-specs (`desktopvirtualization/…/DesktopVirtualization/stable/2025-10-10`)
   and the CLI `desktopvirtualization` extension (hostpool, applicationgroup

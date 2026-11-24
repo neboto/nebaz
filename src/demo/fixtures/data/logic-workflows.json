@@ -1,0 +1,410 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-orders-notify",
+      "name": "la-orders-notify",
+      "type": "Microsoft.Logic/workflows",
+      "location": "westeurope",
+      "tags": {
+        "app": "orders",
+        "env": "prod"
+      },
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "6f1c2a3b-0000-4000-8000-00000000a101",
+        "tenantId": "{{tenant}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "createdTime": "{{iso:now-210d}}",
+        "changedTime": "{{iso:now-9d}}",
+        "state": "Enabled",
+        "version": "08584702311290418713",
+        "accessEndpoint": "https://prod-27.westeurope.logic.azure.com:443/workflows/5f0d6b1c9a2e4c47b6d1",
+        "endpointsConfiguration": {
+          "workflow": {
+            "accessEndpointIpAddresses": [
+              {
+                "address": "13.95.155.53"
+              },
+              {
+                "address": "52.174.54.218"
+              }
+            ],
+            "outgoingIpAddresses": [
+              {
+                "address": "13.95.147.65"
+              },
+              {
+                "address": "23.97.218.130"
+              }
+            ]
+          },
+          "connector": {
+            "outgoingIpAddresses": [
+              {
+                "address": "13.69.227.208/28"
+              },
+              {
+                "address": "40.115.50.13"
+              }
+            ]
+          }
+        },
+        "accessControl": {
+          "contents": {
+            "allowedCallerIpAddresses": [
+              {
+                "addressRange": "10.20.0.0/16"
+              }
+            ]
+          }
+        },
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": {
+              "type": "Object",
+              "defaultValue": {}
+            },
+            "ordersApiKey": {
+              "type": "SecureString",
+              "defaultValue": "demo-planted-workflow-default"
+            }
+          },
+          "triggers": {
+            "Every_15_minutes": {
+              "type": "Recurrence",
+              "recurrence": {
+                "frequency": "Minute",
+                "interval": 15
+              }
+            }
+          },
+          "actions": {
+            "Get_late_orders": {
+              "type": "Http",
+              "runAfter": {},
+              "inputs": {
+                "method": "GET",
+                "uri": "https://ca-orders-api.wonderfulsea-7c1e2a9b.westeurope.azurecontainerapps.io/orders/late?code=demo-planted-workflow-code",
+                "headers": {
+                  "x-orders-key": "@parameters('ordersApiKey')"
+                }
+              }
+            },
+            "For_each_order": {
+              "type": "Foreach",
+              "foreach": "@body('Get_late_orders')",
+              "runAfter": {
+                "Get_late_orders": [
+                  "Succeeded"
+                ]
+              },
+              "actions": {
+                "Send_an_email": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['office365']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "path": "/v2/Mail",
+                    "body": {
+                      "To": "orders-desk@contoso.com",
+                      "Subject": "Late order @{items('For_each_order')?['id']}",
+                      "Body": "demo-planted-workflow-body"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "office365": {
+                "connectionId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/office365-orders",
+                "connectionName": "office365-orders",
+                "id": "/subscriptions/{{prod}}/providers/Microsoft.Web/locations/westeurope/managedApis/office365"
+              }
+            }
+          },
+          "ordersApiKey": {
+            "type": "SecureString",
+            "value": "demo-planted-workflow-param"
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake",
+      "name": "la-invoice-intake",
+      "type": "Microsoft.Logic/workflows",
+      "location": "westeurope",
+      "tags": {
+        "app": "orders",
+        "env": "prod"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "createdTime": "{{iso:now-160d}}",
+        "changedTime": "{{iso:now-21d}}",
+        "state": "Enabled",
+        "version": "08584690112874455102",
+        "accessEndpoint": "https://prod-27.westeurope.logic.azure.com:443/workflows/a83e01f7c2d94b0e9e55",
+        "endpointsConfiguration": {
+          "workflow": {
+            "accessEndpointIpAddresses": [
+              {
+                "address": "13.95.155.53"
+              },
+              {
+                "address": "52.174.54.218"
+              }
+            ],
+            "outgoingIpAddresses": [
+              {
+                "address": "13.95.147.65"
+              },
+              {
+                "address": "23.97.218.130"
+              }
+            ]
+          },
+          "connector": {
+            "outgoingIpAddresses": [
+              {
+                "address": "13.69.227.208/28"
+              },
+              {
+                "address": "40.115.50.13"
+              }
+            ]
+          }
+        },
+        "accessControl": {},
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": {
+              "type": "Object",
+              "defaultValue": {}
+            }
+          },
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "method": "POST",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invoiceId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "actions": {
+            "Parse_invoice": {
+              "type": "ParseJson",
+              "runAfter": {},
+              "inputs": {
+                "content": "@triggerBody()",
+                "schema": {}
+              }
+            },
+            "Check_amount": {
+              "type": "If",
+              "runAfter": {
+                "Parse_invoice": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@body('Parse_invoice')?['amount']",
+                      10000
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Queue_for_approval": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['servicebus']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "path": "/@{encodeURIComponent('invoices-approval')}/messages",
+                    "body": {
+                      "ContentData": "@base64(triggerBody())"
+                    }
+                  },
+                  "runtimeConfiguration": {
+                    "secureData": {
+                      "properties": [
+                        "inputs"
+                      ]
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Queue_for_payment": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connection": {
+                          "name": "@parameters('$connections')['servicebus']['connectionId']"
+                        }
+                      },
+                      "method": "post",
+                      "path": "/@{encodeURIComponent('invoices-payment')}/messages",
+                      "body": {
+                        "ContentData": "@base64(triggerBody())"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "Response": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {
+                "Check_amount": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "statusCode": 202
+              }
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "servicebus": {
+                "connectionId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/servicebus-orders",
+                "connectionName": "servicebus-orders",
+                "id": "/subscriptions/{{prod}}/providers/Microsoft.Web/locations/westeurope/managedApis/servicebus"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Logic/workflows/la-legacy-ftp-sync",
+      "name": "la-legacy-ftp-sync",
+      "type": "Microsoft.Logic/workflows",
+      "location": "westeurope",
+      "tags": {
+        "app": "legacy"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "createdTime": "{{iso:now-700d}}",
+        "changedTime": "{{iso:now-120d}}",
+        "state": "Disabled",
+        "version": "08585240019920033217",
+        "accessEndpoint": "https://prod-27.westeurope.logic.azure.com:443/workflows/0c4f9e2a77b14d6f8a03",
+        "endpointsConfiguration": {
+          "workflow": {
+            "accessEndpointIpAddresses": [
+              {
+                "address": "13.95.155.53"
+              },
+              {
+                "address": "52.174.54.218"
+              }
+            ],
+            "outgoingIpAddresses": [
+              {
+                "address": "13.95.147.65"
+              },
+              {
+                "address": "23.97.218.130"
+              }
+            ]
+          },
+          "connector": {
+            "outgoingIpAddresses": [
+              {
+                "address": "13.69.227.208/28"
+              },
+              {
+                "address": "40.115.50.13"
+              }
+            ]
+          }
+        },
+        "accessControl": {
+          "triggers": {
+            "allowedCallerIpAddresses": [
+              {
+                "addressRange": "10.30.0.0/16"
+              }
+            ]
+          }
+        },
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "triggers": {
+            "Nightly": {
+              "type": "Recurrence",
+              "recurrence": {
+                "frequency": "Day",
+                "interval": 1,
+                "timeZone": "W. Europe Standard Time",
+                "schedule": {
+                  "hours": [
+                    "2"
+                  ]
+                }
+              }
+            }
+          },
+          "actions": {
+            "Push_inventory": {
+              "type": "Http",
+              "runAfter": {},
+              "inputs": {
+                "method": "PUT",
+                "uri": "http://10.10.8.5:8080/inventory/import",
+                "authentication": {
+                  "type": "Basic",
+                  "username": "svc-sync",
+                  "password": "demo-planted-workflow-password"
+                }
+              }
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {}
+      }
+    }
+  ]
+}

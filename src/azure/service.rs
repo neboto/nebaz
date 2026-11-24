@@ -107,6 +107,10 @@ pub enum ServiceType {
     /// named values lazy. Never a subscription key, a named value's value
     /// or a backend's credentials.
     ApiManagement,
+    /// Logic Apps (#159): Consumption workflows (triggers and runs lazy)
+    /// and the API connections their managed connectors use. Never a
+    /// definition's inputs, a run's contents or a connection's values.
+    LogicApps,
     /// Policy assignments, exemptions, custom definitions and initiatives,
     /// resource locks (#155, ADR 0009): the subscription's view with what it
     /// inherits from the management groups above. Never compliance (POST).
@@ -326,6 +330,11 @@ pub enum JumpView {
     // API Management (#159)
     /// `Microsoft.ApiManagement/service`.
     ApimServices,
+    // Logic Apps (#159)
+    /// `Microsoft.Logic/workflows` (Consumption).
+    LogicWorkflows,
+    /// `Microsoft.Web/connections`, listed per resource group.
+    ApiConnections,
     // Governance
     /// Every policy assignment that applies to the subscription or to
     /// anything in it, management groups' included (unfiltered list).
@@ -410,6 +419,7 @@ impl JumpView {
             RedisCaches | ManagedRedis => ServiceType::Redis,
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
             ApimServices => ServiceType::ApiManagement,
+            LogicWorkflows | ApiConnections => ServiceType::LogicApps,
             PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups | Budgets => ServiceType::Governance,
             DefenderRecommendations | DefenderAlerts | SecureScore | DefenderPlans => ServiceType::Defender,
             AdvisorRecommendations | AdvisorScore | AdvisorSuppressions => ServiceType::Advisor,
@@ -517,6 +527,8 @@ impl JumpView {
             ManagedRedis => "managed-redis",
             ServiceBusNamespaces => "servicebus-namespaces",
             ApimServices => "apim-services",
+            LogicWorkflows => "logic-workflows",
+            ApiConnections => "api-connections",
             EventHubNamespaces => "eventhub-namespaces",
             PolicyAssignments => "policy-assignments",
             PolicyExemptions => "policy-exemptions",
@@ -638,6 +650,8 @@ impl JumpView {
             ManagedRedis => "Managed Redis",
             ServiceBusNamespaces => "Service Bus",
             ApimServices => "Instances",
+            LogicWorkflows => "Workflows",
+            ApiConnections => "API connections",
             EventHubNamespaces => "Event Hubs",
             PolicyAssignments => "Assignments",
             PolicyExemptions => "Exemptions",
@@ -768,6 +782,8 @@ impl JumpView {
             ("microsoft.cache", ["redisenterprise"]) => JumpView::ManagedRedis,
             ("microsoft.servicebus", ["namespaces"]) => JumpView::ServiceBusNamespaces,
             ("microsoft.apimanagement", ["service"]) => JumpView::ApimServices,
+            ("microsoft.logic", ["workflows"]) => JumpView::LogicWorkflows,
+            ("microsoft.web", ["connections"]) => JumpView::ApiConnections,
             ("microsoft.eventhub", ["namespaces"]) => JumpView::EventHubNamespaces,
             // Governance (ADR 0009): wherever made, management groups
             // included. A built-in definition is in no list (custom only).
@@ -899,6 +915,7 @@ impl ServiceType {
             ServiceType::Redis,
             ServiceType::Messaging,
             ServiceType::ApiManagement,
+            ServiceType::LogicApps,
             ServiceType::Governance,
             ServiceType::Defender,
             ServiceType::Advisor,
@@ -949,6 +966,7 @@ impl ServiceType {
             ServiceType::Redis => "Databases",
             ServiceType::Messaging => "Integration",
             ServiceType::ApiManagement => "Integration",
+            ServiceType::LogicApps => "Integration",
             ServiceType::Governance => "Management",
             ServiceType::Defender => "Security",
             ServiceType::Advisor => "Management",
@@ -988,6 +1006,7 @@ impl ServiceType {
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
             ServiceType::ApiManagement => "API Management",
+            ServiceType::LogicApps => "Logic Apps",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
             ServiceType::Advisor => "Advisor",
@@ -1028,6 +1047,7 @@ impl ServiceType {
             ServiceType::Redis => "Redis",
             ServiceType::Messaging => "Messaging",
             ServiceType::ApiManagement => "APIM",
+            ServiceType::LogicApps => "Logic",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
             ServiceType::Advisor => "Advisor",
@@ -1067,6 +1087,7 @@ impl ServiceType {
             ServiceType::Redis => "Azure Cache for Redis & Managed Redis",
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
             ServiceType::ApiManagement => "APIs, products, backends & named values",
+            ServiceType::LogicApps => "Consumption workflows & API connections",
             ServiceType::Governance => "Policy, locks & management groups",
             ServiceType::Defender => "Recommendations, alerts, score & plans",
             ServiceType::Advisor => "Recommendations, score & suppressions",
@@ -1136,6 +1157,7 @@ impl ServiceType {
             ServiceType::Redis => &[RedisCaches, ManagedRedis],
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
             ServiceType::ApiManagement => &[ApimServices],
+            ServiceType::LogicApps => &[LogicWorkflows, ApiConnections],
             ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups, Budgets],
             ServiceType::Defender => &[DefenderRecommendations, DefenderAlerts, SecureScore, DefenderPlans],
             ServiceType::Advisor => &[AdvisorRecommendations, AdvisorScore, AdvisorSuppressions],
@@ -1293,7 +1315,7 @@ impl ServiceType {
                 (ServiceType::ContainerRegistry, None)
             }
             "app" | "apps" | "web" | "webapp" | "webapps" | "appservice" | "site" | "sites" => (ServiceType::AppService, None),
-            "func" | "funcs" | "function" | "functions" | "functionapp" | "functionapps" | "logicapp" | "logicapps" => {
+            "func" | "funcs" | "function" | "functions" | "functionapp" | "functionapps" => {
                 (ServiceType::AppService, Some(JumpView::FunctionApps))
             }
             "sql" | "sqlserver" | "sqlservers" | "azuresql" | "db" | "dbs" => (ServiceType::Sql, None),
@@ -1382,6 +1404,8 @@ impl ServiceType {
             "sb" | "servicebus" | "messaging" | "msg" => (ServiceType::Messaging, None),
             "eh" | "eventhub" | "eventhubs" | "kafka" => (ServiceType::Messaging, Some(JumpView::EventHubNamespaces)),
             "apim" | "apimanagement" | "apigateway" => (ServiceType::ApiManagement, None),
+            "logic" | "logicapp" | "logicapps" | "la" | "workflow" | "workflows" => (ServiceType::LogicApps, None),
+            "apiconn" | "apiconnection" | "apiconnections" => (ServiceType::LogicApps, Some(JumpView::ApiConnections)),
             "gov" | "governance" | "policy" | "policies" | "pa" | "assignment" | "assignments" => (ServiceType::Governance, None),
             "exempt" | "exemption" | "exemptions" => (ServiceType::Governance, Some(JumpView::PolicyExemptions)),
             "pdef" | "definition" | "definitions" | "initiative" | "initiatives" | "policyset" | "policysets" => {
@@ -1441,6 +1465,7 @@ impl ServiceType {
             ServiceType::Redis => "@redis",
             ServiceType::Messaging => "@sb",
             ServiceType::ApiManagement => "@apim",
+            ServiceType::LogicApps => "@logic",
             ServiceType::Governance => "@gov",
             ServiceType::Defender => "@defender",
             ServiceType::Advisor => "@advisor",
@@ -1452,12 +1477,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health", "@subdeploy", "@stack", "@ts"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health", "@subdeploy", "@stack", "@ts", "@apiconn"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@deploy", "@arc", "@avd", "@aca", "@redis", "@sb", "@apim", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@deploy", "@arc", "@avd", "@aca", "@redis", "@sb", "@apim", "@logic", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1724,8 +1749,12 @@ mod tests {
         assert_eq!(ServiceType::from_prefix("@avdsp"), Some((ServiceType::VirtualDesktop, Some(JumpView::ScalingPlans))));
         // A session host is a child: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.DesktopVirtualization/hostPools/hp/sessionHosts/h")), None);
-        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Logic/workflows/la")), None);
-        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Logic/workflows/la")), Some(JumpView::AllResources));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Logic/workflows/la")), Some(JumpView::LogicWorkflows));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/connections/office365")), Some(JumpView::ApiConnections));
+        assert_eq!(ServiceType::from_prefix("@logic"), Some((ServiceType::LogicApps, None)));
+        assert_eq!(ServiceType::from_prefix("@apiconn"), Some((ServiceType::LogicApps, Some(JumpView::ApiConnections))));
+        // A run is a child of its workflow: in no list of its own.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Logic/workflows/la/runs/r1")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.KeyVault/vaults/kv/secrets/db")), None);
         assert_eq!(

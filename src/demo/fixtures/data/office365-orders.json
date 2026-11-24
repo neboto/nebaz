@@ -1,0 +1,47 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/office365-orders",
+  "name": "office365-orders",
+  "type": "Microsoft.Web/connections",
+  "location": "westeurope",
+  "kind": "V1",
+  "tags": {
+    "app": "orders"
+  },
+  "properties": {
+    "displayName": "orders-desk@contoso.com",
+    "authenticatedUser": {
+      "name": "orders-desk@contoso.com"
+    },
+    "overallStatus": "Error",
+    "statuses": [
+      {
+        "status": "Error",
+        "target": "token",
+        "error": {
+          "code": "Unauthenticated",
+          "message": "Failed to refresh access token for service: office365. The user's password expired or was changed."
+        }
+      }
+    ],
+    "connectionState": "Enabled",
+    "parameterValues": {
+      "connectionString": "demo-planted-connection-value"
+    },
+    "nonSecretParameterValues": {},
+    "customParameterValues": {},
+    "createdTime": "{{iso:now-200d}}",
+    "changedTime": "{{iso:now-9d}}",
+    "api": {
+      "name": "office365",
+      "displayName": "Office 365 Outlook",
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Web/locations/westeurope/managedApis/office365",
+      "type": "Microsoft.Web/locations/managedApis"
+    },
+    "testLinks": [
+      {
+        "requestUri": "https://management.azure.com:443/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/office365-orders/extensions/proxy/testconnection?api-version=2016-06-01&sig=demo-planted-connection-sig",
+        "method": "get"
+      }
+    ]
+  }
+}

@@ -47,6 +47,15 @@ const PLANTED: &[(&str, &str)] = &[
     ("/service/apim-legacy-dev", "TLS 1."),
     ("/service/apim-legacy-dev", "Minimum API version"),
     ("/service/apim-legacy-dev", "plain http"),
+    // data (#159): la-orders-notify's Office 365 connection lost its
+    // token, so every run since fails; la-invoice-intake's request trigger
+    // takes any caller with its URL; la-legacy-ftp-sync is disabled.
+    ("/workflows/la-orders-notify", "Failed"),
+    ("/workflows/la-orders-notify", "6 failed"),
+    ("/workflows/la-orders-notify", "Unauthenticated"),
+    ("/workflows/la-invoice-intake", "signed URL"),
+    ("/workflows/la-legacy-ftp-sync", "Disabled"),
+    ("/connections/office365-orders", "Error"),
     // data: vm-nva-01's backups fail (no network to the backup service).
     ("/vaults/rsv-contoso-prod", "vm-nva-01"),
     // network: the branch office's backup VPN tunnel is down.
@@ -162,6 +171,10 @@ const AUDIT_EXPECTED: &[&str] = &[
     "apim-retired-platform",
     "apim-old-tls",
     "apim-certificate-expiring",
+    // data (#159): office365-orders is not connected; la-invoice-intake's
+    // request trigger takes any caller with its URL.
+    "logic-connection-error",
+    "logic-trigger-sas-only",
     // core: github-actions-deploy holds User Access Administrator and
     // Contributor on the subscription.
     "sub-privileged-guest-or-sp",
@@ -288,6 +301,27 @@ async fn every_demo_row_opens_without_a_warning() {
         clean_but_listed.is_empty(),
         "these open clean now; take them out of WARNS_YET: {clean_but_listed:?}"
     );
+}
+
+/// The fixtures for the types that scrub before a row keeps the body
+/// carry `demo-planted-…` values (a workflow's action password and
+/// `?code=`, a run's SAS link and outputs, a connection's parameter
+/// values, a backend's header value): none reaches a section `get`
+/// renders. (The row's kept body, what `e` shows, is each service's unit
+/// tests.)
+#[tokio::test]
+async fn no_planted_secret_reaches_get() {
+    for p in ["logic", "apiconn", "apim"] {
+        let rows = demo_ls(p).await;
+        assert!(!rows.is_empty(), "{p} has demo rows");
+        for id in rows.iter().filter_map(|r| r["id"].as_str()) {
+            let cli = demo_cli(&["get", id, "--in", p, "-o", "json"]);
+            let Some(Command::Get(args)) = &cli.command else { unreachable!() };
+            let out = get(&cli, args, OutputFormat::Json).await.unwrap_or_else(|f| panic!("get {id}: {}", f.message()));
+            // Never print `out`: on a failure it would hold the value.
+            assert!(!out.contains("demo-planted"), "{id}: a planted secret reached get");
+        }
+    }
 }
 
 #[tokio::test]
