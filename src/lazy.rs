@@ -297,6 +297,12 @@ pub struct LazyStore {
     /// removed.
     pub apim_named_values: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Logic Apps (#159) ────────────────────────────────────────────────
+    /// `GET {workflow}/triggers`, keyed by workflow id, outlined.
+    pub logic_triggers: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {workflow}/runs?$top=25`, keyed by workflow id, outcomes only.
+    pub logic_runs: LazyMap<Vec<serde_json::Value>>,
+
     // ── Automation (#202) ────────────────────────────────────────────────
     /// `GET {account}/runbooks`, keyed by account id, scrubbed.
     pub aa_runbooks: LazyMap<Vec<serde_json::Value>>,

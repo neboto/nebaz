@@ -512,6 +512,10 @@ fn profile(name: &str) -> (&'static str, Shape) {
         "backendduration" => ("MilliSeconds", Busy(24.0, 18.0)),
         // API Management's units.
         "capacity" => ("Percent", Busy(14.0, 22.0)),
+        // Logic Apps: a run every few minutes, the odd failure, seconds each.
+        "runsstarted" => ("Count", Steady(4.0)),
+        "runsfailed" | "triggersfailed" => ("Count", Steady(0.0)),
+        "runlatency" => ("Seconds", Busy(3.0, 4.0)),
         "totalrequestunits" => ("Count", Traffic(5200.0)),
         "normalizedruconsumption" => ("Percent", Busy(6.0, 22.0)),
         "vipavailability" | "dipavailability" | "datapathavailability" | "originhealthpercentage" => ("Count", Steady(100.0)),

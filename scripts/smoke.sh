@@ -274,6 +274,11 @@ run apim-instances ok apim '[]' \
   "APIs, products, backends & named values" \
   "cannot reach 127.0.0.1"
 
+# Logic Apps is its own tab in Integration (#159).
+run logic-workflows ok logic '[]' \
+  "Consumption workflows & API connections" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

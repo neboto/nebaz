@@ -1,0 +1,27 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Logic/workflows/la-legacy-ftp-sync/triggers/Nightly",
+      "name": "Nightly",
+      "type": "Microsoft.Logic/workflows/triggers",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "createdTime": "{{iso:now-200d}}",
+        "changedTime": "{{iso:now-9d}}",
+        "state": "Disabled",
+        "status": "Succeeded",
+        "lastExecutionTime": "{{iso:now-121d}}",
+        "workflow": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Logic/workflows/la-legacy-ftp-sync/versions/08585240019920033217",
+          "name": "08585240019920033217",
+          "type": "Microsoft.Logic/workflows/versions"
+        },
+        "recurrence": {
+          "frequency": "Day",
+          "interval": 1,
+          "timeZone": "W. Europe Standard Time"
+        }
+      }
+    }
+  ]
+}

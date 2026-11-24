@@ -1,0 +1,42 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/servicebus-orders",
+  "name": "servicebus-orders",
+  "type": "Microsoft.Web/connections",
+  "location": "westeurope",
+  "kind": "V1",
+  "tags": {
+    "app": "orders"
+  },
+  "properties": {
+    "displayName": "sb-orders-prod (managed identity)",
+    "authenticatedUser": {},
+    "overallStatus": "Connected",
+    "statuses": [
+      {
+        "status": "Connected"
+      }
+    ],
+    "connectionState": "Enabled",
+    "parameterValues": {
+      "connectionString": "demo-planted-connection-value"
+    },
+    "nonSecretParameterValues": {
+      "namespaceEndpoint": "demo-planted-nonsecret"
+    },
+    "customParameterValues": {},
+    "createdTime": "{{iso:now-200d}}",
+    "changedTime": "{{iso:now-9d}}",
+    "api": {
+      "name": "servicebus",
+      "displayName": "Service Bus",
+      "id": "/subscriptions/{{prod}}/providers/Microsoft.Web/locations/westeurope/managedApis/servicebus",
+      "type": "Microsoft.Web/locations/managedApis"
+    },
+    "testLinks": [
+      {
+        "requestUri": "https://management.azure.com:443/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/servicebus-orders/extensions/proxy/testconnection?api-version=2016-06-01&sig=demo-planted-connection-sig",
+        "method": "get"
+      }
+    ]
+  }
+}

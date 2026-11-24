@@ -327,6 +327,10 @@
     "kv": [
       "vaults (kv)"
     ],
+    "logic": [
+      "logic-workflows (logic)",
+      "api-connections (apiconn)"
+    ],
     "monitor": [
       "log-workspaces (monitor)",
       "app-insights (appi)",
@@ -415,6 +419,15 @@
       "Products",
       "Backends",
       "Named values",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "API connection": [
+      "Overview",
+      "Status",
+      "Used by",
       "Access",
       "Activity",
       "Related",
@@ -971,6 +984,18 @@
       "Condition",
       "Scopes",
       "Actions",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Logic app workflow": [
+      "Overview",
+      "Definition",
+      "Network",
+      "Triggers",
+      "Runs",
+      "Connections",
       "Access",
       "Activity",
       "Related",

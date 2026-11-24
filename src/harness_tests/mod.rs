@@ -53,6 +53,7 @@ mod search_follow_test;
 mod export_test;
 mod advisor_test;
 mod api_management_test;
+mod logic_apps_test;
 mod alerts_test;
 mod container_instances_test;
 mod static_web_apps_test;

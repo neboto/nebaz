@@ -1,0 +1,27 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-orders-notify/triggers/Every_15_minutes",
+      "name": "Every_15_minutes",
+      "type": "Microsoft.Logic/workflows/triggers",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "createdTime": "{{iso:now-200d}}",
+        "changedTime": "{{iso:now-9d}}",
+        "state": "Enabled",
+        "status": "Succeeded",
+        "lastExecutionTime": "{{iso:now-6m}}",
+        "workflow": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-orders-notify/versions/08584702311290418713",
+          "name": "08584702311290418713",
+          "type": "Microsoft.Logic/workflows/versions"
+        },
+        "nextExecutionTime": "{{iso:now+9m}}",
+        "recurrence": {
+          "frequency": "Minute",
+          "interval": 15
+        }
+      }
+    }
+  ]
+}

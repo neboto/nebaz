@@ -1,0 +1,22 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/triggers/manual",
+      "name": "manual",
+      "type": "Microsoft.Logic/workflows/triggers",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "createdTime": "{{iso:now-200d}}",
+        "changedTime": "{{iso:now-9d}}",
+        "state": "Enabled",
+        "status": "Succeeded",
+        "lastExecutionTime": "{{iso:now-47m}}",
+        "workflow": {
+          "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Logic/workflows/la-invoice-intake/versions/08584690112874455102",
+          "name": "08584690112874455102",
+          "type": "Microsoft.Logic/workflows/versions"
+        }
+      }
+    }
+  ]
+}

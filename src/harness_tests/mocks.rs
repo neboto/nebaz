@@ -468,6 +468,22 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             ),
         ),
         m(
+            JumpView::LogicWorkflows,
+            "WorkflowRow",
+            parse(
+                "WorkflowRow",
+                crate::azure::services::logic_apps::WorkflowRow::from_json(&simple("Microsoft.Logic/workflows/la-1"), t),
+            ),
+        ),
+        m(
+            JumpView::ApiConnections,
+            "ApiConnectionRow",
+            parse(
+                "ApiConnectionRow",
+                crate::azure::services::logic_apps::ApiConnectionRow::from_json(&simple("Microsoft.Web/connections/conn-1"), t),
+            ),
+        ),
+        m(
             JumpView::AppServicePlans,
             "PlanRow",
             parse("PlanRow", app_service::PlanRow::from_json(&simple("Microsoft.Web/serverfarms/plan-1"), t)),
