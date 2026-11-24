@@ -1218,6 +1218,106 @@ pub fn rules_watching(id: &str, lists: &[&[Box<dyn Resource>]]) -> Vec<(String, 
     out
 }
 
+// ── Thresholds on the chart (#230) ────────────────────────────────────
+
+/// A metric alert criterion on the charted metric: the line the `m`
+/// chart draws at its threshold, or why it draws none.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChartThreshold {
+    pub rule: String,
+    /// `> 80`, `≤ 200`.
+    pub condition: String,
+    /// The rule's own reading: `avg over 5m`.
+    pub over: String,
+    pub enabled: bool,
+    /// The value drawn, or why the line would mislead.
+    pub drawn: std::result::Result<f64, String>,
+}
+
+/// `PT5M` → 300; `None` for a year or month part, or anything else.
+fn duration_secs(d: &str) -> Option<i64> {
+    let up = d.to_uppercase();
+    let rest = up.strip_prefix('P')?;
+    let (days, time) = rest.split_once('T').unwrap_or((rest, ""));
+    let (mut total, mut num) = (0_i64, String::new());
+    for (part, units) in [(days, "DW"), (time, "HMS")] {
+        for c in part.chars() {
+            if c.is_ascii_digit() {
+                num.push(c);
+                continue;
+            }
+            let n: i64 = num.parse().ok()?;
+            num.clear();
+            total += n * match c {
+                'W' if units == "DW" => 7 * 86_400,
+                'D' if units == "DW" => 86_400,
+                'H' if units == "HMS" => 3_600,
+                'M' if units == "HMS" => 60,
+                'S' if units == "HMS" => 1,
+                _ => return None,
+            };
+        }
+    }
+    (num.is_empty() && total > 0).then_some(total)
+}
+
+/// The metric alert rules in the warm lists that watch `id` with a
+/// criterion on `metric`, as the chart of `metric` read with `aggregation`
+/// at `grain` (ISO 8601) would draw them. A line is drawn only where it
+/// means what it says: a static threshold, the chart's aggregation, no
+/// dimension filter, and for a sum or a count (which grow with the
+/// window) the chart's grain.
+pub fn chart_thresholds(
+    id: &str,
+    metric: &str,
+    aggregation: crate::azure::metrics::Aggregation,
+    grain: &str,
+    lists: &[&[Box<dyn Resource>]],
+) -> Vec<ChartThreshold> {
+    use crate::azure::metrics::Aggregation;
+    let mut out = Vec::new();
+    for r in lists.iter().flat_map(|l| l.iter()) {
+        let Some(m) = r.as_any().downcast_ref::<MetricAlertRow>() else { continue };
+        if m.is_web_test() || !m.watches(id) {
+            continue;
+        }
+        for c in m.criteria.iter().filter(|c| json::str_at(c, "/metricName").is_some_and(|n| same(&n, metric))) {
+            let agg_word = json::str_at(c, "/timeAggregation").unwrap_or_default();
+            let agg = Aggregation::parse(&agg_word);
+            let window = duration(m.window.as_deref());
+            let over = format!("{} over {}", agg.map(|a| a.short()).unwrap_or(agg_word.as_str()), window);
+            let dims: Vec<String> = json::arr(c, "/dimensions").iter().map(|d| json::text(d, "/name")).collect();
+            let sums = matches!(agg, Some(Aggregation::Total | Aggregation::Count));
+            let rule_secs = m.window.as_deref().and_then(duration_secs);
+            let drawn = if json::str_at(c, "/criterionType").is_some_and(|t| t.contains("Dynamic")) {
+                Err("dynamic threshold".to_string())
+            } else if !dims.is_empty() {
+                Err(format!("per {}", dims.join(", ")))
+            } else if agg != Some(aggregation) {
+                Err(format!("the chart reads {}", aggregation.short()))
+            } else if sums && (rule_secs.is_none() || rule_secs != duration_secs(grain)) {
+                Err(format!("the chart sums per {}", duration(Some(grain))))
+            } else {
+                c.pointer("/threshold").and_then(Value::as_f64).ok_or_else(|| "no threshold".to_string())
+            };
+            // `80`, not `80.0`, whichever way the body spelt it.
+            let threshold = match c.pointer("/threshold").and_then(Value::as_f64) {
+                Some(t) if t.fract() == 0.0 && t.abs() < 1e15 => format!("{}", t as i64),
+                Some(t) => t.to_string(),
+                None => "-".into(),
+            };
+            out.push(ChartThreshold {
+                rule: r.name().to_string(),
+                condition: format!("{} {}", op(&json::str_at(c, "/operator").unwrap_or_default()), threshold),
+                over,
+                enabled: m.enabled != Some(false),
+                drawn,
+            });
+        }
+    }
+    out
+}
+
 /// Every rule and processing rule in the warm lists that names `group`.
 fn users_of<'a>(group: &str, lists: &[&'a [Box<dyn Resource>]]) -> Vec<(&'static str, &'a dyn Resource)> {
     let mut out = Vec::new();
@@ -1454,6 +1554,62 @@ mod tests {
         assert!(!on_group.watches("/subscriptions/0000/resourceGroups/rg-app-2/providers/Microsoft.Compute/virtualMachines/vm-9"));
         let warm: Vec<Box<dyn Resource>> = vec![Box::new(on_vm)];
         assert_eq!(rules_watching(VM, &[&warm]), vec![("Metric alert · cpu-high".to_string(), warm[0].id().to_string())]);
+    }
+
+    fn rule_on(name: &str, window: &str, criterion: Value) -> Box<dyn Resource> {
+        Box::new(
+            MetricAlertRow::from_json(
+                &json!({
+                    "id": format!("{}/providers/Microsoft.Insights/metricAlerts/{}", RG, name), "name": name, "location": "global",
+                    "properties": {"enabled": true, "scopes": [VM], "windowSize": window,
+                                   "criteria": {"odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                                                "allOf": [criterion]}}
+                }),
+                None,
+            )
+            .unwrap(),
+        )
+    }
+
+    #[test]
+    fn the_chart_draws_a_static_threshold_on_its_aggregation_and_says_why_not_otherwise() {
+        use crate::azure::metrics::Aggregation::{Average, Total};
+        let warm: Vec<Box<dyn Resource>> = vec![
+            Box::new(metric(json!([VM]), "Microsoft.Compute/virtualMachines")),
+            rule_on("cpu-max", "PT5M", json!({"metricName": "Percentage CPU", "timeAggregation": "Maximum",
+                                              "operator": "GreaterThan", "threshold": 95})),
+            rule_on("cpu-dyn", "PT5M", json!({"metricName": "percentage cpu", "timeAggregation": "Average", "operator": "GreaterOrLessThan",
+                                              "criterionType": "DynamicThresholdCriterion", "alertSensitivity": "Medium"})),
+            rule_on("cpu-lun", "PT5M", json!({"metricName": "Percentage CPU", "timeAggregation": "Average", "operator": "GreaterThan",
+                                              "threshold": 50, "dimensions": [{"name": "LUN", "operator": "Include", "values": ["*"]}]})),
+            rule_on("net-in", "PT5M", json!({"metricName": "Network In Total", "timeAggregation": "Total",
+                                             "operator": "GreaterThan", "threshold": 1000})),
+        ];
+        let got = chart_thresholds(VM, "Percentage CPU", Average, "PT1H", &[&warm]);
+        let by = |n: &str| got.iter().find(|t| t.rule == n).unwrap().clone();
+        assert_eq!(got.len(), 4, "{:?}", got);
+        let high = by("cpu-high");
+        assert_eq!((high.condition.as_str(), high.over.as_str(), high.drawn.clone()), ("> 80", "avg over 5m", Ok(80.0)));
+        assert_eq!(by("cpu-max").drawn, Err("the chart reads avg".into()));
+        assert_eq!(by("cpu-dyn").drawn, Err("dynamic threshold".into()));
+        assert_eq!(by("cpu-lun").drawn, Err("per LUN".into()));
+        // A sum only at the rule's own window.
+        assert_eq!(
+            chart_thresholds(VM, "Network In Total", Total, "PT1H", &[&warm])[0].drawn,
+            Err("the chart sums per 1h".into())
+        );
+        assert_eq!(chart_thresholds(VM, "Network In Total", Total, "PT5M", &[&warm])[0].drawn, Ok(1000.0));
+        // Another resource: nothing.
+        assert!(chart_thresholds(&format!("{}2", VM), "Percentage CPU", Average, "PT1H", &[&warm]).is_empty());
+    }
+
+    #[test]
+    fn iso_durations_read_as_seconds() {
+        assert_eq!(duration_secs("PT5M"), Some(300));
+        assert_eq!(duration_secs("PT1H30M"), Some(5400));
+        assert_eq!(duration_secs("P1D"), Some(86_400));
+        assert_eq!(duration_secs("P1M"), None);
+        assert_eq!(duration_secs("5m"), None);
     }
 
     #[test]

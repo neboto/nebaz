@@ -43,6 +43,7 @@ mod watch_test;
 mod command_picker_test;
 mod changes_test;
 mod chart_markers_test;
+mod chart_thresholds_test;
 mod audit_test;
 mod directory_test;
 mod keycast_test;

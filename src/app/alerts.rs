@@ -7,11 +7,12 @@
 use super::App;
 use crate::azure::resource::Resource;
 use crate::azure::service::JumpView;
-use crate::azure::services::alerts::{alerts_section_lines, rules_watching, AlertsContext};
+use crate::azure::services::alerts::{alerts_section_lines, chart_thresholds, rules_watching, AlertsContext};
 use crate::azure::services::directory::now_unix;
 use crate::azure::services::governance::Warm;
 use crate::azure::services::splice_related;
 use crate::event::Event;
+use crate::ui::widgets::metrics_overlay::ThresholdSource;
 use tokio::sync::mpsc;
 
 /// The rule lists a resource's Related reads: the three rule types.
@@ -54,6 +55,30 @@ impl App {
         let mut found = rules_watching(id, &lists);
         found.extend(extra);
         splice_related(lines, found)
+    }
+
+    /// The metric alert thresholds on the open chart's selected metric
+    /// (#230), from the warm metric alert list: `None` with no chart, in
+    /// the WAF view, or with nothing to say (the list cold, or no rule on
+    /// the metric).
+    pub fn threshold_source(&self) -> Option<ThresholdSource> {
+        let st = self.metrics.as_ref().filter(|st| !st.waf_view() && st.picker.is_none())?;
+        let s = st.selected_series()?;
+        let src = match self.section_list(JumpView::MetricAlerts) {
+            Warm::Rows(rows) => ThresholdSource {
+                rules: chart_thresholds(&st.resource_id, &s.name, s.aggregation, st.window.interval(), &[rows]),
+                ..Default::default()
+            },
+            Warm::Loading => ThresholdSource { loading: true, ..Default::default() },
+            Warm::Failed(e) => ThresholdSource { failed: Some(e.to_string()), ..Default::default() },
+            Warm::Cold => return None,
+        };
+        (src.loading || src.failed.is_some() || !src.rules.is_empty()).then_some(src)
+    }
+
+    /// The charts' thresholds: the metric alert list, once per subscription.
+    pub(super) fn trigger_chart_thresholds(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
+        self.trigger_section_list(JumpView::MetricAlerts, event_tx);
     }
 
     /// Every type's Related: the three rule lists, once per subscription.
