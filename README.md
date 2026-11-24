@@ -46,7 +46,7 @@ all it needs, and a test fails the build if that ever changes. See
   services, resource groups and subscriptions. `⌫` comes back.
 - **Network access lens** (`N`) on a VM, NIC, subnet or NSG: the NSG rules
   that apply, in priority order with defaults, shadowed rules marked.
-- **Metrics** (`m`): Azure Monitor charts in the pane, a curated set per type.
+- **Metrics** (`m`): Azure Monitor charts in the pane, a curated set per type, with the change markers and the thresholds of the metric alerts watching the resource.
   On an Application Gateway with WAF, a Front Door profile or a WAF policy it
   is the WAF view: requests by action, the block rate and per-rule tables
   (`Tab` between them, `⏎` charts a rule, `d` back, `w` toggles with the

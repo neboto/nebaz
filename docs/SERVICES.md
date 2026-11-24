@@ -287,6 +287,20 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     to 30d, `]` and `5` widen and refetch; shorter ranges filter at draw
     time). `c` hides them, `W` parks the view and opens the timeline on
     those rows, `Esc` there returns to the charts as left.
+    **Alert thresholds** (#230, `chart_thresholds` in
+    `src/azure/services/alerts.rs`, `App::threshold_source`): opening the
+    charts loads the metric alert list (rule 36's, once per subscription,
+    no new call); a metric alert that watches the resource with a
+    criterion on the selected metric draws its threshold as a horizontal
+    line in the error colour, the y range taking it in, and is named on
+    the line under the list (`┄ cpu-high > 80 (avg over 5m)`). A line is
+    drawn only where it means what it says: a static threshold, the
+    chart's aggregation, no dimension filter, and for a sum or a count
+    (which grow with the window) the rule's window equal to the chart's
+    grain. Any other rule on the metric is named dim with why
+    (`· cpu-max: the chart reads avg`, `dynamic threshold`, `per LUN`,
+    `the chart sums per 1m`). Log search and activity log alerts have no
+    metric to sit on.
     **WAF view** (#153, `src/azure/waf_metrics.rs`, drawn by
     `src/ui/widgets/metrics_waf.rs`): `m` on an Application Gateway that
     runs a WAF (`AppGatewayRow::has_waf`), a Front Door Standard / Premium
@@ -851,7 +865,8 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     parent) when it also names the resource's type (a metric alert's
     `targetResourceType`, a log alert's `targetResourceTypes`, an activity
     log alert's `resourceType` condition), on a segment boundary: a
-    subscription-wide Service Health alert is not on every row. An action
+    subscription-wide Service Health alert is not on every row. The
+    charts draw a watching metric alert's threshold (rule 19). An action
     group's **Used by** lists every rule and processing rule naming it
     (the same lists plus the processing rules, loaded on entering it). A
     rule with no action group says it tells no one; an action group with

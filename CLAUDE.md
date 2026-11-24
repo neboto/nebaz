@@ -158,7 +158,10 @@ is the same view with dimension-split calls: actions, block rate, rule
 tables; a policy opens its gateway's or profile's.
 The chart draws the `W` timeline's events as markers (`App::chart_timeline`,
 fetched through the timeline's own `fetch_timeline`, never a second path);
-`W` from the chart parks the view and `Esc` returns to it.
+`W` from the chart parks the view and `Esc` returns to it. A metric
+alert watching the resource draws its static threshold on the matching
+chart (`chart_thresholds`, from the warm metric alert list the charts
+load; a rule the chart would misread is named with why, never drawn, #230).
 
 **`@audit`** (`src/audit.rs`, `src/audit/checks.rs`, `src/app/audit.rs`;
 ADR 0007, `SERVICES.md` rule 25): a virtual service (`is_virtual()`, never

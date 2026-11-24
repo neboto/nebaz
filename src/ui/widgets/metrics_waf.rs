@@ -245,7 +245,7 @@ pub fn render_waf(
                 )];
                 title.extend(legend(&lines));
                 title.push(Span::styled("· d back ", Style::default().fg(theme::text_dim())));
-                render_lines_chart(title, "Count", &lines, st, markers.as_ref(), area, frame);
+                render_lines_chart(title, "Count", &lines, &[], st, markers.as_ref(), area, frame);
             }
             None => {
                 let lines: Vec<ChartLine> =
@@ -255,7 +255,7 @@ pub fn render_waf(
                     Style::default().fg(theme::text_primary()).add_modifier(Modifier::BOLD),
                 )];
                 title.extend(legend(&lines));
-                render_lines_chart(title, "Count", &lines, st, markers.as_ref(), area, frame);
+                render_lines_chart(title, "Count", &lines, &[], st, markers.as_ref(), area, frame);
             }
         }
     }

@@ -18,6 +18,7 @@
 //! come from `App::chart_timeline`, fetched through the same sources as
 //! `W` (`app/timeline.rs`), over the week or month the range needs.
 
+use crate::azure::services::alerts::ChartThreshold;
 use crate::azure::timeline::TimelineRow;
 use crate::azure::metrics::{fmt_value, MetricDefinition, MetricQuery, MetricSeries, MetricWindow};
 use crate::ui::theme;
@@ -281,7 +282,8 @@ pub fn render_metrics_overlay(app: &crate::app::App, area: Rect, frame: &mut Fra
     } else if let (true, Some(w)) = (st.waf_view(), st.waf.as_ref()) {
         super::metrics_waf::render_waf(st, w, app.marker_source(), chunks[2], frame);
     } else {
-        render_series(st, app.marker_source(), chunks[2], &mut rows, frame);
+        let thresholds = app.threshold_source();
+        render_series(st, app.marker_source(), thresholds.as_ref(), chunks[2], &mut rows, frame);
     }
     drop(rows);
 
@@ -385,7 +387,14 @@ fn series_color(i: usize) -> Color {
     [theme::accent(), theme::success(), theme::warning(), theme::heading(), theme::brand(), theme::border_focused()][i % 6]
 }
 
-fn render_series(st: &MetricsState, markers: Option<MarkerSource>, area: Rect, hits: &mut crate::app::PopupHits, frame: &mut Frame) {
+fn render_series(
+    st: &MetricsState,
+    markers: Option<MarkerSource>,
+    thresholds: Option<&ThresholdSource>,
+    area: Rect,
+    hits: &mut crate::app::PopupHits,
+    frame: &mut Frame,
+) {
     if st.series.is_empty() {
         let msg = if st.loading {
             "  Reading…"
@@ -449,11 +458,18 @@ fn render_series(st: &MetricsState, markers: Option<MarkerSource>, area: Rect, h
         }
         lines.push(Line::from(spans));
     }
+    // The selected metric's alert thresholds on the line between the list
+    // and the chart (#230), where they have the pane's width.
+    if let Some(t) = thresholds {
+        let mut legend = vec![Span::raw("  ")];
+        legend.extend(threshold_legend(t));
+        lines.push(Line::from(legend));
+    }
     frame.render_widget(Paragraph::new(lines), list_area);
     hits.record_rows(list_area, 0, st.series.len());
 
     if let (Some(chart_area), Some(s)) = (chart_area, st.selected_series()) {
-        render_value_chart(s, st, markers.as_ref(), series_color(st.selected), chart_area, frame);
+        render_value_chart(s, st, markers.as_ref(), thresholds, series_color(st.selected), chart_area, frame);
     }
 }
 
@@ -567,6 +583,50 @@ fn marker_legend(rows: &[TimelineRow], drawn: &[Marker], loading: bool, width: u
     Line::from(spans)
 }
 
+/// The metric alert rules on the selected metric (#230): read from the
+/// warm metric alert list (loaded when the charts open), never fetched by
+/// the chart.
+#[derive(Debug, Clone, Default)]
+pub struct ThresholdSource {
+    pub rules: Vec<ChartThreshold>,
+    pub loading: bool,
+    pub failed: Option<String>,
+}
+
+impl ThresholdSource {
+    /// The values drawn as lines.
+    pub fn lines(&self) -> Vec<f64> {
+        self.rules.iter().filter_map(|r| r.drawn.clone().ok()).collect()
+    }
+}
+
+/// The threshold legend: each drawn rule (`┄ cpu-high > 80 avg
+/// over 5m`), then each one not drawn with why (`· cpu-max: the chart
+/// reads avg`), then how the list stands.
+fn threshold_legend(src: &ThresholdSource) -> Vec<Span<'static>> {
+    let dim = Style::default().fg(theme::text_dim());
+    let mut spans = Vec::new();
+    for r in &src.rules {
+        let off = if r.enabled { "" } else { ", disabled" };
+        match &r.drawn {
+            Ok(_) => {
+                spans.push(Span::styled("┄ ", Style::default().fg(theme::error())));
+                spans.push(Span::styled(format!("{} {} ", r.rule, r.condition), Style::default().fg(theme::text_primary())));
+                spans.push(Span::styled(format!("({}{}) ", r.over, off), dim));
+            }
+            // Dim and without the ┄: the reason it is not drawn.
+            Err(why) => spans.push(Span::styled(format!("· {}: {}{} ", r.rule, why, off), dim)),
+        }
+    }
+    if src.loading {
+        spans.push(Span::styled("· reading alert rules… ", dim));
+    }
+    if let Some(e) = &src.failed {
+        spans.push(Span::styled(format!("⚠ alert rules: {} ", e), Style::default().fg(theme::warning())));
+    }
+    spans
+}
+
 /// One line of a chart: its name (the legend), colour and points.
 pub struct ChartLine<'a> {
     pub name: &'a str,
@@ -580,23 +640,29 @@ fn render_value_chart(
     s: &MetricSeries,
     st: &MetricsState,
     markers: Option<&MarkerSource>,
+    thresholds: Option<&ThresholdSource>,
     color: Color,
     area: Rect,
     frame: &mut Frame,
 ) {
     let title = format!(" {} · {} ({}) ", s.label, s.name, s.aggregation.short());
     let title = vec![Span::styled(title, Style::default().fg(color).add_modifier(Modifier::BOLD))];
+    let hlines = thresholds.map(ThresholdSource::lines).unwrap_or_default();
     let line = ChartLine { name: &s.label, color, points: &s.points };
-    render_lines_chart(title, &s.unit, &[line], st, markers, area, frame);
+    render_lines_chart(title, &s.unit, &[line], &hlines, st, markers, area, frame);
 }
 
 /// Any number of lines over the window on one axis (the WAF view draws
-/// its actions this way), with the change markers behind them. The
-/// markers' x origin is the window's start, `st.end - st.window.secs()`.
+/// its actions this way), with the change markers behind them and a
+/// horizontal line at each of `hlines` (alert thresholds, #230), which
+/// the y range always takes in. The markers' x origin is the window's
+/// start, `st.end - st.window.secs()`.
+#[allow(clippy::too_many_arguments)]
 pub fn render_lines_chart(
     title: Vec<Span<'static>>,
     unit: &str,
     lines: &[ChartLine],
+    hlines: &[f64],
     st: &MetricsState,
     markers: Option<&MarkerSource>,
     area: Rect,
@@ -606,7 +672,7 @@ pub fn render_lines_chart(
     let start = st.end - st.window.secs();
     let series: Vec<Vec<(f64, f64)>> =
         lines.iter().map(|l| l.points.iter().map(|&(t, v)| ((t - start) as f64, v)).collect()).collect();
-    let ys = || series.iter().flatten().map(|(_, y)| *y);
+    let ys = || series.iter().flatten().map(|(_, y)| *y).chain(hlines.iter().copied());
     let lo = ys().fold(0.0_f64, f64::min);
     let peak = ys().fold(f64::MIN, f64::max);
     let hi = if peak > lo { peak + (peak - lo) * 0.1 } else { lo + 1.0 };
@@ -624,6 +690,16 @@ pub fn render_lines_chart(
                 .style(Style::default().fg(if *failed { theme::error() } else { theme::text_dim() }))
         })
         .collect();
+    let rules: Vec<[(f64, f64); 2]> = hlines.iter().map(|&v| [(0.0, v), (x_max, v)]).collect();
+    for pts in &rules {
+        datasets.push(
+            Dataset::default()
+                .data(pts)
+                .marker(symbols::Marker::Braille)
+                .graph_type(GraphType::Line)
+                .style(Style::default().fg(theme::error())),
+        );
+    }
     for (data, l) in series.iter().zip(lines) {
         datasets.push(
             Dataset::default()
@@ -738,6 +814,10 @@ mod tests {
     }
 
     fn chart_buffer(markers: Option<&MarkerSource>) -> ratatui::buffer::Buffer {
+        chart_buffer_with(markers, None)
+    }
+
+    fn chart_buffer_with(markers: Option<&MarkerSource>, thresholds: Option<&ThresholdSource>) -> ratatui::buffer::Buffer {
         let pts: Vec<(i64, f64)> = (0..=60).map(|m| (END - 3600 + m * 60, 10.0 + (m % 7) as f64)).collect();
         let s = MetricSeries {
             name: "Percentage CPU".into(),
@@ -750,8 +830,38 @@ mod tests {
         let mut st = MetricsState::open("/x".into(), "VM · x".into(), vec![], MetricWindow::OneHour);
         st.end = END;
         let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(100, 16)).unwrap();
-        terminal.draw(|f| render_value_chart(&s, &st, markers, Color::Green, f.area(), f)).unwrap();
+        terminal.draw(|f| render_value_chart(&s, &st, markers, thresholds, Color::Green, f.area(), f)).unwrap();
         terminal.backend().buffer().clone()
+    }
+
+    #[test]
+    fn a_threshold_draws_a_line_the_y_range_takes_in_and_the_legend_names_it_or_why_not() {
+        let rule = |name: &str, drawn: std::result::Result<f64, String>| ChartThreshold {
+            rule: name.into(),
+            condition: "> 80".into(),
+            over: "avg over 5m".into(),
+            enabled: true,
+            drawn,
+        };
+        let src = ThresholdSource {
+            rules: vec![rule("cpu-high", Ok(80.0)), rule("cpu-dyn", Err("dynamic threshold".into()))],
+            ..Default::default()
+        };
+        let text: String = threshold_legend(&src).iter().map(|s| s.content.to_string()).collect();
+        assert_eq!(text, "┄ cpu-high > 80 (avg over 5m) · cpu-dyn: dynamic threshold ");
+        let b = chart_buffer_with(None, Some(&src));
+        let w = b.area.width as usize;
+        // The series peaks at 16; the line at 80 is drawn inside the plot
+        // (the y range grew to take it in), in the error colour.
+        let h = b.area.height as usize;
+        let plot = &b.content()[w..w * (h - 1)];
+        assert!(plot.iter().any(|c| c.fg == theme::error() && c.symbol() != " "), "the threshold is drawn");
+        let labels: String = b.content().iter().map(|c| c.symbol()).collect();
+        assert!(labels.contains("88"), "the y axis reaches past the threshold: {labels}");
+        // Nothing to draw: the plot is the plain one.
+        let empty = ThresholdSource { loading: true, ..Default::default() };
+        let plot_of = |b: &ratatui::buffer::Buffer| b.content()[w..w * (h - 1)].to_vec();
+        assert_eq!(plot_of(&chart_buffer(None)), plot_of(&chart_buffer_with(None, Some(&empty))));
     }
 
     #[test]

@@ -77,6 +77,7 @@ impl App {
             self.open_metric_picker(event_tx);
         }
         self.seed_chart_markers(event_tx);
+        self.trigger_chart_thresholds(event_tx);
     }
 
     /// The change markers the open chart draws: the `W` timeline rows
