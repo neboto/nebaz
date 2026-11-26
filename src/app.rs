@@ -161,6 +161,7 @@ mod deployments;
 mod virtual_desktop;
 mod api_management;
 mod logic_apps;
+mod event_grid;
 mod split;
 mod watch;
 mod arc;
@@ -3097,6 +3098,9 @@ impl App {
             return Some(lines);
         }
         if let Some(lines) = self.logic_section_lines(resource, idx) {
+            return Some(lines);
+        }
+        if let Some(lines) = self.event_grid_section_lines(resource, idx) {
             return Some(lines);
         }
         if let Some(lines) = self.arc_section_lines(resource, idx) {

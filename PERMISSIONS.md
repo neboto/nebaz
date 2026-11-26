@@ -492,6 +492,17 @@ each one backs are in the catalog table
   keys and consent links (POSTs). A definition's inputs, a run's
   outputs and a connection's parameter values are dropped before the
   store keeps a body; the workflows' own host is on the guard's list.
+- **Event Grid** (#159): `Microsoft.EventGrid/topics/read`,
+  `Microsoft.EventGrid/systemTopics/read` and
+  `Microsoft.EventGrid/domains/read`, and for the lazy sections
+  `Microsoft.EventGrid/eventSubscriptions/read`,
+  `Microsoft.EventGrid/systemTopics/eventSubscriptions/read` and
+  `Microsoft.EventGrid/domains/topics/read`. Never: access keys
+  (`listKeys`, a POST), a webhook subscription's full URL (`getFullUrl`,
+  a POST) or its delivery attributes (`getDeliveryAttributes`, a POST).
+  A webhook's base URL is stripped of any query and a static delivery
+  attribute's value is dropped before the store keeps a body; the topic
+  endpoints' host is on the guard's list.
 - **Foundry** (every Cognitive Services account, Azure OpenAI included):
   `Microsoft.CognitiveServices/accounts/read`; the lazy Deployments and
   Projects sections: `Microsoft.CognitiveServices/accounts/deployments/read`,

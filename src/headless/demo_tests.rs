@@ -55,6 +55,13 @@ const PLANTED: &[(&str, &str)] = &[
     ("/workflows/la-orders-notify", "Unauthenticated"),
     ("/workflows/la-invoice-intake", "signed URL"),
     ("/workflows/la-legacy-ftp-sync", "Disabled"),
+    // data (#159): egt-orders-events takes access keys from any IP; its
+    // partner webhook never answered validation and its reports function
+    // has no dead-letter destination.
+    ("/topics/egt-orders-events", "any IP with an access key"),
+    ("/topics/egt-orders-events", "not delivering"),
+    ("/topics/egt-orders-events", "AwaitingManualAction"),
+    ("/topics/egt-orders-events", "none: an event still undelivered"),
     ("/connections/office365-orders", "Error"),
     // data: vm-nva-01's backups fail (no network to the backup service).
     ("/vaults/rsv-contoso-prod", "vm-nva-01"),
@@ -175,6 +182,10 @@ const AUDIT_EXPECTED: &[&str] = &[
     // request trigger takes any caller with its URL.
     "logic-connection-error",
     "logic-trigger-sas-only",
+    // data (#159): egt-orders-events takes keys from any IP, its partner
+    // webhook waits on validation and its reports function has no dead-letter.
+    "eventgrid-local-auth-public",
+    "eventgrid-subscription-delivery",
     // core: github-actions-deploy holds User Access Administrator and
     // Contributor on the subscription.
     "sub-privileged-guest-or-sp",
@@ -306,12 +317,13 @@ async fn every_demo_row_opens_without_a_warning() {
 /// The fixtures for the types that scrub before a row keeps the body
 /// carry `demo-planted-…` values (a workflow's action password and
 /// `?code=`, a run's SAS link and outputs, a connection's parameter
-/// values, a backend's header value): none reaches a section `get`
+/// values, a backend's header value, a webhook's full URL and a delivery
+/// attribute's value): none reaches a section `get`
 /// renders. (The row's kept body, what `e` shows, is each service's unit
 /// tests.)
 #[tokio::test]
 async fn no_planted_secret_reaches_get() {
-    for p in ["logic", "apiconn", "apim"] {
+    for p in ["logic", "apiconn", "apim", "eg", "egst", "egd"] {
         let rows = demo_ls(p).await;
         assert!(!rows.is_empty(), "{p} has demo rows");
         for id in rows.iter().filter_map(|r| r["id"].as_str()) {

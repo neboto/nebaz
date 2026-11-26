@@ -294,6 +294,11 @@
       "dns-resolver-policies (dnsp)",
       "traffic-manager-profiles (tm)"
     ],
+    "eg": [
+      "eventgrid-topics (eg)",
+      "eventgrid-system-topics (egst)",
+      "eventgrid-domains (egd)"
+    ],
     "er": [
       "expressroute-circuits (er)",
       "vnet-gateways (vgw)",
@@ -831,6 +836,33 @@
       "Network injection",
       "Encryption",
       "Identity",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Event Grid domain": [
+      "Overview",
+      "Network",
+      "Topics",
+      "Subscriptions",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Event Grid system topic": [
+      "Overview",
+      "Subscriptions",
+      "Access",
+      "Activity",
+      "Related",
+      "Tags"
+    ],
+    "Event Grid topic": [
+      "Overview",
+      "Network",
+      "Subscriptions",
       "Access",
       "Activity",
       "Related",

@@ -111,6 +111,10 @@ pub enum ServiceType {
     /// and the API connections their managed connectors use. Never a
     /// definition's inputs, a run's contents or a connection's values.
     LogicApps,
+    /// Event Grid (#159): custom topics, system topics and domains, each
+    /// one's event subscriptions lazy. Never an access key or a webhook's
+    /// full URL.
+    EventGrid,
     /// Policy assignments, exemptions, custom definitions and initiatives,
     /// resource locks (#155, ADR 0009): the subscription's view with what it
     /// inherits from the management groups above. Never compliance (POST).
@@ -335,6 +339,13 @@ pub enum JumpView {
     LogicWorkflows,
     /// `Microsoft.Web/connections`, listed per resource group.
     ApiConnections,
+    // Event Grid (#159)
+    /// `Microsoft.EventGrid/topics` (custom topics).
+    EventGridTopics,
+    /// `Microsoft.EventGrid/systemTopics`.
+    EventGridSystemTopics,
+    /// `Microsoft.EventGrid/domains`.
+    EventGridDomains,
     // Governance
     /// Every policy assignment that applies to the subscription or to
     /// anything in it, management groups' included (unfiltered list).
@@ -420,6 +431,7 @@ impl JumpView {
             ServiceBusNamespaces | EventHubNamespaces => ServiceType::Messaging,
             ApimServices => ServiceType::ApiManagement,
             LogicWorkflows | ApiConnections => ServiceType::LogicApps,
+            EventGridTopics | EventGridSystemTopics | EventGridDomains => ServiceType::EventGrid,
             PolicyAssignments | PolicyExemptions | PolicyDefinitions | ResourceLocks | ManagementGroups | Budgets => ServiceType::Governance,
             DefenderRecommendations | DefenderAlerts | SecureScore | DefenderPlans => ServiceType::Defender,
             AdvisorRecommendations | AdvisorScore | AdvisorSuppressions => ServiceType::Advisor,
@@ -529,6 +541,9 @@ impl JumpView {
             ApimServices => "apim-services",
             LogicWorkflows => "logic-workflows",
             ApiConnections => "api-connections",
+            EventGridTopics => "eventgrid-topics",
+            EventGridSystemTopics => "eventgrid-system-topics",
+            EventGridDomains => "eventgrid-domains",
             EventHubNamespaces => "eventhub-namespaces",
             PolicyAssignments => "policy-assignments",
             PolicyExemptions => "policy-exemptions",
@@ -652,6 +667,9 @@ impl JumpView {
             ApimServices => "Instances",
             LogicWorkflows => "Workflows",
             ApiConnections => "API connections",
+            EventGridTopics => "Topics",
+            EventGridSystemTopics => "System topics",
+            EventGridDomains => "Domains",
             EventHubNamespaces => "Event Hubs",
             PolicyAssignments => "Assignments",
             PolicyExemptions => "Exemptions",
@@ -784,6 +802,9 @@ impl JumpView {
             ("microsoft.apimanagement", ["service"]) => JumpView::ApimServices,
             ("microsoft.logic", ["workflows"]) => JumpView::LogicWorkflows,
             ("microsoft.web", ["connections"]) => JumpView::ApiConnections,
+            ("microsoft.eventgrid", ["topics"]) => JumpView::EventGridTopics,
+            ("microsoft.eventgrid", ["systemtopics"]) => JumpView::EventGridSystemTopics,
+            ("microsoft.eventgrid", ["domains"]) => JumpView::EventGridDomains,
             ("microsoft.eventhub", ["namespaces"]) => JumpView::EventHubNamespaces,
             // Governance (ADR 0009): wherever made, management groups
             // included. A built-in definition is in no list (custom only).
@@ -916,6 +937,7 @@ impl ServiceType {
             ServiceType::Messaging,
             ServiceType::ApiManagement,
             ServiceType::LogicApps,
+            ServiceType::EventGrid,
             ServiceType::Governance,
             ServiceType::Defender,
             ServiceType::Advisor,
@@ -967,6 +989,7 @@ impl ServiceType {
             ServiceType::Messaging => "Integration",
             ServiceType::ApiManagement => "Integration",
             ServiceType::LogicApps => "Integration",
+            ServiceType::EventGrid => "Integration",
             ServiceType::Governance => "Management",
             ServiceType::Defender => "Security",
             ServiceType::Advisor => "Management",
@@ -1007,6 +1030,7 @@ impl ServiceType {
             ServiceType::Messaging => "Messaging",
             ServiceType::ApiManagement => "API Management",
             ServiceType::LogicApps => "Logic Apps",
+            ServiceType::EventGrid => "Event Grid",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
             ServiceType::Advisor => "Advisor",
@@ -1048,6 +1072,7 @@ impl ServiceType {
             ServiceType::Messaging => "Messaging",
             ServiceType::ApiManagement => "APIM",
             ServiceType::LogicApps => "Logic",
+            ServiceType::EventGrid => "Event Grid",
             ServiceType::Governance => "Governance",
             ServiceType::Defender => "Defender",
             ServiceType::Advisor => "Advisor",
@@ -1088,6 +1113,7 @@ impl ServiceType {
             ServiceType::Messaging => "Service Bus & Event Hubs namespaces",
             ServiceType::ApiManagement => "APIs, products, backends & named values",
             ServiceType::LogicApps => "Consumption workflows & API connections",
+            ServiceType::EventGrid => "Topics, system topics, domains & event subscriptions",
             ServiceType::Governance => "Policy, locks & management groups",
             ServiceType::Defender => "Recommendations, alerts, score & plans",
             ServiceType::Advisor => "Recommendations, score & suppressions",
@@ -1158,6 +1184,7 @@ impl ServiceType {
             ServiceType::Messaging => &[ServiceBusNamespaces, EventHubNamespaces],
             ServiceType::ApiManagement => &[ApimServices],
             ServiceType::LogicApps => &[LogicWorkflows, ApiConnections],
+            ServiceType::EventGrid => &[EventGridTopics, EventGridSystemTopics, EventGridDomains],
             ServiceType::Governance => &[PolicyAssignments, PolicyExemptions, PolicyDefinitions, ResourceLocks, ManagementGroups, Budgets],
             ServiceType::Defender => &[DefenderRecommendations, DefenderAlerts, SecureScore, DefenderPlans],
             ServiceType::Advisor => &[AdvisorRecommendations, AdvisorScore, AdvisorSuppressions],
@@ -1406,6 +1433,9 @@ impl ServiceType {
             "apim" | "apimanagement" | "apigateway" => (ServiceType::ApiManagement, None),
             "logic" | "logicapp" | "logicapps" | "la" | "workflow" | "workflows" => (ServiceType::LogicApps, None),
             "apiconn" | "apiconnection" | "apiconnections" => (ServiceType::LogicApps, Some(JumpView::ApiConnections)),
+            "eg" | "eventgrid" | "egt" | "egtopic" | "egtopics" => (ServiceType::EventGrid, None),
+            "egst" | "systemtopic" | "systemtopics" => (ServiceType::EventGrid, Some(JumpView::EventGridSystemTopics)),
+            "egd" | "egdomain" | "egdomains" => (ServiceType::EventGrid, Some(JumpView::EventGridDomains)),
             "gov" | "governance" | "policy" | "policies" | "pa" | "assignment" | "assignments" => (ServiceType::Governance, None),
             "exempt" | "exemption" | "exemptions" => (ServiceType::Governance, Some(JumpView::PolicyExemptions)),
             "pdef" | "definition" | "definitions" | "initiative" | "initiatives" | "policyset" | "policysets" => {
@@ -1466,6 +1496,7 @@ impl ServiceType {
             ServiceType::Messaging => "@sb",
             ServiceType::ApiManagement => "@apim",
             ServiceType::LogicApps => "@logic",
+            ServiceType::EventGrid => "@eg",
             ServiceType::Governance => "@gov",
             ServiceType::Defender => "@defender",
             ServiceType::Advisor => "@advisor",
@@ -1477,12 +1508,12 @@ impl ServiceType {
     /// The routing prefixes, in service order, for `@` completion: each
     /// selects a service *and* a sub-tab.
     pub const ROUTING_PREFIXES: &'static [&'static str] =
-        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health", "@subdeploy", "@stack", "@ts", "@apiconn"];
+        &["@search", "@sqlmi", "@sqlpool", "@malert", "@logalert", "@activityalert", "@ag", "@apr", "@alert", "@rg", "@all", "@disk", "@nic", "@bvault", "@vmss", "@asg", "@gallery", "@arck8s", "@arcpls", "@avdag", "@avdws", "@avdsp", "@subnet", "@nsg", "@pip", "@lb", "@rt", "@nat", "@pe", "@bastion", "@ddos", "@pdns", "@dnsz", "@dnsr", "@dnsfr", "@dnsp", "@tm", "@afd", "@waf", "@pls", "@vgw", "@cn", "@lgw", "@hub", "@hubvpn", "@huber", "@p2s", "@vpnsite", "@fwp", "@ipg", "@ngfw", "@rulestack", "@sp", "@appreg", "@pool", "@func", "@plan", "@swa", "@mysql", "@law", "@appi", "@acaenv", "@acajob", "@aci", "@amr", "@eh", "@exempt", "@pdef", "@lock", "@mg", "@budget", "@secalert", "@score", "@pricing", "@advscore", "@snooze", "@activity", "@deploys", "@health", "@subdeploy", "@stack", "@ts", "@apiconn", "@egst", "@egd"];
 
     /// Every completable prefix: the canonical ones, then the routing
     /// prefixes.
     pub fn completion_prefixes() -> Vec<&'static str> {
-        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@deploy", "@arc", "@avd", "@aca", "@redis", "@sb", "@apim", "@logic", "@gov", "@defender", "@advisor", "@changes", "@audit"];
+        let mut all: Vec<&'static str> = vec!["@sub", "@vm", "@storage", "@backup", "@vnet", "@dns", "@agw", "@er", "@vwan", "@fw", "@kv", "@id", "@aks", "@acr", "@app", "@sql", "@cosmos", "@pg", "@foundry", "@monitor", "@pp", "@automation", "@deploy", "@arc", "@avd", "@aca", "@redis", "@sb", "@apim", "@logic", "@eg", "@gov", "@defender", "@advisor", "@changes", "@audit"];
         all.extend_from_slice(Self::ROUTING_PREFIXES);
         all
     }
@@ -1753,6 +1784,16 @@ mod tests {
         assert_eq!(JumpView::for_arm_id(&p("Microsoft.Web/connections/office365")), Some(JumpView::ApiConnections));
         assert_eq!(ServiceType::from_prefix("@logic"), Some((ServiceType::LogicApps, None)));
         assert_eq!(ServiceType::from_prefix("@apiconn"), Some((ServiceType::LogicApps, Some(JumpView::ApiConnections))));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.EventGrid/topics/egt")), Some(JumpView::EventGridTopics));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.EventGrid/systemTopics/st")), Some(JumpView::EventGridSystemTopics));
+        assert_eq!(JumpView::for_arm_id(&p("Microsoft.EventGrid/domains/egd")), Some(JumpView::EventGridDomains));
+        assert_eq!(ServiceType::from_prefix("@eg"), Some((ServiceType::EventGrid, None)));
+        assert_eq!(ServiceType::from_prefix("@egst"), Some((ServiceType::EventGrid, Some(JumpView::EventGridSystemTopics))));
+        assert_eq!(ServiceType::from_prefix("@egd"), Some((ServiceType::EventGrid, Some(JumpView::EventGridDomains))));
+        // An event subscription is a child of its topic: in no list of its own.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.EventGrid/systemTopics/st/eventSubscriptions/s1")), None);
+        // Namespaces are not browsed yet.
+        assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.EventGrid/namespaces/egns")), Some(JumpView::AllResources));
         // A run is a child of its workflow: in no list of its own.
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Logic/workflows/la/runs/r1")), None);
         assert_eq!(JumpView::landing_for_arm_id(&p("Microsoft.Sql/servers/sql-prod")), Some(JumpView::SqlServers));

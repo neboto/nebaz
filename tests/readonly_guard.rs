@@ -56,6 +56,9 @@ const DATA_PLANE_HOSTS: &[&str] = &[
     // callback URLs and its runs' content links (`*.logic.azure.com`),
     // shown, never called.
     "logic.azure.com",
+    // Event Grid (#159): a topic's or domain's publish endpoint
+    // (`*.eventgrid.azure.net`), shown, never called.
+    "eventgrid.azure.net",
     "vault.azure.cn",
     "blob.core.windows.net",
     "dfs.core.windows.net",
@@ -847,6 +850,10 @@ const POST_ONLY_READS: &[&str] = &[
     "/listswagger",
     "listconnectionkeys",
     "listconsentlinks",
+    // Event Grid (#159): a webhook subscription's full URL and its
+    // delivery attributes (header values).
+    "getfullurl",
+    "getdeliveryattributes",
 ];
 
 /// GET reads that return a secret: a connection's pre-shared key

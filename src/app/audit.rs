@@ -188,7 +188,7 @@ impl App {
     /// users' directory objects, each cached SQL server's and Redis cache's firewall rules, each
     /// PostgreSQL and MySQL server's firewall rules, parameters and Entra admins, each
     /// messaging namespace's network rule set,
-    /// each cached site's config, the subscription's flow logs, each backup vault's protected items, each host pool's session hosts. Capped at `AUDIT_LAZY_MAX` per kind.
+    /// each cached site's config, the subscription's flow logs, each backup vault's protected items, each host pool's session hosts, each Event Grid topic's, system topic's and domain's event subscriptions. Capped at `AUDIT_LAZY_MAX` per kind.
     fn trigger_audit_lazies(&mut self, event_tx: &mpsc::UnboundedSender<Event>) {
         let sub = self.subscription_key();
         if sub.is_empty() {
@@ -276,6 +276,12 @@ impl App {
         for id in self.cached_ids(JumpView::HostPools, &sub) {
             self.trigger_session_hosts_of(id, event_tx);
         }
+        // An Event Grid parent's event subscriptions (#159).
+        for view in [JumpView::EventGridTopics, JumpView::EventGridSystemTopics, JumpView::EventGridDomains] {
+            for id in self.cached_ids(view, &sub) {
+                self.trigger_eg_subscriptions_for(id, event_tx);
+            }
+        }
     }
 
     /// Whether anything `r` started is still in flight: a source list, or
@@ -300,6 +306,7 @@ impl App {
                 + l.backup_policies.loading_count()
                 + l.backup_instances.loading_count()
                 + l.backup_jobs.loading_count()
+                + l.eg_subscriptions.loading_count()
                 > 0
     }
 

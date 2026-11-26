@@ -211,6 +211,7 @@ all).
 | `redis` | Redis | Azure Cache for Redis, Managed Redis (`amr`) |
 | `sb` | Messaging | Service Bus namespaces, Event Hubs (`eh`) |
 | `logic` | Logic Apps | Consumption workflows: the definition's outline (never an input or a key), who may call the triggers, triggers and the latest runs; API connections (`apiconn`) with their status and the workflows that use them |
+| `eg` | Event Grid | Custom topics, system topics and domains: who may publish (⚠ keys from any IP), each one's event subscriptions with destination, filter, retry and dead-letter (⚠ when missing or not delivering); a domain's topics |
 | `apim` | API Management | Instances: tier and platform (stv1 flagged), VNet mode, custom domains and their certificates, TLS switches; APIs, products, backends and named values (never a value, a key or a backend credential) |
 | `changes` | Changes | Everything that changed recently: activity, deployments, health |
 | `audit` | Audit | Security findings over what is loaded |

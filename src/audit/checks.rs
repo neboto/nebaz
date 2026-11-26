@@ -24,6 +24,7 @@ use crate::azure::service::JumpView;
 use crate::azure::services::aks::ClusterRow;
 use crate::azure::services::api_management::ApimServiceRow;
 use crate::azure::services::logic_apps::{ApiConnectionRow, WorkflowRow};
+use crate::azure::services::event_grid::{EventGridRow, EventSub};
 use crate::azure::services::app_service::SiteRow;
 use crate::azure::services::arc::{self, ArcClusterRow, ArcMachineRow};
 use crate::azure::services::virtual_desktop::{self as avd, AppGroupRow, HostPoolRow, SessionHost};
@@ -109,9 +110,12 @@ const AVD_APP_GROUPS: &[V] = &[V::AvdApplicationGroups];
 const APIM: &[V] = &[V::ApimServices];
 const LOGIC_WORKFLOWS: &[V] = &[V::LogicWorkflows];
 const API_CONNECTIONS: &[V] = &[V::ApiConnections];
+const EG_TOPICS: &[V] = &[V::EventGridTopics];
+const EG_SYSTEM_TOPICS: &[V] = &[V::EventGridSystemTopics];
+const EG_DOMAINS: &[V] = &[V::EventGridDomains];
 
 /// The checks, in display order (findings sort by severity anyway).
-pub static CHECKS: [Check; 94] = [
+pub static CHECKS: [Check; 96] = [
     // ── Network ──
     Check {
         id: "nsg-open-internet",
@@ -890,6 +894,23 @@ pub static CHECKS: [Check; 94] = [
         fix: "Set the workflow's trigger access control to the callers' IP ranges (or only other logic apps), or add an Entra ID authorization policy; front a public endpoint with API Management.",
         sources: &[LOGIC_WORKFLOWS],
         run: logic_trigger_sas_only,
+    },
+    // ── Event Grid (#159) ──
+    Check {
+        id: "eventgrid-local-auth-public",
+        title: "Event Grid topic accepts access keys from any IP",
+        why: "With local auth on, an access key or a SAS token built from one publishes to the topic; with public access on and no inbound IP rule, it works from anywhere. A leaked key lets anyone inject events that every subscriber trusts.",
+        fix: "Disable local auth so publishers use Entra ID (the EventGrid Data Sender role), or restrict publishers to their IP ranges, or turn public access off and publish through a private endpoint.",
+        sources: &[EG_TOPICS, EG_DOMAINS],
+        run: eventgrid_local_auth_public,
+    },
+    Check {
+        id: "eventgrid-subscription-delivery",
+        title: "Event Grid subscription can lose events",
+        why: "A subscription whose provisioning failed, or that waits for a webhook's validation handshake, delivers nothing. One with no dead-letter destination drops an event for good once its retries or time to live run out, with no record of what was lost.",
+        fix: "Fix the endpoint and validate the webhook (or recreate the subscription); set a dead-letter destination (a storage blob container) on every subscription whose events matter.",
+        sources: &[EG_TOPICS, EG_SYSTEM_TOPICS, EG_DOMAINS],
+        run: eventgrid_subscription_delivery,
     },
 ];
 
@@ -2286,6 +2307,51 @@ fn logic_trigger_sas_only(check: &'static Check, input: &AuditInput, out: &mut V
             );
         }
     }
+}
+
+fn eventgrid_local_auth_public(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    for view in [V::EventGridTopics, V::EventGridDomains] {
+        for t in input.of::<EventGridRow>(view) {
+            if t.open_to_keys() {
+                out.push(AuditFinding::about(check, Severity::Low, t, "local auth on, no inbound IP rule").with_evidence(vec![
+                    format!("publicNetworkAccess: {}", json::opt(t.public_network_access.clone())),
+                    "inboundIpRules: none".into(),
+                    format!("disableLocalAuth: {}", t.disable_local_auth.unwrap_or(false)),
+                ]));
+            }
+        }
+    }
+}
+
+fn eventgrid_subscription_delivery(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {
+    let mut gaps = LazyGaps::default();
+    let lazy = input.lazy();
+    for view in [V::EventGridTopics, V::EventGridSystemTopics, V::EventGridDomains] {
+        for t in input.of::<EventGridRow>(view) {
+            let Some(items) = gaps.see(&t.base.name, lazy.and_then(|l| l.eg_subscriptions.get(&t.base.id))) else {
+                continue;
+            };
+            for s in items.iter().map(EventSub::from_outline) {
+                let (severity, reason, evidence) = if s.not_delivering() {
+                    (Severity::Medium, format!("{}: {}", s.name, s.provisioning), format!("provisioningState: {}", s.provisioning))
+                } else if s.dead_letter.is_none() {
+                    (
+                        Severity::Low,
+                        format!("{}: no dead-letter destination", s.name),
+                        format!("retryPolicy: {} attempts, {} min", s.attempts, s.ttl_minutes),
+                    )
+                } else {
+                    continue;
+                };
+                let name = format!("{}/{}", t.base.name, s.name);
+                out.push(
+                    AuditFinding::at(check, severity, &s.id, &name, t.location(), t.tags().clone(), reason)
+                        .with_evidence(vec![format!("destination: {}", s.destination_text()), evidence]),
+                );
+            }
+        }
+    }
+    gaps.note(check, "event subscriptions", "Subscriptions", out);
 }
 
 fn acr_anonymous_pull(check: &'static Check, input: &AuditInput, out: &mut Vec<AuditFinding>) {

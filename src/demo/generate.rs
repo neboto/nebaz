@@ -516,6 +516,9 @@ fn profile(name: &str) -> (&'static str, Shape) {
         "runsstarted" => ("Count", Steady(4.0)),
         "runsfailed" | "triggersfailed" => ("Count", Steady(0.0)),
         "runlatency" => ("Seconds", Busy(3.0, 4.0)),
+        // Event Grid: a steady flow in and out, nothing lost.
+        "publishsuccesscount" | "matchedeventcount" => ("Count", Traffic(240.0)),
+        "deliveryattemptfailcount" | "deadletteredcount" | "droppedeventcount" => ("Count", Steady(0.0)),
         "totalrequestunits" => ("Count", Traffic(5200.0)),
         "normalizedruconsumption" => ("Percent", Busy(6.0, 22.0)),
         "vipavailability" | "dipavailability" | "datapathavailability" | "originhealthpercentage" => ("Count", Steady(100.0)),

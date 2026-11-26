@@ -1,0 +1,82 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/systemTopics/st-orders-invoices/eventSubscriptions/invoice-to-queue",
+      "name": "invoice-to-queue",
+      "type": "Microsoft.EventGrid/systemTopics/eventSubscriptions",
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "topic": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/systemTopics/st-orders-invoices",
+        "provisioningState": "Succeeded",
+        "labels": [
+          "invoices"
+        ],
+        "eventDeliverySchema": "EventGridSchema",
+        "retryPolicy": {
+          "maxDeliveryAttempts": 10,
+          "eventTimeToLiveInMinutes": 720
+        },
+        "deliveryWithResourceIdentity": {
+          "identity": {
+            "type": "SystemAssigned"
+          },
+          "destination": {
+            "endpointType": "ServiceBusQueue",
+            "properties": {
+              "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/queues/orders",
+              "deliveryAttributeMappings": [
+                {
+                  "name": "source",
+                  "type": "Static",
+                  "properties": {
+                    "value": "demo-planted-static-value",
+                    "isSecret": false
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "filter": {
+          "includedEventTypes": [
+            "Microsoft.Storage.BlobCreated"
+          ],
+          "subjectBeginsWith": "/blobServices/default/containers/invoices/",
+          "subjectEndsWith": ".pdf",
+          "isSubjectCaseSensitive": false,
+          "enableAdvancedFilteringOnArrays": true,
+          "advancedFilters": [
+            {
+              "operatorType": "StringIn",
+              "key": "data.api",
+              "values": [
+                "PutBlob",
+                "PutBlockList",
+                "CopyBlob"
+              ]
+            }
+          ]
+        },
+        "deadLetterWithResourceIdentity": {
+          "identity": {
+            "type": "SystemAssigned"
+          },
+          "deadLetterDestination": {
+            "endpointType": "StorageBlob",
+            "properties": {
+              "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+              "blobContainerName": "eventgrid-deadletter"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
