@@ -279,6 +279,11 @@ run logic-workflows ok logic '[]' \
   "Consumption workflows & API connections" \
   "cannot reach 127.0.0.1"
 
+# Event Grid is its own tab in Integration (#159).
+run eventgrid-topics ok eg '[]' \
+  "Topics, system topics, domains & event subscriptions" \
+  "cannot reach 127.0.0.1"
+
 # The Monitor tab loads through a routing prefix (the sub-tab it picks
 # is covered by the from_prefix unit tests).
 run monitor-appi ok appi '[]' \

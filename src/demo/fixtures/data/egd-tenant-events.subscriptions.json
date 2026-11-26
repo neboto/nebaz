@@ -1,0 +1,49 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events/providers/Microsoft.EventGrid/eventSubscriptions/all-tenants-audit",
+      "name": "all-tenants-audit",
+      "type": "Microsoft.EventGrid/eventSubscriptions",
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "topic": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events",
+        "provisioningState": "Succeeded",
+        "labels": [],
+        "eventDeliverySchema": "EventGridSchema",
+        "retryPolicy": {
+          "maxDeliveryAttempts": 30,
+          "eventTimeToLiveInMinutes": 1440
+        },
+        "destination": {
+          "endpointType": "StorageQueue",
+          "properties": {
+            "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+            "queueName": "tenant-audit",
+            "queueMessageTimeToLiveInSeconds": 604800
+          }
+        },
+        "filter": {
+          "includedEventTypes": [
+            "Contoso.Tenant.Provisioned",
+            "Contoso.Tenant.Deleted"
+          ],
+          "isSubjectCaseSensitive": false
+        },
+        "deadLetterDestination": {
+          "endpointType": "StorageBlob",
+          "properties": {
+            "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+            "blobContainerName": "eventgrid-deadletter"
+          }
+        }
+      }
+    }
+  ]
+}

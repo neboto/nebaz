@@ -17,6 +17,7 @@ pub mod automation;
 pub mod virtual_desktop;
 pub mod api_management;
 pub mod logic_apps;
+pub mod event_grid;
 pub mod arc;
 pub mod all_resources;
 pub mod app_service;

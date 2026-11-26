@@ -380,6 +380,7 @@ impl AzureClients {
                 Arc::new(crate::azure::services::api_management::ApiManagementService::new(scope))
             }
             ServiceType::LogicApps => Arc::new(crate::azure::services::logic_apps::LogicAppsService::new(scope)),
+            ServiceType::EventGrid => Arc::new(crate::azure::services::event_grid::EventGridService::new(scope)),
             ServiceType::Dns => Arc::new(DnsService::new(scope)),
             ServiceType::Edge => Arc::new(EdgeService::new(scope)),
             ServiceType::Hybrid => Arc::new(HybridService::new(scope)),

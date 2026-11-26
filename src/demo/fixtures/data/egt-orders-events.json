@@ -1,0 +1,30 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/topics/egt-orders-events",
+  "name": "egt-orders-events",
+  "type": "Microsoft.EventGrid/topics",
+  "location": "westeurope",
+  "tags": {
+    "app": "orders",
+    "team": "orders"
+  },
+  "systemData": {
+    "createdBy": "platform-team@contoso.com",
+    "createdByType": "User",
+    "createdAt": "{{iso:now-90d}}",
+    "lastModifiedBy": "platform-team@contoso.com",
+    "lastModifiedByType": "User",
+    "lastModifiedAt": "{{iso:now-12d}}"
+  },
+  "properties": {
+    "provisioningState": "Succeeded",
+    "endpoint": "https://egt-orders-events.westeurope-1.eventgrid.azure.net/api/events",
+    "inputSchema": "CloudEventSchemaV1_0",
+    "metricResourceId": "2a7d3e9f-1c5b-4d4f-8e6a-6b7c8d9e0f1a",
+    "publicNetworkAccess": "Enabled",
+    "inboundIpRules": [],
+    "disableLocalAuth": false,
+    "minimumTlsVersionAllowed": "1.2",
+    "dataResidencyBoundary": "WithinGeopair",
+    "privateEndpointConnections": []
+  }
+}

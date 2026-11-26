@@ -1,0 +1,29 @@
+{
+  "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/systemTopics/st-orders-invoices",
+  "name": "st-orders-invoices",
+  "type": "Microsoft.EventGrid/systemTopics",
+  "location": "westeurope",
+  "tags": {
+    "app": "orders",
+    "team": "orders"
+  },
+  "identity": {
+    "type": "SystemAssigned",
+    "principalId": "6b1f0c4e-2a7d-4e55-9a3c-0d9e8f1a2b3c",
+    "tenantId": "{{tenant}}"
+  },
+  "systemData": {
+    "createdBy": "platform-team@contoso.com",
+    "createdByType": "User",
+    "createdAt": "{{iso:now-90d}}",
+    "lastModifiedBy": "platform-team@contoso.com",
+    "lastModifiedByType": "User",
+    "lastModifiedAt": "{{iso:now-12d}}"
+  },
+  "properties": {
+    "source": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Storage/storageAccounts/stcontosoordersprod",
+    "topicType": "Microsoft.Storage.StorageAccounts",
+    "metricResourceId": "1f6c2d8e-0b4a-4c3e-9d7f-5a6b7c8d9e0f",
+    "provisioningState": "Succeeded"
+  }
+}

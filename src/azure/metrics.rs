@@ -232,6 +232,15 @@ const LOGIC_WORKFLOW: &[MetricSpec] = &[
     m("RunLatency", "Run latency", Avg),
     m("TriggersFailed", "Triggers failed", Total),
 ];
+/// An Event Grid topic, system topic or domain (#159): events in, events
+/// delivery failed on, dead-lettered and dropped.
+const EVENT_GRID: &[MetricSpec] = &[
+    m("PublishSuccessCount", "Published", Total),
+    m("MatchedEventCount", "Matched", Total),
+    m("DeliveryAttemptFailCount", "Delivery failures", Total),
+    m("DeadLetteredCount", "Dead-lettered", Total),
+    m("DroppedEventCount", "Dropped", Total),
+];
 const APP_SERVICE_PLAN: &[MetricSpec] = &[
     m("CpuPercentage", "CPU", Avg),
     m("MemoryPercentage", "Memory", Avg),
@@ -493,6 +502,7 @@ pub fn curated_metrics(id: &str) -> &'static [MetricSpec] {
         ("microsoft.web", ["staticsites"]) => STATIC_SITE,
         ("microsoft.apimanagement", ["service"]) => APIM,
         ("microsoft.logic", ["workflows"]) => LOGIC_WORKFLOW,
+        ("microsoft.eventgrid", ["topics"]) | ("microsoft.eventgrid", ["systemtopics"]) | ("microsoft.eventgrid", ["domains"]) => EVENT_GRID,
         ("microsoft.automation", ["automationaccounts"]) => AUTOMATION_ACCOUNT,
         ("microsoft.web", ["serverfarms"]) => APP_SERVICE_PLAN,
         ("microsoft.sql", ["servers", "databases"]) => SQL_DATABASE,

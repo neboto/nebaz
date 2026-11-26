@@ -151,6 +151,21 @@ pub static FIXTURES: &[Fixture] = &[
     fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections", "api-connections-rg-orders-prod.json"),
     fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/office365-orders", "office365-orders.json"),
     fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.Web/connections/servicebus-orders", "servicebus-orders.json"),
+    // ── Event Grid (#159): the invoices system topic on the orders storage
+    //    account, queueing new PDFs (dead-lettered); the orders topic that
+    //    takes keys from any IP, whose partner webhook never validated and
+    //    whose reports function has no dead-letter; the tenant domain,
+    //    Entra ID only and ranged ──
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.EventGrid/systemTopics", "eg-system-topics.json"),
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.EventGrid/topics", "eg-topics.json"),
+    fx!("data", "/subscriptions/{{prod}}/providers/Microsoft.EventGrid/domains", "eg-domains.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/systemTopics/st-orders-invoices/eventSubscriptions", "st-orders-invoices.subscriptions.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/systemTopics/st-orders-invoices", "st-orders-invoices.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/topics/egt-orders-events/providers/Microsoft.EventGrid/eventSubscriptions", "egt-orders-events.subscriptions.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/topics/egt-orders-events", "egt-orders-events.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events/providers/Microsoft.EventGrid/eventSubscriptions", "egd-tenant-events.subscriptions.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events/topics", "egd-tenant-events.topics.json"),
+    fx!("data", "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events", "egd-tenant-events.json"),
     fx!(
         "data",
         "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.ServiceBus/namespaces/sb-orders-prod/networkRuleSets/default",

@@ -1,0 +1,92 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/topics/egt-orders-events/providers/Microsoft.EventGrid/eventSubscriptions/orders-to-partner",
+      "name": "orders-to-partner",
+      "type": "Microsoft.EventGrid/eventSubscriptions",
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "topic": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/topics/egt-orders-events",
+        "provisioningState": "AwaitingManualAction",
+        "labels": [],
+        "eventDeliverySchema": "CloudEventSchemaV1_0",
+        "retryPolicy": {
+          "maxDeliveryAttempts": 30,
+          "eventTimeToLiveInMinutes": 1440
+        },
+        "destination": {
+          "endpointType": "WebHook",
+          "properties": {
+            "endpointUrl": "https://hooks.fabrikam-partner.example/contoso/orders?code=demo-planted-webhook-key",
+            "endpointBaseUrl": "https://hooks.fabrikam-partner.example/contoso/orders",
+            "maxEventsPerBatch": 1,
+            "preferredBatchSizeInKilobytes": 64,
+            "minimumTlsVersionAllowed": "1.2",
+            "deliveryAttributeMappings": [
+              {
+                "name": "x-partner-key",
+                "type": "Static",
+                "properties": {
+                  "value": "demo-planted-partner-key",
+                  "isSecret": true
+                }
+              }
+            ]
+          }
+        },
+        "filter": {
+          "includedEventTypes": [
+            "Contoso.Orders.Shipped",
+            "Contoso.Orders.Cancelled"
+          ],
+          "isSubjectCaseSensitive": false
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/topics/egt-orders-events/providers/Microsoft.EventGrid/eventSubscriptions/orders-to-reports",
+      "name": "orders-to-reports",
+      "type": "Microsoft.EventGrid/eventSubscriptions",
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "topic": "/subscriptions/{{prod}}/resourceGroups/rg-orders-prod/providers/Microsoft.EventGrid/topics/egt-orders-events",
+        "provisioningState": "Succeeded",
+        "labels": [
+          "legacy"
+        ],
+        "eventDeliverySchema": "CloudEventSchemaV1_0",
+        "retryPolicy": {
+          "maxDeliveryAttempts": 30,
+          "eventTimeToLiveInMinutes": 1440
+        },
+        "destination": {
+          "endpointType": "AzureFunction",
+          "properties": {
+            "resourceId": "/subscriptions/{{prod}}/resourceGroups/rg-legacy-prod/providers/Microsoft.Web/sites/func-legacy-reports/functions/OnOrderEvent",
+            "maxEventsPerBatch": 10,
+            "preferredBatchSizeInKilobytes": 64
+          }
+        },
+        "filter": {
+          "subjectBeginsWith": "orders/",
+          "isSubjectCaseSensitive": false
+        },
+        "expirationTimeUtc": "{{iso:now+40d}}"
+      }
+    }
+  ]
+}

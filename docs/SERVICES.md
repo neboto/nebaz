@@ -1241,6 +1241,47 @@ is in [`CONTEXT.md`](../CONTEXT.md). Permissions per service are in
     19): Runs started, Runs failed, Run latency, Triggers failed.
     `@audit`: `logic-connection-error` (medium), `logic-trigger-sas-only`
     (low).
+50. **Event Grid is its own tab** (#159, `src/azure/services/event_grid.rs`,
+    Integration group, after Logic Apps; `@eg`, `@egst`, `@egd`). Three
+    sub-tabs, one subscription-wide list each at `2025-02-15` (the newest
+    stable version): **Topics** (`Microsoft.EventGrid/topics`, custom
+    topics), **System topics** (`Microsoft.EventGrid/systemTopics`, the
+    events an Azure resource raises) and **Domains**
+    (`Microsoft.EventGrid/domains`). One row type for the three
+    (`EventGridRow`, its kind from the ARM type). Namespaces (MQTT and
+    pull delivery) and partner topics are not browsed yet: they land in
+    All resources. State: provisioning only, through the ladder. A topic's
+    and a domain's **Network**: who may publish (`⚠` when any IP with an
+    access key or SAS token can: public access on, no inbound IP rule,
+    local auth not disabled; else the IP rules, "Entra ID token" or
+    private endpoints only), public network access, local auth, minimum
+    TLS, the endpoint as text, private endpoints. Every kind's
+    **Subscriptions** ⧗ (one list per parent, `$top=100`: a system topic's
+    `{id}/eventSubscriptions`, a topic's or domain's extension list
+    `{id}/providers/Microsoft.EventGrid/eventSubscriptions`): a tally,
+    then each one's provisioning (`⚠` unless Succeeded: Failed,
+    AwaitingManualAction for a webhook that never validated), destination
+    (type → name; the top-level resource on its own line so `⏎` opens
+    it, the child path below; a webhook's base URL and its Entra ID app),
+    included event types, subject prefix and suffix, advanced filters (≤ 3
+    values each), retry (attempts and time to live, Event Grid's 30 / 1
+    day when unset), dead-letter (`⚠` when none: an event that runs out of
+    retries is dropped), the delivery identity, schema, expiry, labels;
+    once loaded, Related adds each destination and dead-letter account. A
+    domain's **Topics** ⧗ (`{domain}/topics`, names and state; a domain
+    topic's own subscriptions are one call each and are not read). **Never
+    kept** (`subscription_outline`, an allowlist, before the store holds a
+    body): a webhook's `endpointUrl` (only `endpointBaseUrl`, stripped of
+    any query) and a static delivery attribute's value (its name, type and
+    `isSecret` stay). **Never read**: access keys (`listKeys`), a webhook's
+    full URL (`getFullUrl`) and delivery attributes
+    (`getDeliveryAttributes`), all POSTs. The topic endpoints' host is on
+    the guard, never called. `az eventgrid topic|system-topic|domain show
+    --ids`. Metrics (rule 19): Published, Matched, Delivery failures,
+    Dead-lettered, Dropped. `@audit`: `eventgrid-local-auth-public` (low),
+    `eventgrid-subscription-delivery` (medium when not delivering, low
+    without dead-letter; reads the Subscriptions lazy store, which `r`
+    fills).
 
 ## The catalog
 
@@ -1346,6 +1387,8 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | API Management · Instances (rule 48) | Network (VNet mode, subnet, public IP, addresses, extra regions) · Hostnames (endpoint URLs, each hostname's certificate source, subject, expiry ⚠ within 30 days, Key Vault secret URL, status) · Security (protocol and cipher switches ⚠ on old TLS, minimum API version ⚠ unset, portals, identity, CA certificates) · APIs ⧗ · Products ⧗ · Backends ⧗ · Named values ⧗ · (Overview: SKU and units, platform ⚠ stv1, VNet mode, gateway and developer portal, other regions, publisher, created) | ladder, `Stopped` → stopped | subnets, public IP, private endpoints, identities; ⧗ each backend's resource | `az apim show -n -g --subscription` (no `--ids`) |
 | Logic Apps · Workflows (rule 49) | Definition (triggers and actions in run order: type, method, stripped URI, connector, auth type, secured data; parameters by type) · Network (trigger callers ⚠ any IP with the signed URL, run history and action callers, access endpoint as text, inbound / outbound / connector IPs, integration account) · Triggers ⧗ (state ⚠ disabled, schedule, last status, last / next fire) · Runs ⧗ (latest 25: tally, status ⚠ failed, duration, trigger, error) · Connections (each connection's status from the warm list, ⚠ not connected) · (Overview: state, plan, triggers, action count, connections, identity, version, created, changed) | `state` (Enabled / Disabled / Suspended) through the ladder | connections, integration account, user-assigned identities | `az logic workflow show --ids` |
 | Logic Apps · API connections (rule 49) | Status (each status with target and error ⚠ unless Connected, authenticated as, non-secret parameter names) · Used by (workflows from the warm list) · (Overview: display name, API, status, managed API id, kind, created, changed) | first status: Connected available, else unavailable | the workflows that use it | `az resource show --ids` |
+| Event Grid · Topics, Domains (rule 50) | Network (publishers ⚠ keys from any IP, public access, local auth, TLS, endpoint as text, private endpoints) · Topics ⧗ (a domain's: name, state) · Subscriptions ⧗ (destination ⏎, events, subject, filters, retry, dead-letter ⚠ none, provisioning ⚠ unless Succeeded) · (Overview: endpoint, input schema, public access, local auth, data residency, identity; a domain's auto-create / auto-delete) | provisioning only | private endpoints, identities, once loaded each subscription's destination and dead-letter account | `az eventgrid topic show --ids` · `az eventgrid domain show --ids` |
+| Event Grid · System topics (rule 50) | Subscriptions ⧗ (as above) · (Overview: topic type, source) | provisioning only | the source resource, identities, destinations once loaded | `az eventgrid system-topic show --ids` |
 | Messaging · Event Hubs | Network ⧗ · Security · Access policies ⧗ (as Service Bus; Basic has no firewall, VNet rules or private endpoints) · Event hubs ⧗ (partitions, retention and cleanup policy, status, capture on / off with format, window, destination storage account jumpable or Data Lake, container, identity) · (Overview: SKU, throughput / processing / capacity units, auto-inflate maximum, Kafka, dedicated cluster, zone redundancy) | ladder, then `status` | as Service Bus, plus the dedicated cluster and each capture storage account (once Event hubs loads) | `az eventhubs namespace show` |
 | Automation · Accounts (rule 44) | Runbooks ⧗ (type, state with drafts and never-published marked, runtime environment, modified, logging, the schedules that start it, its newest job in the window with ⚠ when failed) · Schedules ⧗ (recurrence, enabled, next run, expiry with ⚠ when an enabled schedule has expired, time zone, the runbooks it starts and the worker group they run on) · Jobs ⧗ (the last 7 days: count and failures, then the newest 25 with runbook, status, ⚠ failed / suspended / blocked / stopped, ended, started by, ran on) · Hybrid workers ⧗ (each group's type and Run As credential name; each worker's type, machine jumpable, IP, last seen with ⚠ after a day) · Configuration (SKU, local auth, public network access, encryption key and identity, identity, hybrid service URL as text, private endpoints) · (Overview: state, SKU, created, modified, description) | ladder, then `state` (`Ok` → Available, `Suspended` / `Unavailable` → Unavailable) | private endpoints, user-assigned and encryption identities; ⧗ the linked Log Analytics workspace, each hybrid worker's VM or Arc machine | `az automation account show --ids` (the `automation` extension) |
 | Azure Arc · Servers (rule 45) | Machine (computer name, FQDN, domain, OS SKU, version and type, kind, cloud provider, manufacturer, model, logical cores, memory, IP addresses, SQL Server discovered, parent cluster) · Agent (status with ⚠ and how long when disconnected or expired, last status change, agent version, automatic upgrade and the last attempt, config mode, extensions and guest configuration allowed, both services, proxy, incoming ports, private link scope jumpable, each error ⚠) · Extensions ⧗ (type, version, automatic upgrade, state ⚠ when failed or at error level, the status message's first line; never settings) · Licensing & patching (license status, Software Assurance, ESU eligibility and licence with ⚠ when eligible and unassigned, key state, the licence jumpable, patch assessment and patch mode) · (Overview: status, OS, agent version, cloud provider, FQDN, identity) | ladder, then `status` (`Connected` → Available, `Disconnected` / `Error` → Unavailable, Expired after 45 days disconnected, `AwaitingConnection` → Pending) | the private link scope, the parent cluster, the ESU licence | `az connectedmachine show --ids` (the `connectedmachine` extension) |
@@ -1363,7 +1406,7 @@ lazy section; every `az` command is `show --ids {id}` unless stated.
 | Foundry · Resources | Deployments ⧗ (model, version, format, SKU and capacity, PTUs for provisioned SKUs, rate limits, state, upgrade option, RAI policy) · Projects ⧗ (only when `allowProjectManagement`; no call otherwise) · Network (public access, ACLs, restrict outbound + FQDNs, agent subnets, private endpoints) · Security (key auth, identity, CMK) | ladder only | network-rule and agent subnets, private endpoints, user-assigned identities, user-owned storage | `az cognitiveservices account show -n {name} -g {rg} --subscription {sub}` |
 
 Routing prefixes: `@sub @rg @vm @disk @nic @vmss @asg @gallery @arc @arck8s @arcpls @avd @avdag @avdws @avdsp @storage @vnet @subnet @nsg @pip
-@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @automation @aca @acaenv @acajob @aci @redis @amr @sb @eh @apim @logic @apiconn @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
+@lb @rt @nat @pe @dns @pdns @dnsz @dnsr @dnsfr @dnsp @tm @agw @afd @waf @pls @er @vgw @cn @lgw @fw @fwp @ipg @ngfw @rulestack @backup @bvault @kv @id @sp @appreg @aks @pool @acr @app @func @plan @swa @sql @cosmos @pg @mysql @foundry @search @monitor @law @appi @pp @automation @aca @acaenv @acajob @aci @redis @amr @sb @eh @apim @logic @apiconn @eg @egst @egd @gov @exempt @pdef @lock @mg @budget @defender @secalert @score @pricing @advisor @advscore @snooze @changes @activity @deploys @health @audit` (no `@ai`: it could mean Foundry or App Insights) (the list in `ServiceType`, `src/azure/service.rs`, is the
 reference).
 
 ## The audit checks
@@ -1428,6 +1471,8 @@ has a fixture test there.
 | `apim-certificate-expiring` | API Management | a hostname certificate expired (high) or expiring within 30 days (medium) | high / medium |
 | `logic-connection-error` | API connections | a status other than Connected (an expired token, a changed password) | medium |
 | `logic-trigger-sas-only` | Workflows | an enabled workflow with a Request trigger and no trigger caller IP range or Entra ID policy | low |
+| `eventgrid-local-auth-public` | Event Grid topics, domains | public network access on, no inbound IP rule and local auth (keys, SAS) not disabled | low |
+| `eventgrid-subscription-delivery` | Event Grid topics, system topics, domains (+ each one's Subscriptions, lazy) | an event subscription whose provisioning failed or awaits webhook validation (medium), or with no dead-letter destination (low) | medium / low |
 | `acr-anonymous-pull` | Registries | `anonymousPullEnabled` | high |
 | `app-https-only` | Apps | `httpsOnly` false | high |
 | `app-min-tls` | Apps + Configuration ⧗ | `minTlsVersion` below 1.2 | medium |
@@ -1589,6 +1634,7 @@ each one needs is in `PERMISSIONS.md`. **A new call goes in both tables.**
 | API Management instances (rule 48) | 1, then per opened instance: its APIs, products, backends and named values (≤ 500 each, on demand; Related fires Backends) | `/providers/Microsoft.ApiManagement/service` · `{service}/apis` · `{service}/products` · `{service}/backends` · `{service}/namedValues` · `2024-05-01` |
 | Logic Apps workflows (rule 49) | 1, then per opened workflow: its triggers (≤ 100) and latest runs (`$top=25`), on demand | `/providers/Microsoft.Logic/workflows` · `{workflow}/triggers` · `{workflow}/runs` · `2019-05-01` |
 | API connections (rule 49) | 1 generic resources call (which groups hold one), then 1 per group | `/resources?$filter=resourceType eq 'Microsoft.Web/connections'` · `/resourceGroups/{rg}/providers/Microsoft.Web/connections` · `2016-06-01` |
+| Event Grid topics, system topics, domains (rule 50) | 1 each, then per opened parent: its event subscriptions (`$top=100`), a domain's topics, on demand (`r` in `@audit` reads the subscriptions of up to 50 of each) | `/providers/Microsoft.EventGrid/{topics,systemTopics,domains}` · `{systemTopic}/eventSubscriptions` · `{topic\|domain}/providers/Microsoft.EventGrid/eventSubscriptions` · `{domain}/topics` · `2025-02-15` |
 | Network (firewall), Access policies | 1 each per namespace, on demand (Related fires the rule set too; a policy's keys are the `listKeys` POST, never sent) | `{ns}/networkRuleSets/default` · `{ns}/authorizationRules` · `2026-01-01` |
 | Queues, Topics, Event hubs | 1 each per namespace, on demand (a topic's subscriptions and a hub's consumer groups would be one call per entity, so they are not listed; an Event Hubs Related fires Event hubs for the capture accounts) | `{ns}/queues` · `{ns}/topics` · `{ns}/eventhubs` · `2026-01-01` |
 | Foundry resources | 1 (every Cognitive Services kind; `kind` on the row) | `/providers/Microsoft.CognitiveServices/accounts` · `2026-07-01` |
@@ -1697,6 +1743,14 @@ it; that floor is #63.
   (and `overallStatus`); whether `authenticatedUser` is on the list body;
   the `$connections` entry shape on a workflow deployed by Bicep; the
   metric names.
+- Event Grid (#159), built without an Azure login from the Microsoft
+  Learn REST reference (`2025-02-15`: topics, system topics, domains,
+  `EventSubscriptions_ListByResource`, `SystemTopicEventSubscriptions_List`).
+  To check: whether a list ever returns `endpointUrl` or a static
+  attribute's `value` (both dropped regardless); whether a
+  subscription-scope system topic's `source` is the bare subscription id;
+  `id_part="name"` on `az eventgrid system-topic show`; the metric names
+  on a system topic (Publish* may be absent there).
 - Azure Virtual Desktop (#198), built without an Azure login from
   azure-rest-api-specs (`desktopvirtualization/…/DesktopVirtualization/stable/2025-10-10`)
   and the CLI `desktopvirtualization` extension (hostpool, applicationgroup

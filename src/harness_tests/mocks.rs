@@ -484,6 +484,30 @@ pub(crate) fn all_mocks() -> Vec<Mock> {
             ),
         ),
         m(
+            JumpView::EventGridTopics,
+            "EventGridRow",
+            parse(
+                "EventGridRow",
+                crate::azure::services::event_grid::EventGridRow::from_json(&simple("Microsoft.EventGrid/topics/egt-1"), t),
+            ),
+        ),
+        m(
+            JumpView::EventGridSystemTopics,
+            "EventGridRow",
+            parse(
+                "EventGridRow",
+                crate::azure::services::event_grid::EventGridRow::from_json(&simple("Microsoft.EventGrid/systemTopics/st-1"), t),
+            ),
+        ),
+        m(
+            JumpView::EventGridDomains,
+            "EventGridRow",
+            parse(
+                "EventGridRow",
+                crate::azure::services::event_grid::EventGridRow::from_json(&simple("Microsoft.EventGrid/domains/egd-1"), t),
+            ),
+        ),
+        m(
             JumpView::AppServicePlans,
             "PlanRow",
             parse("PlanRow", app_service::PlanRow::from_json(&simple("Microsoft.Web/serverfarms/plan-1"), t)),

@@ -1748,3 +1748,43 @@ fn logic_apps_flag_a_broken_connection_and_an_open_request_trigger() {
     assert_eq!(broken[0].evidence, vec!["token: Error (Unauthenticated)".to_string()]);
     assert_eq!(findings(&audit("logic-trigger-sas-only", &lists, None)), [("la-open".to_string(), Severity::Low)]);
 }
+
+fn eg(provider_path: &str, properties: Value) -> Box<dyn Resource> {
+    boxed(crate::azure::services::event_grid::EventGridRow::from_json(&body(provider_path, properties), None))
+}
+
+#[test]
+fn event_grid_flags_an_open_topic_and_subscriptions_that_lose_events() {
+    use crate::azure::services::event_grid::subscription_outline;
+    let lists = vec![
+        (
+            V::EventGridTopics,
+            vec![
+                eg("Microsoft.EventGrid/topics/egt-open", json!({"publicNetworkAccess": "Enabled"})),
+                eg("Microsoft.EventGrid/topics/egt-entra", json!({"publicNetworkAccess": "Enabled", "disableLocalAuth": true})),
+                eg("Microsoft.EventGrid/topics/egt-unvisited", json!({"publicNetworkAccess": "Disabled"})),
+            ],
+        ),
+        (V::EventGridSystemTopics, vec![eg("Microsoft.EventGrid/systemTopics/st-blobs", json!({"topicType": "Microsoft.Storage.StorageAccounts"}))]),
+        (V::EventGridDomains, vec![]),
+    ];
+    assert_eq!(findings(&audit("eventgrid-local-auth-public", &lists, None)), [("egt-open".to_string(), Severity::Low)]);
+
+    let sub = |name: &str, state: &str, dead_letter: bool| {
+        let mut p = json!({"provisioningState": state, "destination": {"endpointType": "WebHook", "properties": {"endpointBaseUrl": "https://hook.example/x"}}});
+        if dead_letter {
+            p["deadLetterDestination"] = json!({"endpointType": "StorageBlob", "properties": {"resourceId": id("Microsoft.Storage/storageAccounts/stdl"), "blobContainerName": "dl"}});
+        }
+        subscription_outline(&json!({"id": format!("x/eventSubscriptions/{name}"), "name": name, "properties": p}))
+    };
+    let mut lazy = LazyStore::new(0);
+    lazy.eg_subscriptions.apply(id("Microsoft.EventGrid/topics/egt-open"), Ok(vec![sub("to-partner", "AwaitingManualAction", false), sub("safe", "Succeeded", true)]));
+    lazy.eg_subscriptions.apply(id("Microsoft.EventGrid/topics/egt-entra"), Ok(vec![]));
+    lazy.eg_subscriptions.apply(id("Microsoft.EventGrid/systemTopics/st-blobs"), Ok(vec![sub("to-func", "Succeeded", false)]));
+    let rows = audit("eventgrid-subscription-delivery", &lists, Some(&lazy));
+    assert_eq!(
+        findings(&rows),
+        [("egt-open/to-partner".to_string(), Severity::Medium), ("st-blobs/to-func".to_string(), Severity::Low)]
+    );
+    assert!(notes(&rows).iter().any(|n| n.contains("1 of 4 not checked")), "{:?}", notes(&rows));
+}

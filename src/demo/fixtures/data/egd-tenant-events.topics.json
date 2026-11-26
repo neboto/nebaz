@@ -1,0 +1,52 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events/topics/tenant-contoso",
+      "name": "tenant-contoso",
+      "type": "Microsoft.EventGrid/domains/topics",
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events/topics/tenant-fabrikam",
+      "name": "tenant-fabrikam",
+      "type": "Microsoft.EventGrid/domains/topics",
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events/topics/tenant-northwind",
+      "name": "tenant-northwind",
+      "type": "Microsoft.EventGrid/domains/topics",
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}

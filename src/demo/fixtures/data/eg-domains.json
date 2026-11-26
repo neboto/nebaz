@@ -1,0 +1,44 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/{{prod}}/resourceGroups/rg-platform-prod/providers/Microsoft.EventGrid/domains/egd-tenant-events",
+      "name": "egd-tenant-events",
+      "type": "Microsoft.EventGrid/domains",
+      "location": "westeurope",
+      "tags": {
+        "team": "platform"
+      },
+      "systemData": {
+        "createdBy": "platform-team@contoso.com",
+        "createdByType": "User",
+        "createdAt": "{{iso:now-90d}}",
+        "lastModifiedBy": "platform-team@contoso.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "{{iso:now-12d}}"
+      },
+      "properties": {
+        "provisioningState": "Succeeded",
+        "endpoint": "https://egd-tenant-events.westeurope-1.eventgrid.azure.net/api/events",
+        "inputSchema": "EventGridSchema",
+        "metricResourceId": "3b8e4f0a-2d6c-4e5a-9f7b-7c8d9e0f1a2b",
+        "publicNetworkAccess": "Enabled",
+        "inboundIpRules": [
+          {
+            "ipMask": "10.20.0.0/16",
+            "action": "Allow"
+          },
+          {
+            "ipMask": "203.0.113.0/24",
+            "action": "Allow"
+          }
+        ],
+        "disableLocalAuth": true,
+        "minimumTlsVersionAllowed": "1.2",
+        "dataResidencyBoundary": "WithinRegion",
+        "autoCreateTopicWithFirstSubscription": true,
+        "autoDeleteTopicWithLastSubscription": true,
+        "privateEndpointConnections": []
+      }
+    }
+  ]
+}

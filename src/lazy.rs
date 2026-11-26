@@ -303,6 +303,13 @@ pub struct LazyStore {
     /// `GET {workflow}/runs?$top=25`, keyed by workflow id, outcomes only.
     pub logic_runs: LazyMap<Vec<serde_json::Value>>,
 
+    // ── Event Grid (#159) ────────────────────────────────────────────────
+    /// `GET {parent}/…/eventSubscriptions?$top=100`, keyed by topic, system
+    /// topic or domain id, outlined (no full webhook URL, no attribute value).
+    pub eg_subscriptions: LazyMap<Vec<serde_json::Value>>,
+    /// `GET {domain}/topics`, keyed by domain id: names and states.
+    pub eg_domain_topics: LazyMap<Vec<serde_json::Value>>,
+
     // ── Automation (#202) ────────────────────────────────────────────────
     /// `GET {account}/runbooks`, keyed by account id, scrubbed.
     pub aa_runbooks: LazyMap<Vec<serde_json::Value>>,
